@@ -31,15 +31,31 @@ extern int MASTERY_BITS[4];
 extern const double MINIMUM_AFFINITY;
 extern const double MAXIMUM_AFFINITY;
 
-enum ItemType
+enum ItemType // for generator purposes
 {
-	MELEE_WEAPON_1H,
-	MELEE_WEAPON_2H,
-	RANGED,
+	MELEE_WEAPON = 0,
+	RANGED_WEAPON,
+	BLASTER,
+	BODY_ARMOR,
 	SHIELD,
-	ARMOR,
-	CONSUMABLE, // potions etc.
-	SPELL_BOOK,
+	OTHER_EQUIPPABLE,
+	POTION,
+	MISC,
+	ITEM_TYPE_COUNT,
+};
+
+enum ItemSubtype
+{
+	WEAPON_1H,
+	WEAPON_2H,
+	BOW,
+	CROSSBOW,
+	POTION_HP, // gives hp
+	POTION_SP, // gives sp
+	POTION_BUFF, // buffs player
+	POTION_EFFECT, // other type of effect
+	SCROLL,
+	ITEM_SUBTYPE_COUNT,
 };
 
 enum PartyType

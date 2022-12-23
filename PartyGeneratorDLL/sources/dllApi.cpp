@@ -209,7 +209,7 @@ extern "C"
         6) call PauseGame, generate and call ResumeGame (and add logic for checking if it wasn't already paused etc.) -
            should deal with base game, but mmextension (and for example elemental mod) might still theoretically interfere
         7) do away with wxWidgets thread and somehow integrate it into game main thread's event loop - I think it's best solution,
-           but don't know yet how to do that
+           but don't know yet how to do that - MAKING PROGRESS
     */
     DLL_EXPORT void __stdcall init()
     {
@@ -218,7 +218,7 @@ extern "C"
         
         // code from MMExtension
         const int addr = 0x41EDE1;
-        if (!IsBadReadPtr((void*)addr, 1)) // injected into mm[678].exe
+        if (!IsBadReadPtr((void*)addr, 1)) // are we injected into mm[678].exe?
         {
             switch (byte(addr))  // just a random address
             {

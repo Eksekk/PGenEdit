@@ -26,6 +26,9 @@ public:
 	PartyType partyType;
 	void** players;
 
+	bool unsetArtifactsFoundBits;
+	bool setArtifactsFoundBitsIfGenerated;
+
 	virtual bool readFromJson(const Json& json) override;
 	virtual bool writeToJson(Json& json) override;
 	template<typename Player>

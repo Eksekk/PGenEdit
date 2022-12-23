@@ -4,6 +4,9 @@
 #include "Player.h"
 #include <type_traits>
 #include "GeneratorDataBase.h"
+#include "Enum_const.h"
+
+class PlayerItem;
 
 class ItemGenerationData : public GeneratorDataBase
 {
@@ -37,5 +40,8 @@ public:
 	virtual void setDefaults() override
 	{
 	}
+
+	template<typename Player>
+	static std::function<bool(void*, int, PlayerItem*, ItemGenerationData*)> shouldItemTypeGenerate[ITEM_TYPE_COUNT];
 };
 

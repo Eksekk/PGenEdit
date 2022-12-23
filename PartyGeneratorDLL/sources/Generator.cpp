@@ -47,6 +47,8 @@ void Generator::setDefaults()
 	{
 		generateForPlayer[i] = true;
 	}
+	unsetArtifactsFoundBits = false;
+	setArtifactsFoundBitsIfGenerated = false;
 }
 
 template<typename Player>

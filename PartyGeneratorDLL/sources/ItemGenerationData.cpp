@@ -11,3 +11,13 @@ ItemGenerationData::ItemGenerationData()
 	guaranteeArmor = false;
 	guaranteeRangedWeapon = false;
 }
+
+template<typename Player>
+std::function<bool(void*, int remainingValue, PlayerItem*, ItemGenerationData*)> ItemGenerationData::shouldItemTypeGenerate[ITEM_TYPE_COUNT];
+
+template<typename Player>
+bool shouldPotionGenerate(void* player, PlayerItem* itemDef, ItemGenerationData* genData)
+{
+	Player* pl = (Player*)player;
+
+}
