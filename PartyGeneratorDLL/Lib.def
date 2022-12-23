@@ -1,0 +1,6 @@
+LIBRARY PARTYGENERATOR
+VERSION 0.1
+EXPORTS
+	init
+	unloadCleanup
+	displayMainWindow

@@ -1,0 +1,200 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Pliki źródłowe">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Pliki nagłówkowe">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
+    </Filter>
+    <Filter Include="Pliki zasobów">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="Pliki nagłówkowe\GUI">
+      <UniqueIdentifier>{f8033ec0-1387-44c1-9fd4-384537816caf}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Pliki źródłowe\GUI">
+      <UniqueIdentifier>{c8959813-ef34-42a7-b1cb-7934678ccf16}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Pliki nagłówkowe\Structs">
+      <UniqueIdentifier>{822b7a63-7e48-4aa0-8557-4b51a4c4fac3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Pliki źródłowe\Structs">
+      <UniqueIdentifier>{60909965-30a2-47a2-bf44-ce158c244a1f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Pliki źródłowe\Generator">
+      <UniqueIdentifier>{9078347f-8c1e-4fa9-a96b-5aafa31d8a87}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Pliki nagłówkowe\Generator">
+      <UniqueIdentifier>{65133fbe-125b-4d6b-af83-85a8b82d79bd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Pliki nagłówkowe\GameData">
+      <UniqueIdentifier>{ff2dd50a-fd19-422d-b5b4-62c38c87372c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Pliki źródłowe\GameData">
+      <UniqueIdentifier>{79ad6097-9bef-4812-bcf0-f6f282ff000c}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="headers\globals.h">
+      <Filter>Pliki nagłówkowe</Filter>
+    </ClInclude>
+    <ClInclude Include="headers\LowLevel.h">
+      <Filter>Pliki nagłówkowe</Filter>
+    </ClInclude>
+    <ClInclude Include="headers\main.h">
+      <Filter>Pliki nagłówkowe</Filter>
+    </ClInclude>
+    <ClInclude Include="headers\pch.h">
+      <Filter>Pliki nagłówkowe</Filter>
+    </ClInclude>
+    <ClInclude Include="headers\MainWindow.h">
+      <Filter>Pliki nagłówkowe\GUI</Filter>
+    </ClInclude>
+    <ClInclude Include="headers\GeneratorDataBase.h">
+      <Filter>Pliki nagłówkowe\Generator</Filter>
+    </ClInclude>
+    <ClInclude Include="headers\ItemGenerationData.h">
+      <Filter>Pliki nagłówkowe\Generator</Filter>
+    </ClInclude>
+    <ClInclude Include="headers\Item.h">
+      <Filter>Pliki nagłówkowe\Structs</Filter>
+    </ClInclude>
+    <ClInclude Include="headers\Player.h">
+      <Filter>Pliki nagłówkowe\Structs</Filter>
+    </ClInclude>
+    <ClInclude Include="headers\ResistanceData.h">
+      <Filter>Pliki nagłówkowe\Generator</Filter>
+    </ClInclude>
+    <ClInclude Include="headers\Generator.h">
+      <Filter>Pliki nagłówkowe\Generator</Filter>
+    </ClInclude>
+    <ClInclude Include="headers\PlayerData.h">
+      <Filter>Pliki nagłówkowe\Generator</Filter>
+    </ClInclude>
+    <ClInclude Include="headers\StatisticsData.h">
+      <Filter>Pliki nagłówkowe\Generator</Filter>
+    </ClInclude>
+    <ClInclude Include="headers\SpellsData.h">
+      <Filter>Pliki nagłówkowe\Generator</Filter>
+    </ClInclude>
+    <ClInclude Include="headers\SkillsData.h">
+      <Filter>Pliki nagłówkowe\Generator</Filter>
+    </ClInclude>
+    <ClInclude Include="headers\Structs.h">
+      <Filter>Pliki nagłówkowe\Structs</Filter>
+    </ClInclude>
+    <ClInclude Include="headers\Application.h">
+      <Filter>Pliki nagłówkowe\GUI</Filter>
+    </ClInclude>
+    <ClInclude Include="PlayerClass.h">
+      <Filter>Pliki nagłówkowe\GameData</Filter>
+    </ClInclude>
+    <ClInclude Include="Utility.h">
+      <Filter>Pliki nagłówkowe</Filter>
+    </ClInclude>
+    <ClInclude Include="PlayerSkill.h">
+      <Filter>Pliki nagłówkowe\GameData</Filter>
+    </ClInclude>
+    <ClInclude Include="headers\Enum_const.h">
+      <Filter>Pliki nagłówkowe\GameData</Filter>
+    </ClInclude>
+    <ClInclude Include="GameData.h">
+      <Filter>Pliki nagłówkowe\GameData</Filter>
+    </ClInclude>
+    <ClInclude Include="GUIEnums.h">
+      <Filter>Pliki nagłówkowe</Filter>
+    </ClInclude>
+    <ClInclude Include="PlayerItem.h">
+      <Filter>Pliki nagłówkowe\GameData</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="sources\dllApi.cpp">
+      <Filter>Pliki źródłowe</Filter>
+    </ClCompile>
+    <ClCompile Include="sources\LowLevel.cpp">
+      <Filter>Pliki źródłowe</Filter>
+    </ClCompile>
+    <ClCompile Include="sources\main.cpp">
+      <Filter>Pliki źródłowe</Filter>
+    </ClCompile>
+    <ClCompile Include="sources\pch.cpp">
+      <Filter>Pliki źródłowe</Filter>
+    </ClCompile>
+    <ClCompile Include="sources\MainWindow.cpp">
+      <Filter>Pliki źródłowe\GUI</Filter>
+    </ClCompile>
+    <ClCompile Include="sources\GeneratorDataBase.cpp">
+      <Filter>Pliki źródłowe\Generator</Filter>
+    </ClCompile>
+    <ClCompile Include="sources\ItemGenerationData.cpp">
+      <Filter>Pliki źródłowe\Generator</Filter>
+    </ClCompile>
+    <ClCompile Include="sources\Item.cpp">
+      <Filter>Pliki źródłowe\Structs</Filter>
+    </ClCompile>
+    <ClCompile Include="sources\Player.cpp">
+      <Filter>Pliki źródłowe\Structs</Filter>
+    </ClCompile>
+    <ClCompile Include="sources\globals.cpp">
+      <Filter>Pliki źródłowe</Filter>
+    </ClCompile>
+    <ClCompile Include="sources\ResistanceData.cpp">
+      <Filter>Pliki źródłowe\Generator</Filter>
+    </ClCompile>
+    <ClCompile Include="sources\PlayerData.cpp">
+      <Filter>Pliki źródłowe\Generator</Filter>
+    </ClCompile>
+    <ClCompile Include="sources\Generator.cpp">
+      <Filter>Pliki źródłowe\Generator</Filter>
+    </ClCompile>
+    <ClCompile Include="sources\Logger.cpp">
+      <Filter>Pliki źródłowe</Filter>
+    </ClCompile>
+    <ClCompile Include="sources\StatisticsData.cpp">
+      <Filter>Pliki źródłowe\Generator</Filter>
+    </ClCompile>
+    <ClCompile Include="sources\SpellsData.cpp">
+      <Filter>Pliki źródłowe\Generator</Filter>
+    </ClCompile>
+    <ClCompile Include="sources\SkillsData.cpp">
+      <Filter>Pliki źródłowe\Generator</Filter>
+    </ClCompile>
+    <ClCompile Include="sources\Application.cpp">
+      <Filter>Pliki źródłowe\GUI</Filter>
+    </ClCompile>
+    <ClCompile Include="PlayerClass.cpp">
+      <Filter>Pliki źródłowe\GameData</Filter>
+    </ClCompile>
+    <ClCompile Include="sources\Enum_const.cpp">
+      <Filter>Pliki źródłowe\GameData</Filter>
+    </ClCompile>
+    <ClCompile Include="Utility.cpp">
+      <Filter>Pliki źródłowe</Filter>
+    </ClCompile>
+    <ClCompile Include="PlayerSkill.cpp">
+      <Filter>Pliki źródłowe\GameData</Filter>
+    </ClCompile>
+    <ClCompile Include="GameData.cpp">
+      <Filter>Pliki źródłowe\GameData</Filter>
+    </ClCompile>
+    <ClCompile Include="GUIEnums.cpp">
+      <Filter>Pliki źródłowe</Filter>
+    </ClCompile>
+    <ClCompile Include="PlayerItem.cpp">
+      <Filter>Pliki źródłowe\GameData</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="Text.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Lib.def">
+      <Filter>Pliki zasobów</Filter>
+    </None>
+  </ItemGroup>
+</Project>
