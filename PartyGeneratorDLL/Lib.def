@@ -4,3 +4,5 @@ EXPORTS
 	init
 	unloadCleanup
 	displayMainWindow
+	setLuaState
+	setClassData

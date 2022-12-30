@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 #include <unordered_map>
-class PlayerClass
+class PlayerClass // holds data about classes, both from game structs and lua
 {
 public:
 	int id;
@@ -16,8 +16,9 @@ public:
 	std::vector<PlayerClass*> promotionClasses; // higher tier
 	std::unordered_map<int, Mastery> maximumSkillMasteries;
 	double playerTypeAffinity[PLAYER_TYPE_COUNT]; // how appropriate is this class for given player type
+	int classWindowId;
 
-	PlayerClass() = delete;
+	PlayerClass();
 	PlayerClass(int id, std::string name, int tier);
 	PlayerClass(int id, std::string name, int tier, PlayerClass* baseClass, Alignment alignment = ALIGNMENT_NEUTRAL);
 	~PlayerClass();

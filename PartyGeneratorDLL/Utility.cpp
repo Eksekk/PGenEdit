@@ -37,3 +37,27 @@ const T& mmv(const T& e6, const T& e7, const T& e8)
 		throw std::runtime_error(std::format("Invalid MM version ({})!", MMVER));
 	}
 }
+
+wxString concatWxStrings(const std::vector<wxString>& container, const wxString& separator)
+{
+	wxString s;
+	for (int i = 0; i < container.size(); ++i)
+	{
+		s << container[i];
+		if (i < container.size() - 1)
+		{
+			s << separator;
+		}
+	}
+	return s;
+}
+
+std::string tolowerStr(const std::string& source)
+{
+	std::string out = source;
+	for (char& c : out)
+	{
+		c = std::tolower(c);
+	}
+	return out;
+}

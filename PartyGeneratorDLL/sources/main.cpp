@@ -14,3 +14,5 @@ void MSGBOX(const char* text)
 {
 	MessageBoxA(nullptr, text, nullptr, 0);
 }
+
+lua_State* Lua;

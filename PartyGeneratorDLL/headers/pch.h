@@ -22,12 +22,11 @@
 #include <unordered_map>
 #include <vector>
 //#include <WinSock2.h>
-#define WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN // prevents above winsock problem (error if windows.h is included before winsock)
 #include <windows.h>
 #include <format>
 #include <type_traits>
 
 #include <json.hpp>
-using nlohmann::json;
 
 #endif //PCH_H

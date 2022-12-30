@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "main.h"
 #include "PlayerData.h"
+#include "Generator.h"
 
 PlayerData::PlayerData()
 {
@@ -44,5 +45,6 @@ void PlayerData::setDefaults()
 	items->setDefaults();
 	stats->setDefaults();
 	resists->setDefaults();
+	classes.setDefaults();
 	playerType = PLAYER_GENERIC;
 }

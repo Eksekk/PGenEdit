@@ -40,21 +40,28 @@ enum ItemType // for generator purposes
 	SHIELD,
 	OTHER_EQUIPPABLE,
 	POTION,
+	SCROLL,
 	MISC,
 	ITEM_TYPE_COUNT,
 };
 
-enum ItemSubtype
+enum ItemSubtype // only some items get this
 {
-	WEAPON_1H,
+	WEAPON_1H = 0,
 	WEAPON_2H,
 	BOW,
 	CROSSBOW,
+	// leather chain plate can be taken from skill
 	POTION_HP, // gives hp
 	POTION_SP, // gives sp
 	POTION_BUFF, // buffs player
 	POTION_EFFECT, // other type of effect
-	SCROLL,
+	SCROLL_DAMAGE, // usually useless, thus explicitly mentioned
+	SCROLL_DECURSE,
+	SCROLL_PROTECT, // prot from magic and resistances (preservation could be too but is not included)
+	SCROLL_BUFF,
+	SCROLL_DEBUFF_MONSTER,
+	SCROLL_OTHER,
 	ITEM_SUBTYPE_COUNT,
 };
 
@@ -75,8 +82,11 @@ enum PlayerType
 	PLAYER_MELEE,
 	PLAYER_RANGED,
 	PLAYER_DEFENSIVE,
+	PLAYER_UTILITY, // mainly for misc skills
 	PLAYER_TYPE_COUNT
 };
+
+extern const std::unordered_map<std::string, int> plTypeEnumStringToId;
 
 enum SkillType
 {

@@ -15,3 +15,6 @@ const double MINIMUM_AFFINITY = 0.0;
 const double MAXIMUM_AFFINITY = 1.0;
 
 int NUM_CLASSES = 30;
+
+const std::unordered_map<std::string, int> plTypeEnumStringToId = { {"caster", PLAYER_CASTER}, {"melee", PLAYER_MELEE}, {"defensive", PLAYER_DEFENSIVE}
+	, {"utility", PLAYER_UTILITY}, {"ranged", PLAYER_RANGED} };

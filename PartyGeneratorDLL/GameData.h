@@ -8,7 +8,12 @@
 class GameData
 {
 public:
-	static std::vector<PlayerClass> classes; // lua
-	static std::vector<PlayerSkill> skills; // lua
+	// first int is id (ingame, not index)
+	static std::unordered_map<int, PlayerClass> classes; // lua + game structure parsing
+	static std::unordered_map<int, PlayerSkill> skills; // lua + game structure parsing
+
+	// TODO functions to parse data from lua and to parse game structures
+
+	// pass templated game pointer, not stditemstxt etc.
 };
 

@@ -19,8 +19,11 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="ClassInfoPanel.h" />
+    <ClInclude Include="ClassWindow.h" />
     <ClInclude Include="GameData.h" />
     <ClInclude Include="GUIEnums.h" />
+    <ClInclude Include="ClassGenerationData.h" />
     <ClInclude Include="PlayerClass.h" />
     <ClInclude Include="headers\Application.h" />
     <ClInclude Include="headers\Enum_const.h" />
@@ -45,6 +48,9 @@
     <ClInclude Include="Utility.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="ClassGenerationData.cpp" />
+    <ClCompile Include="ClassInfoPanel.cpp" />
+    <ClCompile Include="ClassWindow.cpp" />
     <ClCompile Include="GameData.cpp" />
     <ClCompile Include="GUIEnums.cpp" />
     <ClCompile Include="PlayerClass.cpp" />
@@ -57,7 +63,6 @@
     <ClCompile Include="sources\globals.cpp" />
     <ClCompile Include="sources\Item.cpp" />
     <ClCompile Include="sources\ItemGenerationData.cpp" />
-    <ClCompile Include="sources\Logger.cpp" />
     <ClCompile Include="sources\LowLevel.cpp" />
     <ClCompile Include="sources\main.cpp" />
     <ClCompile Include="sources\MainWindow.cpp" />

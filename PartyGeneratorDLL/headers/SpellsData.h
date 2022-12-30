@@ -22,4 +22,7 @@ public:
 	{
 		return false;
 	}
+
+	// clear beacons if removed lloyd's beacon spell
+	// zero out fire spike casts, divine intervention casts and armageddon casts if spell removed
 };

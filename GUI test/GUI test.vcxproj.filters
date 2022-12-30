@@ -19,4 +19,7 @@
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\..\..\Downloads\wxWidgets-3.2.1\samples\notebook\notebook_vc9.vcproj" />
+  </ItemGroup>
 </Project>

@@ -4,6 +4,14 @@
 
 extern const int INVALID_ID;
 
+PlayerClass::PlayerClass() : id(INVALID_ID), name(""), tier(0), baseClass(nullptr), alignment(ALIGNMENT_NEUTRAL), playerTypeAffinity()
+{
+	for (double& d : playerTypeAffinity)
+	{
+		d = 1.0;
+	}
+}
+
 PlayerClass::PlayerClass(int id, std::string name, int tier) : id(id), name(name), tier(0), baseClass(nullptr), alignment(ALIGNMENT_NEUTRAL), playerTypeAffinity()
 {
 	for (double& d : playerTypeAffinity)

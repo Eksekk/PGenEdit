@@ -111,6 +111,15 @@
     <ClInclude Include="PlayerItem.h">
       <Filter>Pliki nagłówkowe\GameData</Filter>
     </ClInclude>
+    <ClInclude Include="ClassInfoPanel.h">
+      <Filter>Pliki nagłówkowe\GUI</Filter>
+    </ClInclude>
+    <ClInclude Include="ClassWindow.h">
+      <Filter>Pliki nagłówkowe\GUI</Filter>
+    </ClInclude>
+    <ClInclude Include="ClassGenerationData.h">
+      <Filter>Pliki nagłówkowe\Generator</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="sources\dllApi.cpp">
@@ -152,9 +161,6 @@
     <ClCompile Include="sources\Generator.cpp">
       <Filter>Pliki źródłowe\Generator</Filter>
     </ClCompile>
-    <ClCompile Include="sources\Logger.cpp">
-      <Filter>Pliki źródłowe</Filter>
-    </ClCompile>
     <ClCompile Include="sources\StatisticsData.cpp">
       <Filter>Pliki źródłowe\Generator</Filter>
     </ClCompile>
@@ -187,6 +193,15 @@
     </ClCompile>
     <ClCompile Include="PlayerItem.cpp">
       <Filter>Pliki źródłowe\GameData</Filter>
+    </ClCompile>
+    <ClCompile Include="ClassInfoPanel.cpp">
+      <Filter>Pliki źródłowe\GUI</Filter>
+    </ClCompile>
+    <ClCompile Include="ClassWindow.cpp">
+      <Filter>Pliki źródłowe\GUI</Filter>
+    </ClCompile>
+    <ClCompile Include="ClassGenerationData.cpp">
+      <Filter>Pliki źródłowe\Generator</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

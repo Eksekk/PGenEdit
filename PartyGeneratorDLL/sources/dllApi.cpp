@@ -8,6 +8,7 @@
 #include "Application.h"
 #include "GameData.h"
 #include <string>
+#include "Utility.h"
 
 // ----------------------------------------------------------------------------
 // application startup
@@ -172,7 +173,7 @@ extern "C"
         case DLL_PROCESS_DETACH:
             // detach from process
             
-            MessageBoxA(nullptr, "Library unloaded successfully.", "Unloaded!", 0);
+            //MessageBoxA(nullptr, "Library unloaded successfully.", "Unloaded!", 0);
             break;
 
         case DLL_THREAD_ATTACH:
@@ -255,6 +256,22 @@ extern "C"
 
     DLL_EXPORT void __stdcall displayMainWindow(bool visible)
     {
+        if (!allDataReceived)
+        {
+            std::vector<wxString> errors;
+            if (GameData::classes.empty()) // TODO change check, as data will be partially filled from game structures
+            {
+                errors.push_back("Game class info wasn't received from lua yet!");
+            }
+            if (GameData::skills.empty())
+            {
+                errors.push_back("Game skill info wasn't received from lua yet!");
+            }
+            // TODO: check all data to be received from lua
+            wxMessageBox(concatWxStrings(errors, "\n"), "Error", wxOK | wxICON_ERROR);
+            return;
+        }
+        allDataReceived = true;
         wxThreadEvent* event = new wxThreadEvent(wxEVT_THREAD, CMD_SHOW_WINDOW);
         event->SetInt(visible);
         wxQueueEvent(wxApp::GetInstance(), event);
@@ -264,5 +281,110 @@ extern "C"
     {
         delete generator;
         wx_dll_cleanup();
+    }
+
+    DLL_EXPORT void __stdcall setLuaState(void* ptr)
+    {
+        // horrible hack, but should work:
+        /*
+        for k, v in pairs(debug.getregistry()) do
+            if type(k) == "userdata" and getU(v, "HookData") then
+                M.dll.setLuaState(
+                    mem.u4[
+                        tonumber(
+                            tostring(k):match("x([%dA-Fa-f]+)")
+                            , 16
+                        )
+                    ]
+                )
+                break
+            end
+        end
+        */
+        Lua = (lua_State*)ptr;
+    }
+
+    DLL_EXPORT void __stdcall setClassData(const char* jsonStr)
+    {
+        Json json(jsonStr);
+        wxLogMessage(wxString(to_string(json)));
+
+        // first pass - create entries for all classes to allow setting pointers to them (promotion/base classes)
+        auto& entries = GameData::classes;
+        for (auto& classEntry : json)
+        {
+            PlayerClass cls = PlayerClass();
+            int id = classEntry["id"].get<int>();
+            cls.id = id;
+            cls.name = classEntry["name"].get<std::string>();
+            if (classEntry.contains("tier"))
+            {
+                cls.tier = classEntry["tier"].get<int>();
+            }
+            if (classEntry.contains("alignment"))
+            {
+                std::string str = tolowerStr(classEntry["alignment"].get<std::string>());
+                auto itr = plTypeEnumStringToId.find(str);
+                if (itr != plTypeEnumStringToId.end())
+                {
+                    cls.alignment = (Alignment)itr->second;
+                }
+                else
+                {
+                    wxLogWarning("Invalid value (%s) for class alignment (class %d - %s)", str, cls.id, cls.name);
+                }
+            }
+            entries[id] = cls;
+        }
+
+        // second pass - actually set the pointers
+
+        for (auto& classEntry : json)
+        {
+            if (classEntry.contains("promotionClasses"))
+            {
+                auto promos = classEntry["promotionClasses"].get<std::vector<int> >();
+                for (int id : promos)
+                {
+                    auto itr = entries.find(id);
+                    if (itr != entries.end())
+                    {
+                        entries[classEntry["id"].get<int>()].promotionClasses.push_back(&(itr->second));
+                    }
+                    else
+                    {
+                        wxLogWarning("Promotion class %d not found", id);
+                    }
+                }
+            }
+            else
+            {
+                wxLogWarning("Class entry of id %d doesn't contain promotion classes field", classEntry["id"].get<int>());
+            }
+
+            if (classEntry.contains("baseClass"))
+            {
+                int baseId = classEntry["baseClass"].get<int>();
+                auto itr = entries.find(baseId);
+                if (itr != entries.end())
+                {
+                    entries[classEntry["id"].get<int>()].baseClass = &(itr->second);
+                    // could also set promotion classes at the same time (inverse), but
+                    // I like being slightly verbose here with json than implementing it
+                }
+                else
+                {
+                    wxLogWarning("Base class %d not found", baseId);
+                }
+            }
+            else
+            {
+                wxLogWarning("Class entry of id %d doesn't contain base class field", classEntry["id"].get<int>());
+            }
+        }
+
+        // TODO, set GameData::classes AND call ClassGenerationData::createSettings for global/per player default/per player specific class settings
+        // AND call ClassWindow::createPanels AND create default class settings panel
+        // a lot of things to do :)
     }
 }

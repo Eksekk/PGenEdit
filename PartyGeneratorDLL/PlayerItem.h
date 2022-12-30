@@ -4,7 +4,7 @@
 #include "PlayerSkill.h"
 #include "Enum_const.h"
 #include "ItemGenerationData.h"
-class PlayerItem
+class PlayerItem // holds generic item data, one entry per each item id
 {
 	int number;
 	std::string name;
@@ -15,10 +15,5 @@ class PlayerItem
 	bool isArtifact;
 	std::vector<double> affinityByClass;
 	std::vector<double> affinityByPlayerType;
-
-	static int getItemCount(ItemGenerationData* genData);
-	static int getSpecificItemCount(ItemGenerationData* genData);
-	static int getItemTypeCount(ItemGenerationData* genData);
-	static int getItemTypeValue(ItemGenerationData* genData);
 };
 

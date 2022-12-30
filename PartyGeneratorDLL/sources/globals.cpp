@@ -16,3 +16,7 @@ const int CMD_SHOW_WINDOW = wxNewId();
 const int CMD_TERMINATE = wxNewId();
 
 int MMVER = INVALID_ID;
+
+void* game = 0;
+
+bool allDataReceived = false;

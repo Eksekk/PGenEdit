@@ -9,6 +9,7 @@
 #include "StatisticsData.h"
 #include "ItemGenerationData.h"
 #include "Enum_const.h"
+#include "ClassGenerationData.h"
 
 class PlayerData : GeneratorDataBase
 {
@@ -18,6 +19,7 @@ public:
 	SkillsData* skills;
 	SpellsData* spells;
 	StatisticsData* stats;
+	ClassGenerationData classes;
 	PlayerType playerType;
 
 	PlayerData();
