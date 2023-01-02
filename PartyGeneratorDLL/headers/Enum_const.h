@@ -16,6 +16,7 @@ enum SkillCombineMode
 
 enum Mastery
 {
+	NONE = 0,
 	NOVICE = 1,
 	EXPERT = 2,
 	MASTER = 3,
@@ -67,7 +68,7 @@ enum ItemSubtype // only some items get this
 
 enum PartyType
 {
-	PARTY_GENERIC = 0,
+	PARTY_GENERIC = 0, // means basically "anything can generate", thus everything has affinity 1 in it and probably won't change
 	PARTY_CASTER,
 	PARTY_MELEE,
 	PARTY_RANGED,
@@ -77,7 +78,7 @@ enum PartyType
 
 enum PlayerType
 {
-	PLAYER_GENERIC = 0,
+	PLAYER_GENERIC = 0, // see above
 	PLAYER_CASTER,
 	PLAYER_MELEE,
 	PLAYER_RANGED,
@@ -90,20 +91,39 @@ extern const std::unordered_map<std::string, int> plTypeEnumStringToId;
 
 enum SkillType
 {
-	SKILL_GENERIC,
+	SKILL_GENERIC = 0, // see above
 	SKILL_MELEE,
 	SKILL_RANGED,
+	SKILL_DEFENSIVE,
 	SKILL_MAGIC,
 	SKILL_UTILITY,
 	SKILL_TYPE_COUNT
 };
 
+extern const std::unordered_map<std::string, int> skillTypeEnumStringToId;
+
+enum SkillSpecial // don't make hundreds of skill types, instead associate additional property with certain skills
+{
+	SKSPC_NONE = 0,
+	SKSPC_BLASTER,
+	SKSPC_SHIELD,
+	SKSPC_ELEMENTAL,
+	SKSPC_SELF,
+	SKSPC_MAGIC_EXCLUSIVE,
+	SKSPC_MEDITATION,
+	SKSPC_RACE_SKILL
+};
+
+extern const std::unordered_map<std::string, int> skillSpecialEnumStringToId;
+
 enum Alignment
 {
-	ALIGNMENT_NEUTRAL,
-	ALIGNMENT_LIGHT, // mm7 and Merge
-	ALIGNMENT_DARK, // mm7 and Merge
+	ALIGNMENT_NEUTRAL = 0,
+	ALIGNMENT_LIGHT, // mm7 and merge
+	ALIGNMENT_DARK, // mm7 and merge
 };
+
+extern const std::unordered_map<std::string, int> alignmentStringToId;
 
 namespace mm6
 {

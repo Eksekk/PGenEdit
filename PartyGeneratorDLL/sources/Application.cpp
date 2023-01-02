@@ -42,6 +42,11 @@ bool Application::OnInit()
     {
         return false;
     }
+    //wxMessageBox("OnInit()");
+    //MSGBOX("OnInit()");
     mainWindow = new MainWindow(nullptr);
     return true;
 }
+
+// we can't have WinMain() in a DLL and want to start the app ourselves
+wxIMPLEMENT_APP_NO_MAIN(Application);

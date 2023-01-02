@@ -6,7 +6,7 @@ class Application : public wxApp
 {
 public:
     Application();
-    MainWindow* mainWindow = nullptr;
+    MainWindow* mainWindow;
 
     virtual bool OnInit();
 
@@ -15,3 +15,4 @@ private:
     void OnTerminate(wxThreadEvent& event);
 };
 
+wxDECLARE_APP(Application);

@@ -18,8 +18,10 @@ public:
 	std::vector<ClassInfoPanel*> panels;
 	wxBoxSizer* sizer;
 
-	// TODO: three windows, where you can set various settings to use (item/resistance/all etc.)
-	// copy from to, randomize, set to default
+	// TODO: five windows, where you can set various settings to use (item/resistance/all etc.)
+	// copy from to, randomize, set to default, load, save
+	// class managing one set of controls (settings chooser) for above five uses
+	// copy from to choose settings and choose source&target
 
 	// TODO: show jsoned settings (for manual copy) in window appearing when settings couldn't be saved to file
 

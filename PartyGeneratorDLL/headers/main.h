@@ -26,6 +26,8 @@ struct lua_State;
 #define SAME(unknownType, knownType) std::is_same_v<std::decay_t<decltype(unknownType)>, knownType>
 #define TYPE(x) std::decay_t<decltype(x)>
 
+#define JSON_DIAGNOSTICS 1
+#include <json.hpp>
 using Json = nlohmann::json;
 
 void MSGBOX(const char* text);

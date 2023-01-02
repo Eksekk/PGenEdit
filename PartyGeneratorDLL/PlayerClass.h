@@ -15,7 +15,7 @@ public:
 	Alignment alignment; // light, dark, neutral
 	std::vector<PlayerClass*> promotionClasses; // higher tier
 	std::unordered_map<int, Mastery> maximumSkillMasteries;
-	double playerTypeAffinity[PLAYER_TYPE_COUNT]; // how appropriate is this class for given player type
+	std::unordered_map<int, double> playerTypeAffinity; // how appropriate is this class for given player type
 	int classWindowId;
 
 	PlayerClass();

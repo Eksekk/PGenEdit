@@ -46,7 +46,7 @@ ClassInfoPanel::ClassInfoPanel(wxWindow* parent, wxWindowID id, const wxPoint& p
 	sizer->Add(alignment, 0, wxBOTTOM | wxEXPAND, 5);
 
 
-	sizer->Add(sizer, 0, 0, 5);
+	//sizer->Add(sizer, 0, 0, 5); // INFINITE RECURSION, RETAINED FOR LAUGHS - I SPENT 1.5H ON THIS :(((
 
 
 	sizer->Add(0, 20, 0, wxEXPAND, 5);

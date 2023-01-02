@@ -3,13 +3,15 @@
 #include "PlayerSkill.h"
 #include "GameData.h"
 
+extern const int INVALID_ID;
+
 Skill splitSkill(int skill)
 {
-	int mask = (1 << (SKILL_BITS)) - 1;
+	int mask = (1 << SKILL_BITS) - 1;
 	int lev = skill & mask;
 	if (SKILL_COMBINE_MODE == BIT_PER_MASTERY)
 	{
-		for (int i = 3; i >= NOVICE; --i)
+		for (int i = GRAND_MASTER; i >= NOVICE; --i)
 		{
 			if (skill & (1 << MASTERY_BITS[i]))
 			{
@@ -44,4 +46,14 @@ int joinSkill(Skill skill)
 	{
 		throw std::runtime_error("Invalid skill combining mode!");
 	}
+}
+
+PlayerSkill::PlayerSkill()
+{
+	id = INVALID_ID;
+	for (int i = 0; i < PLAYER_TYPE_COUNT; ++i)
+	{
+		affinityByPlayerType.emplace(i, 1);
+	}
+	doNotGenerate = false;
 }

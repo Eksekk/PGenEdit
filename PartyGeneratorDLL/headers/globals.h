@@ -19,3 +19,9 @@ extern lua_State* Lua;
 extern void* game;
 
 extern bool allDataReceived; // from lua, like class info
+
+// functions from lua
+typedef bool (*isTwoHanded_ptr)(void*, int); // player ptr, item id
+extern isTwoHanded_ptr isTwoHanded;
+typedef bool (*isEquippableInOffhand_ptr)(void*, int);
+extern isEquippableInOffhand_ptr isEquippableInOffhand;

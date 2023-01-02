@@ -2,12 +2,17 @@
 #include "main.h"
 #include "MainWindow.h"
 #include "Application.h"
+#include "Generator.h"
+#include "PlayerPanel.h"
+#include "ClassWindow.h"
 
 ///////////////////////////////////////////////////////////////////////////
 
+extern int MAX_PLAYERS;
+
 MainWindow::MainWindow(wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style) : wxFrame(parent, id, title, pos, size, style)
 {
-	
+	assert(MAX_PLAYERS >= 4);
 	this->SetSizeHints(wxDefaultSize, wxDefaultSize);
 
 	statusBar = this->CreateStatusBar(1, wxSTB_SIZEGRIP, wxID_ANY);
@@ -16,13 +21,20 @@ MainWindow::MainWindow(wxWindow* parent, wxWindowID id, const wxString& title, c
 
 	wxBoxSizer* bSizer6;
 	bSizer6 = new wxBoxSizer(wxVERTICAL);
-
+	
 	this->SetSizer(bSizer6);
-	this->Layout();
 
 	this->Centre(wxBOTH);
 
+	for (int i = 0; i < MAX_PLAYERS; ++i)
+	{
+		playerPanels.push_back(new PlayerPanel(this));
+	}
+
+	generalClassWindow = new ClassWindow(this);
+
 	Bind(wxEVT_CLOSE_WINDOW, &MainWindow::onClose, this);
+	this->Layout();
 }
 
 void MainWindow::setupMenus()

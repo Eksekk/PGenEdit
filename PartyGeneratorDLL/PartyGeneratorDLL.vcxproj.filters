@@ -120,6 +120,12 @@
     <ClInclude Include="ClassGenerationData.h">
       <Filter>Pliki nagłówkowe\Generator</Filter>
     </ClInclude>
+    <ClInclude Include="PlayerPanel.h">
+      <Filter>Pliki nagłówkowe\GUI</Filter>
+    </ClInclude>
+    <ClInclude Include="Tests.h">
+      <Filter>Pliki nagłówkowe</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="sources\dllApi.cpp">
@@ -202,6 +208,12 @@
     </ClCompile>
     <ClCompile Include="ClassGenerationData.cpp">
       <Filter>Pliki źródłowe\Generator</Filter>
+    </ClCompile>
+    <ClCompile Include="PlayerPanel.cpp">
+      <Filter>Pliki źródłowe\GUI</Filter>
+    </ClCompile>
+    <ClCompile Include="Tests.cpp">
+      <Filter>Pliki źródłowe</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

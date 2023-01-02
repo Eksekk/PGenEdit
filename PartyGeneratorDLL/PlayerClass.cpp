@@ -6,26 +6,26 @@ extern const int INVALID_ID;
 
 PlayerClass::PlayerClass() : id(INVALID_ID), name(""), tier(0), baseClass(nullptr), alignment(ALIGNMENT_NEUTRAL), playerTypeAffinity()
 {
-	for (double& d : playerTypeAffinity)
+	for (int i = 0; i < PLAYER_TYPE_COUNT; ++i)
 	{
-		d = 1.0;
+		playerTypeAffinity.emplace(i, 1);
 	}
 }
 
 PlayerClass::PlayerClass(int id, std::string name, int tier) : id(id), name(name), tier(0), baseClass(nullptr), alignment(ALIGNMENT_NEUTRAL), playerTypeAffinity()
 {
-	for (double& d : playerTypeAffinity)
+	for (int i = 0; i < PLAYER_TYPE_COUNT; ++i)
 	{
-		d = 1.0;
+		playerTypeAffinity.emplace(i, 1);
 	}
 }
 
 PlayerClass::PlayerClass(int id, std::string name, int tier, PlayerClass* baseClass, Alignment alignment)
 	: id(id), name(name), tier(tier), baseClass(baseClass), alignment(alignment), playerTypeAffinity()
 {
-	for (double& d : playerTypeAffinity)
+	for (int i = 0; i < PLAYER_TYPE_COUNT; ++i)
 	{
-		d = 1.0;
+		playerTypeAffinity.emplace(i, 1);
 	}
 }
 

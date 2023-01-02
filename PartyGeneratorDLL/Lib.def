@@ -3,6 +3,8 @@ VERSION 0.1
 EXPORTS
 	init
 	unloadCleanup
+	runEventLoopOnce
 	displayMainWindow
 	setLuaState
 	setClassData
+	setCallbacks

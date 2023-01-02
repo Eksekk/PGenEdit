@@ -18,7 +18,11 @@ class PlayerSkill
 public:
 	int id;
 	std::string name;
-	SkillType type;
-	std::vector<Mastery> maxMasteryByClass;
-	std::vector<double> affinityByPlayerType;
+	std::vector<SkillType> types;
+	SkillSpecial special;
+	std::unordered_map<int, Mastery> maxMasteryByClass; // <class, mastery>
+	std::unordered_map<int, double> affinityByPlayerType;
+	bool doNotGenerate; // for skills like diplomacy in mm7 (yes, it exists ingame)
+
+	PlayerSkill();
 };

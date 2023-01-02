@@ -1,6 +1,9 @@
 #include <windows.h>
 #include <iostream>
 #include <string>
+#include <fstream>
+#include <sstream>
+#include <cassert>
 
 int main()
 {
@@ -16,6 +19,15 @@ int main()
 	}
 	auto init = GetProcAddress(dll, "init");
 	init();
+	//char pwd[MAX_PATH];
+	//GetCurrentDirectoryA(MAX_PATH, pwd);
+	//MessageBoxA(NULL, pwd, "Working directory", 0);
+	std::fstream file("classData.json");
+	assert(file.good());
+	std::stringstream ss;
+	ss << file.rdbuf();
+	auto setClassData = ( bool (__stdcall *)(const char*))GetProcAddress(dll, "setClassData");
+	setClassData(ss.str().c_str());
 	std::string cmd;
 	while (std::cin >> cmd)
 	{

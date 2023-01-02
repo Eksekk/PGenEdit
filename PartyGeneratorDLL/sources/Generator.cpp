@@ -18,8 +18,13 @@ inline void checkAffinity(double aff)
 Generator::Generator()
 {
 	assert(MAX_PLAYERS >= 4); // set in init() exported dll function
-	playerData = new PlayerData[MAX_PLAYERS] {};
 	generateForPlayer = new bool[MAX_PLAYERS];
+
+	for (int i = 0; i < GameData::classes.size(); ++i)
+	{
+		globalClassSettings.emplace(GameData::classes[i].id, ClassGenerationSettings());
+	}
+	playerData.resize(MAX_PLAYERS);
 	setDefaults(); // also sets defaults for player data and activates generation for every player
 	mockPlayers = nullptr;
 	mock = false;
@@ -27,7 +32,6 @@ Generator::Generator()
 
 Generator::~Generator()
 {
-	delete[] playerData;
 	delete[] generateForPlayer;
 }
 
@@ -53,6 +57,19 @@ void Generator::setDefaults()
 	unsetArtifactsFoundBits = false;
 	setArtifactsFoundBitsIfGenerated = false;
 	defaultGlobalClassSettings.setDefaults();
+	miscSkillsAtMostOnePlayer = true;
+	for (auto& [i, classGenerationSettings] : globalClassSettings)
+	{
+		classGenerationSettings.setDefaults();
+	}
+}
+
+void Generator::createClassSettings()
+{
+	for (int i = 0; i < GameData::classes.size(); ++i)
+	{
+		globalClassSettings.emplace(GameData::classes[i].id, ClassGenerationSettings());
+	}
 }
 
 template<typename Player>
