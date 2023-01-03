@@ -4,6 +4,7 @@
 #include "ClassWindow.h"
 
 class PlayerPanel;
+class wxNotebook;
 
 class MainWindow : public wxFrame
 {
@@ -23,6 +24,7 @@ public:
 
 	std::vector<PlayerPanel*> playerPanels;
 	ClassWindow* generalClassWindow;
+	wxNotebook* tabs;
 
 	MainWindow(wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = _("Party generator"), const wxPoint& pos = wxDefaultPosition,
 		const wxSize& size = wxSize(1280, 720), long style = wxDEFAULT_FRAME_STYLE | wxTAB_TRAVERSAL);

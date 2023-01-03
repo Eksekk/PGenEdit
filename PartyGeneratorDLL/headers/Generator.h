@@ -70,6 +70,7 @@ public:
 	- classes
 	- level
 
+	unordered yet:
 	- items
 	- skills
 	- spells

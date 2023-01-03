@@ -39,5 +39,4 @@ public:
 	virtual bool writeToJson(Json& json) override;
 
 	virtual void setDefaults() override;
-
 };

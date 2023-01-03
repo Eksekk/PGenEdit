@@ -126,6 +126,9 @@
     <ClInclude Include="Tests.h">
       <Filter>Pliki nagłówkowe</Filter>
     </ClInclude>
+    <ClInclude Include="ClassSettingsTab.h">
+      <Filter>Pliki nagłówkowe</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="sources\dllApi.cpp">
@@ -213,6 +216,9 @@
       <Filter>Pliki źródłowe\GUI</Filter>
     </ClCompile>
     <ClCompile Include="Tests.cpp">
+      <Filter>Pliki źródłowe</Filter>
+    </ClCompile>
+    <ClCompile Include="ClassSettingsTab.cpp">
       <Filter>Pliki źródłowe</Filter>
     </ClCompile>
   </ItemGroup>

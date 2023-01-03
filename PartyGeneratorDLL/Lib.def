@@ -7,4 +7,5 @@ EXPORTS
 	displayMainWindow
 	setLuaState
 	setClassData
+	setSkillData
 	setCallbacks

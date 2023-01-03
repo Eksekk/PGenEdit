@@ -9,7 +9,7 @@ bool IS_MERGE = false;
 Mastery MAX_MASTERY = Mastery::GM; // 3 in mm6, 4 in mm7+
 SkillCombineMode SKILL_COMBINE_MODE = BIT_PER_MASTERY;
 int SKILL_BITS = 6;
-int MASTERY_BITS[4] = { 8, 7, 6, 5 };
+int MASTERY_BITS[5] = {-1, 5, 6, 7, 8};
 
 const double MINIMUM_AFFINITY = 0.0;
 const double MAXIMUM_AFFINITY = 1.0;

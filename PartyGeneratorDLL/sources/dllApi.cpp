@@ -12,6 +12,7 @@
 #include "PlayerData.h"
 #include "PlayerPanel.h"
 #include "ClassWindow.h"
+#include "GameData.h"
 
 // ----------------------------------------------------------------------------
 // application startup
@@ -216,7 +217,7 @@ extern "C"
                     MessageBoxA(nullptr, "Party generator couldn't load", nullptr, 0);
 
                     // flush logs (saw it in some wxwidgets source file)
-                    delete wxLog::SetActiveTarget(NULL);
+                    //delete wxLog::SetActiveTarget(NULL);
                 }
                 app = &wxGetApp();
                 assert(dynamic_cast<Application*>(app));
@@ -230,6 +231,8 @@ extern "C"
         case DLL_PROCESS_DETACH:
             // detach from process
             //wxUninitialize();
+            //MSGBOX("x");
+            wxLog::FlushActive();
             delete generator;
             wxEntryCleanup();
             //app->OnExit();
@@ -238,7 +241,6 @@ extern "C"
             //app->CleanUp();
             //MessageBoxA(nullptr, "Library unloaded successfully.", "Unloaded!", 0);
             break;
-
         case DLL_THREAD_ATTACH:
             // attach to thread
             break;
@@ -283,14 +285,16 @@ extern "C"
 
     DLL_EXPORT void __stdcall runEventLoopOnce()
     {
+        assert(dynamic_cast<wxLogGui*>(wxLog::GetActiveTarget()));
+        wxLog::FlushActive();
         app->ProcessPendingEvents();
         //wxGetApp().mainWindow->playerPanels.size()
         //wxLogFatalError("app pointer: %X, mainWindow pointer: %X, playerPanels pointer: %X", (unsigned int)app, (unsigned int)app->mainWindow, (unsigned int)&app->mainWindow->playerPanels);
     }
 
-    DLL_EXPORT void __stdcall displayMainWindow(bool visible)
+    DLL_EXPORT void __stdcall displayMainWindow(bool visible = true)
     {
-        if (!allDataReceived)
+        if (!GameData::allDataReceived)
         {
             std::vector<wxString> errors;
             if (GameData::classes.empty()) // TODO change check, as data will be partially filled from game structures
@@ -305,10 +309,7 @@ extern "C"
             wxMessageBox(concatWxStrings(errors, "\n"), "Error", wxOK | wxICON_ERROR);
             return;
         }
-        allDataReceived = true;
-        wxThreadEvent* event = new wxThreadEvent(wxEVT_THREAD, CMD_SHOW_WINDOW);
-        event->SetInt(visible);
-        wxQueueEvent(wxApp::GetInstance(), event);
+        wxGetApp().mainWindow->Show(visible);
     }
 
     DLL_EXPORT void __stdcall unloadCleanup()
@@ -344,189 +345,12 @@ extern "C"
 
     DLL_EXPORT void __stdcall setClassData(const char* jsonStr)
     {
-        Json json = Json::parse(jsonStr);
-        //wxLogMessage(wxString(to_string(json)));
-        if (json.size() == 0)
-        {
-            wxLogMessage("invalid json: " + wxString(to_string(json)));
-            return;
-        }
-
-        // TODO: move to GameData class?
-
-        // first pass - create entries for all classes to allow setting pointers to them (promotion/base classes)
-        try
-        {
-            auto& entries = GameData::classes;
-            for (auto& classEntry : json)
-            {
-                wxLogMessage(wxString(classEntry.type_name()));
-                //wxLogMessage(wxString(to_string(classEntry)));
-                PlayerClass cls;
-                int id = classEntry["id"];
-                cls.id = id;
-                cls.name = classEntry["name"];
-                if (classEntry.contains("tier"))
-                {
-                    cls.tier = classEntry["tier"];
-                }
-                if (classEntry.contains("alignment"))
-                {
-                    std::string str = tolowerStr(classEntry["alignment"]);
-                    auto itr = plTypeEnumStringToId.find(str);
-                    if (itr != plTypeEnumStringToId.end())
-                    {
-                        cls.alignment = (Alignment)itr->second;
-                    }
-                    else
-                    {
-                        wxLogWarning("Invalid value (%s) for class alignment (class %d - %s)", str, cls.id, cls.name);
-                    }
-                }
-                if (classEntry.contains("playerTypeAffinity"))
-                {
-                    for (auto& [playerTypeStr, affinity] : classEntry["playerTypeAffinity"].items())
-                    {
-                        auto itr = plTypeEnumStringToId.find(playerTypeStr);
-                        if (itr != plTypeEnumStringToId.end())
-                        {
-                            cls.playerTypeAffinity.emplace(id, affinity);
-                        }
-                        else
-                        {
-                            wxLogWarning("Unknown player type %s for class %d", playerTypeStr, cls.id);
-                        }
-
-                    }
-                }
-                else
-                {
-                    wxLogWarning("Class entry of id %d doesn't contain player type affinity field", (int)classEntry["id"]);
-                }
-                entries[id] = std::move(cls);
-            }
-
-            // second pass - actually set the pointers
-
-            for (auto& classEntry : json)
-            {
-                if (classEntry.contains("promotionClasses"))
-                {
-                    auto promos = classEntry["promotionClasses"].get<std::vector<int> >();
-                    for (int id : promos)
-                    {
-                        auto itr = entries.find(id);
-                        if (itr != entries.end())
-                        {
-                            entries[classEntry["id"]].promotionClasses.push_back(&(itr->second));
-                        }
-                        else
-                        {
-                            wxLogWarning("Promotion class %d not found", id);
-                        }
-                    }
-                }
-                else
-                {
-                    wxLogWarning("Class entry of id %d doesn't contain promotion classes field", (int)classEntry["id"]);
-                }
-
-                if (classEntry.contains("baseClass"))
-                {
-                    int baseId = classEntry["baseClass"];
-                    auto itr = entries.find(baseId);
-                    if (itr != entries.end())
-                    {
-                        entries[classEntry["id"]].baseClass = &(itr->second);
-                        // could also set promotion classes at the same time (inverse), but
-                        // I like being slightly verbose here with json than implementing it
-                    }
-                    else
-                    {
-                        wxLogWarning("Base class %d not found", baseId);
-                    }
-                }
-                else
-                {
-                    wxLogWarning("Class entry of id %d doesn't contain base class field", (int)classEntry["id"]);
-                }
-            }
-
-            for (auto& pdata : generator->playerData)
-            {
-                pdata.classes.createSettings();
-            }
-
-            int i = 0;
-            
-            generator->createClassSettings();
-            assert((wxGetApp().mainWindow->playerPanels.size() == MAX_PLAYERS) && wxString::Format("Invalid vector size %d, expected %d", wxGetApp().mainWindow->playerPanels.size(), MAX_PLAYERS).ToStdString().c_str());
-            for (auto& panel : wxGetApp().mainWindow->playerPanels)
-            {
-                panel->classWindow->createPanels(generator->playerData[i].classes.defaultSettings, generator->playerData[i].classes.settings);
-                ++i;
-            }
-            wxGetApp().mainWindow->generalClassWindow->createPanels(generator->defaultGlobalClassSettings, generator->globalClassSettings);
-        }
-        catch (const nlohmann::json::exception& ex)
-        {
-            wxLogMessage("Exception received! Type: %s\n\nwhat(): %s", typeid(ex).name(), wxString(ex.what()));
-        }
-
-        // TODO, set GameData::classes AND call ClassGenerationData::createSettings for global/per player default/per player specific class settings
-        // AND call ClassWindow::createPanels AND create default class settings panel
-        // a lot of things to do :)
-
-        // TODO 2: masteries
+        GameData::processClassDataJson(jsonStr);
     }
 
     DLL_EXPORT void __stdcall setSkillData(const char* jsonStr)
     {
-        Json json = Json::parse(jsonStr);
-        wxLogMessage(wxString(to_string(json)));
-
-        // TODO: move to GameData class?
-
-        auto& entries = GameData::skills;
-        for (auto& skillEntry : json)
-        {
-            PlayerSkill sk;
-            int id = skillEntry["id"].get<int>();
-            sk.id = id;
-            sk.name = skillEntry["name"].get<std::string>();
-            auto maxMasteryByClass = skillEntry["maxMasteryByClass"].get<std::vector<int> >();
-            for (int i = 0; i < maxMasteryByClass.size(); ++i)
-            {
-                sk.maxMasteryByClass.emplace(i, (Mastery)maxMasteryByClass[i]);
-            }
-            sk.types = skillEntry["types"].get<std::vector<SkillType> >();
-            sk.doNotGenerate = skillEntry.contains("doNotGenerate");
-            if (skillEntry.contains("special"))
-            {
-                auto itr = skillSpecialEnumStringToId.find(skillEntry["special"].get<std::string>());
-                if (itr != skillSpecialEnumStringToId.end())
-                {
-                    sk.special = (SkillSpecial)itr->second;
-                }
-                else
-                {
-                    wxLogWarning("Unknown special %s for skill %d", skillEntry["special"].get<std::string>(), sk.id);
-                }
-            }
-            for (auto& [plTypeStr, affinity] : skillEntry["affinityByPlayerType"].items())
-            {
-                auto itr = plTypeEnumStringToId.find(plTypeStr);
-                if (itr != plTypeEnumStringToId.end())
-                {
-                    sk.affinityByPlayerType.emplace(itr->second, affinity.get<double>());
-                }
-                else
-                {
-                    wxLogWarning("Unknown special %s for skill %d", std::string(skillEntry["special"]), sk.id);
-                }
-            }
-            entries[id] = std::move(sk);
-        }
+        GameData::processSkillDataJson(jsonStr);
     }
 
     DLL_EXPORT bool __stdcall setCallbacks(const char* jsonStr)

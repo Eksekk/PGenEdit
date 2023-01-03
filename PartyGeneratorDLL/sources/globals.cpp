@@ -19,7 +19,5 @@ int MMVER = INVALID_ID;
 
 void* game = 0;
 
-bool allDataReceived = false;
-
 isTwoHanded_ptr isTwoHanded = (isTwoHanded_ptr)0;
 isEquippableInOffhand_ptr isEquippableInOffhand = (isEquippableInOffhand_ptr)0;

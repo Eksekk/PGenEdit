@@ -31,14 +31,7 @@ PlayerClass::PlayerClass(int id, std::string name, int tier, PlayerClass* baseCl
 
 PlayerClass::~PlayerClass()
 {
-	for (PlayerClass*& ptr : promotionClasses)
-	{
-		if (ptr)
-		{
-			delete ptr;
-			ptr = nullptr;
-		}
-	}
+	
 }
 
 std::vector<PlayerClass*> PlayerClass::getEntireClassTree(int id)
