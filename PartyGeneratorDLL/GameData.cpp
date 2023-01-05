@@ -8,6 +8,7 @@
 #include "Application.h"
 #include "PlayerData.h"
 #include "PlayerPanel.h"
+#include "wx/notebook.h"
 
 std::unordered_map<int, PlayerClass> GameData::classes;
 std::unordered_map<int, PlayerSkill> GameData::skills;
@@ -138,10 +139,11 @@ bool GameData::processClassDataJson(const char* str)
         int i = 0;
 
         generator->createClassSettings();
-        assert((wxGetApp().mainWindow->playerPanels.size() == MAX_PLAYERS) && wxString::Format("Invalid vector size %d, expected %d", wxGetApp().mainWindow->playerPanels.size(), MAX_PLAYERS).ToStdString().c_str());
-        for (auto& panel : wxGetApp().mainWindow->playerPanels)
+        assert((wxGetApp().mainWindow->tabs->GetPageCount() == MAX_PLAYERS) && wxString::Format("Invalid notebook tab count %d, expected %d", wxGetApp().mainWindow->tabs->GetPageCount(), MAX_PLAYERS).ToStdString().c_str());
+        for (int i = 0; i < wxGetApp().mainWindow->tabs->GetPageCount(); ++i)
         {
-            panel->classWindow->createPanels(generator->playerData[i].classes.defaultSettings, generator->playerData[i].classes.settings);
+            auto tab = static_cast<PlayerPanel*>(wxGetApp().mainWindow->tabs->GetPage(i));
+            tab->classWindow->createPanels(generator->playerData[i].classes.defaultSettings, generator->playerData[i].classes.settings);
             ++i;
         }
         wxGetApp().mainWindow->generalClassWindow->createPanels(generator->defaultGlobalClassSettings, generator->globalClassSettings);

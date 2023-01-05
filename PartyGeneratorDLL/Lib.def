@@ -9,3 +9,4 @@ EXPORTS
 	setClassData
 	setSkillData
 	setCallbacks
+	setPlayerPointers

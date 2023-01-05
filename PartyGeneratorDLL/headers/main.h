@@ -20,8 +20,9 @@ struct lua_State;
 #define JOIN(a, b) a ## b
 #define JOIN2(a, b) JOIN(a, b)
 #define SKIP(bytes) uint8_t JOIN2(unknown_, __COUNTER__)[bytes]
-#define SKIPBITS(bits) int : bits // name is optional
-#define NEXTBYTE() int : 0 // allocates at next byte, can use skipbits instead
+#define SKIPBITS(bits) static_assert(bits <= 8, "Bit amount cannot be higher than 8 because MSVC compiler will not pack bitfields properly");\
+    bool : bits // name is optional
+//#define NEXTBYTE() int : 0 // allocates at next byte, can use skipbits instead
 
 #define SAME(unknownType, knownType) std::is_same_v<std::decay_t<decltype(unknownType)>, knownType>
 #define TYPE(x) std::decay_t<decltype(x)>

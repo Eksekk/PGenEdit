@@ -3,6 +3,7 @@
 #include "main.h"
 
 extern int MAX_PLAYERS; // auto
+//extern int HIRED_PLAYERS; // in mm8
 extern bool IS_ELEMENTAL_MOD; // auto
 extern bool IS_MERGE; // lua
 

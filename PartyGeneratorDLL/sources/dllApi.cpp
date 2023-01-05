@@ -209,22 +209,6 @@ extern "C"
                 }
                 generator = new Generator();
 
-                // wxWidgets init
-                HINSTANCE hinstExe = GetModuleHandleA(nullptr); // HMODULE is convertible to HINSTANCE
-                //wxEntry(hinstExe); // STARTS EVENT LOOP AND RUNS IT, OTHER CODE CAN'T EXECUTE
-                if (!wxEntryStart(hinstExe))
-                {
-                    MessageBoxA(nullptr, "Party generator couldn't load", nullptr, 0);
-
-                    // flush logs (saw it in some wxwidgets source file)
-                    //delete wxLog::SetActiveTarget(NULL);
-                }
-                app = &wxGetApp();
-                assert(dynamic_cast<Application*>(app));
-                app->CallOnInit();
-                //MSGBOX((std::string("app: ") + std::to_string((int)app)).c_str());
-                //MSGBOX((std::string("window: ") + std::to_string((int)app->mainWindow)).c_str());
-                
                 break;
             }
 
@@ -232,9 +216,7 @@ extern "C"
             // detach from process
             //wxUninitialize();
             //MSGBOX("x");
-            wxLog::FlushActive();
             delete generator;
-            wxEntryCleanup();
             //app->OnExit();
             // OnExit isn't called by CleanUp so must be called explicitly.
             //app->OnExit();
@@ -281,18 +263,33 @@ extern "C"
     DLL_EXPORT void __stdcall init()
     {
         //run_wx_gui_from_dll();
+        // wxWidgets init
+        HINSTANCE hinstExe = GetModuleHandleA(nullptr); // HMODULE is convertible to HINSTANCE
+        //wxEntry(hinstExe); // STARTS EVENT LOOP AND RUNS IT, OTHER CODE CAN'T EXECUTE
+        if (!wxEntryStart(hinstExe))
+        {
+            MessageBoxA(nullptr, "Party generator couldn't load", nullptr, 0);
+
+            // flush logs (saw it in some wxwidgets source file)
+            //delete wxLog::SetActiveTarget(NULL);
+        }
+        app = &wxGetApp();
+        assert(dynamic_cast<Application*>(app));
+        app->CallOnInit();
+        //MSGBOX((std::string("app: ") + std::to_string((int)app)).c_str());
+        //MSGBOX((std::string("window: ") + std::to_string((int)app->mainWindow)).c_str());
     }
 
     DLL_EXPORT void __stdcall runEventLoopOnce()
     {
-        assert(dynamic_cast<wxLogGui*>(wxLog::GetActiveTarget()));
+        //assert(dynamic_cast<wxLogGui*>(wxLog::GetActiveTarget()));
         wxLog::FlushActive();
         app->ProcessPendingEvents();
         //wxGetApp().mainWindow->playerPanels.size()
         //wxLogFatalError("app pointer: %X, mainWindow pointer: %X, playerPanels pointer: %X", (unsigned int)app, (unsigned int)app->mainWindow, (unsigned int)&app->mainWindow->playerPanels);
     }
 
-    DLL_EXPORT void __stdcall displayMainWindow(bool visible = true)
+    DLL_EXPORT void __stdcall displayMainWindow(bool visible)
     {
         if (!GameData::allDataReceived)
         {
@@ -316,6 +313,8 @@ extern "C"
     {
         //delete generator;
         //wx_dll_cleanup();
+        wxLog::FlushActive();
+        wxEntryCleanup();
     }
 
     DLL_EXPORT void __stdcall setLuaState(void* ptr)
@@ -360,4 +359,20 @@ extern "C"
         isEquippableInOffhand = (isEquippableInOffhand_ptr)(unsigned int)json["isEquippableInOffhand"];
         return true;
     }
+
+    DLL_EXPORT void __stdcall setPlayerPointers(void** ptrs)
+    {
+        if (!generator->players)
+        {
+            generator->players = new void* [MAX_PLAYERS];
+        }
+        // TODO: mm8 compatibility
+        for (int i = 0; i < MAX_PLAYERS; ++i)
+        {
+            
+            generator->players[i] = ptrs[i];
+        }
+    }
+
+
 }

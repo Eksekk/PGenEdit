@@ -18,7 +18,7 @@ inline void checkAffinity(double aff)
 Generator::Generator()
 {
 	assert(MAX_PLAYERS >= 4); // set in init() exported dll function
-	generateForPlayer = new bool[MAX_PLAYERS];
+	generateForPlayer = new bool[MAX_PLAYERS] {true};
 
 	for (int i = 0; i < GameData::classes.size(); ++i)
 	{
@@ -26,13 +26,14 @@ Generator::Generator()
 	}
 	playerData.resize(MAX_PLAYERS);
 	setDefaults(); // also sets defaults for player data and activates generation for every player
-	mockPlayers = nullptr;
+	players = mockPlayers = nullptr;
 	mock = false;
 }
 
 Generator::~Generator()
 {
 	delete[] generateForPlayer;
+	delete[] players; // deletes only stored player pointer array, not actual player structs
 }
 
 bool Generator::readFromJson(const Json& json)

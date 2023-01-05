@@ -9,12 +9,15 @@ class wxNotebook;
 class MainWindow : public wxFrame
 {
 private:
+	void onClose(wxCloseEvent& event);
+	void onShow(wxShowEvent& event);
+	void setupMenus();
 
 protected:
 	
 public:
 
-	void setupMenus();
+	
 
 	wxStatusBar* statusBar;
 	wxMenuBar* menuBar;
@@ -31,6 +34,9 @@ public:
 
 	~MainWindow();
 
-	void onClose(wxCloseEvent& event);
+	template<typename Player>
+	void updatePlayerNames(wxShowEvent& event);
+	template<typename Player>
+	std::vector<wxString> getPlayerNames();
 };
 

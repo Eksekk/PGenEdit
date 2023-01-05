@@ -12,7 +12,7 @@ namespace mm6
 
 namespace mm7
 {
-	struct Item // size: 0x24
+	/*struct Item // size: 0x24
 	{
 		int32_t number;
 		int32_t bonus;
@@ -39,10 +39,10 @@ namespace mm7
 		int8_t owner;
 		SKIP(1);
 		int64_t bonusExpireTime;
-	};
+	};*/
 }
 
-using ItemInternal = mm7::Item; // has all required fields
+//using ItemInternal = mm7::Item; // has all required fields
 
 namespace mm8
 {

@@ -5,10 +5,47 @@
 #include "Generator.h"
 #include "PlayerPanel.h"
 #include "ClassWindow.h"
+#include <wx/notebook.h>
+#include "Player.h"
+#include "Generator.h"
 
 ///////////////////////////////////////////////////////////////////////////
 
 extern int MAX_PLAYERS;
+extern int MMVER;
+extern Generator* generator;
+
+template<typename Player>
+void MainWindow::updatePlayerNames(wxShowEvent& event)
+{
+	auto names = getPlayerNames<Player>();
+	for (int i = 0; i < tabs->GetPageCount(); ++i)
+	{
+		tabs->SetPageText(i, names[i]);
+	}
+}
+
+template<typename Player>
+std::vector<wxString> MainWindow::getPlayerNames()
+{
+	std::vector<wxString> names;
+	if (generator->players) // setPlayerPointers() was called
+	{
+		for (int i = 0; i < MAX_PLAYERS; ++i)
+		{
+			names.push_back(reinterpret_cast<Player*>(generator->players[i])->name);
+		}
+	}
+	else
+	{
+		for (int i = 0; i < MAX_PLAYERS; ++i)
+		{
+			names.push_back(wxString::Format("Player %d", i + 1));
+		}
+	}
+	
+	return names;
+}
 
 MainWindow::MainWindow(wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style) : wxFrame(parent, id, title, pos, size, style)
 {
@@ -26,14 +63,33 @@ MainWindow::MainWindow(wxWindow* parent, wxWindowID id, const wxString& title, c
 
 	this->Centre(wxBOTH);
 
+	tabs = new wxNotebook(this, wxID_ANY, pos, size, wxNB_TOP | wxNB_FIXEDWIDTH);
+	std::vector<wxString> playerNames;
+	if (MMVER == 6)
+	{
+		//Bind(wxEVT_SHOW, &MainWindow::updatePlayerNames<mm6::Player>, this);
+		//playerNames = getPlayerNames<mm6::Player>();
+	}
+	else if (MMVER == 7)
+	{
+		Bind(wxEVT_SHOW, &MainWindow::updatePlayerNames<mm7::Player>, this);
+		playerNames = getPlayerNames<mm7::Player>();
+	}
+	else if (MMVER == 8)
+	{
+		//Bind(wxEVT_SHOW, &MainWindow::updatePlayerNames<mm8::Player>, this);
+		//playerNames = getPlayerNames<mm8::Player>();
+	}
+
 	for (int i = 0; i < MAX_PLAYERS; ++i)
 	{
-		playerPanels.push_back(new PlayerPanel(this));
+		tabs->AddPage(new PlayerPanel(tabs), playerNames[i], i == 0 ? true : false);
 	}
 
 	generalClassWindow = new ClassWindow(this);
 
 	Bind(wxEVT_CLOSE_WINDOW, &MainWindow::onClose, this);
+	
 	this->Layout();
 }
 
@@ -75,6 +131,10 @@ void MainWindow::setupMenus()
 }
 
 MainWindow::~MainWindow()
+{
+}
+
+void MainWindow::onShow(wxShowEvent& event)
 {
 }
 
