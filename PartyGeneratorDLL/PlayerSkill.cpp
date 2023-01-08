@@ -5,24 +5,29 @@
 
 extern const int INVALID_ID;
 
+bool Skill::operator==(const Skill& other)
+{
+	return level == other.level && mastery == other.mastery;
+}
+
 Skill splitSkill(int skill)
 {
 	int mask = (1 << SKILL_BITS) - 1;
 	int lev = skill & mask;
 	if (SKILL_COMBINE_MODE == BIT_PER_MASTERY)
 	{
-		for (int i = GRAND_MASTER; i >= NOVICE; --i)
+		for (int i = GRAND_MASTER; i > NOVICE; --i)
 		{
 			if (skill & (1 << MASTERY_BITS[i]))
 			{
 				return Skill{ lev, i };
 			}
 		}
-		return Skill{ lev, 0 };
+		return Skill{ lev, lev == 0 ? 0 : 1 };
 	}
 	else if (SKILL_COMBINE_MODE == PACKED)
 	{
-		return Skill{ lev, skill >> SKILL_BITS };
+		return Skill{ lev, lev == 0 ? 0 : (skill >> SKILL_BITS) + 1 };
 	}
 	else
 	{
@@ -32,15 +37,18 @@ Skill splitSkill(int skill)
 
 int joinSkill(Skill skill)
 {
-	int mask = (1 << (SKILL_BITS)) - 1;
 	int result = skill.level;
+	if (!result || !skill.mastery)
+	{
+		return 0;
+	}
 	if (SKILL_COMBINE_MODE == BIT_PER_MASTERY)
 	{
-		return result | (1 << MASTERY_BITS[skill.mastery]);
+		return result | (skill.mastery > NOVICE ? (1 << MASTERY_BITS[skill.mastery]) : 0);
 	}
 	else if (SKILL_COMBINE_MODE == PACKED)
 	{
-		return result | (skill.mastery << SKILL_BITS);
+		return result | (std::max(skill.mastery - 1, 0) << SKILL_BITS);
 	}
 	else
 	{

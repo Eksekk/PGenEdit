@@ -8,6 +8,8 @@
 struct Skill
 {
 	int level, mastery;
+
+	bool operator==(const Skill& other);
 };
 
 Skill splitSkill(int skill);

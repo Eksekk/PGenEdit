@@ -2,12 +2,12 @@
 #include "pch.h"
 #include "main.h"
 
-class ClassWindow;
+class ClassSettingsTab;
 
 class PlayerPanel : public wxPanel
 {
 public:
-	ClassWindow* classWindow;
+	ClassSettingsTab* classSettingsTab;
 
 	PlayerPanel(wxWindow* parent);
 };

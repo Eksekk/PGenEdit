@@ -13,6 +13,8 @@
 #include "PlayerPanel.h"
 #include "ClassWindow.h"
 #include "GameData.h"
+#include "Tests.h"
+#include <fstream>
 
 // ----------------------------------------------------------------------------
 // application startup
@@ -208,7 +210,27 @@ extern "C"
                     IS_ELEMENTAL_MOD = true;
                 }
                 generator = new Generator();
-
+                std::vector<wxString> errors;
+                if (MMVER == 6)
+                {
+                    errors = Tests::run<mm6::Player, mm6::Game>();
+                }
+                else if (MMVER == 7)
+                {
+                    errors = Tests::run<mm7::Player, mm7::Game>();
+                }
+                else if (MMVER == 8)
+                {
+                    errors = Tests::run<mm8::Player, mm8::Game>();
+                }
+                if (errors.size() > 0)
+                {
+                    wxString str = concatWxStrings(errors);
+                    wxLogError(str);
+                    std::fstream file("errors.txt", std::ios::out | std::ios::in | std::ios::trunc);
+                    file << str;
+                    file.close();
+                }
                 break;
             }
 
@@ -366,13 +388,10 @@ extern "C"
         {
             generator->players = new void* [MAX_PLAYERS];
         }
-        // TODO: mm8 compatibility
+        // TODO: mm8 compatibility (player pointers and player names and even player count can change at runtime!)
         for (int i = 0; i < MAX_PLAYERS; ++i)
         {
-            
             generator->players[i] = ptrs[i];
         }
     }
-
-
 }

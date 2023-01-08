@@ -1,8 +1,8 @@
 #include "pch.h"
 #include "PlayerPanel.h"
-#include "ClassWindow.h"
+#include "ClassSettingsTab.h"
 
 PlayerPanel::PlayerPanel(wxWindow* parent) : wxPanel(parent)
 {
-	classWindow = new ClassWindow(this, wxID_ANY);
+	classSettingsTab = new ClassSettingsTab(this);
 }

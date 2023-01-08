@@ -28,7 +28,7 @@ enum Mastery
 extern Mastery MAX_MASTERY; // 3 in mm6, 4 in mm7+
 extern SkillCombineMode SKILL_COMBINE_MODE;
 extern int SKILL_BITS;
-extern int MASTERY_BITS[5];
+extern std::array<int, 5> MASTERY_BITS;
 
 extern const double MINIMUM_AFFINITY;
 extern const double MAXIMUM_AFFINITY;

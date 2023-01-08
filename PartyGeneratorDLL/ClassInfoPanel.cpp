@@ -2,13 +2,14 @@
 #include "ClassInfoPanel.h"
 #include "ClassGenerationData.h"
 
-ClassInfoPanel::ClassInfoPanel(wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style, const wxString& title) : wxPanel(parent, id, pos, size, style, title)
+ClassInfoPanel::ClassInfoPanel(wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style, const wxString& title) : wxPanel(parent, id, pos, size, style, title), resetButton(nullptr)
 {
 	this->SetSizeHints(wxDefaultSize, wxDefaultSize);
 
 	linkedClassSettings = nullptr;
 
 	sizer = new wxBoxSizer(wxHORIZONTAL);
+	this->SetSizer(sizer);
 
 	wxStaticBoxSizer* tierSizer;
 	tierSizer = new wxStaticBoxSizer(new wxStaticBox(this, wxID_ANY, _("Tier")), wxHORIZONTAL);
@@ -39,7 +40,7 @@ ClassInfoPanel::ClassInfoPanel(wxWindow* parent, wxWindowID id, const wxPoint& p
 
 	sizer->Add(30, 0, 1, wxEXPAND, 5);
 
-	wxString alignmentChoices[] = { ("Both"), _("Light"), _("Dark") }; // TODO: properly set order from enum values
+	wxString alignmentChoices[] = { _("Both"), _("Light"), _("Dark") }; // TODO: properly set order from enum values
 	int alignmentNChoices = sizeof(alignmentChoices) / sizeof(wxString);
 	alignment = new wxRadioBox(this, wxID_ANY, _("Alignment"), wxDefaultPosition, wxDefaultSize, alignmentNChoices, alignmentChoices, 1, wxRA_SPECIFY_ROWS);
 	alignment->SetSelection(1);
@@ -60,8 +61,6 @@ ClassInfoPanel::ClassInfoPanel(wxWindow* parent, wxWindowID id, const wxPoint& p
 
 	sizer->Add(specificClasses, 1, wxEXPAND, 5);*/
 
-
-	this->SetSizer(sizer);
 	this->Layout();
 
 	this->Centre(wxBOTH);

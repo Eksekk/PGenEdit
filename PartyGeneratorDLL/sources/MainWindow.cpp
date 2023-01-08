@@ -29,7 +29,7 @@ template<typename Player>
 std::vector<wxString> MainWindow::getPlayerNames()
 {
 	std::vector<wxString> names;
-	if (generator->players) // setPlayerPointers() was called
+	if (generator->players) // setPlayerPointers() was called, TODO: zero out when exited to main menu etc.
 	{
 		for (int i = 0; i < MAX_PLAYERS; ++i)
 		{

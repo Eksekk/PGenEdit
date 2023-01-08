@@ -9,6 +9,7 @@
 #include "PlayerData.h"
 #include "PlayerPanel.h"
 #include "wx/notebook.h"
+#include "ClassSettingsTab.h"
 
 std::unordered_map<int, PlayerClass> GameData::classes;
 std::unordered_map<int, PlayerSkill> GameData::skills;
@@ -142,7 +143,7 @@ bool GameData::processClassDataJson(const char* str)
         assert((wxGetApp().mainWindow->tabs->GetPageCount() == MAX_PLAYERS) && wxString::Format("Invalid notebook tab count %d, expected %d", wxGetApp().mainWindow->tabs->GetPageCount(), MAX_PLAYERS).ToStdString().c_str());
         for (int i = 0; i < wxGetApp().mainWindow->tabs->GetPageCount(); ++i)
         {
-            auto tab = static_cast<PlayerPanel*>(wxGetApp().mainWindow->tabs->GetPage(i));
+            auto tab = static_cast<PlayerPanel*>(wxGetApp().mainWindow->tabs->GetPage(i))->classSettingsTab;
             tab->classWindow->createPanels(generator->playerData[i].classes.defaultSettings, generator->playerData[i].classes.settings);
             ++i;
         }

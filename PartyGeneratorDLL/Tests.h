@@ -6,31 +6,39 @@
 class Tests
 {
 public:
-	Generator::State storedState;
+	static Generator::State storedState;
 
-	void testSkillFunctions(); // join skill / split skill
-
-	template<typename Player, typename Game>
-	void testClassGeneration(Player* player);
+	static std::vector<wxString> testSkillFunctions(); // join skill / split skill
 
 	template<typename Player, typename Game>
-	void testSkillsGeneration(Player* player);
+	static std::vector<wxString> testClassGeneration(Player* player);
 
-	void testJson();
+	template<typename Player, typename Game>
+	static std::vector<wxString> testSkillsGeneration(Player* player);
 
-	void testGui();
+	static std::vector<wxString> testJson();
+	static std::vector<wxString> testGui();
+
+	template<typename Player, typename Game>
+	static std::vector<wxString> run();
 };
 
 template<typename Player, typename Game>
-inline void Tests::testClassGeneration(Player* player)
+inline std::vector<wxString> Tests::testClassGeneration(Player* player)
 {
 	// Game* game = static_cast<Game*>(0);
 	// static_assert(SAME(game->party[0], Player))
 }
 
 template<typename Player, typename Game>
-inline void Tests::testSkillsGeneration(Player* player)
+inline std::vector<wxString> Tests::testSkillsGeneration(Player* player)
 {
 	// Game* game = static_cast<Game*>(0);
 	// static_assert(SAME(game->party[0], Player))
+}
+
+template<typename Player, typename Game>
+std::vector<wxString> Tests::run()
+{
+	return testSkillFunctions();
 }

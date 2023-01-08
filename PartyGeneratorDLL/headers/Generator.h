@@ -36,7 +36,7 @@ public:
 	Generator();
 	virtual ~Generator();
 
-	bool* generateForPlayer;
+	bool* generateForPlayer; // TODO: move to PlayerData
 	PartyType partyType;
 	void** players;
 	void** mockPlayers; // for testing
@@ -45,6 +45,10 @@ public:
 	bool unsetArtifactsFoundBits;
 	bool setArtifactsFoundBitsIfGenerated;
 	bool miscSkillsAtMostOnePlayer; // there's almost no reason to have two trap disarmers or three item identifiers
+	unsigned long long seed;
+	bool randomSeed;
+	bool randomInFileIsExact; // if true, writes exact seed to file, otherwise writes information that it's random
+							  // (another user will random seed too)
 
 	struct State // will hold current generation state (like generated classes etc.)
 	{

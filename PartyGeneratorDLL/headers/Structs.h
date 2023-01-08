@@ -3,6 +3,7 @@
 #include "main.h"
 #include "Item.h"
 #include "Player.h"
+#include "Game.h"
 #include <variant>
 #include <type_traits>
 
@@ -14,6 +15,7 @@ struct GameSpecificStructs<6>
 {
 	using Item = mm6::Item;
 	using Player = mm6::Player;
+	using Game = mm6::Game;
 };
 
 template<>
@@ -21,6 +23,7 @@ struct GameSpecificStructs<7>
 {
 	using Item = mm7::Item;
 	using Player = mm7::Player;
+	using Game = mm7::Game;
 };
 
 template<>
@@ -28,6 +31,7 @@ struct GameSpecificStructs<8>
 {
 	using Item = mm8::Item;
 	using Player = mm8::Player;
+	using Game = mm8::Game;
 };
 
 using MM6Structs = GameSpecificStructs<6>;

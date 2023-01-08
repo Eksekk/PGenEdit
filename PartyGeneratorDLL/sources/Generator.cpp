@@ -25,6 +25,9 @@ Generator::Generator()
 		globalClassSettings.emplace(GameData::classes[i].id, ClassGenerationSettings());
 	}
 	playerData.resize(MAX_PLAYERS);
+	randomSeed = true;
+	seed = 0;
+	randomInFileIsExact = true;
 	setDefaults(); // also sets defaults for player data and activates generation for every player
 	players = mockPlayers = nullptr;
 	mock = false;
