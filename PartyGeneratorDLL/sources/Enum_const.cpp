@@ -25,4 +25,4 @@ const std::unordered_map<std::string, int> skillTypeEnumStringToId = { {"melee",
 const std::unordered_map<std::string, int> skillSpecialEnumStringToId = { {"blaster", SKSPC_BLASTER}, {"meditation", SKSPC_MEDITATION}, {"elemental", SKSPC_ELEMENTAL},
 	{"self", SKSPC_SELF}, {"magicExclusive", SKSPC_MAGIC_EXCLUSIVE}, {"shield", SKSPC_SHIELD}, {"raceSkill", SKSPC_RACE_SKILL} };
 
-const std::unordered_map<std::string, int> alignmentStringToId = { {"neutral", ALIGNMENT_NEUTRAL}, {"light", ALIGNMENT_LIGHT}, {"dark", ALIGNMENT_DARK} };
+const std::unordered_map<std::string, int> alignmentStringToId = { {"neutral", ALIGNMENT_NEUTRAL}, {"light", ALIGNMENT_LIGHT}, {"dark", ALIGNMENT_DARK}, {"any", ALIGNMENT_ANY} };

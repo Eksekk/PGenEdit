@@ -36,6 +36,7 @@ void ClassGenerationData::setDefaults()
 	{
 		classGenerationSettings.setDefaults();
 	}
+	possibleAlignment = ALIGNMENT_ANY;
 }
 
 void ClassGenerationData::createSettings()

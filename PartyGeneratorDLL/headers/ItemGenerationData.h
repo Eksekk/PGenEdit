@@ -5,8 +5,15 @@
 #include <type_traits>
 #include "GeneratorDataBase.h"
 #include "Enum_const.h"
+#include "Player.h"
 
 class PlayerItem;
+
+struct GuaranteedItem
+{
+	mm7::Item details;
+
+};
 
 class ItemGenerationData : public GeneratorDataBase
 {

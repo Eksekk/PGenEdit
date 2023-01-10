@@ -24,7 +24,9 @@ class ClassGenerationData : public GeneratorDataBase
 public:
 	std::unordered_map<int, ClassGenerationSettings> settings; // rehash doesn't invalidate pointers
 	ClassGenerationSettings defaultSettings; // for player
+	Alignment possibleAlignment;
 	// TODO: guaranteed classes
+	// TODO: MM7 & MERGE unavailable promotion quests if generating two path characters
 
 	template<typename Player>
 	bool generate(Player* player/*, Generator::State state*/);

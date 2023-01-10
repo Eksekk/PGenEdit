@@ -1,0 +1,31 @@
+DISPLAY IN ITEM PICKER
+Value	
+EquipStat
+Skill	
+Mod1DiceCount	
+Mod1DiceSides	
+Mod2	
+Material	0 = normal,  1 = artifact,  2 = relic,  3 = special
+Bonus2	[MM7+]  VarA
+Bonus	[MM7+]  VarA
+BonusStrength	[MM7+]  VarB
+
+EDIT GUARANTEED ITEM
+
+Number -- handled above
+Bonus	x
+BonusStrength	x
+Bonus2	x
+Charges	x
+
+FLAGS ----
+Identified	x
+Broken	x
+
+Stolen	x
+Hardened	x
+Refundable	Added in patch v2.5.4. Used internally to remove artifacts generated in unopened chests from ArtifactsFound upon map refill.
+Condition	x
+ENDFLAGS ---
+
+MaxCharges	x

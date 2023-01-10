@@ -22,6 +22,9 @@ public:
 	ClassGenerationData classes;
 	PlayerType playerType;
 
+	CharacterStrengthIndicator strengthIndicator;
+	bool generationEnabled;
+
 	PlayerData();
 	virtual ~PlayerData();
 

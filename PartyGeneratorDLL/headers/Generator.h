@@ -36,7 +36,6 @@ public:
 	Generator();
 	virtual ~Generator();
 
-	bool* generateForPlayer; // TODO: move to PlayerData
 	PartyType partyType;
 	void** players;
 	void** mockPlayers; // for testing
@@ -48,7 +47,11 @@ public:
 	unsigned long long seed;
 	bool randomSeed;
 	bool randomInFileIsExact; // if true, writes exact seed to file, otherwise writes information that it's random
-							  // (another user will random seed too)
+							  // (another user will have random seed too)
+
+	static const unsigned MAX_AVERAGE_LEVEL;
+	static const unsigned MIN_AVERAGE_LEVEL;
+	unsigned averageLevel;
 
 	struct State // will hold current generation state (like generated classes etc.)
 	{
@@ -57,6 +60,7 @@ public:
 		double averageLevel = 0;
 		int currentPlayer = INVALID_ID;
 	} state;
+	Alignment possibleAlignment; // will override specific ones from class settings
 
 	ClassGenerationSettings defaultGlobalClassSettings;
 	std::unordered_map<int, ClassGenerationSettings> globalClassSettings;
@@ -71,8 +75,8 @@ public:
 
 	/*
 	GENERATION ORDER:
-	- classes
 	- level
+	- classes
 
 	unordered yet:
 	- items

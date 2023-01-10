@@ -7,6 +7,8 @@
 #include <algorithm>
 
 extern const int INVALID_ID;
+const unsigned Generator::MAX_AVERAGE_LEVEL = 200;
+const unsigned Generator::MIN_AVERAGE_LEVEL = 1;
 
 inline void checkAffinity(double aff)
 {
@@ -18,8 +20,6 @@ inline void checkAffinity(double aff)
 Generator::Generator()
 {
 	assert(MAX_PLAYERS >= 4); // set in init() exported dll function
-	generateForPlayer = new bool[MAX_PLAYERS] {true};
-
 	for (int i = 0; i < GameData::classes.size(); ++i)
 	{
 		globalClassSettings.emplace(GameData::classes[i].id, ClassGenerationSettings());
@@ -35,7 +35,6 @@ Generator::Generator()
 
 Generator::~Generator()
 {
-	delete[] generateForPlayer;
 	delete[] players; // deletes only stored player pointer array, not actual player structs
 }
 
@@ -49,15 +48,12 @@ bool Generator::writeToJson(Json& json)
 }
 void Generator::setDefaults()
 {
+	averageLevel = std::clamp(25U, MIN_AVERAGE_LEVEL, MAX_AVERAGE_LEVEL);
 	for (int i = 0; i < MAX_PLAYERS; ++i)
 	{
 		playerData[i].setDefaults();
 	}
 	partyType = PARTY_GENERIC;
-	for (int i = 0; i < MAX_PLAYERS; ++i)
-	{
-		generateForPlayer[i] = true;
-	}
 	unsetArtifactsFoundBits = false;
 	setArtifactsFoundBitsIfGenerated = false;
 	defaultGlobalClassSettings.setDefaults();
@@ -66,6 +62,7 @@ void Generator::setDefaults()
 	{
 		classGenerationSettings.setDefaults();
 	}
+	possibleAlignment = ALIGNMENT_ANY;
 }
 
 void Generator::createClassSettings()

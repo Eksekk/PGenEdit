@@ -64,4 +64,5 @@ PlayerSkill::PlayerSkill()
 		affinityByPlayerType.emplace(i, 1);
 	}
 	doNotGenerate = false;
+	special = SKSPC_NONE;
 }

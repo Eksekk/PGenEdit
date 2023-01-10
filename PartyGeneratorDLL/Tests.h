@@ -3,6 +3,20 @@
 #include "main.h"
 #include "Generator.h"
 
+struct Asserter
+{
+	std::vector<wxString>& errors;
+	bool& failed;
+	void operator()(const char* func, const char* file, int line, bool cond, wxString errorMsg, ...);
+
+	Asserter(std::vector<wxString>& errors, bool& failed);
+
+	Asserter() = delete;
+	Asserter(const Asserter&) = delete;
+	Asserter(Asserter&&) = delete;
+	Asserter& operator=(const Asserter&) = delete;
+}
+
 class Tests
 {
 public:
@@ -21,6 +35,9 @@ public:
 
 	template<typename Player, typename Game>
 	static std::vector<wxString> run();
+
+	template<typename Player, typename Game>
+	static std::vector<wxString> testMisc();
 };
 
 template<typename Player, typename Game>
@@ -40,5 +57,5 @@ inline std::vector<wxString> Tests::testSkillsGeneration(Player* player)
 template<typename Player, typename Game>
 std::vector<wxString> Tests::run()
 {
-	return testSkillFunctions();
+	return mergeVectors(testMisc(), testSkillFunctions());
 }

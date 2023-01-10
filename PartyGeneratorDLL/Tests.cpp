@@ -3,39 +3,44 @@
 #include "PlayerSkill.h"
 #include <cstdarg>
 
+Asserter::Asserter(std::vector<wxString>& errors, bool& failed) : errors(errors), failed(failed) {}
+
+void Asserter::operator()(const char* func, const char* file, int line, bool cond, wxString errorMsg, ...)
+{
+	if (!cond)
+	{
+		if (!errorMsg.empty())
+		{
+			va_list args;
+			va_start(args, errorMsg); // second argument cannot be a reference
+			std::string file2 = file;
+			size_t index = file2.rfind('/');
+			if (index != std::string::npos)
+			{
+				file2 = file2.substr(index + 1);
+			}
+			errors.push_back(wxString::Format(wxString("%s(%s:%d) %s" + errorMsg), func, file2, line, args));
+			va_end(args);
+		}
+		failed = true;
+	}
+};
+
 std::vector<wxString> Tests::testSkillFunctions()
 {
+	std::vector<wxString> errors;
+	bool failed = false;
+	Asserter myasserter(errors, failed);
+#define myassert(cond, ...) myasserter(__FUNCTION__, __FILE__, __LINE__, (cond), wxString("Assertion failed! (" #cond ")")__VA_OPT__(,) __VA_ARGS__)
 	auto old1 = SKILL_COMBINE_MODE;
 	auto old2 = MASTERY_BITS;
 	auto old3 = SKILL_BITS;
+
+	// rules as in mm7+
 	SKILL_COMBINE_MODE = BIT_PER_MASTERY;
 	MASTERY_BITS = {-1, -1, 6, 7, 8 };
 	SKILL_BITS = 6;
-	std::vector<wxString> errors;
-	bool failed = false;
-	auto myassertraw = [&errors, &failed](const char* func, const char* file, int line, bool cond, wxString errorMsg, ...)
-	{
-		if (!cond)
-		{
-			if (!errorMsg.empty())
-			{
-				va_list args;
-				va_start(args, errorMsg); // second argument cannot be a reference
-				std::string file2 = file;
-				size_t index = file2.rfind('/');
-				if (index != std::string::npos)
-				{
-					file2 = file2.substr(index + 1);
-				}
-				errors.push_back(wxString::Format(wxString("%s(%s:%d) %s" + errorMsg), func, file2, line, args));
-				va_end(args);
-			}
-			failed = true;
-		}
-	};
-#define myassert(cond, ...) myassertraw(__FUNCTION__, __FILE__, __LINE__, (cond), wxString("Assertion failed! (" #cond ")")__VA_OPT__(,) __VA_ARGS__)
-	// rules as in mm7+
-	// TODO: splitSkill (transform join skill with regex)
+	
 	myassert(joinSkill({ 5, 2 }) == 0b1000101);
 	myassert(joinSkill({ 10, 2 }) == 0b1001010);
 	myassert(joinSkill({ 1, 4 }) == 0b100000001);
@@ -141,4 +146,14 @@ std::vector<wxString> Tests::testJson()
 std::vector<wxString> Tests::testGui()
 {
 	return std::vector<wxString>();
+}
+
+template<typename Player, typename Game>
+std::vector<wxString> Tests::testMisc()
+{
+	Player** players = (Player**)generator->players;
+	for (int i = 0; i < MAX_PLAYERS; ++i) // TODO: player count can be different in mm8
+	{
+
+	}
 }
