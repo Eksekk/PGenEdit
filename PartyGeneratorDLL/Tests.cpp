@@ -2,6 +2,12 @@
 #include "Tests.h"
 #include "PlayerSkill.h"
 #include <cstdarg>
+#include "Application.h"
+#include <wx/notebook.h>
+#include "GeneralPanel.h"
+#include "Generator.h"
+
+extern Generator* generator;
 
 Asserter::Asserter(std::vector<wxString>& errors, bool& failed) : errors(errors), failed(failed) {}
 
@@ -31,7 +37,6 @@ std::vector<wxString> Tests::testSkillFunctions()
 	std::vector<wxString> errors;
 	bool failed = false;
 	Asserter myasserter(errors, failed);
-#define myassert(cond, ...) myasserter(__FUNCTION__, __FILE__, __LINE__, (cond), wxString("Assertion failed! (" #cond ")")__VA_OPT__(,) __VA_ARGS__)
 	auto old1 = SKILL_COMBINE_MODE;
 	auto old2 = MASTERY_BITS;
 	auto old3 = SKILL_BITS;
@@ -145,15 +150,11 @@ std::vector<wxString> Tests::testJson()
 
 std::vector<wxString> Tests::testGui()
 {
-	return std::vector<wxString>();
-}
-
-template<typename Player, typename Game>
-std::vector<wxString> Tests::testMisc()
-{
-	Player** players = (Player**)generator->players;
-	for (int i = 0; i < MAX_PLAYERS; ++i) // TODO: player count can be different in mm8
-	{
-
-	}
+	std::vector<wxString> errors;
+	bool failed;
+	Asserter myasserter(errors, failed);
+	auto tabs = wxGetApp().mainWindow->tabs;
+	myassert(tabs->GetPageCount() >= 2 + 4);
+	myassert(dynamic_cast<GeneralPanel*>(tabs->GetPage(0)));
+	return errors;;
 }

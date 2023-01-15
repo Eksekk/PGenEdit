@@ -5,6 +5,7 @@
 #include "GeneratorDataBase.h"
 #include "Enum_const.h"
 #include "ClassGenerationData.h"
+#include "PlayerData.h"
 
 inline void checkAffinity(double aff);
 class PlayerData;
@@ -16,6 +17,8 @@ public:
 	/* to solve:
 	either access state in cpp only (via global generator pointer), or extract class settings to separate file, or store pointer to default class settings here
 	*/
+
+	// PARTY EDITOR AS NECESSARY COMPLEMENT TO GENERATOR
 	static bool IS_ELEMENTAL_MOD; // changes some game structures, different parsing needed
 	static bool IS_MERGE; // ditto, todo: merge versions !!!!! structs.Player.Attrs support
 	static const double MINIMUM_AFFINITY; // multiplied by weights
@@ -38,8 +41,6 @@ public:
 
 	PartyType partyType;
 	void** players;
-	void** mockPlayers; // for testing
-	bool mock;
 
 	bool unsetArtifactsFoundBits;
 	bool setArtifactsFoundBitsIfGenerated;
@@ -64,6 +65,7 @@ public:
 
 	ClassGenerationSettings defaultGlobalClassSettings;
 	std::unordered_map<int, ClassGenerationSettings> globalClassSettings;
+	PlayerData defaultPlayerData;
 
 	void createClassSettings(); // fill map with default settings for base classes
 

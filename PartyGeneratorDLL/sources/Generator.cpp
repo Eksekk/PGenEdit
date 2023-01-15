@@ -17,25 +17,30 @@ inline void checkAffinity(double aff)
 //#define CHECK_AFFINITY(aff, msg) assert((aff) >= Generator::MINIMUM_AFFINITY && (aff) <= Generator::MAXIMUM_AFFINITY, msg)
 //#define CHECK_AFFINITY(aff) CHECK_AFFINITY(aff, "Affinity is outside the bounds [" + Generator::MINIMUM_AFFINITY + ", " + Generator::MINIMUM_AFFINITY + "]")
 
-Generator::Generator()
+Generator::Generator() : defaultPlayerData(INVALID_ID)
 {
 	assert(MAX_PLAYERS >= 4); // set in init() exported dll function
 	for (int i = 0; i < GameData::classes.size(); ++i)
 	{
 		globalClassSettings.emplace(GameData::classes[i].id, ClassGenerationSettings());
 	}
-	playerData.resize(MAX_PLAYERS);
+	for (int i = 0; i < MAX_PLAYERS; ++i)
+	{
+		playerData.push_back(PlayerData(i));
+	}
 	randomSeed = true;
 	seed = 0;
 	randomInFileIsExact = true;
 	setDefaults(); // also sets defaults for player data and activates generation for every player
-	players = mockPlayers = nullptr;
-	mock = false;
+	players = nullptr;
 }
 
 Generator::~Generator()
 {
-	delete[] players; // deletes only stored player pointer array, not actual player structs
+	if (players)
+	{
+		delete[] players; // deletes only stored player pointer array, not actual player structs
+	}
 }
 
 bool Generator::readFromJson(const Json& json)
@@ -58,11 +63,13 @@ void Generator::setDefaults()
 	setArtifactsFoundBitsIfGenerated = false;
 	defaultGlobalClassSettings.setDefaults();
 	miscSkillsAtMostOnePlayer = true;
+	assert(globalClassSettings.size() > 0);
 	for (auto& [i, classGenerationSettings] : globalClassSettings)
 	{
 		classGenerationSettings.setDefaults();
 	}
 	possibleAlignment = ALIGNMENT_ANY;
+	defaultPlayerData.setDefaults();
 }
 
 void Generator::createClassSettings()
@@ -83,7 +90,7 @@ template<typename Player>
 bool Generator::generate()
 {
 	state = Generator::State(); // explicitly create fresh state
-	Player** players = (Player**)(mock ? this->mockPlayers : this->players);
+	Player** players = (Player**)this->players;
 	if constexpr (SAME(Player, mm6::Player))
 	{
 		// PartyMm6 party = (GameMm6)game->party;

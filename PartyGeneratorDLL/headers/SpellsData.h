@@ -2,9 +2,17 @@
 #include "pch.h"
 #include "main.h"
 #include "GeneratorDataBase.h"
+
+class PlayerData;
+
 class SpellsData : public GeneratorDataBase
 {
 public:
+	int index;
+	bool generationEnabled;
+	PlayerData& playerData;
+	SpellsData(int index, PlayerData& playerData);
+	SpellsData() = delete;
 	// Inherited via GeneratorDataBase
 	virtual bool readFromJson(const Json& json) override
 	{
@@ -16,6 +24,7 @@ public:
 	}
 	virtual void setDefaults() override
 	{
+		generationEnabled = true;
 	}
 	template<typename Player>
 	bool generate(Player* player)

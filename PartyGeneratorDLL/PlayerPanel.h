@@ -1,14 +1,15 @@
 #pragma once
 #include "pch.h"
 #include "main.h"
+#include <wx/notebook.h>
+#include "PlayerPanelBase.h"
 
 class ClassSettingsTab;
 
-class PlayerPanel : public wxPanel
+class PlayerPanel : public PlayerPanelBase
 {
 public:
-	ClassSettingsTab* classSettingsTab;
 
-	PlayerPanel(wxWindow* parent);
+	PlayerPanel(wxWindow* parent, PlayerData* linkedGenerationData);
+	wxCheckBox* useDefaultsCheckbox;
 };
-

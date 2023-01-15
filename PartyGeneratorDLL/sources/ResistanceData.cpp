@@ -3,6 +3,11 @@
 #include "ResistanceData.h"
 #include "globals.h"
 
+ResistanceData::ResistanceData(int index, PlayerData& playerData) : index(index), playerData(playerData)
+{
+	setDefaults();
+}
+
 template<typename Player>
 bool ResistanceData::generate(Player* player)
 {
@@ -21,6 +26,7 @@ bool ResistanceData::readFromJson(const Json& json)
 
 void ResistanceData::setDefaults()
 {
+	generationEnabled = true;
 	playerResistancePoints = 0;
 	disabled = false;
 	for (auto& line : lines)

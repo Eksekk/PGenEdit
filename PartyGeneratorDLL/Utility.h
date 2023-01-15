@@ -16,4 +16,21 @@ wxString concatWxStrings(const std::vector<wxString>& container, const wxString&
 
 std::string tolowerStr(const std::string& source);
 
-std::vector<wxString>& mergeWithVector(std::vector<wxString>& first, const std::vector<wxString>& second);
+template<typename Vector>
+Vector mergeVectors(const Vector& first, const Vector& second)
+{
+	size_t n = first.size();
+	auto out = first;
+	out.resize(n + second.size());
+	for (int i = 0; i < second.size(); ++i)
+	{
+		out[n + i] = second[i];
+	}
+	return out;
+}
+
+template<typename Vector, typename... Vectors>
+Vector mergeVectors(const Vector& first, const Vector& second, const Vectors... vectors)
+{
+	return mergeVectors(mergeVectors(first, second), vectors...);
+}

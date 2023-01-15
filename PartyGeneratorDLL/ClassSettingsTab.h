@@ -3,18 +3,18 @@
 #include "main.h"
 
 class ClassWindow;
+class ClassGenerationData;
+
 class ClassSettingsTab : public wxPanel
 {
 public:
 
-	ClassSettingsTab(wxWindow* parent);
+	ClassGenerationData* data;
+	ClassSettingsTab(wxWindow* parent, ClassGenerationData* data);
 	ClassWindow* classWindow;
 
-	/*int id = INVALID_ID; // not used in general settings
-	int weight;
-	std::vector<int> tierWeights;
-	Alignment alignment;
-	bool disabled; // not used in general settings
-	bool equalChances;*/
+	wxRadioBox* possibleAlignmentRadioBox;
+
+	void onPossibleAlignmentSelectRadio(wxCommandEvent& event);
 };
 

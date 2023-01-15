@@ -7,6 +7,8 @@
 #include "GeneratorDataBase.h"
 #include "Player.h"
 
+class PlayerData;
+
 struct ResistanceDataInner
 {
 	int resistanceId;
@@ -33,6 +35,11 @@ public:
 	int playerResistancePoints;
 	std::vector<ResistanceDataInner> lines;
 	bool disabled; // not generated
+	int index;
+	bool generationEnabled;
+	PlayerData& playerData;
+	ResistanceData(int index, PlayerData& playerData);
+	ResistanceData() = delete;
 
 	template<typename Player>
 	bool generate(Player* player);

@@ -3,6 +3,11 @@
 #include "ClassGenerationData.h"
 #include "GameData.h"
 
+ClassGenerationData::ClassGenerationData(int index, PlayerData& playerData) : index(index), playerData(playerData)
+{
+	setDefaults();
+}
+
 void ClassGenerationSettings::setDefaults()
 {
 	weight = 1;

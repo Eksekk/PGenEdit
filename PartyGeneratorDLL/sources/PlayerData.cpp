@@ -3,13 +3,13 @@
 #include "PlayerData.h"
 #include "Generator.h"
 
-PlayerData::PlayerData()
+PlayerData::PlayerData(int index) : index(index), classes(index, *this)
 {
-	skills = new SkillsData;
-	spells = new SpellsData;
-	items = new ItemGenerationData;
-	stats = new StatisticsData;
-	resists = new ResistanceData;
+	skills = new SkillsData(index, *this);
+	spells = new SpellsData(index, *this);
+	items = new ItemGenerationData(index, *this);
+	stats = new StatisticsData(index, *this);
+	resists = new ResistanceData(index, *this);
 	setDefaults();
 }
 

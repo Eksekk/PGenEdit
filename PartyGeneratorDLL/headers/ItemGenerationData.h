@@ -9,6 +9,8 @@
 
 class PlayerItem;
 
+class PlayerData;
+
 struct GuaranteedItem
 {
 	mm7::Item details;
@@ -22,13 +24,18 @@ public:
 	// array of player's items
 	// std::remove_extent_t<decltype(Player::items)>* items;
 
-	ItemGenerationData();
 	bool keepCurrentItems;
 	bool guaranteeMeleeWeapon;
 	bool guaranteeArmor;
 	bool guaranteeRangedWeapon;
 
 	int remainingValue;
+
+	int index;
+	bool generationEnabled;
+	PlayerData& playerData;
+	ItemGenerationData(int index, PlayerData& playerData);
+	ItemGenerationData() = delete;
 
 	// Inherited via GeneratorDataBase
 	virtual bool readFromJson(const Json& json) override;

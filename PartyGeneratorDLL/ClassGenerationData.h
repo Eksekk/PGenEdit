@@ -6,6 +6,8 @@
 
 extern const int INVALID_ID;
 
+class PlayerData;
+
 struct ClassGenerationSettings // settings from GUI
 {
 	int id = INVALID_ID; // not used in general settings
@@ -25,11 +27,17 @@ public:
 	std::unordered_map<int, ClassGenerationSettings> settings; // rehash doesn't invalidate pointers
 	ClassGenerationSettings defaultSettings; // for player
 	Alignment possibleAlignment;
+	int index;
+	bool generationEnabled;
+	PlayerData& playerData;
 	// TODO: guaranteed classes
 	// TODO: MM7 & MERGE unavailable promotion quests if generating two path characters
 
 	template<typename Player>
 	bool generate(Player* player/*, Generator::State state*/);
+
+	ClassGenerationData(int index, PlayerData& playerData);
+	ClassGenerationData() = delete;
 
 	// TODO: guarantee class in spells/skills window, if so show note in class window
 

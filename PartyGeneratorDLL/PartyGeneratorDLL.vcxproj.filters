@@ -126,11 +126,20 @@
     <ClInclude Include="Tests.h">
       <Filter>Pliki nagłówkowe</Filter>
     </ClInclude>
-    <ClInclude Include="ClassSettingsTab.h">
-      <Filter>Pliki nagłówkowe</Filter>
-    </ClInclude>
     <ClInclude Include="Game.h">
       <Filter>Pliki nagłówkowe\Structs</Filter>
+    </ClInclude>
+    <ClInclude Include="DefaultPlayerPanel.h">
+      <Filter>Pliki nagłówkowe\GUI</Filter>
+    </ClInclude>
+    <ClInclude Include="GeneralPanel.h">
+      <Filter>Pliki nagłówkowe\GUI</Filter>
+    </ClInclude>
+    <ClInclude Include="PlayerPanelBase.h">
+      <Filter>Pliki nagłówkowe\GUI</Filter>
+    </ClInclude>
+    <ClInclude Include="ClassSettingsTab.h">
+      <Filter>Pliki nagłówkowe\GUI</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -221,8 +230,17 @@
     <ClCompile Include="Tests.cpp">
       <Filter>Pliki źródłowe</Filter>
     </ClCompile>
+    <ClCompile Include="DefaultPlayerPanel.cpp">
+      <Filter>Pliki źródłowe\GUI</Filter>
+    </ClCompile>
+    <ClCompile Include="GeneralPanel.cpp">
+      <Filter>Pliki źródłowe\GUI</Filter>
+    </ClCompile>
+    <ClCompile Include="PlayerPanelBase.cpp">
+      <Filter>Pliki źródłowe\GUI</Filter>
+    </ClCompile>
     <ClCompile Include="ClassSettingsTab.cpp">
-      <Filter>Pliki źródłowe</Filter>
+      <Filter>Pliki źródłowe\GUI</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

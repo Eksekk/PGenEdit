@@ -22,8 +22,10 @@
     <ClInclude Include="ClassInfoPanel.h" />
     <ClInclude Include="ClassSettingsTab.h" />
     <ClInclude Include="ClassWindow.h" />
+    <ClInclude Include="DefaultPlayerPanel.h" />
     <ClInclude Include="Game.h" />
     <ClInclude Include="GameData.h" />
+    <ClInclude Include="GeneralPanel.h" />
     <ClInclude Include="GUIEnums.h" />
     <ClInclude Include="ClassGenerationData.h" />
     <ClInclude Include="PlayerClass.h" />
@@ -46,6 +48,7 @@
     <ClInclude Include="headers\StatisticsData.h" />
     <ClInclude Include="headers\Structs.h" />
     <ClInclude Include="PlayerItem.h" />
+    <ClInclude Include="PlayerPanelBase.h" />
     <ClInclude Include="PlayerSkill.h" />
     <ClInclude Include="PlayerPanel.h" />
     <ClInclude Include="Tests.h" />
@@ -56,10 +59,13 @@
     <ClCompile Include="ClassInfoPanel.cpp" />
     <ClCompile Include="ClassSettingsTab.cpp" />
     <ClCompile Include="ClassWindow.cpp" />
+    <ClCompile Include="DefaultPlayerPanel.cpp" />
     <ClCompile Include="GameData.cpp" />
+    <ClCompile Include="GeneralPanel.cpp" />
     <ClCompile Include="GUIEnums.cpp" />
     <ClCompile Include="PlayerClass.cpp" />
     <ClCompile Include="PlayerItem.cpp" />
+    <ClCompile Include="PlayerPanelBase.cpp" />
     <ClCompile Include="PlayerSkill.cpp" />
     <ClCompile Include="PlayerPanel.cpp" />
     <ClCompile Include="sources\Application.cpp" />

@@ -10,6 +10,7 @@
 #include "PlayerPanel.h"
 #include "wx/notebook.h"
 #include "ClassSettingsTab.h"
+#include <fstream>
 
 std::unordered_map<int, PlayerClass> GameData::classes;
 std::unordered_map<int, PlayerSkill> GameData::skills;
@@ -26,7 +27,18 @@ void GameData::postProcess()
 
 bool GameData::processClassDataJson(const char* str)
 {
-    Json json = Json::parse(str);
+    Json json;
+    if (inMM)
+    {
+        json = Json::parse(str);
+    }
+    else
+    {
+        std::fstream file(str, std::ios::in);
+        json << file;
+        file.close();
+    }
+    
     //wxLogMessage(wxString(to_string(json)));
     if (json.size() == 0)
     {
@@ -168,7 +180,17 @@ bool GameData::processSkillDataJson(const char* str)
 {
     try
     {
-        Json json = Json::parse(str);
+        Json json;
+        if (inMM)
+        {
+            json = Json::parse(str);
+        }
+        else
+        {
+            std::fstream file(str, std::ios::in);
+            json << file;
+            file.close();
+        }
         if (json.size() == 0)
         {
             wxLogMessage("invalid json: " + wxString(to_string(json)));
@@ -234,4 +256,9 @@ bool GameData::processSkillDataJson(const char* str)
     }
     postProcess();
     return true;
+}
+
+void GameData::reparse(const char* data[DATA_TYPE_COUNT])
+{
+
 }

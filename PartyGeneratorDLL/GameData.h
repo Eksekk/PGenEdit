@@ -5,6 +5,8 @@
 #include "PlayerSkill.h"
 #include <vector>
 
+extern bool inMM;
+
 class GameData
 {
 public:
@@ -14,9 +16,11 @@ public:
 
 	static bool processClassDataJson(const char* str);
 	static bool processSkillDataJson(const char* str);
+	static const int DATA_TYPE_COUNT = 2;
 
 	static bool allDataReceived; // from lua, like class info
 	static void postProcess();
+	static void reparse(const char* data[DATA_TYPE_COUNT]);
 
 	// TODO functions to parse data from lua and to parse game structures
 

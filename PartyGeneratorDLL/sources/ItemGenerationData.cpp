@@ -3,14 +3,10 @@
 #include "ItemGenerationData.h"
 #include "Player.h"
 
-ItemGenerationData::ItemGenerationData()
+ItemGenerationData::ItemGenerationData(int index, PlayerData& playerData) : index(index), playerData(playerData)
 {
 	//items = player->items;
-	keepCurrentItems = false;
-	guaranteeMeleeWeapon = false;
-	guaranteeArmor = false;
-	guaranteeRangedWeapon = false;
-	remainingValue = 0;
+	setDefaults();
 }
 
 // Inherited via GeneratorDataBase
@@ -29,6 +25,12 @@ bool ItemGenerationData::generate(Player* player)
 }
 void ItemGenerationData::setDefaults()
 {
+	generationEnabled = true;
+	keepCurrentItems = false;
+	guaranteeMeleeWeapon = false;
+	guaranteeArmor = false;
+	guaranteeRangedWeapon = false;
+	remainingValue = 0;
 }
 
 template <typename Player>

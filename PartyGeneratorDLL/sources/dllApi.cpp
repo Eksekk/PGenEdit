@@ -16,6 +16,8 @@
 #include "Tests.h"
 #include <fstream>
 
+extern bool inMM;
+
 // ----------------------------------------------------------------------------
 // application startup
 // ----------------------------------------------------------------------------
@@ -167,7 +169,6 @@ extern "C"
         wxUninitialize();
     }
 
-    bool inMM = false;
     Application* app = nullptr;
     DLL_EXPORT BOOL __stdcall APIENTRY DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
     {
