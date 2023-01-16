@@ -44,6 +44,14 @@ void ClassGenerationData::setDefaults()
 	possibleAlignment = ALIGNMENT_ANY;
 }
 
+void ClassGenerationData::randomize()
+{
+}
+
+void ClassGenerationData::copyFrom(const GeneratorDataBase& source)
+{
+}
+
 void ClassGenerationData::createSettings()
 {
 	for (int i = 0; i < GameData::classes.size(); ++i)

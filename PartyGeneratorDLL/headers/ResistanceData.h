@@ -46,6 +46,10 @@ public:
 	bool writeToJson(Json& json) override;
 	bool readFromJson(const Json& json) override;
 	void setDefaults() override;
+
+	// Inherited via GeneratorDataBase
+	virtual void randomize() override;
+	virtual void copyFrom(const GeneratorDataBase& source) override;
 };
 
 //base resistances weight/range/exact value, exact number of resistance points or range, scale by level or not

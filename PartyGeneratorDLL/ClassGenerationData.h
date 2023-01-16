@@ -49,4 +49,7 @@ public:
 	virtual bool writeToJson(Json& json) override;
 
 	virtual void setDefaults() override;
+
+	virtual void randomize() override;
+	virtual void copyFrom(const GeneratorDataBase& source) override;
 };

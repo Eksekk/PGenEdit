@@ -6,3 +6,11 @@ SkillsData::SkillsData(int index, PlayerData& playerData) : index(index), player
 {
 	setDefaults();
 }
+
+void SkillsData::randomize()
+{
+}
+
+void SkillsData::copyFrom(const GeneratorDataBase& source)
+{
+}

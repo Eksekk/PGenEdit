@@ -6,3 +6,11 @@ SpellsData::SpellsData(int index, PlayerData& playerData) : index(index), player
 {
 	setDefaults();
 }
+
+void SpellsData::randomize()
+{
+}
+
+void SpellsData::copyFrom(const GeneratorDataBase& source)
+{
+}

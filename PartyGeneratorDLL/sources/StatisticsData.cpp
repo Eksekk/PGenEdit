@@ -6,3 +6,11 @@ StatisticsData::StatisticsData(int index, PlayerData& playerData) : index(index)
 {
 	setDefaults();
 }
+
+void StatisticsData::randomize()
+{
+}
+
+void StatisticsData::copyFrom(const GeneratorDataBase& source)
+{
+}

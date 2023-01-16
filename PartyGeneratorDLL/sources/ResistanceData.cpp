@@ -35,6 +35,14 @@ void ResistanceData::setDefaults()
 	}
 }
 
+void ResistanceData::randomize()
+{
+}
+
+void ResistanceData::copyFrom(const GeneratorDataBase& source)
+{
+}
+
 ResistanceDataInner::ResistanceDataInner()
 {
 	setDefaults();

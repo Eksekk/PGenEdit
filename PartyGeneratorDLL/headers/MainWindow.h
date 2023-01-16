@@ -18,7 +18,8 @@ private:
 protected:
 	
 public:
-
+	static const int GENERAL_PANEL_PAGE = 0;
+	static const int DEFAULT_PLAYER_PAGE = 1;
 	static const int FIRST_PLAYER_PAGE = 2;
 	wxStatusBar* statusBar;
 	wxMenuBar* menuBar;

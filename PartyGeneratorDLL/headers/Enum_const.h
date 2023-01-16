@@ -4,15 +4,15 @@
 
 extern int MAX_PLAYERS; // auto
 //extern int HIRED_PLAYERS; // in mm8
-extern bool IS_ELEMENTAL_MOD; // auto
-extern bool IS_MERGE; // lua
+extern bool IS_ELEMENTAL_MOD; // changes some game structures, different parsing needed
+extern bool IS_MERGE; // ditto, todo: merge versions !!!!! structs.Player.Attrs support
 
 extern int NUM_CLASSES;
 
 enum SkillCombineMode
 {
 	BIT_PER_MASTERY, // first x bits mean skill, then each bit after indicates next mastery (if it's set); mm7+
-	PACKED // first x bits mean skill, then next two bits mean mastery (increasing order: 00, 01, 10, 11); mm6
+	PACKED // first x bits mean skill, then next two bits mean mastery (00 novice or none, 01 expert, 10 master, 11 (potentially) GM); mm6
 };
 
 enum Mastery
@@ -30,8 +30,8 @@ extern SkillCombineMode SKILL_COMBINE_MODE;
 extern int SKILL_BITS;
 extern std::array<int, 5> MASTERY_BITS;
 
-extern const double MINIMUM_AFFINITY;
-extern const double MAXIMUM_AFFINITY;
+extern const double MINIMUM_AFFINITY; // multiplied by weights
+extern const double MAXIMUM_AFFINITY; // ditto
 
 enum ItemType // for generator purposes
 {

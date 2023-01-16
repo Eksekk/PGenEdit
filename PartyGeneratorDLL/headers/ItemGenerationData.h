@@ -36,14 +36,15 @@ public:
 	PlayerData& playerData;
 	ItemGenerationData(int index, PlayerData& playerData);
 	ItemGenerationData() = delete;
-
+	template<typename Player>
+	bool generate(Player* player);
 	// Inherited via GeneratorDataBase
 	virtual bool readFromJson(const Json& json) override;
 	virtual bool writeToJson(Json& json) override;
-	template<typename Player>
-	bool generate(Player* player);
-	virtual void setDefaults() override;
 
+	virtual void setDefaults() override;
+	virtual void randomize() override;
+	virtual void copyFrom(const GeneratorDataBase& source) override;
 	// using a TON of function templates instead of class template because I really
 	// hate std::variant syntax (std::visit) and the fact
 	// that I'd probably have to use it all over my code
@@ -65,5 +66,8 @@ public:
 
 	template<typename Player>
 	static std::function<bool(void*, int, PlayerItem*, ItemGenerationData*)> shouldItemTypeGenerate[ITEM_TYPE_COUNT];
+
+	// Inherited via GeneratorDataBase
+	
 };
 

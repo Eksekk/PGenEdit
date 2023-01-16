@@ -72,6 +72,20 @@ void Generator::setDefaults()
 	defaultPlayerData.setDefaults();
 }
 
+void Generator::randomize()
+{
+}
+
+void Generator::copyFrom(const GeneratorDataBase& source)
+{
+	const Generator* other = dynamic_cast<const Generator*>(&source);
+	if (!other)
+	{
+		throw std::runtime_error(wxString::Format("%s:%d %s", __FILE__, __LINE__, "Dynamic cast from GeneratorDataBase to Generator failed"));
+	}
+
+}
+
 void Generator::createClassSettings()
 {
 	for (int i = 0; i < GameData::classes.size(); ++i)

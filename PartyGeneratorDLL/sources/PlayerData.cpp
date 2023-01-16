@@ -50,3 +50,11 @@ void PlayerData::setDefaults()
 	strengthIndicator = CHARACTER_GENERATED_LEVEL;
 	generationEnabled = true;
 }
+
+void PlayerData::randomize()
+{
+}
+
+void PlayerData::copyFrom(const GeneratorDataBase& source)
+{
+}

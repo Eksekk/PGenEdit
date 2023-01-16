@@ -3,6 +3,7 @@
 #include "Enum_const.h"
 
 int MAX_PLAYERS = 0;
+
 bool IS_ELEMENTAL_MOD = false;
 bool IS_MERGE = false;
 

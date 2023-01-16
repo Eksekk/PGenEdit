@@ -18,6 +18,41 @@
 
 extern bool inMM;
 
+std::vector<void*> getPlayerPointersMm8()
+{
+    int count;
+    void* ptrs[5];
+    _asm
+    {
+        push ebx
+        push esi
+        push edi
+        mov edi, 0xB7CA60 // address of count
+        mov edi, dword ptr [edi]
+        mov count, edi
+        mov ebx, 0xB7CA4C // players roster txt indexes, or FFFFFFFF if player not in party
+        xor esi, esi
+        get:
+            mov ecx, dword ptr [ebx]
+            add ebx, 4
+            test ecx, ecx
+            js skipField
+                push ecx
+                mov ecx, 0xB20E90
+                call absolute 0x4026F4 // getPlayerPtr()
+                mov dword ptr [ptrs + esi * 4], eax
+                inc esi
+            skipField:
+            dec edi
+            jne get
+        exit:
+        pop ebx
+        pop esi
+        pop edi
+    }
+    return std::vector<void*>(ptrs, ptrs + count);
+}
+
 // ----------------------------------------------------------------------------
 // application startup
 // ----------------------------------------------------------------------------
@@ -210,28 +245,8 @@ extern "C"
                 {
                     IS_ELEMENTAL_MOD = true;
                 }
+                // TODO: test for Merge (run lua script?)
                 generator = new Generator();
-                std::vector<wxString> errors;
-                if (MMVER == 6)
-                {
-                    errors = Tests::run<mm6::Player, mm6::Game>();
-                }
-                else if (MMVER == 7)
-                {
-                    errors = Tests::run<mm7::Player, mm7::Game>();
-                }
-                else if (MMVER == 8)
-                {
-                    errors = Tests::run<mm8::Player, mm8::Game>();
-                }
-                if (errors.size() > 0)
-                {
-                    wxString str = concatWxStrings(errors);
-                    wxLogError(str);
-                    std::fstream file("errors.txt", std::ios::out | std::ios::in | std::ios::trunc);
-                    file << str;
-                    file.close();
-                }
                 break;
             }
 
@@ -281,6 +296,8 @@ extern "C"
            should deal with base game, but mmextension (and for example elemental mod) might still theoretically interfere
         7) do away with wxWidgets thread and somehow integrate it into game main thread's event loop - I think it's best solution,
            but don't know yet how to do that - MAKING PROGRESS
+           
+           DONE?
     */
 
     DLL_EXPORT void __stdcall init()
@@ -299,6 +316,27 @@ extern "C"
         app = &wxGetApp();
         assert(dynamic_cast<Application*>(app));
         app->CallOnInit();
+        std::vector<wxString> errors;
+        if (MMVER == 6)
+        {
+            errors = Tests::run<mm6::Player, mm6::Game>();
+        }
+        else if (MMVER == 7)
+        {
+            errors = Tests::run<mm7::Player, mm7::Game>();
+        }
+        else if (MMVER == 8)
+        {
+            errors = Tests::run<mm8::Player, mm8::Game>();
+        }
+        if (errors.size() > 0)
+        {
+            wxString str = concatWxStrings(errors);
+            wxLogError(str);
+            std::fstream file("pgen_errors.txt", std::ios::out | std::ios::in | std::ios::trunc);
+            file << str;
+            file.close();
+        }
         //MSGBOX((std::string("app: ") + std::to_string((int)app)).c_str());
         //MSGBOX((std::string("window: ") + std::to_string((int)app->mainWindow)).c_str());
     }

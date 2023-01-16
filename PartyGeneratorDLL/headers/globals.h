@@ -24,4 +24,4 @@ extern isTwoHanded_ptr isTwoHanded;
 typedef bool (*isEquippableInOffhand_ptr)(void*, int);
 extern isEquippableInOffhand_ptr isEquippableInOffhand;
 
-bool inMM;
+extern bool inMM;

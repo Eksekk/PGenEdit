@@ -6,6 +6,8 @@
 #include <wx/notebook.h>
 #include "GeneralPanel.h"
 #include "Generator.h"
+#include "DefaultPlayerPanel.h"
+#include "PlayerPanel.h"
 
 extern Generator* generator;
 
@@ -151,10 +153,15 @@ std::vector<wxString> Tests::testJson()
 std::vector<wxString> Tests::testGui()
 {
 	std::vector<wxString> errors;
-	bool failed;
+	bool failed = false;
 	Asserter myasserter(errors, failed);
 	auto tabs = wxGetApp().mainWindow->tabs;
-	myassert(tabs->GetPageCount() >= 2 + 4);
-	myassert(dynamic_cast<GeneralPanel*>(tabs->GetPage(0)));
+	myassert(tabs->GetPageCount() == MainWindow::FIRST_PLAYER_PAGE + 4);
+	myassert(dynamic_cast<GeneralPanel*>(tabs->GetPage(MainWindow::GENERAL_PANEL_PAGE)));
+	myassert(dynamic_cast<DefaultPlayerPanel*>(tabs->GetPage(MainWindow::DEFAULT_PLAYER_PAGE)));
+	for (int i = 0; i < MAX_PLAYERS; ++i)
+	{
+		myassert(dynamic_cast<PlayerPanel*>(tabs->GetPage(i + MainWindow::FIRST_PLAYER_PAGE)));
+	}
 	return errors;;
 }

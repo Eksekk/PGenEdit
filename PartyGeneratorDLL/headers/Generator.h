@@ -19,10 +19,6 @@ public:
 	*/
 
 	// PARTY EDITOR AS NECESSARY COMPLEMENT TO GENERATOR
-	static bool IS_ELEMENTAL_MOD; // changes some game structures, different parsing needed
-	static bool IS_MERGE; // ditto, todo: merge versions !!!!! structs.Player.Attrs support
-	static const double MINIMUM_AFFINITY; // multiplied by weights
-	static const double MAXIMUM_AFFINITY; // ditto
 
 	// generate classes, if affinity is 0 then weight 0, otherwise weight at least 1
 	// add openresty luajit to project/libs/iat dll/check lua state/registryindex
@@ -74,6 +70,12 @@ public:
 	template<typename Player>
 	bool generate();
 	virtual void setDefaults() override;
+
+
+	// Inherited via GeneratorDataBase
+	virtual void randomize() override;
+
+	virtual void copyFrom(const GeneratorDataBase& source) override;
 
 	/*
 	GENERATION ORDER:

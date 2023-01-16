@@ -33,6 +33,14 @@ void ItemGenerationData::setDefaults()
 	remainingValue = 0;
 }
 
+void ItemGenerationData::randomize()
+{
+}
+
+void ItemGenerationData::copyFrom(const GeneratorDataBase& source)
+{
+}
+
 template <typename Player>
 int ItemGenerationData::getItemCount(Player* player)
 {

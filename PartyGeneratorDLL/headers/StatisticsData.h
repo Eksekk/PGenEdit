@@ -31,5 +31,9 @@ public:
 	{
 		return false;
 	}
+
+	// Inherited via GeneratorDataBase
+	virtual void randomize() override;
+	virtual void copyFrom(const GeneratorDataBase& source) override;
 };
 

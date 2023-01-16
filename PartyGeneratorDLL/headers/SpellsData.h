@@ -32,6 +32,12 @@ public:
 		return false;
 	}
 
+
+	// Inherited via GeneratorDataBase
+	virtual void randomize() override;
+
+	virtual void copyFrom(const GeneratorDataBase& source) override;
+
 	// clear beacons if removed lloyd's beacon spell
 	// zero out fire spike casts, divine intervention casts and armageddon casts if spell removed
 	// reset quick spell, attack spell, spell book page
