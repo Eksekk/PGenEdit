@@ -147,12 +147,10 @@ bool GameData::processClassDataJson(const char* str)
 
         for (auto& pdata : generator->playerData)
         {
-            pdata.classes.createSettings();
+            pdata->classes.createSettings();
         }
 
-        int i = 0;
-
-        generator->createClassSettings();
+        generator->defaultPlayerData.classes.createSettings();
         assert((wxGetApp().mainWindow->tabs->GetPageCount() == MAX_PLAYERS + MainWindow::FIRST_PLAYER_PAGE) && wxString::Format("Invalid notebook tab count %d, expected %d", wxGetApp().mainWindow->tabs->GetPageCount(), MAX_PLAYERS + MainWindow::FIRST_PLAYER_PAGE).ToStdString().c_str());
         for (int i = MainWindow::FIRST_PLAYER_PAGE; i < wxGetApp().mainWindow->tabs->GetPageCount(); ++i)
         {
@@ -164,7 +162,6 @@ bool GameData::processClassDataJson(const char* str)
         auto page = static_cast<DefaultPlayerPanel*>(wxGetApp().mainWindow->tabs->GetPage(MainWindow::DEFAULT_PLAYER_PAGE));
         auto tab = page->classSettingsTab;
         tab->classWindow->createPanels(page->linkedGenerationData->classes.defaultSettings, page->linkedGenerationData->classes.settings);
-        wxGetApp().mainWindow->generalClassWindow->createPanels(generator->defaultGlobalClassSettings, generator->globalClassSettings);
     }
     catch (const nlohmann::json::exception& ex)
     {

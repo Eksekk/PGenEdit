@@ -141,6 +141,9 @@
     <ClInclude Include="ClassSettingsTab.h">
       <Filter>Pliki nagłówkowe\GUI</Filter>
     </ClInclude>
+    <ClInclude Include="resource.h">
+      <Filter>Pliki nagłówkowe</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="sources\dllApi.cpp">
@@ -250,5 +253,13 @@
     <None Include="Lib.def">
       <Filter>Pliki zasobów</Filter>
     </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="wx.rc">
+      <Filter>Pliki zasobów</Filter>
+    </ResourceCompile>
+    <ResourceCompile Include="pgen.rc">
+      <Filter>Pliki zasobów</Filter>
+    </ResourceCompile>
   </ItemGroup>
 </Project>

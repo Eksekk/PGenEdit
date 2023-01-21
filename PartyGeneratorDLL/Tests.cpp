@@ -13,26 +13,50 @@ extern Generator* generator;
 
 Asserter::Asserter(std::vector<wxString>& errors, bool& failed) : errors(errors), failed(failed) {}
 
-void Asserter::operator()(const char* func, const char* file, int line, bool cond, wxString errorMsg, ...)
+wxString rep(const wxString& str, int n = 1)
+{
+	wxString ret = str;
+	for (int i = 0; i < n - 1; ++i)
+	{
+		ret << str;
+	}
+	return ret;
+}
+
+template<typename T>
+wxString my_to_string(const T& t)
+{
+	return wxString().operator<<(t); // sorry for clever code, couldn't help myself
+	// we are calling operator<< (which inserts argument into string) on temporary string,
+	// taking advantage that it returns modified string (intended to allow chaining,
+	// like str << "x" << "y" << 5)
+}
+
+template<typename... Args>
+bool Asserter::operator()(const char* func, const char* file, int line, bool cond, wxString errorMsg, const Args&... args)
 {
 	if (!cond)
 	{
 		if (!errorMsg.empty())
 		{
-			va_list args;
-			va_start(args, errorMsg); // second argument cannot be a reference
 			std::string file2 = file;
 			size_t index = file2.rfind('/');
 			if (index != std::string::npos)
 			{
 				file2 = file2.substr(index + 1);
 			}
-			errors.push_back(wxString::Format(wxString("%s(%s:%d) %s" + errorMsg), func, file2, line, args));
-			va_end(args);
+			wxString errorMsg = wxString("%s(%s:%d) " + errorMsg);
+			if constexpr (sizeof...(args) > 0)
+			{
+				errorMsg << ("Extra data:" + rep("\n%s", sizeof...(args)));
+			}
+			errors.push_back(wxString::Format(errorMsg, func, file2, line, my_to_string(args)...));
 		}
 		failed = true;
+		return false;
 	}
-};
+	return true;
+}
 
 std::vector<wxString> Tests::testSkillFunctions()
 {
@@ -158,10 +182,16 @@ std::vector<wxString> Tests::testGui()
 	auto tabs = wxGetApp().mainWindow->tabs;
 	myassert(tabs->GetPageCount() == MainWindow::FIRST_PLAYER_PAGE + 4);
 	myassert(dynamic_cast<GeneralPanel*>(tabs->GetPage(MainWindow::GENERAL_PANEL_PAGE)));
-	myassert(dynamic_cast<DefaultPlayerPanel*>(tabs->GetPage(MainWindow::DEFAULT_PLAYER_PAGE)));
+	auto p = dynamic_cast<DefaultPlayerPanel*>(tabs->GetPage(MainWindow::DEFAULT_PLAYER_PAGE));
+	if (myassert(p))
+	{
+		myassert(dynamic_cast<PlayerData*>(p->linkedGenerationData));
+	}
 	for (int i = 0; i < MAX_PLAYERS; ++i)
 	{
-		myassert(dynamic_cast<PlayerPanel*>(tabs->GetPage(i + MainWindow::FIRST_PLAYER_PAGE)));
+		auto p = dynamic_cast<PlayerPanel*>(tabs->GetPage(i + MainWindow::FIRST_PLAYER_PAGE));
+		myassert(p, wxString::Format("iteration %d", i));
+		myassert(p->linkedGenerationData, wxString::Format("iteration %d", i));
 	}
 	return errors;;
 }

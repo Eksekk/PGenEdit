@@ -7,6 +7,7 @@
 class PlayerPanel;
 class wxNotebook;
 class GeneralPanel;
+class DefaultPlayerPanel;
 
 class MainWindow : public wxFrame
 {
@@ -21,6 +22,10 @@ public:
 	static const int GENERAL_PANEL_PAGE = 0;
 	static const int DEFAULT_PLAYER_PAGE = 1;
 	static const int FIRST_PLAYER_PAGE = 2;
+
+	wxPanel* mainPanel;
+	wxBoxSizer* mainSizer;
+
 	wxStatusBar* statusBar;
 	wxMenuBar* menuBar;
 	wxMenu* settingsMenu;
@@ -37,18 +42,29 @@ public:
 	wxCheckBox* randomSeedInFileCheckbox;
 	wxButton* generateButton;
 	wxNotebook* tabs;
-	ClassWindow* generalClassWindow;
+
 	GeneralPanel* generalPanel;
-	PlayerPanel* defaultSettings; // TODO: move to own class
+	DefaultPlayerPanel* defaultSettings; // TODO: move to own class
+
+	wxTimer* updateTabsTimer;
+
+	wxBoxSizer* mm8PartialGenerationWarningSizer;
+
+	wxStaticBitmap* m_bitmap1;
+
+	wxStaticText* warningText;
+
+	static const wxString WARNING_FORMAT;
 
 	MainWindow(wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = _("Party generator"), const wxPoint& pos = wxDefaultPosition,
-		const wxSize& size = wxSize(800, 600), long style = (wxDEFAULT_FRAME_STYLE | wxTAB_TRAVERSAL) & ~wxRESIZE_BORDER);
+		const wxSize& size = wxSize(800, 600), long style = (wxDEFAULT_FRAME_STYLE | wxTAB_TRAVERSAL) & ~wxRESIZE_BORDER | wxCLIP_CHILDREN);
 
 	~MainWindow();
 
 	template<typename Player>
-	void updatePlayerNames(wxShowEvent& event);
+	void update();
 	template<typename Player>
-	std::vector<wxString> getPlayerNames();
+	[[nodiscard]] std::vector<wxString> getPlayerNames();
+	void onTimer(wxTimerEvent& event);
 };
 

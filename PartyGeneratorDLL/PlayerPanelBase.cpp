@@ -44,7 +44,7 @@ PlayerPanelBase::PlayerPanelBase(wxWindow* parent, PlayerData* linkedGenerationD
 	wxString generateWhatRadioBoxChoices[] = { _("Level"), _("Experience") };
 	int generateWhatRadioBoxNChoices = sizeof(generateWhatRadioBoxChoices) / sizeof(wxString);
 	generateWhatRadioBox = new wxRadioBox(levelPanel, wxID_ANY, _("Generate"), wxDefaultPosition, wxDefaultSize, generateWhatRadioBoxNChoices, generateWhatRadioBoxChoices, 1, wxRA_SPECIFY_ROWS);
-	generateWhatRadioBox->SetSelection(1);
+	generateWhatRadioBox->SetSelection(0);
 	bSizer17->Add(generateWhatRadioBox, 0, wxALL, 5);
 	generateWhatRadioBox->Bind(wxEVT_RADIOBOX, &PlayerPanelBase::onGenerateWhatRadio, this);
 

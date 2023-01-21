@@ -34,3 +34,14 @@ Vector mergeVectors(const Vector& first, const Vector& second, const Vectors... 
 {
 	return mergeVectors(mergeVectors(first, second), vectors...);
 }
+
+template<template<typename, typename, typename...> typename Map, typename Key, typename Value, typename... Extra>
+Map<Value, Key> invertMap(const Map<Key, Value, Extra...>& map)
+{
+	Map<Value, Key> outMap;
+	for (const auto& [key, value] : map)
+	{
+		outMap[value] = key;
+	}
+	return outMap;
+}

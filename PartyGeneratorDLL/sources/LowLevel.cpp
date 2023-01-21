@@ -4,13 +4,21 @@
 #include <cassert>
 #include <cstring>
 
+std::unordered_map<uint32_t, std::vector<uint8_t> > hookRestoreList;
+
+void storeBytes(uint32_t addr, uint32_t size)
+{
+	hookRestoreList[addr] = std::vector<uint8_t>((uint8_t*)addr, (uint8_t*)(addr + size));
+}
+
 void hookCall(uint32_t addr, void* func, uint32_t size)
 {
 	assert(size >= 5);
+	storeBytes(addr, size);
 	DWORD tmp;
 	VirtualProtect((void*)addr, size, PAGE_EXECUTE_READWRITE, &tmp);
-	byte(addr) = 0xE8;
-	sdword(addr + 1) = (int)func - addr - 5;
+	byte(addr) = 0xE8; // call rel32
+	sdword(addr + 1) = (int32_t)func - addr - 5;
 	if (size > 5)
 	{
 		memset((void*)(addr + 5), 0x90, size - 5);
@@ -21,13 +29,14 @@ void hookCall(uint32_t addr, void* func, uint32_t size)
 void hookJump(uint32_t addr, void* func, uint32_t size)
 {
 	assert(size >= 5);
+	storeBytes(addr, size);
 	DWORD tmp;
 	VirtualProtect((void*)addr, size, PAGE_EXECUTE_READWRITE, &tmp);
-	byte(addr) = 0xE9;
-	sdword(addr + 1) = (int)func - addr - 5;
+	byte(addr) = 0xE9; // jmp rel32
+	sdword(addr + 1) = (int32_t)func - addr - 5;
 	if (size > 5)
 	{
-		memset((void*)(addr + 5), 0x90, size - 5);
+		memset((void*)(addr + 5), 0x90, size - 5); // 0x90 = NOP
 	}
 	VirtualProtect((void*)addr, size, tmp, &tmp);
 }
@@ -66,6 +75,7 @@ void patchQword(uint32_t addr, uint64_t val)
 
 void eraseCode(uint32_t addr, uint32_t size)
 {
+	storeBytes(addr, size);
 	DWORD tmp;
 	VirtualProtect((void*)addr, size, PAGE_EXECUTE_READWRITE, &tmp);
 	memset((void*)addr, 0x90, size);
@@ -77,10 +87,23 @@ void eraseCode(uint32_t addr, uint32_t size)
 	VirtualProtect((void*)addr, size, tmp, &tmp);
 }
 
-void patchBytes(uint32_t addr, void* bytes, uint32_t size)
+void patchBytes(uint32_t addr, void* bytes, uint32_t size, bool store = true)
 {
+	if (store)
+	{
+		storeBytes(addr, size);
+	}
 	DWORD tmp;
 	VirtualProtect((void*)addr, size, PAGE_EXECUTE_READWRITE, &tmp);
 	memcpy((void*)addr, bytes, size);
 	VirtualProtect((void*)addr, size, tmp, &tmp);
+}
+
+void removeHooks()
+{
+	for (auto& [address, data] : hookRestoreList)
+	{
+		patchBytes(address, data.data(), data.size(), false);
+	}
+	hookRestoreList.clear();
 }

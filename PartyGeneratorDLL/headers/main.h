@@ -33,6 +33,12 @@ using Json = nlohmann::json;
 
 void MSGBOX(const char* text);
 
+#define wxUSE_RC_MANIFEST 1 // make controls look much better
+
+#pragma comment(linker,"\"/manifestdependency:type='win32' \
+name='Microsoft.Windows.Common-Controls' version='6.0.0.0' \
+processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
+
 //using std::visit;
 
 #endif // __MAIN_H__

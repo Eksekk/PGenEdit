@@ -12,7 +12,8 @@ struct Asserter
 {
 	std::vector<wxString>& errors;
 	bool& failed;
-	void operator()(const char* func, const char* file, int line, bool cond, wxString errorMsg, ...);
+	template<typename... Args>
+	bool operator()(const char* func, const char* file, int line, bool cond, wxString errorMsg, const Args&... args);
 
 	Asserter(std::vector<wxString>& errors, bool& failed);
 

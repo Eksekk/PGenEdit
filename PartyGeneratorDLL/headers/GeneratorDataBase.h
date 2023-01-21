@@ -11,6 +11,10 @@ public:
     virtual void randomize() = 0;
     virtual void copyFrom(const GeneratorDataBase& source) = 0;
 
+    // TODO: implement in each subclass:
+    // virtual GeneratorDataBase& operator=(const GeneratorDataBase& other);
+    // GeneratorDataBase(const GeneratorDataBase& other);
+
     GeneratorDataBase() {};
     virtual ~GeneratorDataBase();
 };

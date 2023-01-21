@@ -19,14 +19,11 @@ inline void checkAffinity(double aff)
 
 Generator::Generator() : defaultPlayerData(INVALID_ID)
 {
-	assert(MAX_PLAYERS >= 4); // set in init() exported dll function
-	for (int i = 0; i < GameData::classes.size(); ++i)
-	{
-		globalClassSettings.emplace(GameData::classes[i].id, ClassGenerationSettings());
-	}
+	assert(MAX_PLAYERS >= 4); // set in dllmain
+	playerData.reserve(MAX_PLAYERS);
 	for (int i = 0; i < MAX_PLAYERS; ++i)
 	{
-		playerData.push_back(PlayerData(i));
+		playerData.push_back(std::make_unique<PlayerData>(i));
 	}
 	randomSeed = true;
 	seed = 0;
@@ -56,18 +53,12 @@ void Generator::setDefaults()
 	averageLevel = std::clamp(25U, MIN_AVERAGE_LEVEL, MAX_AVERAGE_LEVEL);
 	for (int i = 0; i < MAX_PLAYERS; ++i)
 	{
-		playerData[i].setDefaults();
+		playerData[i]->setDefaults();
 	}
 	partyType = PARTY_GENERIC;
 	unsetArtifactsFoundBits = false;
 	setArtifactsFoundBitsIfGenerated = false;
-	defaultGlobalClassSettings.setDefaults();
 	miscSkillsAtMostOnePlayer = true;
-	assert(globalClassSettings.size() > 0);
-	for (auto& [i, classGenerationSettings] : globalClassSettings)
-	{
-		classGenerationSettings.setDefaults();
-	}
 	possibleAlignment = ALIGNMENT_ANY;
 	defaultPlayerData.setDefaults();
 }
@@ -84,14 +75,6 @@ void Generator::copyFrom(const GeneratorDataBase& source)
 		throw std::runtime_error(wxString::Format("%s:%d %s", __FILE__, __LINE__, "Dynamic cast from GeneratorDataBase to Generator failed"));
 	}
 
-}
-
-void Generator::createClassSettings()
-{
-	for (int i = 0; i < GameData::classes.size(); ++i)
-	{
-		globalClassSettings.emplace(GameData::classes[i].id, ClassGenerationSettings());
-	}
 }
 
 template<typename Player>

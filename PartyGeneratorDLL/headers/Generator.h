@@ -30,7 +30,10 @@ public:
 	// solve problem of requiring three edits to each file by searching for predefined string
 	// and replacing it with new content (if file exists then don't add includes etc.)
 
-	std::vector<PlayerData> playerData;
+	// 2023-01-18 removed generator's and main window's class settings - add a lot of complexity,
+	// and player will be able to copy settings around / load part of them
+
+	std::vector<std::unique_ptr<PlayerData>> playerData; // pointer because by value creates problems related to copying and destruction
 
 	Generator();
 	virtual ~Generator();
@@ -59,11 +62,7 @@ public:
 	} state;
 	Alignment possibleAlignment; // will override specific ones from class settings
 
-	ClassGenerationSettings defaultGlobalClassSettings;
-	std::unordered_map<int, ClassGenerationSettings> globalClassSettings;
 	PlayerData defaultPlayerData;
-
-	void createClassSettings(); // fill map with default settings for base classes
 
 	virtual bool readFromJson(const Json& json) override;
 	virtual bool writeToJson(Json& json) override;

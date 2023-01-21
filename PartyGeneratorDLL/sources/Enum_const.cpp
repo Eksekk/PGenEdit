@@ -1,11 +1,14 @@
 #include "pch.h"
 #include "main.h"
 #include "Enum_const.h"
+#include "Utility.h"
 
 int MAX_PLAYERS = 0;
 
 bool IS_ELEMENTAL_MOD = false;
 bool IS_MERGE = false;
+
+int CURRENT_PARTY_SIZE = 0;
 
 Mastery MAX_MASTERY = Mastery::GM; // 3 in mm6, 4 in mm7+
 SkillCombineMode SKILL_COMBINE_MODE = BIT_PER_MASTERY;
@@ -27,3 +30,9 @@ const std::unordered_map<std::string, int> skillSpecialEnumStringToId = { {"blas
 	{"self", SKSPC_SELF}, {"magicExclusive", SKSPC_MAGIC_EXCLUSIVE}, {"shield", SKSPC_SHIELD}, {"raceSkill", SKSPC_RACE_SKILL} };
 
 const std::unordered_map<std::string, int> alignmentStringToId = { {"neutral", ALIGNMENT_NEUTRAL}, {"light", ALIGNMENT_LIGHT}, {"dark", ALIGNMENT_DARK}, {"any", ALIGNMENT_ANY} };
+
+
+const std::unordered_map<int, std::string> plTypeEnumIdToString = invertMap(plTypeEnumStringToId);
+const std::unordered_map<int, std::string> skillTypeEnumIdToString = invertMap(skillTypeEnumStringToId);
+const std::unordered_map<int, std::string> skillSpecialEnumIdToString = invertMap(skillSpecialEnumStringToId);
+const std::unordered_map<int, std::string> alignmentIdToString = invertMap(alignmentStringToId);

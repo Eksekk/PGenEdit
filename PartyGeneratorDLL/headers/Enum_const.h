@@ -3,7 +3,7 @@
 #include "main.h"
 
 extern int MAX_PLAYERS; // auto
-//extern int HIRED_PLAYERS; // in mm8
+extern int CURRENT_PARTY_SIZE; // in mm8
 extern bool IS_ELEMENTAL_MOD; // changes some game structures, different parsing needed
 extern bool IS_MERGE; // ditto, todo: merge versions !!!!! structs.Player.Attrs support
 
@@ -89,6 +89,7 @@ enum PlayerType
 };
 
 extern const std::unordered_map<std::string, int> plTypeEnumStringToId;
+extern const std::unordered_map<int, std::string> plTypeEnumIdToString;
 
 enum SkillType
 {
@@ -102,6 +103,7 @@ enum SkillType
 };
 
 extern const std::unordered_map<std::string, int> skillTypeEnumStringToId;
+extern const std::unordered_map<int, std::string> skillTypeEnumIdToString;
 
 enum SkillSpecial // don't make hundreds of skill types, instead associate additional property with certain skills
 {
@@ -116,6 +118,7 @@ enum SkillSpecial // don't make hundreds of skill types, instead associate addit
 };
 
 extern const std::unordered_map<std::string, int> skillSpecialEnumStringToId;
+extern const std::unordered_map<int, std::string> skillSpecialEnumIdToString;
 
 enum Alignment
 {
@@ -126,6 +129,7 @@ enum Alignment
 };
 
 extern const std::unordered_map<std::string, int> alignmentStringToId;
+extern const std::unordered_map<int, std::string> alignmentIdToString;
 
 enum CharacterStrengthIndicator
 {

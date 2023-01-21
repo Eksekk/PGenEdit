@@ -2,6 +2,10 @@
 #include "pch.h"
 #include "main.h"
 
+extern std::unordered_map<uint32_t, std::vector<uint8_t> > hookRestoreList;
+
+void storeBytes(uint32_t addr, uint32_t size);
+
 // credits to Tomsod for his elemental mod sources (and of course to Grayface), they made it much easier
 // for me to understand such low level stuff
 // many functions taken from Tomsod's elemental mod
@@ -33,4 +37,6 @@ void patchQword(uint32_t addr, uint64_t val);
 void eraseCode(uint32_t addr, uint32_t size);
 
 // patches sequence of bytes (unprotect/protect)
-void patchBytes(uint32_t addr, void* bytes, uint32_t size);
+void patchBytes(uint32_t addr, void* bytes, uint32_t size, bool store);
+
+void removeHooks();

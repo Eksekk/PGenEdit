@@ -8,7 +8,7 @@ extern const int INVALID_ID;
 
 class PlayerData;
 
-struct ClassGenerationSettings // settings from GUI
+struct ClassGenerationSettings : public GeneratorDataBase // settings from GUI
 {
 	int id = INVALID_ID; // not used in general settings
 	int weight;
@@ -18,7 +18,13 @@ struct ClassGenerationSettings // settings from GUI
 	bool equalChances;
 
 	ClassGenerationSettings();
-	void setDefaults();
+
+	// Inherited via GeneratorDataBase
+	virtual bool readFromJson(const Json& json) override;
+	virtual bool writeToJson(Json& json) override;
+	virtual void setDefaults() override;
+	virtual void randomize() override;
+	virtual void copyFrom(const GeneratorDataBase& source) override;
 };
 
 class ClassGenerationData : public GeneratorDataBase

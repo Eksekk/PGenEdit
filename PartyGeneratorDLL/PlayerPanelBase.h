@@ -6,8 +6,8 @@
 
 class PlayerData;
 
-// atm PlayerPanel and DefaultPlayerPanel could be merged into one class, but I thought otherwise
-// and don't want to change because they'll almost surely be different in future
+// atm PlayerPanel and DefaultPlayerPanel could be merged into one class (and so this class is redundant),
+// but I thought otherwise and don't want to change because they'll almost surely be different in future
 
 class PlayerPanelBase : public wxPanel
 {
@@ -22,7 +22,6 @@ public:
 	wxNotebook* m_notebook2;
 	wxPanel* levelPanel;
 	wxRadioBox* generateWhatRadioBox;
-	ClassSettingsTab* classPanel;
 	wxPanel* skillsPanel;
 	wxStaticText* m_staticText111;
 	wxTextCtrl* skillPointsMultiplier;

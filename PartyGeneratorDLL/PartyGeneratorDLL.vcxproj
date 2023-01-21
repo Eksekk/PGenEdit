@@ -51,6 +51,7 @@
     <ClInclude Include="PlayerPanelBase.h" />
     <ClInclude Include="PlayerSkill.h" />
     <ClInclude Include="PlayerPanel.h" />
+    <ClInclude Include="resource.h" />
     <ClInclude Include="Tests.h" />
     <ClInclude Include="Utility.h" />
   </ItemGroup>
@@ -102,6 +103,18 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Lib.def" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="pgen.rc">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+    </ResourceCompile>
+    <ResourceCompile Include="wx.rc">
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(WindowsSDK_IncludePath);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(WindowsSDK_IncludePath);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <ShowProgress Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ShowProgress>
+      <ShowProgress Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ShowProgress>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+    </ResourceCompile>
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
@@ -205,6 +218,9 @@
       </ForceFileOutput>
       <ModuleDefinitionFile>Lib.def</ModuleDefinitionFile>
     </Link>
+    <Manifest>
+      <AdditionalManifestFiles>C:\wxWidgets-3.2.1\include\wx\msw\wx.manifest %(AdditionalManifestFiles)</AdditionalManifestFiles>
+    </Manifest>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -242,6 +258,9 @@
       </ForceFileOutput>
       <ModuleDefinitionFile>Exports.def</ModuleDefinitionFile>
     </Link>
+    <Manifest>
+      <AdditionalManifestFiles>%(AdditionalManifestFiles)</AdditionalManifestFiles>
+    </Manifest>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>

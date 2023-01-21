@@ -15,6 +15,7 @@
 #include "GameData.h"
 #include "Tests.h"
 #include <fstream>
+#include "Enum_const.h"
 
 extern bool inMM;
 
@@ -22,6 +23,7 @@ std::vector<void*> getPlayerPointersMm8()
 {
     int count;
     void* ptrs[5];
+    // assembly just for fun, could be done in c++ with dword() macro
     _asm
     {
         push ebx
@@ -29,7 +31,7 @@ std::vector<void*> getPlayerPointersMm8()
         push edi
         mov edi, 0xB7CA60 // address of count
         mov edi, dword ptr [edi]
-        mov count, edi
+        // mov count, edi
         mov ebx, 0xB7CA4C // players roster txt indexes, or FFFFFFFF if player not in party
         xor esi, esi
         get:
@@ -39,171 +41,34 @@ std::vector<void*> getPlayerPointersMm8()
             js skipField
                 push ecx
                 mov ecx, 0xB20E90
-                call absolute 0x4026F4 // getPlayerPtr()
+                mov eax, 0x4026F4 // getPlayerPtr()
+                call eax
                 mov dword ptr [ptrs + esi * 4], eax
                 inc esi
             skipField:
             dec edi
             jne get
         exit:
-        pop ebx
-        pop esi
+        mov count, esi
         pop edi
+        pop esi
+        pop ebx
     }
     return std::vector<void*>(ptrs, ptrs + count);
 }
 
-// ----------------------------------------------------------------------------
-// application startup
-// ----------------------------------------------------------------------------
-
-namespace
+void updatePartySizeAndPlayerPtrs()
 {
-    HINSTANCE hInstance;
-    // Critical section that guards everything related to wxWidgets "main" thread
-    // startup or shutdown.
-    wxCriticalSection gs_wxStartupCS;
-    // Handle of wx "main" thread if running, NULL otherwise
-    HANDLE gs_wxMainThread = NULL;
-
-    //  wx application startup code -- runs from its own thread
-    unsigned wxSTDCALL MyAppLauncher(void* event)
+    std::vector<void*> ptrs = getPlayerPointersMm8();
+    CURRENT_PARTY_SIZE = ptrs.size();
+    for (int i = 0; i < ptrs.size(); ++i)
     {
-        // Note: The thread that called run_wx_gui_from_dll() holds gs_wxStartupCS
-        //       at this point and won't release it until we signal it.
-
-        // We need to pass correct HINSTANCE to wxEntry() and the right value is
-        // HINSTANCE of this DLL, not of the main .exe, use this MSW-specific wx
-        // function to get it. Notice that under Windows XP and later the name is
-        // not needed/used as we retrieve the DLL handle from an address inside it
-        // but you do need to use the correct name for this code to work with older
-        // systems as well.
-        /*const HINSTANCE
-            hInstance = wxDynamicLibrary::MSWGetModuleHandle("PartyGenerator",
-                &gs_wxMainThread);
-        if (!hInstance)
-        {
-            MessageBoxA(nullptr, "failed to get DLL's handle", nullptr, MB_OK | MB_ICONERROR | MB_APPLMODAL);
-            return 0; // failed to get DLL's handle
-        }*/
-                
-
-        // wxIMPLEMENT_WXWIN_MAIN does this as the first thing
-        wxDISABLE_DEBUG_SUPPORT();
-
-        // We do this before wxEntry() explicitly, even though wxEntry() would
-        // do it too, so that we know when wx is initialized and can signal
-        // run_wx_gui_from_dll() about it *before* starting the event loop.
-        //wxInitializer wxinit;
-        //if (!wxinit.IsOk())
-        if (!wxInitialize())
-        {
-            MessageBoxA(nullptr, "failed to init wx", nullptr, MB_OK | MB_ICONERROR | MB_APPLMODAL);
-            return 0; // failed to init wx
-        }
-                
-        // Signal run_wx_gui_from_dll() that it can continue
-        HANDLE hEvent = *(static_cast<HANDLE*>(event));
-        if (!SetEvent(hEvent))
-        {
-            MessageBoxA(nullptr, "failed setting up the mutex", nullptr, MB_OK | MB_ICONERROR | MB_APPLMODAL);
-            return 0; // failed setting up the mutex
-        }
-
-        // Run the app:
-        wxEntry(hInstance);
-        return 1;
+        generator->players[i] = ptrs[i];
     }
-
-} // anonymous namespace
+}
 
 extern "C"
 {
-    void run_wx_gui_from_dll(/*const char* title*/)
-    {
-        // In order to prevent conflicts with hosting app's event loop, we
-        // launch wx app from the DLL in its own thread.
-        //
-        // We can't even use wxInitializer: it initializes wxModules and one of
-        // the modules it handles is wxThread's private module that remembers
-        // ID of the main thread. But we need to fool wxWidgets into thinking that
-        // the thread we are about to create now is the main thread, not the one
-        // from which this function is called.
-        //
-        // Note that we cannot use wxThread here, because the wx library wasn't
-        // initialized yet. wxCriticalSection is safe to use, though.
-
-        wxCriticalSectionLocker lock(gs_wxStartupCS);
-
-        if (!gs_wxMainThread)
-        {
-            HANDLE hEvent = CreateEvent
-            (
-                NULL,  // default security attributes
-                FALSE, // auto-reset
-                FALSE, // initially non-signaled
-                NULL   // anonymous
-            );
-            if (!hEvent)
-            {
-                MessageBoxA(nullptr, "Failed creating event", nullptr, MB_OK | MB_ICONERROR | MB_APPLMODAL);
-                return; // error
-            }
-            
-
-            // NB: If your compiler doesn't have _beginthreadex(), use CreateThread()
-            gs_wxMainThread = (HANDLE)_beginthreadex
-            (
-                NULL,           // default security
-                0,              // default stack size
-                &MyAppLauncher,
-                &hEvent,        // arguments
-                0,              // create running
-                NULL
-            );
-
-            if (!gs_wxMainThread)
-            {
-                CloseHandle(hEvent);
-                MessageBoxA(nullptr, "Failed creating the thread", nullptr, MB_OK | MB_ICONERROR | MB_APPLMODAL);
-                return; // error
-            }
-
-            // Wait until MyAppLauncher signals us that wx was initialized. This
-            // is because we use wxMessageQueue<> and wxString later and so must
-            // be sure that they are in working state.
-            WaitForSingleObject(hEvent, INFINITE);
-            CloseHandle(hEvent);
-        }
-
-        // Send a message to wx thread to show a new frame:
-        //wxThreadEvent* event =
-        //    new wxThreadEvent(wxEVT_THREAD, CMD_SHOW_WINDOW);
-        //event->SetString(title);
-        //event->SetInt(true);
-        //wxQueueEvent(wxApp::GetInstance(), event);
-    }
-
-    void wx_dll_cleanup()
-    {
-        wxCriticalSectionLocker lock(gs_wxStartupCS);
-
-        if (!gs_wxMainThread)
-            return;
-
-        // If wx main thread is running, we need to stop it. To accomplish this,
-        // send a message telling it to terminate the app.
-        wxThreadEvent* event =
-            new wxThreadEvent(wxEVT_THREAD, CMD_TERMINATE);
-        wxQueueEvent(wxApp::GetInstance(), event);
-
-        // We must then wait for the thread to actually terminate.
-        WaitForSingleObject(gs_wxMainThread, INFINITE);
-        CloseHandle(gs_wxMainThread);
-        gs_wxMainThread = NULL;
-        wxUninitialize();
-    }
-
     Application* app = nullptr;
     DLL_EXPORT BOOL __stdcall APIENTRY DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
     {
@@ -300,6 +165,32 @@ extern "C"
            DONE?
     */
 
+    __declspec(naked) void setPartyCountMm6()
+    {
+        _asm
+        {
+            or ecx, 0xFFFFFFFF
+            xor eax, eax
+            // our code
+            mov dword ptr[CURRENT_PARTY_SIZE], 4
+            mov edx, 0x458BDB
+            jmp edx
+        }
+    }
+
+    __declspec(naked) void setPartyCountMm7()
+    {
+        _asm
+        {
+            push esi
+            lea eax, dword ptr [ebp - 0x10C]
+            // our code
+            mov dword ptr [CURRENT_PARTY_SIZE], 4
+            mov ecx, 0x460755
+            jmp ecx
+        }
+    }
+
     DLL_EXPORT void __stdcall init()
     {
         //run_wx_gui_from_dll();
@@ -309,7 +200,7 @@ extern "C"
         if (!wxEntryStart(hinstExe))
         {
             MessageBoxA(nullptr, "Party generator couldn't load", nullptr, 0);
-
+            return;
             // flush logs (saw it in some wxwidgets source file)
             //delete wxLog::SetActiveTarget(NULL);
         }
@@ -337,6 +228,16 @@ extern "C"
             file << str;
             file.close();
         }
+
+        if (inMM && MMVER == 6)
+        {
+            hookJump(0x458BD6, setPartyCountMm6);
+        }
+        else if (inMM && MMVER == 7)
+        {
+            hookJump(0x46074E, setPartyCountMm7, 7);
+        }
+        
         //MSGBOX((std::string("app: ") + std::to_string((int)app)).c_str());
         //MSGBOX((std::string("window: ") + std::to_string((int)app->mainWindow)).c_str());
     }
@@ -344,6 +245,10 @@ extern "C"
     DLL_EXPORT void __stdcall runEventLoopOnce()
     {
         //assert(dynamic_cast<wxLogGui*>(wxLog::GetActiveTarget()));
+        if (MMVER == 8)
+        {
+            updatePartySizeAndPlayerPtrs();
+        }
         wxLog::FlushActive();
         app->ProcessPendingEvents();
         //wxGetApp().mainWindow->playerPanels.size()
@@ -374,6 +279,7 @@ extern "C"
     {
         //delete generator;
         //wx_dll_cleanup();
+        removeHooks();
         wxLog::FlushActive();
         wxEntryCleanup();
     }
