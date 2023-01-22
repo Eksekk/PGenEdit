@@ -23,3 +23,5 @@ isTwoHanded_ptr isTwoHanded = (isTwoHanded_ptr)0;
 isEquippableInOffhand_ptr isEquippableInOffhand = (isEquippableInOffhand_ptr)0;
 
 bool inMM = false;
+
+std::vector<wxString> jsonErrors;

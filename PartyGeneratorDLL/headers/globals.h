@@ -24,4 +24,6 @@ extern isTwoHanded_ptr isTwoHanded;
 typedef bool (*isEquippableInOffhand_ptr)(void*, int);
 extern isEquippableInOffhand_ptr isEquippableInOffhand;
 
+extern std::vector<wxString> jsonErrors;
+
 extern bool inMM;

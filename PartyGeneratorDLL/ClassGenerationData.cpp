@@ -2,20 +2,7 @@
 #include "main.h"
 #include "ClassGenerationData.h"
 #include "GameData.h"
-
-ClassGenerationData::ClassGenerationData(int index, PlayerData& playerData) : index(index), playerData(playerData)
-{
-	setDefaults();
-}
-
-void ClassGenerationSettings::randomize()
-{
-}
-
-void ClassGenerationSettings::copyFrom(const GeneratorDataBase& source)
-{
-
-}
+#include "Globals.h"
 
 ClassGenerationSettings::ClassGenerationSettings()
 {
@@ -44,8 +31,12 @@ bool ClassGenerationSettings::writeToJson(Json& json)
 {
 	json["weight"] = weight;
 	json["tierWeights"] = tierWeights;
-	//json["alignment"] = 
-	return false;
+	auto itr = alignmentIdToString.find(alignment);
+	assert(itr != alignmentIdToString.end());
+	json["alignment"] = itr->second;
+	json["disabled"] = disabled;
+	json["equalChances"] = equalChances;
+	return true;
 }
 
 void ClassGenerationSettings::setDefaults()
@@ -55,19 +46,97 @@ void ClassGenerationSettings::setDefaults()
 	{
 		i = 1;
 	}
-	alignment = ALIGNMENT_NEUTRAL;
+	alignment = ALIGNMENT_ANY;
 	disabled = false;
 	equalChances = false;
 }
 
+void ClassGenerationSettings::randomize()
+{
+	static std::random_device rd;
+	static std::mt19937 gen(rd());
+
+	static std::uniform_int_distribution weightRand(0, 10);
+	static std::uniform_int_distribution alignmentRand(0, 3);
+	static std::uniform_int_distribution disabledRand(0, 5);
+	static std::uniform_int_distribution equalChancesRand(0, 5);
+
+	weight = weightRand(gen);
+	for (int i = 0; i <= 2; ++i)
+	{
+		tierWeights.at(i) = weightRand(gen);
+	}
+	alignment = (Alignment)alignmentRand(gen);
+	disabled = disabledRand(gen) == 5; // 16.66%
+	equalChances = equalChancesRand(gen) == 5; // 16.66%
+}
+
+void ClassGenerationSettings::copyFrom(const GeneratorDataBase& source)
+{
+	const ClassGenerationSettings* other = dynamic_cast<const ClassGenerationSettings*>(&source);
+	assert(other);
+	weight = other->weight;
+	tierWeights = other->tierWeights;
+	alignment = other->alignment;
+	disabled = other->disabled;
+	equalChances = other->equalChances;
+}
+
+ClassGenerationData::ClassGenerationData(int index, PlayerData& playerData) : index(index), playerData(playerData)
+{
+	setDefaults();
+}
+
+/*std::unordered_map<int, ClassGenerationSettings> settings; // rehash doesn't invalidate pointers
+	ClassGenerationSettings defaultSettings; // for player
+	Alignment possibleAlignment;
+	int index;
+	bool generationEnabled;*/
+
 bool ClassGenerationData::readFromJson(const Json& json)
 {
-	return false;
+	auto s = json["settings"].get<std::unordered_map<int, Json>>();
+	for (auto& [id, data] : s)
+	{
+		if (!GameData::classes.contains(id))
+		{
+			jsonErrors.push_back(wxString::Format("Class entry for player %d doesn't contain class settings with id %d", index, id));
+		}
+		ClassGenerationSettings s;
+		s.readFromJson(data);
+		settings[id] = std::move(s);
+	}
+	if (s.size() != GameData::classes.size())
+	{
+		jsonErrors.push_back(wxString::Format("Class entry for player %d contains %d entries (%d expected)", index, s.size(), GameData::classes.size()));
+	}
+	defaultSettings.readFromJson(json["defaultSettings"]);
+	std::string astr = json["possibleAlignment"];
+	auto itr = alignmentStringToId.find(astr);
+	assert(itr != alignmentStringToId.end());
+	possibleAlignment = (Alignment)itr->second;
+	generationEnabled = json["generationEnabled"];
+	return true;
 }
 
 bool ClassGenerationData::writeToJson(Json& json)
 {
-	return false;
+	Json s;
+	for (auto& [id, data] : settings)
+	{
+		Json tmp;
+		data.writeToJson(tmp);
+		s[id] = tmp;
+	}
+	json["settings"] = s;
+	Json tmp;
+	defaultSettings.writeToJson(tmp);
+	json["defaultSettings"] = tmp;
+	auto itr = alignmentIdToString.find(possibleAlignment);
+	assert(itr != alignmentIdToString.end());
+	json["possibleAlignment"] = itr->second;
+	json["generationEnabled"] = generationEnabled;
+	return true;
 }
 
 void ClassGenerationData::setDefaults()
@@ -77,37 +146,26 @@ void ClassGenerationData::setDefaults()
 		classGenerationSettings.setDefaults();
 	}
 	possibleAlignment = ALIGNMENT_ANY;
+	generationEnabled = true;
 }
 
 void ClassGenerationData::randomize()
 {
-	std::random_device rd;
-	std::mt19937 gen(rd());
+	static std::random_device rd;
+	static std::mt19937 gen(rd());
 	possibleAlignment = (Alignment)std::uniform_int_distribution(0, 3)(gen);
-	if (std::uniform_int_distribution(0, 9)(gen) == 9)
+	if (std::uniform_int_distribution(0, 9)(gen)) // 90%
+	{
+		possibleAlignment = ALIGNMENT_ANY;
+	}
+	if (std::uniform_int_distribution(0, 9)(gen) == 9) // 10%
 	{
 		generationEnabled = false;
 	}
-	std::uniform_int_distribution weightRand(0, 10);
-	std::uniform_int_distribution alignmentRand(0, 3);
-	std::uniform_int_distribution disabledRand(0, 5);
-	std::uniform_int_distribution equalChancesRand(0, 5);
-	auto randomSettings = [&](ClassGenerationSettings& s)
-	{
-		s.weight = weightRand(gen);
-		s.tierWeights.clear();
-		for (int i = 0; i <= 2; ++i)
-		{
-			s.tierWeights.push_back(weightRand(gen));
-		}
-		s.alignment = (Alignment)alignmentRand(gen);
-		s.disabled = disabledRand(gen) == 5;
-		s.equalChances = equalChancesRand(gen) == 5;
-	};
-	randomSettings(defaultSettings);
+	defaultSettings.randomize();
 	for (auto& [id, s] : settings)
 	{
-		randomSettings(s);
+		s.randomize();
 	}
 	/*
 	struct ClassGenerationSettings // settings from GUI
@@ -137,6 +195,12 @@ public:
 
 void ClassGenerationData::copyFrom(const GeneratorDataBase& source)
 {
+	const ClassGenerationData* other = dynamic_cast<const ClassGenerationData*>(&source);
+	assert(other);
+	settings = other->settings;
+	defaultSettings = other->defaultSettings;
+	possibleAlignment = other->possibleAlignment;
+	generationEnabled = other->generationEnabled;
 }
 
 void ClassGenerationData::createSettings()
