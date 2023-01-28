@@ -76,6 +76,11 @@ public:
 
 	virtual void copyFrom(const GeneratorDataBase& source) override;
 
+	Generator& operator=(const Generator& other);
+
+	bool operator==(const Generator& other) const;
+	bool operator!=(const Generator& other) const;
+
 	/*
 	GENERATION ORDER:
 	- level

@@ -10,3 +10,4 @@ EXPORTS
 	setSkillData
 	setCallbacks
 	setPlayerPointers
+	runTests

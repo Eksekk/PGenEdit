@@ -35,5 +35,10 @@ public:
 	// Inherited via GeneratorDataBase
 	virtual void randomize() override;
 	virtual void copyFrom(const GeneratorDataBase& source) override;
+
+	StatisticsData& operator=(const StatisticsData& other);
+
+	bool operator==(const StatisticsData& other) const;
+	bool operator!=(const StatisticsData& other) const;
 };
 

@@ -41,32 +41,48 @@ void hookJump(uint32_t addr, void* func, uint32_t size)
 	VirtualProtect((void*)addr, size, tmp, &tmp);
 }
 
-void patchByte(uint32_t addr, uint8_t val)
+void patchByte(uint32_t addr, uint8_t val, bool store = false)
 {
+	if (store)
+	{
+		storeBytes(addr, 1);
+	}
 	DWORD tmp;
 	VirtualProtect((void*)addr, 1, PAGE_EXECUTE_READWRITE, &tmp);
 	byte(addr) = val;
 	VirtualProtect((void*)addr, 1, tmp, &tmp);
 }
 
-void patchWord(uint32_t addr, uint16_t val)
+void patchWord(uint32_t addr, uint16_t val, bool store = false)
 {
+	if (store)
+	{
+		storeBytes(addr, 2);
+	}
 	DWORD tmp;
 	VirtualProtect((void*)addr, 2, PAGE_EXECUTE_READWRITE, &tmp);
 	word(addr) = val;
 	VirtualProtect((void*)addr, 2, tmp, &tmp);
 }
 
-void patchDword(uint32_t addr, uint32_t val)
+void patchDword(uint32_t addr, uint32_t val, bool store = false)
 {
+	if (store)
+	{
+		storeBytes(addr, 4);
+	}
 	DWORD tmp;
 	VirtualProtect((void*)addr, 4, PAGE_EXECUTE_READWRITE, &tmp);
 	dword(addr) = val;
 	VirtualProtect((void*)addr, 4, tmp, &tmp);
 }
 
-void patchQword(uint32_t addr, uint64_t val)
+void patchQword(uint32_t addr, uint64_t val, bool store = false)
 {
+	if (store)
+	{
+		storeBytes(addr, 8);
+	}
 	DWORD tmp;
 	VirtualProtect((void*)addr, 8, PAGE_EXECUTE_READWRITE, &tmp);
 	qword(addr) = val;
@@ -106,4 +122,14 @@ void removeHooks()
 		patchBytes(address, data.data(), data.size(), false);
 	}
 	hookRestoreList.clear();
+}
+
+void removeHook(uint32_t addr)
+{
+	if (!hookRestoreList.contains(addr))
+	{
+		wxLogFatalError("Attempt to remove nonexisting hook at %X", addr);
+	}
+	auto& data = hookRestoreList[addr];
+	patchBytes(addr, data.data(), data.size(), false);
 }

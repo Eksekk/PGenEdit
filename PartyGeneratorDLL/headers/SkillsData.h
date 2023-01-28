@@ -37,4 +37,9 @@ public:
 	// Inherited via GeneratorDataBase
 	virtual void randomize() override;
 	virtual void copyFrom(const GeneratorDataBase& source) override;
+
+	SkillsData& operator=(const SkillsData& other);
+
+	bool operator==(const SkillsData& other) const;
+	bool operator!=(const SkillsData& other) const;
 };

@@ -77,5 +77,5 @@ std::vector<wxString> Tests::testMisc()
 template<typename Player, typename Game>
 std::vector<wxString> Tests::run()
 {
-	return mergeVectors(testMisc<Player, Game>(), testSkillFunctions());
+	return mergeVectors(testMisc<Player, Game>(), testSkillFunctions(), testJson());
 }

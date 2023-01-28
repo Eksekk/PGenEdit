@@ -9,7 +9,7 @@
 
 class PlayerData;
 
-struct ResistanceDataInner
+struct ResistanceDataInner : public GeneratorDataBase
 {
 	int resistanceId;
 	bool useExact; // always sets exact value
@@ -26,7 +26,18 @@ struct ResistanceDataInner
 	// TODO: isExclusive, set in lua
 
 	ResistanceDataInner();
-	void setDefaults();
+
+	// Inherited via GeneratorDataBase
+	virtual bool readFromJson(const Json& json) override;
+	virtual bool writeToJson(Json& json) override;
+	virtual void randomize() override;
+	virtual void setDefaults() override;
+	virtual void copyFrom(const GeneratorDataBase& source) override;
+
+	ResistanceDataInner& operator=(const ResistanceDataInner& other);
+
+	bool operator==(const ResistanceDataInner& other);
+	bool operator!=(const ResistanceDataInner& other);
 };
 
 class ResistanceData : public GeneratorDataBase
@@ -50,6 +61,11 @@ public:
 	// Inherited via GeneratorDataBase
 	virtual void randomize() override;
 	virtual void copyFrom(const GeneratorDataBase& source) override;
+
+	ResistanceData& operator=(const ResistanceData& other);
+
+	bool operator==(const ResistanceData& other) const;
+	bool operator!=(const ResistanceData& other) const;
 };
 
 //base resistances weight/range/exact value, exact number of resistance points or range, scale by level or not

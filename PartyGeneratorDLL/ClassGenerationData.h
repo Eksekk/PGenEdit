@@ -25,6 +25,11 @@ struct ClassGenerationSettings : public GeneratorDataBase // settings from GUI
 	virtual void setDefaults() override;
 	virtual void randomize() override;
 	virtual void copyFrom(const GeneratorDataBase& source) override;
+
+	ClassGenerationSettings& operator=(const ClassGenerationSettings& other);
+
+	bool operator==(const ClassGenerationSettings& other) const;
+	bool operator!=(const ClassGenerationSettings& other) const;
 };
 
 class ClassGenerationData : public GeneratorDataBase
@@ -58,4 +63,9 @@ public:
 
 	virtual void randomize() override;
 	virtual void copyFrom(const GeneratorDataBase& source) override;
+
+	ClassGenerationData& operator=(const ClassGenerationData& other);
+
+	bool operator==(const ClassGenerationData& other);
+	bool operator!=(const ClassGenerationData& other);
 };

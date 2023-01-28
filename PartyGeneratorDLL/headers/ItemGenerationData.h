@@ -67,7 +67,10 @@ public:
 	template<typename Player>
 	static std::function<bool(void*, int, PlayerItem*, ItemGenerationData*)> shouldItemTypeGenerate[ITEM_TYPE_COUNT];
 
-	// Inherited via GeneratorDataBase
+	ItemGenerationData& operator=(const ItemGenerationData& other);
+
+	bool operator==(const ItemGenerationData& other) const;
+	bool operator!=(const ItemGenerationData& other) const;
 	
 };
 

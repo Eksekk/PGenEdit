@@ -30,7 +30,7 @@ Vector mergeVectors(const Vector& first, const Vector& second)
 }
 
 template<typename Vector, typename... Vectors>
-Vector mergeVectors(const Vector& first, const Vector& second, const Vectors... vectors)
+Vector mergeVectors(const Vector& first, const Vector& second, const Vectors&... vectors)
 {
 	return mergeVectors(mergeVectors(first, second), vectors...);
 }

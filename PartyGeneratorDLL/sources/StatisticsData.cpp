@@ -14,3 +14,19 @@ void StatisticsData::randomize()
 void StatisticsData::copyFrom(const GeneratorDataBase& source)
 {
 }
+
+StatisticsData& StatisticsData::operator=(const StatisticsData& other)
+{
+	// TODO: insert return statement here
+	return *this;
+}
+
+bool StatisticsData::operator==(const StatisticsData& other) const
+{
+	return false;
+}
+
+bool StatisticsData::operator!=(const StatisticsData& other) const
+{
+	return false;
+}

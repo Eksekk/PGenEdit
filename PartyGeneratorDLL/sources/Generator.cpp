@@ -77,6 +77,21 @@ void Generator::copyFrom(const GeneratorDataBase& source)
 
 }
 
+Generator& Generator::operator=(const Generator& other)
+{
+	return *this;
+}
+
+bool Generator::operator==(const Generator& other) const
+{
+	return false;
+}
+
+bool Generator::operator!=(const Generator& other) const
+{
+	return false;
+}
+
 template<typename Player>
 void generateClass(Player* player)
 {

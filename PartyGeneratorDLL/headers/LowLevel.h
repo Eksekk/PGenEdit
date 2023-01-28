@@ -28,10 +28,10 @@ void hookCall(uint32_t addr, void* func, uint32_t size = 5);
 void hookJump(uint32_t addr, void* func, uint32_t size = 5);
 
 // data patching functions which unprotect before/protect after (essential for patching code etc.)
-void patchByte(uint32_t addr, uint8_t val);
-void patchWord(uint32_t addr, uint16_t val);
-void patchDword(uint32_t addr, uint32_t val);
-void patchQword(uint32_t addr, uint64_t val);
+void patchByte(uint32_t addr, uint8_t val, bool store);
+void patchWord(uint32_t addr, uint16_t val, bool store);
+void patchDword(uint32_t addr, uint32_t val, bool store);
+void patchQword(uint32_t addr, uint64_t val, bool store);
 
 // erases code (NOPs), writing jump forward if number of bytes erased is high enough
 void eraseCode(uint32_t addr, uint32_t size);
@@ -40,3 +40,4 @@ void eraseCode(uint32_t addr, uint32_t size);
 void patchBytes(uint32_t addr, void* bytes, uint32_t size, bool store);
 
 void removeHooks();
+void removeHook(uint32_t addr);

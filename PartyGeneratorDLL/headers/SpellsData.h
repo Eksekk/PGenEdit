@@ -38,6 +38,11 @@ public:
 
 	virtual void copyFrom(const GeneratorDataBase& source) override;
 
+	SpellsData& operator=(const SpellsData& other);
+
+	bool operator==(const SpellsData& other) const;
+	bool operator!=(const SpellsData& other) const;
+
 	// clear beacons if removed lloyd's beacon spell
 	// zero out fire spike casts, divine intervention casts and armageddon casts if spell removed
 	// reset quick spell, attack spell, spell book page

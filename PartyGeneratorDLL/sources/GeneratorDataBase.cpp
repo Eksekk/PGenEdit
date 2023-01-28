@@ -6,4 +6,16 @@ void GeneratorDataBase::randomize()
 {
 }
 
+Json GeneratorDataBase::writeToJsonR()
+{
+    Json j;
+    writeToJson(j);
+    return j;
+}
+
+GeneratorDataBase::GeneratorDataBase(const GeneratorDataBase& other)
+{
+    // assert(false); // shouldn't be ever called - use subclass copy ctor
+}
+
 GeneratorDataBase::~GeneratorDataBase() {}

@@ -14,3 +14,18 @@ void SkillsData::randomize()
 void SkillsData::copyFrom(const GeneratorDataBase& source)
 {
 }
+
+SkillsData& SkillsData::operator=(const SkillsData& other)
+{
+	return *this;
+}
+
+bool SkillsData::operator==(const SkillsData& other) const
+{
+	return false;
+}
+
+bool SkillsData::operator!=(const SkillsData& other) const
+{
+	return false;
+}

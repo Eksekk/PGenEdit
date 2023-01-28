@@ -58,3 +58,18 @@ void PlayerData::randomize()
 void PlayerData::copyFrom(const GeneratorDataBase& source)
 {
 }
+
+PlayerData& PlayerData::operator=(const PlayerData& other)
+{
+	return *this;
+}
+
+bool PlayerData::operator==(const PlayerData& other) const
+{
+	return false;
+}
+
+bool PlayerData::operator!=(const PlayerData& other) const
+{
+	return false;
+}

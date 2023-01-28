@@ -4,7 +4,7 @@
 #include "GameData.h"
 #include "Globals.h"
 
-ClassGenerationSettings::ClassGenerationSettings()
+ClassGenerationSettings::ClassGenerationSettings() : tierWeights(3, 1)
 {
 	setDefaults();
 }
@@ -42,9 +42,16 @@ bool ClassGenerationSettings::writeToJson(Json& json)
 void ClassGenerationSettings::setDefaults()
 {
 	weight = 1;
-	for (int& i : tierWeights)
+	if (tierWeights.size() != 3)
 	{
-		i = 1;
+		tierWeights.resize(3, 1);
+	}
+	else
+	{
+		for (int& i : tierWeights)
+		{
+			i = 1;
+		}
 	}
 	alignment = ALIGNMENT_ANY;
 	disabled = false;
@@ -62,9 +69,18 @@ void ClassGenerationSettings::randomize()
 	static std::uniform_int_distribution equalChancesRand(0, 5);
 
 	weight = weightRand(gen);
+	bool nonzero = false; // at least one weight has to be nonzero
 	for (int i = 0; i <= 2; ++i)
 	{
 		tierWeights.at(i) = weightRand(gen);
+		if (tierWeights[i] != 0)
+		{
+			nonzero = true;
+		}
+		if (i == 2 && !nonzero)
+		{
+			tierWeights[std::uniform_int_distribution(0, 2)(gen)] = 1;
+		}
 	}
 	alignment = (Alignment)alignmentRand(gen);
 	disabled = disabledRand(gen) == 5; // 16.66%
@@ -82,22 +98,34 @@ void ClassGenerationSettings::copyFrom(const GeneratorDataBase& source)
 	equalChances = other->equalChances;
 }
 
+ClassGenerationSettings& ClassGenerationSettings::operator=(const ClassGenerationSettings& other)
+{
+	copyFrom(other);
+	return *this;
+}
+
+bool ClassGenerationSettings::operator==(const ClassGenerationSettings& other) const
+{
+	return weight == other.weight && tierWeights == other.tierWeights && alignment == other.alignment
+		&& disabled == other.disabled && equalChances == other.equalChances;
+}
+
+bool ClassGenerationSettings::operator!=(const ClassGenerationSettings& other) const
+{
+	return !operator==(other);
+}
+
 ClassGenerationData::ClassGenerationData(int index, PlayerData& playerData) : index(index), playerData(playerData)
 {
 	setDefaults();
 }
 
-/*std::unordered_map<int, ClassGenerationSettings> settings; // rehash doesn't invalidate pointers
-	ClassGenerationSettings defaultSettings; // for player
-	Alignment possibleAlignment;
-	int index;
-	bool generationEnabled;*/
-
 bool ClassGenerationData::readFromJson(const Json& json)
 {
-	auto s = json["settings"].get<std::unordered_map<int, Json>>();
-	for (auto& [id, data] : s)
+	auto s = json["settings"].get<std::unordered_map<std::string, Json>>();
+	for (auto& [idstr, data] : s)
 	{
+		int id = std::stoi(idstr);
 		if (!GameData::classes.contains(id))
 		{
 			jsonErrors.push_back(wxString::Format("Class entry for player %d doesn't contain class settings with id %d", index, id));
@@ -124,14 +152,10 @@ bool ClassGenerationData::writeToJson(Json& json)
 	Json s;
 	for (auto& [id, data] : settings)
 	{
-		Json tmp;
-		data.writeToJson(tmp);
-		s[id] = tmp;
+		s[std::to_string(id)] = data.writeToJsonR();
 	}
 	json["settings"] = s;
-	Json tmp;
-	defaultSettings.writeToJson(tmp);
-	json["defaultSettings"] = tmp;
+	json["defaultSettings"] = defaultSettings.writeToJsonR();
 	auto itr = alignmentIdToString.find(possibleAlignment);
 	assert(itr != alignmentIdToString.end());
 	json["possibleAlignment"] = itr->second;
@@ -145,6 +169,7 @@ void ClassGenerationData::setDefaults()
 	{
 		classGenerationSettings.setDefaults();
 	}
+	defaultSettings.setDefaults();
 	possibleAlignment = ALIGNMENT_ANY;
 	generationEnabled = true;
 }
@@ -201,6 +226,23 @@ void ClassGenerationData::copyFrom(const GeneratorDataBase& source)
 	defaultSettings = other->defaultSettings;
 	possibleAlignment = other->possibleAlignment;
 	generationEnabled = other->generationEnabled;
+}
+
+ClassGenerationData& ClassGenerationData::operator=(const ClassGenerationData& other)
+{
+	copyFrom(other);
+	return *this;
+}
+
+bool ClassGenerationData::operator==(const ClassGenerationData& other)
+{
+	return settings == other.settings && defaultSettings == other.defaultSettings
+		&& possibleAlignment == other.possibleAlignment && generationEnabled == other.generationEnabled;
+}
+
+bool ClassGenerationData::operator!=(const ClassGenerationData& other)
+{
+	return !operator==(other);
 }
 
 void ClassGenerationData::createSettings()

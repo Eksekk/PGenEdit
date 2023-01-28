@@ -41,6 +41,21 @@ void ItemGenerationData::copyFrom(const GeneratorDataBase& source)
 {
 }
 
+ItemGenerationData& ItemGenerationData::operator=(const ItemGenerationData& other)
+{
+	return *this;
+}
+
+bool ItemGenerationData::operator==(const ItemGenerationData& other) const
+{
+	return false;
+}
+
+bool ItemGenerationData::operator!=(const ItemGenerationData& other) const
+{
+	return false;
+}
+
 template <typename Player>
 int ItemGenerationData::getItemCount(Player* player)
 {

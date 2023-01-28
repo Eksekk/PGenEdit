@@ -26,7 +26,7 @@ wxString rep(const wxString& str, int n = 1)
 template<typename T>
 wxString my_to_string(const T& t)
 {
-	return wxString().operator<<(t); // sorry for clever code, couldn't help myself
+	return wxString().operator<<(t); // sorry for clever code, couldn't help myself!
 	// we are calling operator<< (which inserts argument into string) on temporary string,
 	// taking advantage that it returns modified string (intended to allow chaining,
 	// like str << "x" << "y" << 5)
@@ -171,7 +171,96 @@ std::vector<wxString> Tests::testSkillFunctions()
 
 std::vector<wxString> Tests::testJson()
 {
-	return std::vector<wxString>();
+	static const std::string TEST_FILE_NAME = "class data tests.txt", ERROR_FILE_NAME = "class data errors.txt", OLD_ERROR_FILE_NAME = "old class data errors.txt";
+	std::vector<wxString> errors;
+	bool failed = false;
+	Asserter myasserter(errors, failed);
+	// std::ios::in fails if file doesn't exist, even if std::ios::out is specified
+	std::fstream errorFile(ERROR_FILE_NAME, std::ios::in);
+	if (errorFile.is_open())
+	{
+		std::fstream(OLD_ERROR_FILE_NAME, std::ios::out | std::ios::trunc) << errorFile.rdbuf();
+		errorFile.close();
+	}
+	else
+	{
+		errorFile.clear();
+	}
+	errorFile.open(ERROR_FILE_NAME, std::ios::in | std::ios::trunc);
+	std::fstream testFile;
+	bool existed = true;
+	Json testOut = Json::array(), existingJson;
+	std::fstream oldTestsFile(TEST_FILE_NAME, std::ios::in);
+	if (oldTestsFile.is_open() && std::filesystem::file_size(TEST_FILE_NAME) > 0)
+	{
+		try
+		{
+			existingJson = Json::parse(oldTestsFile);
+		}
+		catch (const nlohmann::json::exception& ex)
+		{
+			wxLogError("Error reading old tests file, generating new tests\nError description: %s", ex.what());
+			wxLog::FlushActive();
+			existed = false;
+			testFile.open(TEST_FILE_NAME, std::ios::out | std::ios::trunc);
+		}
+	}
+	else
+	{
+		existed = false;
+		testFile.open(TEST_FILE_NAME, std::ios::out | std::ios::trunc);
+	}
+	int failedNum = 0;
+	try
+	{
+		const size_t jsonSize = existingJson.size();
+		const int TESTS = 25;
+		for (int pl = 0; pl < MAX_PLAYERS; ++pl)
+		{
+			auto& classes = generator->playerData[pl]->classes;
+			Json copy;
+			classes.writeToJson(copy);
+			for (int i = 0; i < TESTS; ++i)
+			{
+				Json j;
+				if (existed && jsonSize > pl * TESTS + i)
+				{
+					classes.readFromJson(existingJson[pl * TESTS + i]); // TODO: array of arrays of class json instead of * 1000 (players/tests/classes)
+				}
+				else
+				{
+					classes.randomize();
+				}
+				classes.writeToJson(j);
+				//wxLogWarning(wxString(j.dump(4)));
+				//wxLog::FlushActive();
+				if (!existed)
+				{
+					testOut.push_back(j);
+				}
+				ClassGenerationData classes2(classes.index, classes.playerData);
+				classes2.readFromJson(j);
+				if (classes != classes2)
+				{
+					errorFile << wxString::Format("Test %d (player %d) failed\nResult json:\n%s\n\n", i, pl, j.dump(4) + "\n\n");
+					++failedNum;
+				}
+			}
+			classes.readFromJson(copy);
+		}
+		wxLogInfo(wxString::Format("%d tests failed", failedNum));
+		wxLog::FlushActive();
+		if (!existed)
+		{
+			testFile << testOut;
+		}
+	}
+	catch (const std::exception& ex)
+	{
+		wxLogError(ex.what());
+		wxLog::FlushActive();
+	}
+	return errors;
 }
 
 std::vector<wxString> Tests::testGui()
@@ -180,7 +269,7 @@ std::vector<wxString> Tests::testGui()
 	bool failed = false;
 	Asserter myasserter(errors, failed);
 	auto tabs = wxGetApp().mainWindow->tabs;
-	myassert(tabs->GetPageCount() == MainWindow::FIRST_PLAYER_PAGE + 4);
+	myassert(tabs->GetPageCount() == MainWindow::FIRST_PLAYER_PAGE + MAX_PLAYERS);
 	myassert(dynamic_cast<GeneralPanel*>(tabs->GetPage(MainWindow::GENERAL_PANEL_PAGE)));
 	auto p = dynamic_cast<DefaultPlayerPanel*>(tabs->GetPage(MainWindow::DEFAULT_PLAYER_PAGE));
 	if (myassert(p))
@@ -191,7 +280,10 @@ std::vector<wxString> Tests::testGui()
 	{
 		auto p = dynamic_cast<PlayerPanel*>(tabs->GetPage(i + MainWindow::FIRST_PLAYER_PAGE));
 		myassert(p, wxString::Format("iteration %d", i));
-		myassert(p->linkedGenerationData, wxString::Format("iteration %d", i));
+		if (p)
+		{
+			myassert(p->linkedGenerationData, wxString::Format("iteration %d", i));
+		}
 	}
-	return errors;;
+	return errors;
 }

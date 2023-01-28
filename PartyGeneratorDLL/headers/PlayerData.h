@@ -40,4 +40,9 @@ public:
 	virtual void setDefaults() override;
 	virtual void randomize() override;
 	virtual void copyFrom(const GeneratorDataBase& source) override;
+
+	PlayerData& operator=(const PlayerData& other);
+
+	bool operator==(const PlayerData& other) const;
+	bool operator!=(const PlayerData& other) const;
 };
