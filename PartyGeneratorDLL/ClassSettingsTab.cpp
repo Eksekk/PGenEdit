@@ -1,28 +1,43 @@
 #include "pch.h"
 #include "main.h"
 #include "ClassSettingsTab.h"
+#include "ClassInfoPanel.h"
+#include "GameData.h"
+#include "ClassGenerationData.h"
 #include "ClassWindow.h"
 
-ClassSettingsTab::ClassSettingsTab(wxWindow* parent, ClassGenerationData* data) : wxPanel(parent), data(data)
+ClassSettingsTab::ClassSettingsTab(wxWindow* parent, ClassGenerationData* data) : wxPanel(parent), linkedClassSettings(data)
 {
-	assert(data);
 	classWindow = new ClassWindow(this);
+	assert(data);
 
-	wxBoxSizer* bSizer28;
-	bSizer28 = new wxBoxSizer(wxHORIZONTAL);
-	wxString possibleAlignmentRadioBoxChoices[] = { _("Any"), _("Light only"), _("Dark only") };
-	int possibleAlignmentRadioBoxNChoices = sizeof(possibleAlignmentRadioBoxChoices) / sizeof(wxString);
-	possibleAlignmentRadioBox = new wxRadioBox(this, wxID_ANY, _("Possible alignment (MM7/Merge; overrides all other alignment settings)"), wxDefaultPosition, wxDefaultSize, possibleAlignmentRadioBoxNChoices, possibleAlignmentRadioBoxChoices, 1, wxRA_SPECIFY_ROWS);
-	possibleAlignmentRadioBox->SetSelection(0);
+	mainSizer = new wxBoxSizer(wxVERTICAL);
+	possibleAlignmentRadioBox = new AlignmentRadioBox(this, _("Possible alignment (MM7/Merge; overrides all other alignment settings)"));
+	possibleAlignmentRadioBox->SetSelection(ALIGNMENT_ANY);
 	possibleAlignmentRadioBox->Bind(wxEVT_RADIOBOX, &ClassSettingsTab::onPossibleAlignmentSelectRadio, this);
-	bSizer28->Add(possibleAlignmentRadioBox, 0, wxALL, 5);
+	mainSizer->Add(possibleAlignmentRadioBox, 0, wxALL, 5);
 
+	specificClassSettingsButton = new wxButton(this, wxID_ANY, "Specific class settings");
+	mainSizer->Add(specificClassSettingsButton, 0, wxALL, 5);
+	specificClassSettingsButton->Bind(wxEVT_BUTTON, &ClassSettingsTab::onSpecificClassSettingsClick, this);
 
-	this->SetSizer(bSizer28);
+	this->SetSizer(mainSizer);
 	this->Layout();
-	bSizer28->Fit(this);
+	mainSizer->Fit(this);
+}
+
+void ClassSettingsTab::onSpecificClassSettingsClick(wxCommandEvent& event)
+{
+	classWindow->Show(true);
 }
 
 void ClassSettingsTab::onPossibleAlignmentSelectRadio(wxCommandEvent& event)
 {
+	linkedClassSettings->possibleAlignment = possibleAlignmentRadioBox->getSelectedAlignment();
+}
+
+void ClassSettingsTab::updateSettingsFromLinked()
+{
+	possibleAlignmentRadioBox->SetSelection(linkedClassSettings->possibleAlignment);
+	classWindow->updateSettingsFromLinked();
 }

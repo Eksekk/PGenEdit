@@ -1,20 +1,27 @@
-#pragma once
 #include "pch.h"
 #include "main.h"
+#include "ClassGenerationData.h"
+#include "AlignmentRadioBox.h"
 
 class ClassWindow;
 class ClassGenerationData;
+class ClassInfoPanel;
 
+#pragma once
 class ClassSettingsTab : public wxPanel
 {
 public:
 
-	ClassGenerationData* data;
-	ClassSettingsTab(wxWindow* parent, ClassGenerationData* data);
+	ClassGenerationData* linkedClassSettings;
+	wxBoxSizer* mainSizer;
+	AlignmentRadioBox* possibleAlignmentRadioBox;
 	ClassWindow* classWindow;
 
-	wxRadioBox* possibleAlignmentRadioBox;
-
+	ClassSettingsTab(wxWindow* parent, ClassGenerationData* data);
+	void updateSettingsFromLinked();
+private:
+	void onSpecificClassSettingsClick(wxCommandEvent& event);
 	void onPossibleAlignmentSelectRadio(wxCommandEvent& event);
+	wxButton* specificClassSettingsButton;
 };
 

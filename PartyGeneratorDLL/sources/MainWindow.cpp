@@ -84,133 +84,136 @@ MainWindow::MainWindow(wxWindow* parent, wxWindowID id, const wxString& title, c
 	this->SetSizeHints(wxDefaultSize, wxDefaultSize);
 
 	mainPanel = new wxPanel(this);
-
-	statusBar = this->CreateStatusBar(1, wxSTB_SIZEGRIP, wxID_ANY);
-
-	setupMenus();
-
-	mainSizer = new wxBoxSizer(wxVERTICAL);
-
-	mainPanel->SetSizer(mainSizer);
-
-	// BUTTONS //
-
-	wxBoxSizer* buttonsSizer;
-	buttonsSizer = new wxBoxSizer(wxHORIZONTAL);
-
-	loadButton = new wxButton(mainPanel, wxID_ANY, _("Load"), wxDefaultPosition, wxDefaultSize, 0);
-	loadButton->SetToolTip(_("Load settings from file"));
-	loadButton->SetMinSize(wxSize(-1, 30));
-
-	buttonsSizer->Add(loadButton, 1, wxALL, 5);
-
-	saveButton = new wxButton(mainPanel, wxID_ANY, _("Save"), wxDefaultPosition, wxDefaultSize, 0);
-	saveButton->SetToolTip(_("Save settings to file"));
-	saveButton->SetMinSize(wxSize(-1, 30));
-
-	buttonsSizer->Add(saveButton, 1, wxALL, 5);
-
-	clearButton = new wxButton(mainPanel, wxID_ANY, _("Clear"), wxDefaultPosition, wxDefaultSize, 0);
-	clearButton->SetToolTip(_("Set settings to their default values"));
-	clearButton->SetMinSize(wxSize(-1, 30));
-
-	buttonsSizer->Add(clearButton, 1, wxALL, 5);
-
-	randomizeButton = new wxButton(mainPanel, wxID_ANY, _("Randomize"), wxDefaultPosition, wxDefaultSize, 0);
-	randomizeButton->SetToolTip(_("Create random settings"));
-	randomizeButton->SetMinSize(wxSize(-1, 30));
-
-	buttonsSizer->Add(randomizeButton, 1, wxALL, 5);
-
-	copyButton = new wxButton(mainPanel, wxID_ANY, _("Copy"), wxDefaultPosition, wxDefaultSize, 0);
-	copyButton->SetToolTip(_("Copy settings or part of them from/to player"));
-	copyButton->SetMinSize(wxSize(-1, 30));
-
-	buttonsSizer->Add(copyButton, 1, wxALL, 5);
-
-
-	mainSizer->Add(buttonsSizer, 0, wxEXPAND, 5);
-
-	// ~~BUTTONS~~ //
-	
-	// SEED //
-
-	wxStaticBoxSizer* seedStaticBoxSizer;
-	seedStaticBoxSizer = new wxStaticBoxSizer(new wxStaticBox(mainPanel, wxID_ANY, _("Seed")), wxHORIZONTAL);
-
-	randomSeedRadio = new wxRadioButton(seedStaticBoxSizer->GetStaticBox(), wxID_ANY, _("Random"), wxDefaultPosition, wxDefaultSize, wxRB_GROUP);
-	seedStaticBoxSizer->Add(randomSeedRadio, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
-
-	specificSeedRadio = new wxRadioButton(seedStaticBoxSizer->GetStaticBox(), wxID_ANY, _("Specific:"), wxDefaultPosition, wxDefaultSize, 0);
-	seedStaticBoxSizer->Add(specificSeedRadio, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
-
-	specificSeedText = new wxTextCtrl(seedStaticBoxSizer->GetStaticBox(), wxID_ANY, _("0"), wxDefaultPosition, wxDefaultSize, wxTE_NOHIDESEL);
-	seedStaticBoxSizer->Add(specificSeedText, 0, wxALL, 5);
-
-	randomSeedInFileCheckbox = new wxCheckBox(seedStaticBoxSizer->GetStaticBox(), wxID_ANY, _("Keep random seed in file"), wxDefaultPosition, wxDefaultSize, 0);
-	randomSeedInFileCheckbox->SetToolTip(_("If set and seed to use is random, writes information about randomness to file (another user will get different seed), otherwise seed in file is exact"));
-
-	seedStaticBoxSizer->Add(randomSeedInFileCheckbox, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
-
-
-	mainSizer->Add(seedStaticBoxSizer, 0, wxLEFT, 5);
-
-	// ~~SEED~~ //
-
-	generateButton = new wxButton(mainPanel, wxID_ANY, _("Generate!"), wxDefaultPosition, wxDefaultSize, 0);
-	generateButton->SetFont(wxFont(15, wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL, false, wxEmptyString));
-	generateButton->SetMinSize(wxSize(200, 50));
-
-	mainSizer->Add(generateButton, 1, wxALIGN_CENTER_HORIZONTAL | wxALL, 10);
-
-	mm8PartialGenerationWarningSizer = new wxBoxSizer(wxHORIZONTAL);
-
-	m_bitmap1 = new wxStaticBitmap(mainPanel, wxID_ANY, wxArtProvider::GetBitmap(wxART_WARNING, wxART_CMN_DIALOG), wxDefaultPosition, wxDefaultSize, 0);
-	mm8PartialGenerationWarningSizer->Add(m_bitmap1, 0, wxALL, 5);
-
-	warningText = new wxStaticText(mainPanel, wxID_ANY, _("Warning: your party count is x. Only x leftmost tabs will be generated, the rest is implicitly disabled."), wxDefaultPosition, wxDefaultSize, 0);
-	mm8PartialGenerationWarningSizer->Add(warningText, 0, wxALIGN_CENTER_VERTICAL | wxALL, 5);
-
-	mainSizer->Add(mm8PartialGenerationWarningSizer, 0, wxEXPAND, 5);
-
-	for (auto& item : mm8PartialGenerationWarningSizer->GetChildren())
 	{
-		item->Show(false);
-	}
+		statusBar = this->CreateStatusBar(1, wxSTB_SIZEGRIP, wxID_ANY);
 
-	tabs = new wxNotebook(mainPanel, wxID_ANY, pos, size, wxNB_TOP | wxNB_FIXEDWIDTH | wxCLIP_CHILDREN);
-	mainSizer->Add(tabs, 1, wxEXPAND | wxALL, 5);
-	generalPanel = new GeneralPanel(tabs, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL | wxVSCROLL);
-	tabs->AddPage(generalPanel, _("General"), true);
-	std::vector<wxString> playerNames;
-	if (MMVER == 6)
-	{
-		//playerNames = getPlayerNames<mm6::Player>();
-	}
-	else if (MMVER == 7)
-	{
-		playerNames = getPlayerNames<mm7::Player>();
-	}
-	else if (MMVER == 8)
-	{
-		//playerNames = getPlayerNames<mm8::Player>();
-	}
+		setupMenus();
 
-	defaultSettings = new DefaultPlayerPanel(tabs, &generator->defaultPlayerData);
-	tabs->AddPage(defaultSettings, _("Default"), false);
-	for (int i = 0; i < MAX_PLAYERS; ++i)
-	{
-		tabs->AddPage(new PlayerPanel(tabs, generator->playerData[i].get()), playerNames[i]);
-	}
+		mainSizer = new wxBoxSizer(wxVERTICAL);
 
-	updateTabsTimer = new wxTimer(this);
-	Bind(wxEVT_TIMER, &MainWindow::onTimer, this); // TODO mm6-7 party size when reloading dll at runtime (currently hook launches only on map load)
-	updateTabsTimer->Start(200, wxTIMER_CONTINUOUS);
+		mainPanel->SetSizer(mainSizer);
+
+		// BUTTONS //
+
+		wxBoxSizer* buttonsSizer;
+		buttonsSizer = new wxBoxSizer(wxHORIZONTAL);
+		{
+			loadButton = new wxButton(mainPanel, wxID_ANY, _("Load"), wxDefaultPosition, wxDefaultSize, 0);
+			loadButton->SetToolTip(_("Load settings from file"));
+			loadButton->SetMinSize(wxSize(-1, 30));
+
+			buttonsSizer->Add(loadButton, 1, wxALL, 5);
+
+			saveButton = new wxButton(mainPanel, wxID_ANY, _("Save"), wxDefaultPosition, wxDefaultSize, 0);
+			saveButton->SetToolTip(_("Save settings to file"));
+			saveButton->SetMinSize(wxSize(-1, 30));
+
+			buttonsSizer->Add(saveButton, 1, wxALL, 5);
+
+			clearButton = new wxButton(mainPanel, wxID_ANY, _("Clear"), wxDefaultPosition, wxDefaultSize, 0);
+			clearButton->SetToolTip(_("Set settings to their default values"));
+			clearButton->SetMinSize(wxSize(-1, 30));
+
+			buttonsSizer->Add(clearButton, 1, wxALL, 5);
+
+			randomizeButton = new wxButton(mainPanel, wxID_ANY, _("Randomize"), wxDefaultPosition, wxDefaultSize, 0);
+			randomizeButton->SetToolTip(_("Create random settings"));
+			randomizeButton->SetMinSize(wxSize(-1, 30));
+
+			buttonsSizer->Add(randomizeButton, 1, wxALL, 5);
+
+			copyButton = new wxButton(mainPanel, wxID_ANY, _("Copy"), wxDefaultPosition, wxDefaultSize, 0);
+			copyButton->SetToolTip(_("Copy settings or part of them from/to player"));
+			copyButton->SetMinSize(wxSize(-1, 30));
+
+			buttonsSizer->Add(copyButton, 1, wxALL, 5);
+		}
+
+
+		mainSizer->Add(buttonsSizer, 0, wxEXPAND, 5);
+
+		// ~~BUTTONS~~ //
+
+		// SEED //
+
+		wxStaticBoxSizer* seedStaticBoxSizer;
+		seedStaticBoxSizer = new wxStaticBoxSizer(new wxStaticBox(mainPanel, wxID_ANY, _("Seed")), wxHORIZONTAL);
+		{
+			randomSeedRadio = new wxRadioButton(seedStaticBoxSizer->GetStaticBox(), wxID_ANY, _("Random"), wxDefaultPosition, wxDefaultSize, wxRB_GROUP);
+			seedStaticBoxSizer->Add(randomSeedRadio, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+
+			specificSeedRadio = new wxRadioButton(seedStaticBoxSizer->GetStaticBox(), wxID_ANY, _("Specific:"), wxDefaultPosition, wxDefaultSize, 0);
+			seedStaticBoxSizer->Add(specificSeedRadio, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+
+			specificSeedText = new wxTextCtrl(seedStaticBoxSizer->GetStaticBox(), wxID_ANY, _("0"), wxDefaultPosition, wxDefaultSize, wxTE_NOHIDESEL);
+			seedStaticBoxSizer->Add(specificSeedText, 0, wxALL, 5);
+
+			randomSeedInFileCheckbox = new wxCheckBox(seedStaticBoxSizer->GetStaticBox(), wxID_ANY, _("Keep random seed in file"), wxDefaultPosition, wxDefaultSize, 0);
+			randomSeedInFileCheckbox->SetToolTip(_("If set and seed to use is random, writes information about randomness to file (another user will get different seed), otherwise seed in file is exact"));
+
+			seedStaticBoxSizer->Add(randomSeedInFileCheckbox, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+		}
+
+		mainSizer->Add(seedStaticBoxSizer, 0, wxLEFT, 5);
+
+		// ~~SEED~~ //
+
+		generateButton = new wxButton(mainPanel, wxID_ANY, _("Generate!"), wxDefaultPosition, wxDefaultSize, 0);
+		generateButton->SetFont(wxFont(15, wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL, false, wxEmptyString));
+		generateButton->SetMinSize(wxSize(200, 50));
+
+		mainSizer->Add(generateButton, 1, wxALIGN_CENTER_HORIZONTAL | wxALL, 10);
+
+		mm8PartialGenerationWarningSizer = new wxBoxSizer(wxHORIZONTAL);
+
+		m_bitmap1 = new wxStaticBitmap(mainPanel, wxID_ANY, wxArtProvider::GetBitmap(wxART_WARNING, wxART_CMN_DIALOG), wxDefaultPosition, wxDefaultSize, 0);
+		mm8PartialGenerationWarningSizer->Add(m_bitmap1, 0, wxALL, 5);
+
+		warningText = new wxStaticText(mainPanel, wxID_ANY, _("Warning: your party count is x. Only x leftmost tabs will be generated, the rest is implicitly disabled."), wxDefaultPosition, wxDefaultSize, 0);
+		mm8PartialGenerationWarningSizer->Add(warningText, 0, wxALIGN_CENTER_VERTICAL | wxALL, 5);
+
+		mainSizer->Add(mm8PartialGenerationWarningSizer, 0, wxEXPAND, 5);
+
+		for (auto& item : mm8PartialGenerationWarningSizer->GetChildren())
+		{
+			item->Show(false);
+		}
+
+		tabs = new wxNotebook(mainPanel, wxID_ANY, pos, size, wxNB_TOP | wxNB_FIXEDWIDTH | wxCLIP_CHILDREN);
+		mainSizer->Add(tabs, 1, wxEXPAND | wxALL, 5);
+		generalPanel = new GeneralPanel(tabs, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
+		tabs->AddPage(generalPanel, _("General"), true);
+		std::vector<wxString> playerNames;
+		if (MMVER == 6)
+		{
+			//playerNames = getPlayerNames<mm6::Player>();
+		}
+		else if (MMVER == 7)
+		{
+			playerNames = getPlayerNames<mm7::Player>();
+		}
+		else if (MMVER == 8)
+		{
+			//playerNames = getPlayerNames<mm8::Player>();
+		}
+
+		defaultSettings = new DefaultPlayerPanel(tabs, &generator->defaultPlayerData);
+		tabs->AddPage(defaultSettings, _("Default"), false);
+		for (int i = 0; i < MAX_PLAYERS; ++i)
+		{
+			tabs->AddPage(new PlayerPanel(tabs, generator->playerData[i].get()), playerNames[i]);
+		}
+
+		updateTabsTimer = new wxTimer(this);
+		Bind(wxEVT_TIMER, &MainWindow::onTimer, this); // TODO mm6-7 party size when reloading dll at runtime (currently hook launches only on map load)
+		updateTabsTimer->Start(200, wxTIMER_CONTINUOUS);
+	}
 
 	this->Centre(wxBOTH);
 	mainPanel->Layout();
 
 	Bind(wxEVT_CLOSE_WINDOW, &MainWindow::onClose, this);
+	Bind(wxEVT_KEY_DOWN, &MainWindow::onKeyDown, this);
 	
 	this->Layout();
 }
@@ -275,6 +278,15 @@ void MainWindow::onTimer(wxTimerEvent& event)
 
 void MainWindow::onShow(wxShowEvent& event)
 {
+}
+
+void MainWindow::onKeyDown(wxKeyEvent& event)
+{
+	event.Skip();
+	if (event.GetKeyCode() == WXK_ESCAPE)
+	{
+		Show(false);
+	}
 }
 
 void MainWindow::onClose(wxCloseEvent& event)

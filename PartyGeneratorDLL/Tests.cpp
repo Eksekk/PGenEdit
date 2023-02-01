@@ -248,8 +248,8 @@ std::vector<wxString> Tests::testJson()
 			}
 			classes.readFromJson(copy);
 		}
-		wxLogInfo(wxString::Format("%d tests failed", failedNum));
-		wxLog::FlushActive();
+		//wxLogInfo(wxString::Format("%d tests failed", failedNum));
+		//wxLog::FlushActive();
 		if (!existed)
 		{
 			testFile << testOut;

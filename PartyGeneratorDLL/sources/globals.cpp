@@ -11,9 +11,7 @@
 Generator* generator = nullptr;
 
 const int INVALID_ID = -1;
-
-const int CMD_SHOW_WINDOW = wxNewId();
-const int CMD_TERMINATE = wxNewId();
+const int DEFAULT_SETTINGS_INDEX = -2;
 
 int MMVER = INVALID_ID;
 

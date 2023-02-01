@@ -2,68 +2,96 @@
 #include "ClassInfoPanel.h"
 #include "ClassGenerationData.h"
 
-ClassInfoPanel::ClassInfoPanel(wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style, const wxString& title) : wxPanel(parent, id, pos, size, style, title), resetButton(nullptr)
+const int ClassInfoPanel::TIER_IDS[3] = { TIER_ZERO_ID, TIER_ONE_ID, TIER_TWO_ID };
+
+ClassInfoPanel::ClassInfoPanel(wxWindow* parent, ClassGenerationSettings* linkedClassSettings) : wxPanel(parent), linkedClassSettings(linkedClassSettings)//, resetButton(nullptr)
 {
 	this->SetSizeHints(wxDefaultSize, wxDefaultSize);
+	wxBoxSizer* mainSizer;
+	mainSizer = new wxBoxSizer(wxVERTICAL);
 
-	linkedClassSettings = nullptr;
+	m_staticline4 = new wxStaticLine(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL);
+	mainSizer->Add(m_staticline4, 0, wxEXPAND | wxALL, 5);
 
-	sizer = new wxBoxSizer(wxHORIZONTAL);
-	this->SetSizer(sizer);
+	className = new wxStaticText(this, wxID_ANY, _("Class name"), wxDefaultPosition, wxDefaultSize, 0);
+	className->Wrap(-1);
+	className->SetFont(wxFont(20, wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxEmptyString));
 
-	wxStaticBoxSizer* tierSizer;
-	tierSizer = new wxStaticBoxSizer(new wxStaticBox(this, wxID_ANY, _("Tier")), wxHORIZONTAL);
+	mainSizer->Add(className, 0, wxALL | wxALIGN_CENTER_HORIZONTAL, 5);
 
-	equalChancesCheckbox = new wxCheckBox(tierSizer->GetStaticBox(), wxID_ANY, _("Equal chances"), wxDefaultPosition, wxDefaultSize, 0);
-	equalChancesCheckbox->SetToolTip(_("If enabled, each tier will have equal chance of generating"));
+	checkboxesSizer = new wxBoxSizer(wxHORIZONTAL);
 
-	tierSizer->Add(equalChancesCheckbox, 0, wxALIGN_CENTER | wxALL, 5);
+	disabledCheckbox = new wxCheckBox(this, wxID_ANY, _("Disabled"), wxDefaultPosition, wxDefaultSize, 0);
+	disabledCheckbox->SetToolTip(_("Excludes this class from generation"));
+	disabledCheckbox->Bind(wxEVT_CHECKBOX, &ClassInfoPanel::onDisabledCheck, this);
+	checkboxesSizer->Add(disabledCheckbox, 0, wxALL, 5);
 
-	wxStaticBoxSizer* weights_sbs;
-	weights_sbs = new wxStaticBoxSizer(new wxStaticBox(tierSizer->GetStaticBox(), wxID_ANY, _("Weights (tier 0/1/2)")), wxHORIZONTAL);
+	useDefaultsCheckbox = new wxCheckBox(this, wxID_ANY, _("Use defaults"));
+	useDefaultsCheckbox->SetToolTip(isDefault() ? "Check to use global defaults where player-specific default would be used" : "Check to use default settings above");
+	useDefaultsCheckbox->Bind(wxEVT_CHECKBOX, &ClassInfoPanel::onUseDefaultsCheck, this);
+	if (linkedClassSettings->useDefaults)
+	{
+		useDefaultsCheckbox->SetValue(true);
+		setEnabledStateBecauseUseDefaultsChanged(false);
+	}
+	checkboxesSizer->Add(useDefaultsCheckbox, 0, wxALL, 5);
 
-	tierZeroWeight = new wxTextCtrl(weights_sbs->GetStaticBox(), wxID_ANY, _("1"), wxDefaultPosition, wxDefaultSize, 0);
-	weights_sbs->Add(tierZeroWeight, 0, wxALL, 5);
+	mainSizer->Add(checkboxesSizer, 0, wxALL, 5);
 
-	tierOneWeight = new wxTextCtrl(weights_sbs->GetStaticBox(), wxID_ANY, _("1"), wxDefaultPosition, wxDefaultSize, 0);
-	weights_sbs->Add(tierOneWeight, 0, wxALL, 5);
+	wxBoxSizer* bSizer40;
+	bSizer40 = new wxBoxSizer(wxHORIZONTAL);
 
-	tierTwoWeight = new wxTextCtrl(weights_sbs->GetStaticBox(), wxID_ANY, _("1"), wxDefaultPosition, wxDefaultSize, 0);
-	weights_sbs->Add(tierTwoWeight, 0, wxALL, 5);
+	m_staticText24 = new wxStaticText(this, wxID_ANY, _("Class weight:"), wxDefaultPosition, wxDefaultSize, 0);
+	m_staticText24->Wrap(-1);
+	bSizer40->Add(m_staticText24, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
-
-	tierSizer->Add(weights_sbs, 1, wxEXPAND, 5);
-
-
-	sizer->Add(tierSizer, 0, wxEXPAND, 5);
+	weightText = new wxSpinCtrl(this, wxID_ANY, wxT("1"), wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS | wxSP_WRAP, 0, 99999, 1);
+	weightText->Bind(wxEVT_SPINCTRL, &ClassInfoPanel::onWeightTextChange, this);
+	bSizer40->Add(weightText, 0, wxALL, 5);
 
 
-	sizer->Add(30, 0, 1, wxEXPAND, 5);
+	mainSizer->Add(bSizer40, 0, wxEXPAND, 5);
 
-	wxString alignmentChoices[] = { _("Both"), _("Light"), _("Dark") }; // TODO: properly set order from enum values
-	int alignmentNChoices = sizeof(alignmentChoices) / sizeof(wxString);
-	alignment = new wxRadioBox(this, wxID_ANY, _("Alignment"), wxDefaultPosition, wxDefaultSize, alignmentNChoices, alignmentChoices, 1, wxRA_SPECIFY_ROWS);
-	alignment->SetSelection(1);
-	sizer->Add(alignment, 0, wxBOTTOM | wxEXPAND, 5);
+	wxStaticBoxSizer* tierSettings_sbs;
+	tierSettings_sbs = new wxStaticBoxSizer(new wxStaticBox(this, wxID_ANY, _("Tier settings")), wxHORIZONTAL);
 
+	equalWeightsRadio = new wxRadioButton(tierSettings_sbs->GetStaticBox(), wxID_ANY, _("Equal weights"), wxDefaultPosition, wxDefaultSize, wxRB_GROUP);
+	tierSettings_sbs->Add(equalWeightsRadio, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+	equalWeightsRadio->Bind(wxEVT_RADIOBUTTON, &ClassInfoPanel::onEqualWeightsRadio, this);
+	manualWeightsRadio = new wxRadioButton(tierSettings_sbs->GetStaticBox(), wxID_ANY, _("Specific weights:"), wxDefaultPosition, wxDefaultSize, 0);
+	manualWeightsRadio->SetToolTip(_("Tier 0, 1, 2"));
+	manualWeightsRadio->Bind(wxEVT_RADIOBUTTON, &ClassInfoPanel::onManualWeightsRadio, this);
+	tierSettings_sbs->Add(manualWeightsRadio, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+
+	for (int i = 0; i < 3; ++i)
+	{
+		tierWeightTexts[i] = new wxSpinCtrl(tierSettings_sbs->GetStaticBox(), TIER_IDS[i], "1", wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS | wxSP_WRAP, 0, 99999, 1);
+		tierSettings_sbs->Add(tierWeightTexts[i], 0, wxALL, 5);
+		tierWeightTexts[i]->Bind(wxEVT_SPINCTRL, &ClassInfoPanel::onWeightTextChange, this);
+	}
+
+	mainSizer->Add(tierSettings_sbs, 0, wxEXPAND, 5);
+
+	alignmentRadioBox = new AlignmentRadioBox(this, _("Alignment"));
+	alignmentRadioBox->SetSelection(ALIGNMENT_ANY);
+	mainSizer->Add(alignmentRadioBox, 0, wxALL, 5);
+	alignmentRadioBox->Bind(wxEVT_RADIOBOX, &ClassInfoPanel::onAlignmentRadioBoxSelect, this);
+
+	this->SetSizer(mainSizer);
+	this->Layout();
+	mainSizer->Fit(this);
 
 	//sizer->Add(sizer, 0, 0, 5); // INFINITE RECURSION, RETAINED FOR LAUGHS - I SPENT 1.5H ON THIS :(((
+}
 
+bool ClassInfoPanel::isDefault()
+{
+	return linkedClassSettings->id == DEFAULT_SETTINGS_INDEX;
+}
 
-	sizer->Add(0, 20, 0, wxEXPAND, 5);
-
-	/*wxStaticBoxSizer* specificClasses;
-	specificClasses = new wxStaticBoxSizer(new wxStaticBox(this, wxID_ANY, _("Specific classes")), wxVERTICAL);
-
-	resetButton = new wxButton(specificClasses->GetStaticBox(), wxID_ANY, _("Reset"), wxDefaultPosition, wxDefaultSize, 0);
-	specificClasses->Add(resetButton, 0, wxALIGN_CENTER_HORIZONTAL | wxALL, 5);
-
-
-	sizer->Add(specificClasses, 1, wxEXPAND, 5);*/
-
-	this->Layout();
-
-	this->Centre(wxBOTH);
+void ClassInfoPanel::setClassName(const wxString& name)
+{
+	className->SetLabel(name);
 }
 
 ClassInfoPanel::~ClassInfoPanel()
@@ -72,9 +100,94 @@ ClassInfoPanel::~ClassInfoPanel()
 
 void ClassInfoPanel::updateSettingsFromLinked()
 {
-	tierZeroWeight->ChangeValue(wxString::Format(wxT("%i"), linkedClassSettings->tierWeights[0]));
-	tierOneWeight->ChangeValue(wxString::Format(wxT("%i"), linkedClassSettings->tierWeights[1]));
-	tierTwoWeight->ChangeValue(wxString::Format(wxT("%i"), linkedClassSettings->tierWeights[2]));
-	equalChancesCheckbox->SetValue(linkedClassSettings->equalChances);
-	alignment->SetSelection((int)linkedClassSettings->alignment);
+	disabledCheckbox->SetValue(linkedClassSettings->disabled);
+	useDefaultsCheckbox->SetValue(linkedClassSettings->useDefaults);
+	weightText->SetValue(linkedClassSettings->weight);
+	if (linkedClassSettings->equalChances)
+	{
+		equalWeightsRadio->SetValue(true);
+	}
+	else
+	{
+		manualWeightsRadio->SetValue(true);
+	}
+	for (int i = 0; i < 3; ++i)
+	{
+		tierWeightTexts[i]->SetValue(linkedClassSettings->tierWeights[i]);
+	}
+	alignmentRadioBox->SetSelection(linkedClassSettings->alignment);
+	useDefaultsCheckbox->SetValue(linkedClassSettings->useDefaults);
+
+	useDefaultsCheckbox->Enable(linkedClassSettings->disabled);
+
+	bool enableRest = !linkedClassSettings->disabled && !linkedClassSettings->useDefaults;
+	setEnabledStateBecauseUseDefaultsChanged(enableRest);
+}
+
+void ClassInfoPanel::setEnabledStateBecauseUseDefaultsChanged(bool enabled)
+{
+	weightText->Enable(enabled);
+	equalWeightsRadio->Enable(enabled);
+	manualWeightsRadio->Enable(enabled);
+	bool enableTierWeights = enabled && manualWeightsRadio->GetValue();
+	for (auto ptr : tierWeightTexts)
+	{
+		ptr->Enable(enableTierWeights);
+	}
+	alignmentRadioBox->Enable(enabled);
+}
+
+void ClassInfoPanel::onDisabledCheck(wxCommandEvent& event)
+{
+	linkedClassSettings->disabled = event.IsChecked();
+	bool enabled = !event.IsChecked();
+	if (!enabled)
+	{
+		setEnabledStateBecauseUseDefaultsChanged(false);
+	}
+	else if (!useDefaultsCheckbox->IsChecked())
+	{
+		setEnabledStateBecauseUseDefaultsChanged(true);
+	}
+	useDefaultsCheckbox->Enable(enabled);
+}
+
+void ClassInfoPanel::onUseDefaultsCheck(wxCommandEvent& event)
+{
+	linkedClassSettings->useDefaults = event.IsChecked();
+	setEnabledStateBecauseUseDefaultsChanged(!event.IsChecked());
+}
+
+void ClassInfoPanel::onWeightTextChange(wxCommandEvent& event)
+{
+	linkedClassSettings->weight = weightText->GetValue();
+}
+
+void ClassInfoPanel::onEqualWeightsRadio(wxCommandEvent& event)
+{
+	linkedClassSettings->equalChances = true;
+	for (int i = 0; i < 3; ++i)
+	{
+		tierWeightTexts[i]->Disable();
+	}
+}
+
+void ClassInfoPanel::onManualWeightsRadio(wxCommandEvent& event)
+{
+	linkedClassSettings->equalChances = false;
+	for (int i = 0; i < 3; ++i)
+	{
+		tierWeightTexts[i]->Enable();
+	}
+}
+
+void ClassInfoPanel::onTierWeightTextChange(wxCommandEvent& event)
+{
+	const int index = event.GetId() - TIER_ZERO_ID;
+	linkedClassSettings->tierWeights[index] = tierWeightTexts[index]->GetValue();
+}
+
+void ClassInfoPanel::onAlignmentRadioBoxSelect(wxCommandEvent& event)
+{
+	linkedClassSettings->alignment = alignmentRadioBox->getSelectedAlignment();
 }

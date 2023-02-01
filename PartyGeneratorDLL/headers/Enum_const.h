@@ -122,10 +122,10 @@ extern const std::unordered_map<int, std::string> skillSpecialEnumIdToString;
 
 enum Alignment
 {
-	ALIGNMENT_NEUTRAL = 0,
+	ALIGNMENT_ANY = 0,
+	ALIGNMENT_NEUTRAL,
 	ALIGNMENT_LIGHT, // mm7 and merge
 	ALIGNMENT_DARK, // mm7 and merge
-	ALIGNMENT_ANY,
 };
 
 extern const std::unordered_map<std::string, int> alignmentStringToId;

@@ -162,17 +162,18 @@ extern "C"
         7) do away with wxWidgets thread and somehow integrate it into game main thread's event loop - I think it's best solution,
            but don't know yet how to do that - MAKING PROGRESS
            
-           DONE?
+           DONE
     */
 
     __declspec(naked) void setPartyCountMm6()
     {
         _asm
         {
+            // replaced code
             or ecx, 0xFFFFFFFF
             xor eax, eax
             // our code
-            mov dword ptr[CURRENT_PARTY_SIZE], 4
+            mov dword ptr [CURRENT_PARTY_SIZE], 4
             mov edx, 0x458BDB
             jmp edx
         }
@@ -182,6 +183,7 @@ extern "C"
     {
         _asm
         {
+            // replaced code
             push esi
             lea eax, dword ptr [ebp - 0x10C]
             // our code
@@ -205,7 +207,6 @@ extern "C"
             //delete wxLog::SetActiveTarget(NULL);
         }
         app = &wxGetApp();
-        assert(dynamic_cast<Application*>(app));
         app->CallOnInit();
 
         if (inMM && MMVER == 6)

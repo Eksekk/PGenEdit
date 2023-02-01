@@ -18,6 +18,8 @@ public:
 	static bool processSkillDataJson(const char* str);
 	static const int DATA_TYPE_COUNT = 2;
 
+	static Json classDataJson, skillDataJson;
+
 	static bool allDataReceived; // from lua, like class info
 	static void postProcess();
 	static void reparse(const char* data[DATA_TYPE_COUNT]);

@@ -19,6 +19,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="AlignmentRadioBox.h" />
     <ClInclude Include="ClassInfoPanel.h" />
     <ClInclude Include="ClassSettingsTab.h" />
     <ClInclude Include="ClassWindow.h" />
@@ -26,6 +27,7 @@
     <ClInclude Include="Game.h" />
     <ClInclude Include="GameData.h" />
     <ClInclude Include="GeneralPanel.h" />
+    <ClInclude Include="GuaranteedClassDialog.h" />
     <ClInclude Include="GUIEnums.h" />
     <ClInclude Include="ClassGenerationData.h" />
     <ClInclude Include="PlayerClass.h" />
@@ -56,6 +58,7 @@
     <ClInclude Include="Utility.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="AlignmentRadioBox.cpp" />
     <ClCompile Include="ClassGenerationData.cpp" />
     <ClCompile Include="ClassInfoPanel.cpp" />
     <ClCompile Include="ClassSettingsTab.cpp" />
@@ -63,6 +66,7 @@
     <ClCompile Include="DefaultPlayerPanel.cpp" />
     <ClCompile Include="GameData.cpp" />
     <ClCompile Include="GeneralPanel.cpp" />
+    <ClCompile Include="GuaranteedClassDialog.cpp" />
     <ClCompile Include="GUIEnums.cpp" />
     <ClCompile Include="PlayerClass.cpp" />
     <ClCompile Include="PlayerItem.cpp" />
@@ -105,9 +109,6 @@
     <None Include="Lib.def" />
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="pgen.rc">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
-    </ResourceCompile>
     <ResourceCompile Include="wx.rc">
       <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(WindowsSDK_IncludePath);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(WindowsSDK_IncludePath);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
@@ -126,7 +127,6 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
-    <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
@@ -178,12 +178,14 @@
     <SourcePath>sources;C:\wxWidgets-3.2.1\src\common;C:\wxWidgets-3.2.1\src\msw;.</SourcePath>
     <EnableMicrosoftCodeAnalysis>true</EnableMicrosoftCodeAnalysis>
     <ExternalIncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);json</ExternalIncludePath>
+    <GenerateManifest>true</GenerateManifest>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <IncludePath>headers</IncludePath>
     <SourcePath>sources</SourcePath>
     <EnableClangTidyCodeAnalysis>true</EnableClangTidyCodeAnalysis>
     <TargetName>PartyGenerator</TargetName>
+    <GenerateManifest>true</GenerateManifest>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -206,6 +208,7 @@
       <SmallerTypeCheck>false</SmallerTypeCheck>
       <ExternalTemplatesDiagnostics>false</ExternalTemplatesDiagnostics>
       <DisableAnalyzeExternal>true</DisableAnalyzeExternal>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -217,9 +220,11 @@
       <ForceFileOutput>
       </ForceFileOutput>
       <ModuleDefinitionFile>Lib.def</ModuleDefinitionFile>
+      <AssemblyDebug>false</AssemblyDebug>
+      <SupportUnloadOfDelayLoadedDLL>false</SupportUnloadOfDelayLoadedDLL>
     </Link>
     <Manifest>
-      <AdditionalManifestFiles>C:\wxWidgets-3.2.1\include\wx\msw\wx.manifest %(AdditionalManifestFiles)</AdditionalManifestFiles>
+      <AdditionalManifestFiles>%(AdditionalManifestFiles)</AdditionalManifestFiles>
     </Manifest>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -256,7 +261,9 @@
       <RandomizedBaseAddress>false</RandomizedBaseAddress>
       <ForceFileOutput>
       </ForceFileOutput>
-      <ModuleDefinitionFile>Exports.def</ModuleDefinitionFile>
+      <ModuleDefinitionFile>Lib.def</ModuleDefinitionFile>
+      <AssemblyDebug>false</AssemblyDebug>
+      <SupportUnloadOfDelayLoadedDLL>false</SupportUnloadOfDelayLoadedDLL>
     </Link>
     <Manifest>
       <AdditionalManifestFiles>%(AdditionalManifestFiles)</AdditionalManifestFiles>

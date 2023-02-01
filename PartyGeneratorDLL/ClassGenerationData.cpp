@@ -56,6 +56,7 @@ void ClassGenerationSettings::setDefaults()
 	alignment = ALIGNMENT_ANY;
 	disabled = false;
 	equalChances = false;
+	useDefaults = true;
 }
 
 void ClassGenerationSettings::randomize()
@@ -154,7 +155,7 @@ bool ClassGenerationData::writeToJson(Json& json)
 	{
 		s[std::to_string(id)] = data.writeToJsonR();
 	}
-	json["settings"] = s;
+	json["settings"] = std::move(s);
 	json["defaultSettings"] = defaultSettings.writeToJsonR();
 	auto itr = alignmentIdToString.find(possibleAlignment);
 	assert(itr != alignmentIdToString.end());

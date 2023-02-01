@@ -75,3 +75,18 @@ bool PlayerClass::areInSameClassTree(int otherId)
 {
 	return false;
 }
+
+wxString PlayerClass::getFormattedTier()
+{
+	static wxString tierNames[] = {"basic", "promoted", "fully promoted"};
+	assert(tier <= 2);
+	return wxString::Format("%d (%s)", tier, tierNames[tier]);
+}
+
+wxString PlayerClass::getFormattedAlignment()
+{
+	if (alignment == ALIGNMENT_ANY) return "any";
+	if (alignment == ALIGNMENT_DARK) return "dark";
+	if (alignment == ALIGNMENT_LIGHT) return "light";
+	return "neutral";
+}

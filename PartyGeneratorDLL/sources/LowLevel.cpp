@@ -132,4 +132,5 @@ void removeHook(uint32_t addr)
 	}
 	auto& data = hookRestoreList[addr];
 	patchBytes(addr, data.data(), data.size(), false);
+	hookRestoreList.erase(addr);
 }

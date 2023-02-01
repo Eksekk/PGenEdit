@@ -10,6 +10,8 @@
 inline void checkAffinity(double aff);
 class PlayerData;
 
+extern const int INVALID_ID;
+
 class Generator : public GeneratorDataBase
 {
 public:
@@ -32,6 +34,10 @@ public:
 
 	// 2023-01-18 removed generator's and main window's class settings - add a lot of complexity,
 	// and player will be able to copy settings around / load part of them
+	
+
+	// TOO MANY CONTROLS (500+) IN A SINGLE WINDOW, EVEN IF INVISIBLE, CAUSE EXTREME LAG WHEN MOVING WINDOW
+	// SOLUTION - SPLIT INTO DIFFERENT FRAMES/DIALOGS
 
 	std::vector<std::unique_ptr<PlayerData>> playerData; // pointer because by value creates problems related to copying and destruction
 

@@ -31,5 +31,8 @@ public:
 	static bool areInSameClassTree(PlayerClass* clas1, PlayerClass* clas2);
 	bool areInSameClassTree(PlayerClass* other);
 	bool areInSameClassTree(int otherId);
+
+	wxString getFormattedTier();
+	wxString getFormattedAlignment();
 };
 

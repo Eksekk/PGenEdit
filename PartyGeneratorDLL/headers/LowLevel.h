@@ -8,7 +8,7 @@ void storeBytes(uint32_t addr, uint32_t size);
 
 // credits to Tomsod for his elemental mod sources (and of course to Grayface), they made it much easier
 // for me to understand such low level stuff
-// many functions taken from Tomsod's elemental mod
+// many functions taken/adapted from Tomsod's elemental mod
 
 // get or set either byte/word/dword/qword (unsigned 1/2/4/8 byte integer)
 #define byte(addr) (*(uint8_t*)(addr))

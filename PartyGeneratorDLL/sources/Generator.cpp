@@ -6,7 +6,7 @@
 #include "PlayerData.h"
 #include <algorithm>
 
-extern const int INVALID_ID;
+extern const int DEFAULT_SETTINGS_INDEX;
 const unsigned Generator::MAX_AVERAGE_LEVEL = 200;
 const unsigned Generator::MIN_AVERAGE_LEVEL = 1;
 
@@ -17,7 +17,7 @@ inline void checkAffinity(double aff)
 //#define CHECK_AFFINITY(aff, msg) assert((aff) >= Generator::MINIMUM_AFFINITY && (aff) <= Generator::MAXIMUM_AFFINITY, msg)
 //#define CHECK_AFFINITY(aff) CHECK_AFFINITY(aff, "Affinity is outside the bounds [" + Generator::MINIMUM_AFFINITY + ", " + Generator::MINIMUM_AFFINITY + "]")
 
-Generator::Generator() : defaultPlayerData(INVALID_ID)
+Generator::Generator() : defaultPlayerData(DEFAULT_SETTINGS_INDEX)
 {
 	assert(MAX_PLAYERS >= 4); // set in dllmain
 	playerData.reserve(MAX_PLAYERS);

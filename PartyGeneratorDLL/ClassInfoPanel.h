@@ -2,30 +2,52 @@
 #include "pch.h"
 #include "main.h"
 #include "Generator.h"
+#include <wx/statline.h>
+#include <wx/spinctrl.h>
+#include "AlignmentRadioBox.h"
 
-struct ClassGenerationSettings;
+class ClassGenerationSettings;
 
 class ClassInfoPanel : public wxPanel
 {
 private:
 
+	wxBoxSizer* checkboxesSizer;
+	wxCheckBox* useDefaultsCheckbox;
 protected:
 	
 
 public:
-	wxCheckBox* equalChancesCheckbox;
-	wxTextCtrl* tierZeroWeight;
-	wxTextCtrl* tierOneWeight;
-	wxTextCtrl* tierTwoWeight;
-	wxRadioBox* alignment;
-	wxButton* resetButton;
-	wxBoxSizer* sizer;
+	wxStaticLine* m_staticline4;
+	wxStaticText* className;
+	wxCheckBox* disabledCheckbox;
+	wxStaticText* m_staticText24;
+	wxSpinCtrl* weightText;
+	wxRadioButton* equalWeightsRadio;
+	wxRadioButton* manualWeightsRadio;
+	wxSpinCtrl* tierWeightTexts[3];
+	AlignmentRadioBox* alignmentRadioBox;
+
 	ClassGenerationSettings* linkedClassSettings;
 
-	ClassInfoPanel(wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize(843, 479),
-		long style = wxDEFAULT_FRAME_STYLE | wxTAB_TRAVERSAL, const wxString& title = _("Classes"));
+	static const int TIER_ZERO_ID = 10, TIER_ONE_ID = 11, TIER_TWO_ID = 12;
+	static const int TIER_IDS[3];
+
+	void onDisabledCheck(wxCommandEvent& event);
+	void onUseDefaultsCheck(wxCommandEvent& event);
+	void onWeightTextChange(wxCommandEvent& event);
+	void onEqualWeightsRadio(wxCommandEvent& event);
+	void onManualWeightsRadio(wxCommandEvent& event);
+	void onTierWeightTextChange(wxCommandEvent& event);
+	void onAlignmentRadioBoxSelect(wxCommandEvent& event);
+
+	ClassInfoPanel(wxWindow* parent, ClassGenerationSettings* linkedClassSettings);
+
+	bool isDefault();
+	void setClassName(const wxString& name);
 
 	~ClassInfoPanel();
 	void updateSettingsFromLinked();
+	void setEnabledStateBecauseUseDefaultsChanged(bool enabled);
 };
 

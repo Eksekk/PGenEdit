@@ -9,8 +9,6 @@
 // Licence:     wxWindows Licence
 /////////////////////////////////////////////////////////////////////////////
 
-aaaa ICON "wx/msw/std.ico"
-
 #include <windows.h>
 
 #include "wx/msw/rcdefs.h"

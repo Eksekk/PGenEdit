@@ -14,6 +14,7 @@ class MainWindow : public wxFrame
 private:
 	void onClose(wxCloseEvent& event);
 	void onShow(wxShowEvent& event);
+	void onKeyDown(wxKeyEvent& event);
 	void setupMenus();
 
 protected:
@@ -44,7 +45,7 @@ public:
 	wxNotebook* tabs;
 
 	GeneralPanel* generalPanel;
-	DefaultPlayerPanel* defaultSettings; // TODO: move to own class
+	DefaultPlayerPanel* defaultSettings;
 
 	wxTimer* updateTabsTimer;
 
@@ -57,12 +58,13 @@ public:
 	static const wxString WARNING_FORMAT;
 
 	MainWindow(wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = _("Party generator"), const wxPoint& pos = wxDefaultPosition,
-		const wxSize& size = wxSize(800, 600), long style = (wxDEFAULT_FRAME_STYLE | wxTAB_TRAVERSAL) & ~wxRESIZE_BORDER | wxCLIP_CHILDREN);
+		const wxSize& size = wxSize(800, 900), long style = (wxDEFAULT_FRAME_STYLE | wxTAB_TRAVERSAL) & ~wxRESIZE_BORDER | wxCLIP_CHILDREN);
 
 	~MainWindow();
 
 	template<typename Player>
 	void update();
+	void updateSettingsFromLinked();
 	template<typename Player>
 	[[nodiscard]] std::vector<wxString> getPlayerNames();
 	void onTimer(wxTimerEvent& event);

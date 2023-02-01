@@ -52,13 +52,13 @@ PlayerPanelBase::PlayerPanelBase(wxWindow* parent, PlayerData* linkedGenerationD
 	levelPanel->Layout();
 	bSizer17->Fit(levelPanel);
 	m_notebook2->AddPage(levelPanel, _("Level"), false);
-
 	// ~~LEVEL PANEL~~ //
 	
 	// CLASS PANEL //
 
 	classSettingsTab = new ClassSettingsTab(m_notebook2, &linkedGenerationData->classes);
 	m_notebook2->AddPage(classSettingsTab, _("Class"), true);
+	//if (classSettingsTab->Hide()) wxLogMessage("Done");
 
 	// ~~CLASS PANEL~~ //
 

@@ -39,6 +39,7 @@ bool GameData::processClassDataJson(const char* str)
         json = json.parse(file);
         file.close();
     }
+    classDataJson = json;
     
     //wxLogMessage(wxString(to_string(json)));
     if (json.size() == 0)
@@ -193,6 +194,7 @@ bool GameData::processSkillDataJson(const char* str)
             json = json.parse(file);
             file.close();
         }
+        skillDataJson = json;
         if (json.size() == 0)
         {
             wxLogMessage("invalid json: " + wxString(to_string(json)));

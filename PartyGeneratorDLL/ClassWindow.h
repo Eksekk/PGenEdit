@@ -4,6 +4,8 @@
 #include "ClassGenerationData.h"
 
 class ClassInfoPanel;
+class ClassSettingsTab;
+class ClassGenerationData;
 
 class ClassWindow : public wxFrame
 {
@@ -13,10 +15,13 @@ protected:
 
 
 public:
-	wxButton* resetButton;
 	ClassInfoPanel* generalPanel;
 	std::vector<ClassInfoPanel*> panels;
-	wxBoxSizer* sizer;
+	wxBoxSizer* mainSizer, *classSizer, *topButtonSizer, *bottomButtonSizer;
+	wxButton* closeButtonTop, *closeButtonBottom;
+	wxScrolledWindow* mainPanel;
+	ClassSettingsTab* parentTab;
+	ClassGenerationData* linkedClassSettings;
 
 	// TODO: five windows, where you can set various settings to use (item/resistance/all etc.)
 	// copy from to, randomize, set to default, load, save
@@ -25,11 +30,15 @@ public:
 
 	// TODO: show jsoned settings (for manual copy) in window appearing when settings couldn't be saved to file
 
-	ClassWindow(wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = _("Classes"), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize(843, 479), long style = wxDEFAULT_FRAME_STYLE | wxTAB_TRAVERSAL);
+	ClassWindow(wxWindow* parent, const wxSize & size = wxSize(800, 600), long style = (wxDEFAULT_FRAME_STYLE | wxTAB_TRAVERSAL) & ~wxRESIZE_BORDER);
 
 	void createPanels(ClassGenerationSettings& generalClassSettings, std::unordered_map<int, ClassGenerationSettings>& classSettings);
 
+	void updateSettingsFromLinked();
 	~ClassWindow();
 
+private:
+	void OnCloseWindow(wxCloseEvent& event);
+	void onCloseButtonClick(wxCommandEvent& event);
 };
 

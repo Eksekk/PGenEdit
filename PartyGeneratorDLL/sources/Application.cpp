@@ -19,9 +19,6 @@ Application::Application()
     // thread will sleep waiting for a new event. We could safe some memory
     // by shutting the thread down when it's no longer needed, though.
     SetExitOnFrameDelete(false);
-
-    Bind(wxEVT_THREAD, &Application::OnShowWindow, this, CMD_SHOW_WINDOW);
-    Bind(wxEVT_THREAD, &Application::OnTerminate, this, CMD_TERMINATE);
 }
 
 void Application::OnShowWindow(wxThreadEvent& event)

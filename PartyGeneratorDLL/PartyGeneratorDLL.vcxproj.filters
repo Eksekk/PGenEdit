@@ -144,6 +144,12 @@
     <ClInclude Include="resource.h">
       <Filter>Pliki nagłówkowe</Filter>
     </ClInclude>
+    <ClInclude Include="GuaranteedClassDialog.h">
+      <Filter>Pliki nagłówkowe\GUI</Filter>
+    </ClInclude>
+    <ClInclude Include="AlignmentRadioBox.h">
+      <Filter>Pliki nagłówkowe\GUI</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="sources\dllApi.cpp">
@@ -245,6 +251,12 @@
     <ClCompile Include="ClassSettingsTab.cpp">
       <Filter>Pliki źródłowe\GUI</Filter>
     </ClCompile>
+    <ClCompile Include="GuaranteedClassDialog.cpp">
+      <Filter>Pliki źródłowe\GUI</Filter>
+    </ClCompile>
+    <ClCompile Include="AlignmentRadioBox.cpp">
+      <Filter>Pliki źródłowe\GUI</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Text Include="Text.txt" />
@@ -256,9 +268,6 @@
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="wx.rc">
-      <Filter>Pliki zasobów</Filter>
-    </ResourceCompile>
-    <ResourceCompile Include="pgen.rc">
       <Filter>Pliki zasobów</Filter>
     </ResourceCompile>
   </ItemGroup>

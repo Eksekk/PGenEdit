@@ -2,6 +2,7 @@
 #include "pch.h"
 #include "main.h"
 #include <wx/statline.h>
+#include "wx/spinctrl.h"
 
 class GeneralPanel : public wxPanel
 {
@@ -24,9 +25,9 @@ public:
 	wxCheckBox* removeFineCheckbox;
 	wxCheckBox* generateFoodCheckbox;
 	wxStaticText* m_staticText11;
-	wxTextCtrl* foodMin;
+	wxSpinCtrl* foodMin;
 	wxStaticText* m_staticText21;
-	wxTextCtrl* foodMax;
+	wxSpinCtrl* foodMax;
 	wxCheckBox* clearConditionsCheckbox;
 	wxCheckBox* fullHpSpCheckbox;
 	wxCheckBox* dispelPartyCheckbox;

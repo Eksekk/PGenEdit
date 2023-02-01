@@ -10,9 +10,7 @@ extern Generator* generator;
 extern int MMVER;
 
 extern const int INVALID_ID;
-
-extern const int CMD_SHOW_WINDOW;
-extern const int CMD_TERMINATE;
+extern const int DEFAULT_SETTINGS_INDEX;
 
 extern lua_State* Lua;
 

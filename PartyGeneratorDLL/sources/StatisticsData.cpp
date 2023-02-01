@@ -7,6 +7,24 @@ StatisticsData::StatisticsData(int index, PlayerData& playerData) : index(index)
 	setDefaults();
 }
 
+// Inherited via GeneratorDataBase
+
+bool StatisticsData::readFromJson(const Json& json)
+{
+	return false;
+}
+
+bool StatisticsData::writeToJson(Json& json)
+{
+	return false;
+}
+
+void StatisticsData::setDefaults()
+{
+	generationEnabled = true;
+	efficientUseOfBreakpoints = true;
+}
+
 void StatisticsData::randomize()
 {
 }

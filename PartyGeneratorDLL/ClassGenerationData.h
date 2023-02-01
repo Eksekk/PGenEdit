@@ -4,13 +4,14 @@
 #include "Enum_const.h"
 #include "GeneratorDataBase.h"
 
-extern const int INVALID_ID;
+extern const int DEFAULT_SETTINGS_INDEX;
 
 class PlayerData;
 
-struct ClassGenerationSettings : public GeneratorDataBase // settings from GUI
+class ClassGenerationSettings : public GeneratorDataBase // settings from GUI
 {
-	int id = INVALID_ID; // not used in general settings
+public:
+	int id = DEFAULT_SETTINGS_INDEX; // not used in general settings
 	int weight;
 	std::vector<int> tierWeights;
 	Alignment alignment;
@@ -30,6 +31,7 @@ struct ClassGenerationSettings : public GeneratorDataBase // settings from GUI
 
 	bool operator==(const ClassGenerationSettings& other) const;
 	bool operator!=(const ClassGenerationSettings& other) const;
+	bool useDefaults;
 };
 
 class ClassGenerationData : public GeneratorDataBase

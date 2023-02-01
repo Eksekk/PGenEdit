@@ -89,14 +89,14 @@ GeneralPanel::GeneralPanel(wxWindow* parent, wxWindowID id, const wxPoint& pos, 
 	m_staticText11->Wrap(-1);
 	generateFoodSizer->Add(m_staticText11, 0, wxALIGN_CENTER_VERTICAL | wxALL, 5);
 
-	foodMin = new wxTextCtrl(this, wxID_ANY, _("10"), wxDefaultPosition, wxDefaultSize, wxTE_NOHIDESEL);
+	foodMin = new wxSpinCtrl(this, wxID_ANY, _("10"), wxDefaultPosition, wxDefaultSize, wxTE_NOHIDESEL);
 	generateFoodSizer->Add(foodMin, 0, wxALL, 5);
 
 	m_staticText21 = new wxStaticText(this, wxID_ANY, _("Max:"), wxDefaultPosition, wxDefaultSize, 0);
 	m_staticText21->Wrap(-1);
 	generateFoodSizer->Add(m_staticText21, 0, wxALIGN_CENTER_VERTICAL | wxALL, 5);
 
-	foodMax = new wxTextCtrl(this, wxID_ANY, _("20"), wxDefaultPosition, wxDefaultSize, wxTE_NOHIDESEL);
+	foodMax = new wxSpinCtrl(this, wxID_ANY, _("20"), wxDefaultPosition, wxDefaultSize, wxTE_NOHIDESEL);
 	generateFoodSizer->Add(foodMax, 0, wxALL, 5);
 
 
@@ -116,7 +116,6 @@ GeneralPanel::GeneralPanel(wxWindow* parent, wxWindowID id, const wxPoint& pos, 
 	dispelPartyCheckbox = new wxCheckBox(this, wxID_ANY, _("Remove active buffs and statistics bonuses"), wxDefaultPosition, wxDefaultSize, 0);
 	dispelPartyCheckbox->SetValue(true);
 	partyConditionSizer->Add(dispelPartyCheckbox, 0, wxALL, 5);
-
 
 	generalSettingsSizer->Add(partyConditionSizer, 0, wxEXPAND, 5);
 
