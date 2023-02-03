@@ -1,3 +1,4 @@
+#pragma once
 #include "pch.h"
 #include "main.h"
 #include "ClassGenerationData.h"
@@ -7,11 +8,9 @@ class ClassWindow;
 class ClassGenerationData;
 class ClassInfoPanel;
 
-#pragma once
 class ClassSettingsTab : public wxPanel
 {
 public:
-
 	ClassGenerationData* linkedClassSettings;
 	wxBoxSizer* mainSizer;
 	AlignmentRadioBox* possibleAlignmentRadioBox;

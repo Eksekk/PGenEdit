@@ -11,12 +11,9 @@ ClassGenerationSettings::ClassGenerationSettings() : tierWeights(3, 1)
 
 bool ClassGenerationSettings::readFromJson(const Json& json)
 {
-	/*int id = INVALID_ID; // not used in general settings
-	int weight;
-	std::vector<int> tierWeights;
-	Alignment alignment;
-	bool disabled; // not used in general settings
-	bool equalChances;*/
+	// TODO: log messages if values missing/invalid
+	// TODO below
+	// setDefaults(); // set defaults to use if value invalid (don't set it)
 	weight = json["weight"];
 	tierWeights = json["tierWeights"].get<std::vector<int>>();
 	auto itr = alignmentStringToId.find(json["alignment"]);
@@ -24,6 +21,7 @@ bool ClassGenerationSettings::readFromJson(const Json& json)
 	alignment = (Alignment)itr->second;
 	disabled = json["disabled"];
 	equalChances = json["equalChances"];
+	useDefaults = json["useDefaults"];
 	return true;
 }
 
@@ -36,6 +34,7 @@ bool ClassGenerationSettings::writeToJson(Json& json)
 	json["alignment"] = itr->second;
 	json["disabled"] = disabled;
 	json["equalChances"] = equalChances;
+	json["useDefaults"] = useDefaults;
 	return true;
 }
 
@@ -67,6 +66,7 @@ void ClassGenerationSettings::randomize()
 	static std::uniform_int_distribution weightRand(0, 10);
 	static std::uniform_int_distribution alignmentRand(0, 3);
 	static std::uniform_int_distribution disabledRand(0, 5);
+	static std::uniform_int_distribution useDefaultsRand(0, 5);
 	static std::uniform_int_distribution equalChancesRand(0, 5);
 
 	weight = weightRand(gen);
@@ -85,6 +85,7 @@ void ClassGenerationSettings::randomize()
 	}
 	alignment = (Alignment)alignmentRand(gen);
 	disabled = disabledRand(gen) == 5; // 16.66%
+	useDefaults = useDefaultsRand(gen) == 5; // 16.66%
 	equalChances = equalChancesRand(gen) == 5; // 16.66%
 }
 
@@ -97,6 +98,7 @@ void ClassGenerationSettings::copyFrom(const GeneratorDataBase& source)
 	alignment = other->alignment;
 	disabled = other->disabled;
 	equalChances = other->equalChances;
+	useDefaults = other->useDefaults;
 }
 
 ClassGenerationSettings& ClassGenerationSettings::operator=(const ClassGenerationSettings& other)
@@ -108,7 +110,7 @@ ClassGenerationSettings& ClassGenerationSettings::operator=(const ClassGeneratio
 bool ClassGenerationSettings::operator==(const ClassGenerationSettings& other) const
 {
 	return weight == other.weight && tierWeights == other.tierWeights && alignment == other.alignment
-		&& disabled == other.disabled && equalChances == other.equalChances;
+		&& disabled == other.disabled && equalChances == other.equalChances && useDefaults == other.useDefaults;
 }
 
 bool ClassGenerationSettings::operator!=(const ClassGenerationSettings& other) const
@@ -123,7 +125,7 @@ ClassGenerationData::ClassGenerationData(int index, PlayerData& playerData) : in
 
 bool ClassGenerationData::readFromJson(const Json& json)
 {
-	auto s = json["settings"].get<std::unordered_map<std::string, Json>>();
+	auto s = std::move(json["settings"]).get<std::unordered_map<std::string, Json>>();
 	for (auto& [idstr, data] : s)
 	{
 		int id = std::stoi(idstr);

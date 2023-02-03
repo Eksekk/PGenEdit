@@ -35,7 +35,7 @@ public:
 
 	PlayerData* linkedGenerationData;
 	ClassSettingsTab* classSettingsTab;
-
+private:
 	void onGenerationEnabledCheck(wxCommandEvent& event);
 	void onPlayerTypeChoice(wxCommandEvent& event);
 	void onStrengthIndicatorRadio(wxCommandEvent& event);

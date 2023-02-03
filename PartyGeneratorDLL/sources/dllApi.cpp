@@ -5,7 +5,7 @@
 #include <cstdlib>
 #include "LowLevel.h"
 #include "MainWindow.h"
-#include "Application.h"
+#include "GuiApplication.h"
 #include "GameData.h"
 #include <string>
 #include "Utility.h"
@@ -69,7 +69,7 @@ void updatePartySizeAndPlayerPtrs()
 
 extern "C"
 {
-    Application* app = nullptr;
+    GuiApplication* app = nullptr;
     DLL_EXPORT BOOL __stdcall APIENTRY DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
     {
         switch (fdwReason)
@@ -109,6 +109,17 @@ extern "C"
                 if (MMVER == 7 && GetModuleHandleA("elemental.dll"))
                 {
                     IS_ELEMENTAL_MOD = true;
+                }
+				INITCOMMONCONTROLSEX whatToInit;
+                whatToInit.dwICC = 0x8000FFFF; // that's all that can be initialized successfully
+				whatToInit.dwSize = sizeof(INITCOMMONCONTROLSEX);
+                if (!InitCommonControlsEx(&whatToInit))
+                {
+                    DWORD err = GetLastError();
+                    char buffer[500];
+                    FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM, nullptr, err, 0, buffer, 500, nullptr);
+                    wxLogError("Couldn't init common controls from comctl32.dll. Error message: %s", buffer);
+                    wxLog::FlushActive();
                 }
                 // TODO: test for Merge (run lua script?)
                 generator = new Generator();

@@ -15,6 +15,7 @@ private:
 	void onClose(wxCloseEvent& event);
 	void onShow(wxShowEvent& event);
 	void onKeyDown(wxKeyEvent& event);
+	void onTimer(wxTimerEvent& event);
 	void setupMenus();
 
 protected:
@@ -51,7 +52,7 @@ public:
 
 	wxBoxSizer* mm8PartialGenerationWarningSizer;
 
-	wxStaticBitmap* m_bitmap1;
+	wxStaticBitmap* warningBitmap;
 
 	wxStaticText* warningText;
 
@@ -67,6 +68,5 @@ public:
 	void updateSettingsFromLinked();
 	template<typename Player>
 	[[nodiscard]] std::vector<wxString> getPlayerNames();
-	void onTimer(wxTimerEvent& event);
 };
 

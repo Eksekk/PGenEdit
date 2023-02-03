@@ -1,9 +1,9 @@
 #include "pch.h"
-#include "Application.h"
+#include "GuiApplication.h"
 #include "globals.h"
 #include "MainWindow.h"
 
-Application::Application()
+GuiApplication::GuiApplication()
 {
     // Keep the wx "main" thread running even without windows. This greatly
     // simplifies threads handling, because we don't have to correctly
@@ -21,19 +21,19 @@ Application::Application()
     SetExitOnFrameDelete(false);
 }
 
-void Application::OnShowWindow(wxThreadEvent& event)
+void GuiApplication::OnShowWindow(wxThreadEvent& event)
 {
     mainWindow->Show(event.GetInt());
 }
 
-void Application::OnTerminate(wxThreadEvent& event)
+void GuiApplication::OnTerminate(wxThreadEvent& event)
 {
     MessageBoxA(0, "OnTerminate()", "", 0);
     //mainWindow->Destroy();
     ExitMainLoop();
 }
 
-bool Application::OnInit()
+bool GuiApplication::OnInit()
 {
     if (!wxApp::OnInit())
     {
@@ -46,4 +46,4 @@ bool Application::OnInit()
 }
 
 // we can't have WinMain() in a DLL and want to start the app ourselves
-wxIMPLEMENT_APP_NO_MAIN(Application);
+wxIMPLEMENT_APP_NO_MAIN(GuiApplication);

@@ -2,12 +2,13 @@
 #include "Tests.h"
 #include "PlayerSkill.h"
 #include <cstdarg>
-#include "Application.h"
+#include "GuiApplication.h"
 #include <wx/notebook.h>
 #include "GeneralPanel.h"
 #include "Generator.h"
 #include "DefaultPlayerPanel.h"
 #include "PlayerPanel.h"
+#include "globals.h"
 
 extern Generator* generator;
 
@@ -169,12 +170,44 @@ std::vector<wxString> Tests::testSkillFunctions()
 	return errors;
 }
 
-std::vector<wxString> Tests::testJson()
+std::vector<wxString> Tests::testAlignmentRadioBox()
 {
-	static const std::string TEST_FILE_NAME = "class data tests.txt", ERROR_FILE_NAME = "class data errors.txt", OLD_ERROR_FILE_NAME = "old class data errors.txt";
+	// need to pass nullptr!!! otherwise children of frame will be created as top level windows
+	// and NtUserCreateWindowEx will fail with code 1406 (0x57E)
+	wxFrame* w = new wxFrame(nullptr, wxID_ANY, "testFrame");
 	std::vector<wxString> errors;
 	bool failed = false;
 	Asserter myasserter(errors, failed);
+	AlignmentRadioBox* b1 = new AlignmentRadioBox(w, "a"), *b2 = new AlignmentRadioBox(w, "b");
+	myassert(b1->getSelectedAlignment() == b2->getSelectedAlignment());
+	b1->setSelection(ALIGNMENT_LIGHT);
+	myassert(b1->getSelectedAlignment() != b2->getSelectedAlignment());
+	b2->setSelection(ALIGNMENT_LIGHT);
+	myassert(b1->getSelectedAlignment() == b2->getSelectedAlignment());
+	b1->setSelection(ALIGNMENT_ANY);
+	b2->setSelection(ALIGNMENT_DARK);
+	myassert(b1->getSelectedAlignment() != b2->getSelectedAlignment());
+
+	for (const auto& str : AlignmentRadioBox::texts)
+	{
+		b1->setSelection(str);
+		b2->setSelection(str);
+		myassert(b1->getSelectedAlignment() == b2->getSelectedAlignment(), str);
+	}
+
+	b1->SetSelection(AlignmentRadioBox::alignmentIndexes.find(ALIGNMENT_DARK)->second);
+	b2->setSelection(ALIGNMENT_DARK);
+	myassert(b1->getSelectedAlignment() == b2->getSelectedAlignment());
+	myassert(b1->GetSelection() == b2->GetSelection());
+	w->Destroy();
+	//delete b1, b2, w;
+	return errors;
+}
+
+std::vector<wxString> Tests::testJson()
+{
+	static const std::string TEST_FILE_NAME = "class data tests.txt", ERROR_FILE_NAME = "class data errors.txt", OLD_ERROR_FILE_NAME = "old class data errors.txt";
+	static const int TEST_AMOUNT = 25;
 	// std::ios::in fails if file doesn't exist, even if std::ios::out is specified
 	std::fstream errorFile(ERROR_FILE_NAME, std::ios::in);
 	if (errorFile.is_open())
@@ -184,9 +217,27 @@ std::vector<wxString> Tests::testJson()
 	}
 	else
 	{
-		errorFile.clear();
+		errorFile.clear(); // remove failed open flags
 	}
-	errorFile.open(ERROR_FILE_NAME, std::ios::in | std::ios::trunc);
+	errorFile.open(ERROR_FILE_NAME, std::ios::out | std::ios::trunc);
+	if (!jsonErrors.empty())
+	{
+		wxString str = wxString::Format("Time: %s\nEntering %s(), %d old errors still present:\n\n%s\n\n\n", getTimeStr(), __FUNCTION__, jsonErrors.size(), concatWxStrings(jsonErrors, "\n"));
+		errorFile << str;
+		if (jsonErrors.size() <= 5)
+		{
+			wxLogError(str);
+		}
+		else
+		{
+			wxLogError("%d json errors written to error file", jsonErrors.size());
+		}
+		wxLog::FlushActive();
+	}
+	jsonErrors.clear();
+	std::vector<wxString> errors;
+	bool failed = false;
+	Asserter myasserter(errors, failed);
 	std::fstream testFile;
 	bool existed = true;
 	Json testOut = Json::array(), existingJson;
@@ -210,33 +261,35 @@ std::vector<wxString> Tests::testJson()
 		existed = false;
 		testFile.open(TEST_FILE_NAME, std::ios::out | std::ios::trunc);
 	}
-	int failedNum = 0;
+	unsigned int failedNum = 0;
 	try
 	{
-		const size_t jsonSize = existingJson.size();
-		const int TESTS = 25;
+		const size_t playerJsonSize = existingJson.size();
 		for (int pl = 0; pl < MAX_PLAYERS; ++pl)
 		{
+			if (!existed || playerJsonSize <= pl)
+			{
+				testOut.push_back(Json::array());
+			}
 			auto& classes = generator->playerData[pl]->classes;
 			Json copy;
 			classes.writeToJson(copy);
-			for (int i = 0; i < TESTS; ++i)
+			const size_t classJsonSize = playerJsonSize > pl ? existingJson[pl].size() : 0;
+			for (int i = 0; i < TEST_AMOUNT; ++i)
 			{
 				Json j;
-				if (existed && jsonSize > pl * TESTS + i)
+				if (existed && playerJsonSize > pl && classJsonSize > i)
 				{
-					classes.readFromJson(existingJson[pl * TESTS + i]); // TODO: array of arrays of class json instead of * 1000 (players/tests/classes)
+					classes.readFromJson(existingJson[pl][i]);
 				}
 				else
 				{
 					classes.randomize();
 				}
 				classes.writeToJson(j);
-				//wxLogWarning(wxString(j.dump(4)));
-				//wxLog::FlushActive();
-				if (!existed)
+				if (!existed || classJsonSize <= i)
 				{
-					testOut.push_back(j);
+					testOut[pl].push_back(j);
 				}
 				ClassGenerationData classes2(classes.index, classes.playerData);
 				classes2.readFromJson(j);
@@ -248,8 +301,11 @@ std::vector<wxString> Tests::testJson()
 			}
 			classes.readFromJson(copy);
 		}
-		//wxLogInfo(wxString::Format("%d tests failed", failedNum));
-		//wxLog::FlushActive();
+		if (failedNum > 0)
+		{
+			wxLogInfo(wxString::Format("%d class json tests failed", failedNum));
+			wxLog::FlushActive();
+		}
 		if (!existed)
 		{
 			testFile << testOut;
@@ -258,6 +314,20 @@ std::vector<wxString> Tests::testJson()
 	catch (const std::exception& ex)
 	{
 		wxLogError(ex.what());
+		wxLog::FlushActive();
+	}
+	if (!jsonErrors.empty())
+	{
+		wxString str = wxString::Format("Time: %s\nLeaving %s(), %d errors occurred:\n\n%s\n\n\n", getTimeStr(), __FUNCTION__, jsonErrors.size(), concatWxStrings(jsonErrors, "\n"));
+		errorFile << str;
+		if (jsonErrors.size() <= 5)
+		{
+			wxLogError(str);
+		}
+		else
+		{
+			wxLogError("%d json errors written to error file", jsonErrors.size());
+		}
 		wxLog::FlushActive();
 	}
 	return errors;
@@ -285,5 +355,5 @@ std::vector<wxString> Tests::testGui()
 			myassert(p->linkedGenerationData, wxString::Format("iteration %d", i));
 		}
 	}
-	return errors;
+	return mergeVectors(errors, testAlignmentRadioBox());
 }

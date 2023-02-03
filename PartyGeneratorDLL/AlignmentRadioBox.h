@@ -4,10 +4,10 @@
 #include "Enum_const.h"
 class AlignmentRadioBox : public wxRadioBox
 {
-private:
+public:
 	static const wxString texts[4];
 	static const std::map<Alignment, int> alignmentIndexes;
-public:
+
 	AlignmentRadioBox(wxWindow* parent, wxString&& label);
 	AlignmentRadioBox(wxWindow* parent, const wxString& label);
 

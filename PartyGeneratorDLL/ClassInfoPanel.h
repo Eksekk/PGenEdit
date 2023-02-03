@@ -14,14 +14,15 @@ private:
 
 	wxBoxSizer* checkboxesSizer;
 	wxCheckBox* useDefaultsCheckbox;
+	wxStaticBoxSizer* tierSettings_sbs;
 protected:
 	
 
 public:
 	wxStaticLine* m_staticline4;
-	wxStaticText* className;
+	wxStaticText* classNameLabel;
 	wxCheckBox* disabledCheckbox;
-	wxStaticText* m_staticText24;
+	wxStaticText* classWeightText;
 	wxSpinCtrl* weightText;
 	wxRadioButton* equalWeightsRadio;
 	wxRadioButton* manualWeightsRadio;

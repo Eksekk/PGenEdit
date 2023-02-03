@@ -47,7 +47,7 @@ void PlayerData::setDefaults()
 	resists->setDefaults();
 	classes.setDefaults();
 	playerType = PLAYER_GENERIC;
-	strengthIndicator = CHARACTER_GENERATED_LEVEL;
+	strengthIndicator = AVERAGE_LEVEL;
 	generationEnabled = true;
 }
 

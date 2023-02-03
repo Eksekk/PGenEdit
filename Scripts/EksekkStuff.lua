@@ -1,3 +1,5 @@
+pgenData = pgenData or {}
+
 local M = {dll = _G.oldDll}
 mem.dll.kernel32.SetDllDirectoryA("C:\\Users\\Eksekk\\source\\repos\\PartyGenerator\\Debug\\")
 function events.GameInitialized2()
@@ -27,21 +29,33 @@ function M.unloadDll()
 end
 -- M.dll.setClassData(json.encode(M.C()))
 
+local FORMAT_MESSAGE_FROM_SYSTEM = 0x00001000
 function M.loadDll()
 	if not M.dll then
 		M.dll = mem.LoadDll("PartyGenerator.dll")
+		if not M.dll then
+			local err = mem.dll.kernel32.GetLastError()
+			local buffer = mem.allocMM(500)
+            mem.dll.kernel32.FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM, 0, err, 0, buffer, 500, 0);
+			error(string.format("Couldn't load party generator dll! Error %d (message: \"%s\")", err, mem.string(buffer)))
+			mem.freeMM(buffer)
+			return
+		end
 		d = M.dll
 		_G.oldDll = M.dll
 		M.dll.init()
 		runEventLoopOnce = function() M.dll.runEventLoopOnce() end
-		events.Tick = runEventLoopOnce -- TODO: hijack main game loop (doesn't work outside of [main screen when playing], need to add
-		-- check to not generate if outside of game area, but that will be better solution than current)
+		events.Tick = runEventLoopOnce
 		M.dll.setClassData(json.encode(M.C()))
 		M.dll.setSkillData(json.encode(M.Sk()))
 		M.dll.runTests()
 	end
 end
 
+if pgenData.ptrs then
+	events.LoadMap.Remove(pgenData.ptrs)
+	pgenData.ptrs = nil
+end
 function M.ptrs()
 	if M.dll then
 		local ptrs = mem.allocMM(4 * Party.Count)
@@ -52,8 +66,9 @@ function M.ptrs()
 		mem.freeMM(ptrs)
 	end
 end
+pgenData.ptrs = M.ptrs
 
-events.LoadMap = M.ptrs
+events.LoadMap = pgenData.ptrs
 
 function M.reloadDll()
 	M.unloadDll()

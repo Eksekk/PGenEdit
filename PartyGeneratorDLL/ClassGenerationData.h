@@ -17,6 +17,7 @@ public:
 	Alignment alignment;
 	bool disabled; // not used in general settings
 	bool equalChances;
+	bool useDefaults;
 
 	ClassGenerationSettings();
 
@@ -31,7 +32,6 @@ public:
 
 	bool operator==(const ClassGenerationSettings& other) const;
 	bool operator!=(const ClassGenerationSettings& other) const;
-	bool useDefaults;
 };
 
 class ClassGenerationData : public GeneratorDataBase

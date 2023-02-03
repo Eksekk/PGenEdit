@@ -57,7 +57,7 @@ PlayerPanelBase::PlayerPanelBase(wxWindow* parent, PlayerData* linkedGenerationD
 	// CLASS PANEL //
 
 	classSettingsTab = new ClassSettingsTab(m_notebook2, &linkedGenerationData->classes);
-	m_notebook2->AddPage(classSettingsTab, _("Class"), true);
+	m_notebook2->AddPage(classSettingsTab, _("Class"), false);
 	//if (classSettingsTab->Hide()) wxLogMessage("Done");
 
 	// ~~CLASS PANEL~~ //

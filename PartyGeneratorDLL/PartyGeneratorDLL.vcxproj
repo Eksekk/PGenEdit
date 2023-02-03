@@ -27,11 +27,12 @@
     <ClInclude Include="Game.h" />
     <ClInclude Include="GameData.h" />
     <ClInclude Include="GeneralPanel.h" />
+    <ClInclude Include="GeneratorGuiBase.h" />
     <ClInclude Include="GuaranteedClassDialog.h" />
     <ClInclude Include="GUIEnums.h" />
     <ClInclude Include="ClassGenerationData.h" />
     <ClInclude Include="PlayerClass.h" />
-    <ClInclude Include="headers\Application.h" />
+    <ClInclude Include="headers\GuiApplication.h" />
     <ClInclude Include="headers\Enum_const.h" />
     <ClInclude Include="headers\Generator.h" />
     <ClInclude Include="headers\globals.h" />
@@ -66,6 +67,7 @@
     <ClCompile Include="DefaultPlayerPanel.cpp" />
     <ClCompile Include="GameData.cpp" />
     <ClCompile Include="GeneralPanel.cpp" />
+    <ClCompile Include="GeneratorGuiBase.cpp" />
     <ClCompile Include="GuaranteedClassDialog.cpp" />
     <ClCompile Include="GUIEnums.cpp" />
     <ClCompile Include="PlayerClass.cpp" />
@@ -73,7 +75,7 @@
     <ClCompile Include="PlayerPanelBase.cpp" />
     <ClCompile Include="PlayerSkill.cpp" />
     <ClCompile Include="PlayerPanel.cpp" />
-    <ClCompile Include="sources\Application.cpp" />
+    <ClCompile Include="sources\GuiApplication.cpp" />
     <ClCompile Include="sources\dllApi.cpp" />
     <ClCompile Include="sources\Enum_const.cpp" />
     <ClCompile Include="sources\Generator.cpp" />
@@ -107,15 +109,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="Lib.def" />
-  </ItemGroup>
-  <ItemGroup>
-    <ResourceCompile Include="wx.rc">
-      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(WindowsSDK_IncludePath);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(WindowsSDK_IncludePath);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <ShowProgress Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ShowProgress>
-      <ShowProgress Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ShowProgress>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
-    </ResourceCompile>
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>

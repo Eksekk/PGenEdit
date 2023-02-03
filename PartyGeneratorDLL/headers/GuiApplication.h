@@ -2,10 +2,10 @@
 #include "pch.h"
 #include "main.h"
 #include "MainWindow.h"
-class Application : public wxApp
+class GuiApplication : public wxApp
 {
 public:
-    Application();
+    GuiApplication();
     MainWindow* mainWindow;
 
     virtual bool OnInit();
@@ -15,4 +15,4 @@ private:
     void OnTerminate(wxThreadEvent& event);
 };
 
-wxDECLARE_APP(Application);
+wxDECLARE_APP(GuiApplication);

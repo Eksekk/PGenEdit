@@ -12,7 +12,8 @@ const T& mmv(const T& e6, const T& e7, const T& e8);
 template<typename T>
 T& mmv(T& e6, T& e7, T& e8);
 
-wxString concatWxStrings(const std::vector<wxString>& container, const wxString& separator = "\n");
+template<template<typename, typename...> typename Container, typename... Extra>
+wxString concatWxStrings(const Container<wxString, Extra...>& container, const wxString& separator = "\n");
 
 std::string tolowerStr(const std::string& source);
 
@@ -45,3 +46,5 @@ Map<Value, Key> invertMap(const Map<Key, Value, Extra...>& map)
 	}
 	return outMap;
 }
+
+wxString getTimeStr();

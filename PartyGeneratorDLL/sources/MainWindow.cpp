@@ -1,7 +1,7 @@
 #include "pch.h"
 #include "main.h"
 #include "MainWindow.h"
-#include "Application.h"
+#include "GuiApplication.h"
 #include "Generator.h"
 #include "PlayerPanel.h"
 #include "ClassWindow.h"
@@ -166,8 +166,8 @@ MainWindow::MainWindow(wxWindow* parent, wxWindowID id, const wxString& title, c
 
 		mm8PartialGenerationWarningSizer = new wxBoxSizer(wxHORIZONTAL);
 
-		m_bitmap1 = new wxStaticBitmap(mainPanel, wxID_ANY, wxArtProvider::GetBitmap(wxART_WARNING, wxART_CMN_DIALOG), wxDefaultPosition, wxDefaultSize, 0);
-		mm8PartialGenerationWarningSizer->Add(m_bitmap1, 0, wxALL, 5);
+		warningBitmap = new wxStaticBitmap(mainPanel, wxID_ANY, wxArtProvider::GetBitmap(wxART_WARNING, wxART_CMN_DIALOG), wxDefaultPosition, wxDefaultSize, 0);
+		mm8PartialGenerationWarningSizer->Add(warningBitmap, 0, wxALL, 5);
 
 		warningText = new wxStaticText(mainPanel, wxID_ANY, _("Warning: your party count is x. Only x leftmost tabs will be generated, the rest is implicitly disabled."), wxDefaultPosition, wxDefaultSize, 0);
 		mm8PartialGenerationWarningSizer->Add(warningText, 0, wxALIGN_CENTER_VERTICAL | wxALL, 5);

@@ -30,6 +30,7 @@ public:
 
 	static std::vector<wxString> testSkillFunctions(); // join skill / split skill
 
+	static std::vector<wxString> testAlignmentRadioBox();
 	template<typename Player, typename Game>
 	static std::vector<wxString> testClassGeneration(Player* player);
 
@@ -77,5 +78,5 @@ std::vector<wxString> Tests::testMisc()
 template<typename Player, typename Game>
 std::vector<wxString> Tests::run()
 {
-	return mergeVectors(testMisc<Player, Game>(), testSkillFunctions(), testJson());
+	return mergeVectors(testMisc<Player, Game>(), testSkillFunctions(), testJson(), testGui());
 }

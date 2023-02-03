@@ -13,11 +13,11 @@ ClassInfoPanel::ClassInfoPanel(wxWindow* parent, ClassGenerationSettings* linked
 	m_staticline4 = new wxStaticLine(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL);
 	mainSizer->Add(m_staticline4, 0, wxEXPAND | wxALL, 5);
 
-	className = new wxStaticText(this, wxID_ANY, _("Class name"), wxDefaultPosition, wxDefaultSize, 0);
-	className->Wrap(-1);
-	className->SetFont(wxFont(20, wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxEmptyString));
+	classNameLabel = new wxStaticText(this, wxID_ANY, _("Class name"), wxDefaultPosition, wxDefaultSize, 0);
+	classNameLabel->Wrap(-1);
+	classNameLabel->SetFont(wxFont(20, wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxEmptyString));
 
-	mainSizer->Add(className, 0, wxALL | wxALIGN_CENTER_HORIZONTAL, 5);
+	mainSizer->Add(classNameLabel, 0, wxALL | wxALIGN_CENTER_HORIZONTAL, 5);
 
 	checkboxesSizer = new wxBoxSizer(wxHORIZONTAL);
 
@@ -29,11 +29,6 @@ ClassInfoPanel::ClassInfoPanel(wxWindow* parent, ClassGenerationSettings* linked
 	useDefaultsCheckbox = new wxCheckBox(this, wxID_ANY, _("Use defaults"));
 	useDefaultsCheckbox->SetToolTip(isDefault() ? "Check to use global defaults where player-specific default would be used" : "Check to use default settings above");
 	useDefaultsCheckbox->Bind(wxEVT_CHECKBOX, &ClassInfoPanel::onUseDefaultsCheck, this);
-	if (linkedClassSettings->useDefaults)
-	{
-		useDefaultsCheckbox->SetValue(true);
-		setEnabledStateBecauseUseDefaultsChanged(false);
-	}
 	checkboxesSizer->Add(useDefaultsCheckbox, 0, wxALL, 5);
 
 	mainSizer->Add(checkboxesSizer, 0, wxALL, 5);
@@ -41,9 +36,9 @@ ClassInfoPanel::ClassInfoPanel(wxWindow* parent, ClassGenerationSettings* linked
 	wxBoxSizer* bSizer40;
 	bSizer40 = new wxBoxSizer(wxHORIZONTAL);
 
-	m_staticText24 = new wxStaticText(this, wxID_ANY, _("Class weight:"), wxDefaultPosition, wxDefaultSize, 0);
-	m_staticText24->Wrap(-1);
-	bSizer40->Add(m_staticText24, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+	classWeightText = new wxStaticText(this, wxID_ANY, _("Class weight:"), wxDefaultPosition, wxDefaultSize, 0);
+	classWeightText->Wrap(-1);
+	bSizer40->Add(classWeightText, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
 	weightText = new wxSpinCtrl(this, wxID_ANY, wxT("1"), wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS | wxSP_WRAP, 0, 99999, 1);
 	weightText->Bind(wxEVT_SPINCTRL, &ClassInfoPanel::onWeightTextChange, this);
@@ -52,7 +47,6 @@ ClassInfoPanel::ClassInfoPanel(wxWindow* parent, ClassGenerationSettings* linked
 
 	mainSizer->Add(bSizer40, 0, wxEXPAND, 5);
 
-	wxStaticBoxSizer* tierSettings_sbs;
 	tierSettings_sbs = new wxStaticBoxSizer(new wxStaticBox(this, wxID_ANY, _("Tier settings")), wxHORIZONTAL);
 
 	equalWeightsRadio = new wxRadioButton(tierSettings_sbs->GetStaticBox(), wxID_ANY, _("Equal weights"), wxDefaultPosition, wxDefaultSize, wxRB_GROUP);
@@ -81,6 +75,12 @@ ClassInfoPanel::ClassInfoPanel(wxWindow* parent, ClassGenerationSettings* linked
 	this->Layout();
 	mainSizer->Fit(this);
 
+	if (linkedClassSettings->useDefaults)
+	{
+		useDefaultsCheckbox->SetValue(true);
+		setEnabledStateBecauseUseDefaultsChanged(false);
+	}
+
 	//sizer->Add(sizer, 0, 0, 5); // INFINITE RECURSION, RETAINED FOR LAUGHS - I SPENT 1.5H ON THIS :(((
 }
 
@@ -91,7 +91,7 @@ bool ClassInfoPanel::isDefault()
 
 void ClassInfoPanel::setClassName(const wxString& name)
 {
-	className->SetLabel(name);
+	classNameLabel->SetLabel(name);
 }
 
 ClassInfoPanel::~ClassInfoPanel()
@@ -126,6 +126,8 @@ void ClassInfoPanel::updateSettingsFromLinked()
 
 void ClassInfoPanel::setEnabledStateBecauseUseDefaultsChanged(bool enabled)
 {
+	classWeightText->Enable(enabled);
+	tierSettings_sbs->GetStaticBox()->Enable(enabled);
 	weightText->Enable(enabled);
 	equalWeightsRadio->Enable(enabled);
 	manualWeightsRadio->Enable(enabled);

@@ -87,7 +87,7 @@
     <ClInclude Include="headers\Structs.h">
       <Filter>Pliki nagłówkowe\Structs</Filter>
     </ClInclude>
-    <ClInclude Include="headers\Application.h">
+    <ClInclude Include="headers\GuiApplication.h">
       <Filter>Pliki nagłówkowe\GUI</Filter>
     </ClInclude>
     <ClInclude Include="PlayerClass.h">
@@ -150,6 +150,9 @@
     <ClInclude Include="AlignmentRadioBox.h">
       <Filter>Pliki nagłówkowe\GUI</Filter>
     </ClInclude>
+    <ClInclude Include="GeneratorGuiBase.h">
+      <Filter>Pliki nagłówkowe</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="sources\dllApi.cpp">
@@ -200,7 +203,7 @@
     <ClCompile Include="sources\SkillsData.cpp">
       <Filter>Pliki źródłowe\Generator</Filter>
     </ClCompile>
-    <ClCompile Include="sources\Application.cpp">
+    <ClCompile Include="sources\GuiApplication.cpp">
       <Filter>Pliki źródłowe\GUI</Filter>
     </ClCompile>
     <ClCompile Include="PlayerClass.cpp">
@@ -257,6 +260,9 @@
     <ClCompile Include="AlignmentRadioBox.cpp">
       <Filter>Pliki źródłowe\GUI</Filter>
     </ClCompile>
+    <ClCompile Include="GeneratorGuiBase.cpp">
+      <Filter>Pliki źródłowe</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Text Include="Text.txt" />
@@ -265,10 +271,5 @@
     <None Include="Lib.def">
       <Filter>Pliki zasobów</Filter>
     </None>
-  </ItemGroup>
-  <ItemGroup>
-    <ResourceCompile Include="wx.rc">
-      <Filter>Pliki zasobów</Filter>
-    </ResourceCompile>
   </ItemGroup>
 </Project>

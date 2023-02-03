@@ -38,13 +38,16 @@ const T& mmv(const T& e6, const T& e7, const T& e8)
 	}
 }
 
-wxString concatWxStrings(const std::vector<wxString>& container, const wxString& separator)
+template<template<typename, typename...> typename Container, typename... Extra>
+wxString concatWxStrings(const Container<wxString, Extra...>& container, const wxString& separator)
 {
 	wxString s;
-	for (int i = 0; i < container.size(); ++i)
+	const size_t size = container.size();
+	int i = 0;
+	for (const auto& val: Container)
 	{
-		s << container[i];
-		if (i < container.size() - 1)
+		s << val;
+		if (i++ < size - 1)
 		{
 			s << separator;
 		}
@@ -60,4 +63,10 @@ std::string tolowerStr(const std::string& source)
 		c = std::tolower(c);
 	}
 	return out;
+}
+
+wxString getTimeStr()
+{
+	auto endTime = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+	return wxString(std::ctime(&endTime));
 }

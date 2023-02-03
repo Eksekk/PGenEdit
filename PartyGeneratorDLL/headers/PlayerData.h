@@ -22,7 +22,6 @@ public:
 	ClassGenerationData classes;
 	PlayerType playerType;
 	int index; // player left to right, starting at 0
-	// INVALID_ID MEANS DEFAULT DATA
 
 	CharacterStrengthIndicator strengthIndicator; // TODO: add reference to player data to member classes?
 	bool generationEnabled;

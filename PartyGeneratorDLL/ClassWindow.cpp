@@ -4,11 +4,12 @@
 #include "GameData.h"
 #include "ClassSettingsTab.h"
 
-ClassWindow::ClassWindow(wxWindow* parent, const wxSize& size, long style) : wxFrame(parent, wxID_ANY, "", wxDefaultPosition, size, style)
+ClassWindow::ClassWindow(wxWindow* parent, const wxSize& size, long style) : wxFrame(nullptr, wxID_ANY, "", wxDefaultPosition, size, style)
 {
 	generalPanel = nullptr;
 	parentTab = dynamic_cast<ClassSettingsTab*>(parent);
 	wxASSERT_MSG(parentTab, wxString::Format("Class window for player %d doesn't have ClassSettingsTab as parent", linkedClassSettings->index));
+	if (!parentTab) return;
 	linkedClassSettings = parentTab->linkedClassSettings;
 	if (linkedClassSettings->index == DEFAULT_SETTINGS_INDEX)
 	{
@@ -31,15 +32,16 @@ ClassWindow::ClassWindow(wxWindow* parent, const wxSize& size, long style) : wxF
 	mainSizer->Add(topButtonSizer, 0, wxALIGN_CENTER_HORIZONTAL);
 	closeButtonTop = new wxButton(mainPanel, wxID_CLOSE, "Close");
 	topButtonSizer->Add(closeButtonTop, 0, wxALIGN_BOTTOM | wxALL, 5);
+	closeButtonTop->Bind(wxEVT_BUTTON, &ClassWindow::onCloseButtonClick, this);
 
 	classSizer = new wxBoxSizer(wxVERTICAL);
-	mainSizer->Add(classSizer, 0, wxALL, 5);
+	mainSizer->Add(classSizer, 0, wxEXPAND | wxALL, 5);
 
 	bottomButtonSizer = new wxBoxSizer(wxHORIZONTAL);
 	mainSizer->Add(bottomButtonSizer, 0, wxALIGN_CENTER_HORIZONTAL);
 	closeButtonBottom = new wxButton(mainPanel, wxID_CLOSE, "Close");
 	bottomButtonSizer->Add(closeButtonBottom, 0, wxALIGN_BOTTOM | wxALL, 5);
-	//closeButton->Bind(wxEVT_BUTTON, &ClassWindow::onCloseButtonClick, this);
+	closeButtonBottom->Bind(wxEVT_BUTTON, &ClassWindow::onCloseButtonClick, this);
 	this->Bind(wxEVT_CLOSE_WINDOW, &ClassWindow::OnCloseWindow, this);
 
 	this->Centre(wxBOTH);
@@ -70,8 +72,8 @@ void ClassWindow::createPanels(ClassGenerationSettings& generalClassSettings, st
 {
 	assert(classSettings.size() > 0);
 	generalPanel = new ClassInfoPanel(mainPanel, &generalClassSettings);
-	generalPanel->className->SetLabel("Default settings");
-	mainSizer->Add(generalPanel, 0, wxEXPAND, 5);
+	generalPanel->setClassName("Default settings");
+	classSizer->Add(generalPanel, 0, wxEXPAND, 5);
 	//sizer->Add(0, 20); // adds spacer
 
 	for (auto& [id, clas] : GameData::classes)
@@ -81,14 +83,15 @@ void ClassWindow::createPanels(ClassGenerationSettings& generalClassSettings, st
 			auto f = classSettings.find(clas.id);
 			assert(f != classSettings.end());
 			ClassInfoPanel* panel = new ClassInfoPanel(mainPanel, &(f->second));
-			panel->className->SetLabel(clas.name);
-			mainSizer->Add(panel, 0, wxEXPAND, 5);
+			panel->setClassName(clas.name);
+			classSizer->Add(panel, 0, wxEXPAND, 5);
 			panels.push_back(panel);
 		}
 	}
 	wxStaticLine* line = new wxStaticLine(mainPanel);
-	mainSizer->Add(line, 0, wxALL | wxEXPAND, 5);
+	classSizer->Add(line, 0, wxALL | wxEXPAND, 5);
 
+	classSizer->Layout();
 	mainPanel->Layout();
 	this->Layout();
 	mainSizer->Fit(mainPanel);

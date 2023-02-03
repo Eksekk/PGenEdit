@@ -5,7 +5,7 @@
 #include "Generator.h"
 #include "globals.h"
 #include <cassert>
-#include "Application.h"
+#include "GuiApplication.h"
 #include "PlayerData.h"
 #include "PlayerPanel.h"
 #include "wx/notebook.h"
@@ -15,6 +15,8 @@
 
 std::unordered_map<int, PlayerClass> GameData::classes;
 std::unordered_map<int, PlayerSkill> GameData::skills;
+Json GameData::classDataJson;
+Json GameData::skillDataJson;
 
 bool GameData::allDataReceived = false;
 void GameData::postProcess()
