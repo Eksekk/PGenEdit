@@ -151,7 +151,7 @@
       <Filter>Pliki nagłówkowe\GUI</Filter>
     </ClInclude>
     <ClInclude Include="GeneratorGuiBase.h">
-      <Filter>Pliki nagłówkowe</Filter>
+      <Filter>Pliki nagłówkowe\GUI</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -261,7 +261,7 @@
       <Filter>Pliki źródłowe\GUI</Filter>
     </ClCompile>
     <ClCompile Include="GeneratorGuiBase.cpp">
-      <Filter>Pliki źródłowe</Filter>
+      <Filter>Pliki źródłowe\GUI</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

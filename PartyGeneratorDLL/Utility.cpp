@@ -38,23 +38,6 @@ const T& mmv(const T& e6, const T& e7, const T& e8)
 	}
 }
 
-template<template<typename, typename...> typename Container, typename... Extra>
-wxString concatWxStrings(const Container<wxString, Extra...>& container, const wxString& separator)
-{
-	wxString s;
-	const size_t size = container.size();
-	int i = 0;
-	for (const auto& val: Container)
-	{
-		s << val;
-		if (i++ < size - 1)
-		{
-			s << separator;
-		}
-	}
-	return s;
-}
-
 std::string tolowerStr(const std::string& source)
 {
 	std::string out = source;

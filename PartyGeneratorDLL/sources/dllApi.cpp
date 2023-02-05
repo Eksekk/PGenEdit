@@ -110,7 +110,27 @@ extern "C"
                 {
                     IS_ELEMENTAL_MOD = true;
                 }
-				INITCOMMONCONTROLSEX whatToInit;
+                // TODO: two versions of comctl32.dll are loaded (old first) and when wxwidgets dll tries to get module handle,
+                // it gets the old one
+                // SOLUTION:
+                // 1. make mm7.exe.manifest file with comctl32.dll 6.0 version requested
+                // example below:
+				/* < ? xml version = '1.0' encoding = 'UTF-8' standalone = 'yes' ? >
+				<assembly xmlns = 'urn:schemas-microsoft-com:asm.v1' manifestVersion = '1.0'>
+					<dependency>
+						<dependentAssembly>
+						    <assemblyIdentity type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'/>
+						</dependentAssembly>
+					</dependency>
+				</assembly>
+                */
+                // 2. touch mm7.exe (update modification date)
+                
+                // unwanted effect: mmeditor's buttons etc. are also changed
+
+
+
+				/*INITCOMMONCONTROLSEX whatToInit;
                 whatToInit.dwICC = 0x8000FFFF; // that's all that can be initialized successfully
 				whatToInit.dwSize = sizeof(INITCOMMONCONTROLSEX);
                 if (!InitCommonControlsEx(&whatToInit))
@@ -120,10 +140,23 @@ extern "C"
                     FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM, nullptr, err, 0, buffer, 500, nullptr);
                     wxLogError("Couldn't init common controls from comctl32.dll. Error message: %s", buffer);
                     wxLog::FlushActive();
-                }
+                }*/
                 // TODO: test for Merge (run lua script?)
                 generator = new Generator();
                 break;
+                /* call comctl32.dll init common controls ex (change call address!)
+                
+                60 83 EC 08 C7 04 24 08 00 00 00 C7 44 24 04 FF FF 00 80 54 E8 C7 33 F9 6E 83 C4 08 61 C3
+                 
+				pushad
+				sub esp,8
+				mov dword ptr ss:[esp],8
+				mov dword ptr ss:[esp+4],8000FFFF
+				push esp
+				call 0x755D33E0
+				add esp,8
+				popad
+				ret */
             }
 
         case DLL_PROCESS_DETACH:

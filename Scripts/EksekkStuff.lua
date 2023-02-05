@@ -2,7 +2,7 @@ pgenData = pgenData or {}
 
 local M = {dll = _G.oldDll}
 mem.dll.kernel32.SetDllDirectoryA("C:\\Users\\Eksekk\\source\\repos\\PartyGenerator\\Debug\\")
-function events.GameInitialized2()
+function events.GameInitialized1()
 	-- speed up loading and unloading my dll by not unloading dependencies which don't change
 	-- (they won't unload because this increments reference count)
 	mem.LoadDll "wxmsw321ud_core_vc_custom.dll"
@@ -442,6 +442,11 @@ getU = getUpvalue
 getUbyV = getUpvalueByValue
 dumpU = dumpUpvalues
 MT = debug.getmetatable or getmetatable
+
+function M.reloadApi()
+	dofile "C:\\Users\\Eksekk\\source\\repos\\PartyGenerator\\Scripts\\General\\PartyGeneratorApi.lua"
+end
+M.reloadApi()
 
 _G.oldDll = M.dll
 return M

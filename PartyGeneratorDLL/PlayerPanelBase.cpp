@@ -35,6 +35,10 @@ PlayerPanelBase::PlayerPanelBase(wxWindow* parent, PlayerData* linkedGenerationD
 	strengthIndicatorRadioBox->Bind(wxEVT_RADIOBOX, &PlayerPanelBase::onStrengthIndicatorRadio, this);
 
 	m_notebook2 = new wxNotebook(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, 0);
+	mainSizer->Add(m_notebook2, 1, wxEXPAND | wxALL, 0);
+	wxSize m_notebook2ImageSize = wxSize(30, 20);
+	wxImageList* m_notebook2Images = new wxImageList(m_notebook2ImageSize.GetWidth(), m_notebook2ImageSize.GetHeight());
+	m_notebook2->AssignImageList(m_notebook2Images);
 
 	// LEVEL PANEL //
 	levelPanel = new wxPanel(m_notebook2, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
@@ -144,9 +148,6 @@ PlayerPanelBase::PlayerPanelBase(wxWindow* parent, PlayerData* linkedGenerationD
 	m_notebook2->AddPage(spellsPanel, _("Spells"), false);
 
 	// ~~SPELLS PANEL~~ //
-
-	mainSizer->Add(m_notebook2, 1, wxEXPAND | wxALL, 20);
-
 
 	this->SetSizer(mainSizer);
 	this->Layout();

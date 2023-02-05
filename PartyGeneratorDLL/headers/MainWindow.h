@@ -17,6 +17,7 @@ private:
 	void onKeyDown(wxKeyEvent& event);
 	void onTimer(wxTimerEvent& event);
 	void setupMenus();
+	bool CanAcceptFocus() const;
 
 protected:
 	
@@ -59,7 +60,7 @@ public:
 	static const wxString WARNING_FORMAT;
 
 	MainWindow(wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = _("Party generator"), const wxPoint& pos = wxDefaultPosition,
-		const wxSize& size = wxSize(800, 900), long style = (wxDEFAULT_FRAME_STYLE | wxTAB_TRAVERSAL) & ~wxRESIZE_BORDER | wxCLIP_CHILDREN);
+		const wxSize& size = wxSize(800, 700), long style = (wxDEFAULT_FRAME_STYLE | wxTAB_TRAVERSAL) & ~wxRESIZE_BORDER);
 
 	~MainWindow();
 

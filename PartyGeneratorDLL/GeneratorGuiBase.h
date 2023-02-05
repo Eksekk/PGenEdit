@@ -13,7 +13,8 @@ public:
 	virtual void updateSettingsFromLinked() = 0;
 	virtual void updateLinkedSettings() = 0;
 
-	// copy constructor, copy assignment operator, comparison operator?
+	// copy constructor, copy assignment operator, comparison operator? -- NO COMPARISON OPERATOR, because I feel
+	// having same settings won't necessarily be being equal
 
 	virtual ~GeneratorGuiBase();
 };

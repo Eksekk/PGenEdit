@@ -125,7 +125,7 @@ ClassGenerationData::ClassGenerationData(int index, PlayerData& playerData) : in
 
 bool ClassGenerationData::readFromJson(const Json& json)
 {
-	auto s = std::move(json["settings"]).get<std::unordered_map<std::string, Json>>();
+	auto s = json["settings"].get<std::unordered_map<std::string, Json>>();
 	for (auto& [idstr, data] : s)
 	{
 		int id = std::stoi(idstr);

@@ -34,25 +34,23 @@ wxString my_to_string(const T& t)
 }
 
 template<typename... Args>
-bool Asserter::operator()(const char* func, const char* file, int line, bool cond, wxString errorMsg, const Args&... args)
+bool Asserter::operator()(const char* func, const char* file, int line, bool cond, const wxString& rawErrorMsg, const Args&... args)
 {
 	if (!cond)
 	{
-		if (!errorMsg.empty())
+		std::string file2 = file;
+		size_t index = file2.rfind('/');
+		if (index != std::string::npos)
 		{
-			std::string file2 = file;
-			size_t index = file2.rfind('/');
-			if (index != std::string::npos)
-			{
-				file2 = file2.substr(index + 1);
-			}
-			wxString errorMsg = wxString("%s(%s:%d) " + errorMsg);
-			if constexpr (sizeof...(args) > 0)
-			{
-				errorMsg << ("Extra data:" + rep("\n%s", sizeof...(args)));
-			}
-			errors.push_back(wxString::Format(errorMsg, func, file2, line, my_to_string(args)...));
+			file2 = file2.substr(index + 1);
 		}
+		static const wxString errorFormat("%s(%s:%d) %s");
+		wxString errorMsg = rawErrorMsg;
+		if constexpr (sizeof...(args) > 0)
+		{
+			errorMsg << ("Extra data:" + rep("\n%s", sizeof...(args)));
+		}
+		errors.push_back(wxString::Format(errorFormat, func, file2, line, errorMsg, my_to_string(args)...));
 		failed = true;
 		return false;
 	}

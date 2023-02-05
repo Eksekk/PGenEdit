@@ -40,9 +40,9 @@ ClassInfoPanel::ClassInfoPanel(wxWindow* parent, ClassGenerationSettings* linked
 	classWeightText->Wrap(-1);
 	bSizer40->Add(classWeightText, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
-	weightText = new wxSpinCtrl(this, wxID_ANY, wxT("1"), wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS | wxSP_WRAP, 0, 99999, 1);
-	weightText->Bind(wxEVT_SPINCTRL, &ClassInfoPanel::onWeightTextChange, this);
-	bSizer40->Add(weightText, 0, wxALL, 5);
+	weight = new wxSpinCtrl(this, wxID_ANY, wxT("1"), wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS | wxSP_WRAP, 0, 99999, 1);
+	weight->Bind(wxEVT_SPINCTRL, &ClassInfoPanel::onWeightChange, this);
+	bSizer40->Add(weight, 0, wxALL, 5);
 
 
 	mainSizer->Add(bSizer40, 0, wxEXPAND, 5);
@@ -59,9 +59,9 @@ ClassInfoPanel::ClassInfoPanel(wxWindow* parent, ClassGenerationSettings* linked
 
 	for (int i = 0; i < 3; ++i)
 	{
-		tierWeightTexts[i] = new wxSpinCtrl(tierSettings_sbs->GetStaticBox(), TIER_IDS[i], "1", wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS | wxSP_WRAP, 0, 99999, 1);
-		tierSettings_sbs->Add(tierWeightTexts[i], 0, wxALL, 5);
-		tierWeightTexts[i]->Bind(wxEVT_SPINCTRL, &ClassInfoPanel::onWeightTextChange, this);
+		tierWeights[i] = new wxSpinCtrl(tierSettings_sbs->GetStaticBox(), TIER_IDS[i], "1", wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS | wxSP_WRAP, 0, 99999, 1);
+		tierSettings_sbs->Add(tierWeights[i], 0, wxALL, 5);
+		tierWeights[i]->Bind(wxEVT_SPINCTRL, &ClassInfoPanel::onWeightChange, this);
 	}
 
 	mainSizer->Add(tierSettings_sbs, 0, wxEXPAND, 5);
@@ -98,11 +98,48 @@ ClassInfoPanel::~ClassInfoPanel()
 {
 }
 
+void ClassInfoPanel::setEnabledStateBecauseUseDefaultsChanged(bool enabled)
+{
+	classWeightText->Enable(enabled);
+	tierSettings_sbs->GetStaticBox()->Enable(enabled);
+	weight->Enable(enabled);
+	equalWeightsRadio->Enable(enabled);
+	manualWeightsRadio->Enable(enabled);
+	bool enableTierWeights = enabled && manualWeightsRadio->GetValue();
+	for (auto ptr : tierWeights)
+	{
+		ptr->Enable(enableTierWeights);
+	}
+	alignmentRadioBox->Enable(enabled);
+}
+
+bool ClassInfoPanel::readFromJson(const Json& json)
+{
+	throw std::logic_error("The method or operation is not implemented.");
+}
+
+bool ClassInfoPanel::writeToJson(Json& json) const
+{
+	throw std::logic_error("The method or operation is not implemented.");
+}
+
+void ClassInfoPanel::copyFrom(const GeneratorGuiBase& source)
+{
+	throw std::logic_error("The method or operation is not implemented.");
+}
+
+bool ClassInfoPanel::hasSameSettingsAs(const GeneratorGuiBase& other) const
+{
+	const ClassInfoPanel* otherPanel = dynamic_cast<const ClassInfoPanel*>(&other);
+	wxASSERT(otherPanel);
+	return otherPanel && linkedClassSettings == otherPanel->linkedClassSettings;
+}
+
 void ClassInfoPanel::updateSettingsFromLinked()
 {
 	disabledCheckbox->SetValue(linkedClassSettings->disabled);
 	useDefaultsCheckbox->SetValue(linkedClassSettings->useDefaults);
-	weightText->SetValue(linkedClassSettings->weight);
+	weight->SetValue(linkedClassSettings->weight);
 	if (linkedClassSettings->equalChances)
 	{
 		equalWeightsRadio->SetValue(true);
@@ -113,7 +150,7 @@ void ClassInfoPanel::updateSettingsFromLinked()
 	}
 	for (int i = 0; i < 3; ++i)
 	{
-		tierWeightTexts[i]->SetValue(linkedClassSettings->tierWeights[i]);
+		tierWeights[i]->SetValue(linkedClassSettings->tierWeights[i]);
 	}
 	alignmentRadioBox->SetSelection(linkedClassSettings->alignment);
 	useDefaultsCheckbox->SetValue(linkedClassSettings->useDefaults);
@@ -124,19 +161,18 @@ void ClassInfoPanel::updateSettingsFromLinked()
 	setEnabledStateBecauseUseDefaultsChanged(enableRest);
 }
 
-void ClassInfoPanel::setEnabledStateBecauseUseDefaultsChanged(bool enabled)
+void ClassInfoPanel::updateLinkedSettings()
 {
-	classWeightText->Enable(enabled);
-	tierSettings_sbs->GetStaticBox()->Enable(enabled);
-	weightText->Enable(enabled);
-	equalWeightsRadio->Enable(enabled);
-	manualWeightsRadio->Enable(enabled);
-	bool enableTierWeights = enabled && manualWeightsRadio->GetValue();
-	for (auto ptr : tierWeightTexts)
+	linkedClassSettings->disabled = disabledCheckbox->GetValue();
+	linkedClassSettings->useDefaults = useDefaultsCheckbox->GetValue();
+	linkedClassSettings->weight = weight->GetValue();
+	linkedClassSettings->equalChances = equalWeightsRadio->GetValue();
+	for (int i = 0; i < 3; ++i)
 	{
-		ptr->Enable(enableTierWeights);
+		linkedClassSettings->tierWeights[i] = tierWeights[i]->GetValue();
 	}
-	alignmentRadioBox->Enable(enabled);
+	linkedClassSettings->alignment = alignmentRadioBox->getSelectedAlignment();
+	linkedClassSettings->useDefaults = useDefaultsCheckbox->GetValue();
 }
 
 void ClassInfoPanel::onDisabledCheck(wxCommandEvent& event)
@@ -160,33 +196,33 @@ void ClassInfoPanel::onUseDefaultsCheck(wxCommandEvent& event)
 	setEnabledStateBecauseUseDefaultsChanged(!event.IsChecked());
 }
 
-void ClassInfoPanel::onWeightTextChange(wxCommandEvent& event)
+void ClassInfoPanel::onWeightChange(wxCommandEvent & event)
 {
-	linkedClassSettings->weight = weightText->GetValue();
+	linkedClassSettings->weight = weight->GetValue();
 }
 
-void ClassInfoPanel::onEqualWeightsRadio(wxCommandEvent& event)
+void ClassInfoPanel::onEqualWeightsRadio(wxCommandEvent & event)
 {
 	linkedClassSettings->equalChances = true;
 	for (int i = 0; i < 3; ++i)
 	{
-		tierWeightTexts[i]->Disable();
+		tierWeights[i]->Disable();
 	}
 }
 
-void ClassInfoPanel::onManualWeightsRadio(wxCommandEvent& event)
+void ClassInfoPanel::onManualWeightsRadio(wxCommandEvent & event)
 {
 	linkedClassSettings->equalChances = false;
 	for (int i = 0; i < 3; ++i)
 	{
-		tierWeightTexts[i]->Enable();
+		tierWeights[i]->Enable();
 	}
 }
 
-void ClassInfoPanel::onTierWeightTextChange(wxCommandEvent& event)
+void ClassInfoPanel::onTierWeightChange(wxCommandEvent& event)
 {
 	const int index = event.GetId() - TIER_ZERO_ID;
-	linkedClassSettings->tierWeights[index] = tierWeightTexts[index]->GetValue();
+	linkedClassSettings->tierWeights[index] = tierWeights[index]->GetValue();
 }
 
 void ClassInfoPanel::onAlignmentRadioBoxSelect(wxCommandEvent& event)

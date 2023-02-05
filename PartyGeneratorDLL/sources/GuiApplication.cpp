@@ -5,6 +5,7 @@
 
 GuiApplication::GuiApplication()
 {
+    mainWindow = nullptr;
     // Keep the wx "main" thread running even without windows. This greatly
     // simplifies threads handling, because we don't have to correctly
     // implement wx-thread restarting.
@@ -41,6 +42,7 @@ bool GuiApplication::OnInit()
     }
     //wxMessageBox("OnInit()");
     //MSGBOX("OnInit()");
+    wxToolTip::Enable(true);
     mainWindow = new MainWindow(nullptr);
     return true;
 }

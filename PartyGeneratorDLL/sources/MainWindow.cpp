@@ -84,6 +84,7 @@ MainWindow::MainWindow(wxWindow* parent, wxWindowID id, const wxString& title, c
 	this->SetSizeHints(wxDefaultSize, wxDefaultSize);
 
 	mainPanel = new wxPanel(this);
+
 	{
 		statusBar = this->CreateStatusBar(1, wxSTB_SIZEGRIP, wxID_ANY);
 
@@ -97,6 +98,7 @@ MainWindow::MainWindow(wxWindow* parent, wxWindowID id, const wxString& title, c
 
 		wxBoxSizer* buttonsSizer;
 		buttonsSizer = new wxBoxSizer(wxHORIZONTAL);
+
 		{
 			loadButton = new wxButton(mainPanel, wxID_ANY, _("Load"), wxDefaultPosition, wxDefaultSize, 0);
 			loadButton->SetToolTip(_("Load settings from file"));
@@ -138,6 +140,7 @@ MainWindow::MainWindow(wxWindow* parent, wxWindowID id, const wxString& title, c
 
 		wxStaticBoxSizer* seedStaticBoxSizer;
 		seedStaticBoxSizer = new wxStaticBoxSizer(new wxStaticBox(mainPanel, wxID_ANY, _("Seed")), wxHORIZONTAL);
+
 		{
 			randomSeedRadio = new wxRadioButton(seedStaticBoxSizer->GetStaticBox(), wxID_ANY, _("Random"), wxDefaultPosition, wxDefaultSize, wxRB_GROUP);
 			seedStaticBoxSizer->Add(randomSeedRadio, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
@@ -180,7 +183,11 @@ MainWindow::MainWindow(wxWindow* parent, wxWindowID id, const wxString& title, c
 		}
 
 		tabs = new wxNotebook(mainPanel, wxID_ANY, pos, size, wxNB_TOP | wxNB_FIXEDWIDTH | wxCLIP_CHILDREN);
-		mainSizer->Add(tabs, 1, wxEXPAND | wxALL, 5);
+		mainSizer->Add(tabs, 1, wxEXPAND | wxALL, 0);
+		wxSize tabsImageSize = wxSize(30, 30);
+		wxImageList* tabsImages = new wxImageList(tabsImageSize.GetWidth(), tabsImageSize.GetHeight());
+		tabs->AssignImageList(tabsImages);
+
 		generalPanel = new GeneralPanel(tabs, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
 		tabs->AddPage(generalPanel, _("General"), true);
 		std::vector<wxString> playerNames;
@@ -300,4 +307,9 @@ void MainWindow::onClose(wxCloseEvent& event)
 	}
 	Destroy();
 	wxGetApp().mainWindow = nullptr;
+}
+
+bool MainWindow::CanAcceptFocus() const
+{
+	return true;
 }

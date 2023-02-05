@@ -4,7 +4,7 @@
 #include "Generator.h"
 #include "Utility.h"
 
-#define myassert(cond, ...) myasserter(__FUNCTION__, __FILE__, __LINE__, (cond), wxString("Assertion failed! (" #cond ")")__VA_OPT__(,) __VA_ARGS__)
+#define myassert(cond, ...) myasserter(__FUNCTION__, __FILE__, __LINE__, (cond), "Assertion failed! (" #cond ")" __VA_OPT__(,) __VA_ARGS__)
 
 extern Generator* generator;
 
@@ -13,7 +13,7 @@ struct Asserter
 	std::vector<wxString>& errors;
 	bool& failed;
 	template<typename... Args>
-	bool operator()(const char* func, const char* file, int line, bool cond, wxString errorMsg, const Args&... args);
+	bool operator()(const char* func, const char* file, int line, bool cond, const wxString& errorMsg, const Args&... args);
 
 	Asserter(std::vector<wxString>& errors, bool& failed);
 
