@@ -665,3 +665,97 @@ end
 -- this includes skipbits
 -- OR
 -- split skipbits into groups of 8 (need same type as members - bool - 1 byte; can't have more skipped than field size even if it's just for skipping...)
+
+
+
+-- "ENUM" GENERATOR
+local namePrefixes = {["Stats"] = "STAT"}
+local consts, header, source = {}, {}, {}
+function processConst(name)
+	if not consts[6] then
+		consts[Game.Version] = const
+		for _, i in ipairs{6, 7 ,8} do
+			if i ~= Game.Version then
+				local f, err = loadfile((DevPath or AppPath) .. "Scripts/Core/ConstAndBits.lua")
+				if not f then
+					print(err)
+					goto continue
+				end
+				local o = table.copy(offsets)
+				o.MMVersion = i
+				local env = {
+					offsets = o,
+					select = select,
+					mem = mem,
+					pairs = pairs,
+					internal = {MMVersion = Game.Version},
+					string = string,
+					setmetatable = setmetatable,
+					table = table
+				}
+				setfenv(f, env)
+				f()
+				consts[i] = env.const
+				::continue::
+			end
+		end
+	end
+	local prefix = namePrefixes[name]
+	
+	-- header
+	
+	local allKeys = {}
+	for i, const in pairs(consts) do
+		for v, k in sortpairs(table.invert(const[name])) do
+			if not table.find(allKeys, k) then
+				allKeys[#allKeys + 1] = k
+			end
+		end
+	end
+	local function formatName(name)
+		name = name:gsub("([a-z])([A-Z0-9])", "%1_%2")
+		name = prefix .. "_" .. name:upper()
+		return name
+	end
+	local forwardDecl = {"extern int"}
+	for i, k in ipairs(allKeys) do
+		table.insert(forwardDecl, "\t" .. formatName(k) .. (i == #allKeys and ";" or ","))
+	end
+	table.insert(forwardDecl, "") -- becomes newline after concat
+	for _, i in ipairs{6, 7, 8} do
+		table.insert(forwardDecl, string.format("extern void makeEnum%s_%d();", name, i))
+	end
+	multipleInsert(header, #header + 1, forwardDecl)
+	table.insert(header, "")
+	
+	-- source
+	
+	source[#source + 1] = "int "
+	local last = allKeys[#allKeys]
+	for _, k in ipairs(allKeys) do
+		table.insert(source, string.format("\t%s = INVALID_ID%s", formatName(k), k == last and ";" or ","))
+	end
+	table.insert(source, "")
+	
+	for _, i in ipairs{6, 7, 8} do
+		table.insert(source, string.format("void makeEnum%s_%d()", name, i))
+		table.insert(source, "{")
+		for v, k in sortpairs(table.invert(consts[i][name])) do
+			table.insert(source, string.format("\t%s = %d;", formatName(k), v))
+		end
+		
+		table.insert(source, "}")
+		table.insert(source, "")
+	end
+	table.insert(source, "")
+end
+
+local constsToProcess = {"Stats"}
+function writeConsts()
+	for _, const in ipairs(constsToProcess) do
+		processConst(const)
+	end
+	io.save("constHeader.h", table.concat(header, "\n"))
+	io.save("constSource.cpp", table.concat(source, "\n"))
+	header, source = {}, {}
+end

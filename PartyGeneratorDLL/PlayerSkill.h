@@ -1,8 +1,6 @@
 #pragma once
 #include "pch.h"
 #include "main.h"
-#include <string>
-#include <vector>
 #include "Enum_const.h"
 
 struct Skill

@@ -143,10 +143,25 @@ bool ClassGenerationData::readFromJson(const Json& json)
 	}
 	defaultSettings.readFromJson(json["defaultSettings"]);
 	std::string astr = json["possibleAlignment"];
-	auto itr = alignmentStringToId.find(astr);
-	assert(itr != alignmentStringToId.end());
-	possibleAlignment = (Alignment)itr->second;
+	auto itrAlign = alignmentStringToId.find(astr);
+	assert(itrAlign != alignmentStringToId.end());
+	possibleAlignment = (Alignment)itrAlign->second;
 	generationEnabled = json["generationEnabled"];
+	int guaranteedClassId = json["guaranteedClass"];
+	if (guaranteedClassId != INVALID_ID)
+	{
+		auto itrClass = GameData::classes.find(guaranteedClassId);
+		if (itrClass == GameData::classes.end())
+		{
+			jsonErrors.push_back(wxString::Format("Guaranteed class (%d) for player %d not found", guaranteedClassId, index));
+		}
+		guaranteedClass = &(itrClass->second);
+	}
+	else
+	{
+		guaranteedClass = nullptr;
+	}
+	useGuaranteedClass = json["useGuaranteedClass"];
 	return true;
 }
 
@@ -163,6 +178,8 @@ bool ClassGenerationData::writeToJson(Json& json)
 	assert(itr != alignmentIdToString.end());
 	json["possibleAlignment"] = itr->second;
 	json["generationEnabled"] = generationEnabled;
+	json["guaranteedClass"] = guaranteedClass ? guaranteedClass->id : INVALID_ID;
+	json["useGuaranteedClass"] = useGuaranteedClass;
 	return true;
 }
 
@@ -175,12 +192,15 @@ void ClassGenerationData::setDefaults()
 	defaultSettings.setDefaults();
 	possibleAlignment = ALIGNMENT_ANY;
 	generationEnabled = true;
+	guaranteedClass = nullptr;
+	useGuaranteedClass = false;
 }
 
 void ClassGenerationData::randomize()
 {
 	static std::random_device rd;
 	static std::mt19937 gen(rd());
+	setDefaults();
 	possibleAlignment = (Alignment)std::uniform_int_distribution(0, 3)(gen);
 	if (std::uniform_int_distribution(0, 9)(gen)) // 90%
 	{
@@ -190,35 +210,19 @@ void ClassGenerationData::randomize()
 	{
 		generationEnabled = false;
 	}
+	if (std::uniform_int_distribution(0, 5)(gen) == 0) // 16.66%
+	{
+		const int index = std::uniform_int_distribution(0, (int)GameData::classes.size() - 1)(gen);
+		auto itr = GameData::classes.begin();
+		std::advance(itr, index);
+		guaranteedClass = &(itr->second);
+		useGuaranteedClass = true;
+	}
 	defaultSettings.randomize();
 	for (auto& [id, s] : settings)
 	{
 		s.randomize();
 	}
-	/*
-	struct ClassGenerationSettings // settings from GUI
-{
-	int id = INVALID_ID; // not used in general settings
-	int weight;
-	std::vector<int> tierWeights;
-	Alignment alignment;
-	bool disabled; // not used in general settings
-	bool equalChances;
-
-	ClassGenerationSettings();
-	void setDefaults();
-};
-
-class ClassGenerationData : public GeneratorDataBase
-{
-public:
-	std::unordered_map<int, ClassGenerationSettings> settings; // rehash doesn't invalidate pointers
-	ClassGenerationSettings defaultSettings; // for player
-	Alignment possibleAlignment;
-	int index;
-	bool generationEnabled;
-	PlayerData& playerData;
-	*/
 }
 
 void ClassGenerationData::copyFrom(const GeneratorDataBase& source)
@@ -229,6 +233,8 @@ void ClassGenerationData::copyFrom(const GeneratorDataBase& source)
 	defaultSettings = other->defaultSettings;
 	possibleAlignment = other->possibleAlignment;
 	generationEnabled = other->generationEnabled;
+	guaranteedClass = other->guaranteedClass;
+	useGuaranteedClass = other->useGuaranteedClass;
 }
 
 ClassGenerationData& ClassGenerationData::operator=(const ClassGenerationData& other)
@@ -240,7 +246,8 @@ ClassGenerationData& ClassGenerationData::operator=(const ClassGenerationData& o
 bool ClassGenerationData::operator==(const ClassGenerationData& other)
 {
 	return settings == other.settings && defaultSettings == other.defaultSettings
-		&& possibleAlignment == other.possibleAlignment && generationEnabled == other.generationEnabled;
+		&& possibleAlignment == other.possibleAlignment && generationEnabled == other.generationEnabled
+		&& guaranteedClass == other.guaranteedClass && useGuaranteedClass == other.useGuaranteedClass;
 }
 
 bool ClassGenerationData::operator!=(const ClassGenerationData& other)

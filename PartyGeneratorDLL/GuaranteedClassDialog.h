@@ -5,9 +5,18 @@
 #include <wx/statline.h>
 #include "AlignmentRadioBox.h"
 
-class ClassTableViewModel : public wxDataViewModel
+class GuaranteedClassDialog;
+class SpecificClassChooserPanel;
+
+class ClassTableViewModelNode
 {
 
+};
+
+class ClassTableViewModel : public wxDataViewModel
+{
+private:
+	wxVector<wxVector<wxVariant>> data;
 public:
 	void GetValue(wxVariant& variant, const wxDataViewItem& item, unsigned int col) const override;
 
@@ -19,8 +28,13 @@ public:
 
 	unsigned int GetChildren(const wxDataViewItem& item, wxDataViewItemArray& children) const override;
 
-	void createRows();
+	unsigned int GetColumnCount() const override;
+	wxString GetColumnType(unsigned int col) const override;
+	void fillOutTable();
+	GuaranteedClassDialog& dialog;
 
+	std::unordered_map<int, int> classIdsToTableIndexes;
+	ClassTableViewModel(GuaranteedClassDialog& dialog);
 };
 
 class GuaranteedClassDialog : public wxDialog
@@ -35,21 +49,16 @@ public:
 	wxRadioBox* tierRadioBox;
 	wxChoice* classChoice;
 	AlignmentRadioBox* alignmentRadioBox;
-	wxDataViewListCtrl* classTable;
-	wxDataViewColumn* classTableIdColumn;
-	wxDataViewColumn* classTableNameColumn;
-	wxDataViewColumn* classTableTierColumn;
-	wxDataViewColumn* classTableAlignmentColumn;
+	wxDataViewCtrl* classTable;
 	wxStaticLine* m_staticline6;
 	wxStdDialogButtonSizer* buttonsSizer;
-	wxButton* buttonsSizerSave;
-	wxButton* buttonsSizerCancel;
+	wxButton* saveButton;
+	wxButton* cancelButton;
+	SpecificClassChooserPanel* specificClassChooserPanel;
 
 	GuaranteedClassDialog(wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxEmptyString, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize(681, 244), long style = wxDEFAULT_DIALOG_STYLE);
 
 	~GuaranteedClassDialog();
-
-	void fillOutTable();
 
 	void fillOutClassChoice();
 	void readFromJson(const Json& json);
@@ -58,10 +67,13 @@ public:
 private:
 	std::unordered_map<int, int> choicesToClassIds;
 	std::unordered_map<int, int> classIdsToChoices;
-	std::unordered_map<int, int> classIdsToTableIndexes;
 	wxArrayString classChoiceEntries;
 
 	void applyFilters();
 	void onFilterChange(wxCommandEvent& event);
+
+	void onSavePress(wxCommandEvent& event);
+	void onCancelPress(wxCommandEvent& event);
+	friend class ClassTableViewModel;
 };
 

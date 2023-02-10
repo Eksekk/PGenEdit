@@ -4,8 +4,10 @@
 #include "PlayerSkill.h"
 #include "Enum_const.h"
 #include "ItemGenerationData.h"
+#include "wx/mstream.h"
 class PlayerItem // holds generic item data, one entry per each item id
 {
+public:
 	int number;
 	std::string name;
 	PlayerSkill skill;
@@ -15,5 +17,11 @@ class PlayerItem // holds generic item data, one entry per each item id
 	bool isArtifact;
 	std::vector<double> affinityByClass;
 	std::vector<double> affinityByPlayerType;
+	wxBitmap* image;
+	int inventoryWidth, inventoryHeight;
+
+	PlayerItem();
+
+	void loadAndConvertBitmap(const wxString& name);
 };
 

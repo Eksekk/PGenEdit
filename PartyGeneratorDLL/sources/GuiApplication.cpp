@@ -19,7 +19,8 @@ GuiApplication::GuiApplication()
     // Also note that this is efficient, because if there are no windows, the
     // thread will sleep waiting for a new event. We could safe some memory
     // by shutting the thread down when it's no longer needed, though.
-    SetExitOnFrameDelete(false);
+	SetExitOnFrameDelete(false);
+	wxToolTip::Enable(true);
 }
 
 void GuiApplication::OnShowWindow(wxThreadEvent& event)
@@ -42,7 +43,6 @@ bool GuiApplication::OnInit()
     }
     //wxMessageBox("OnInit()");
     //MSGBOX("OnInit()");
-    wxToolTip::Enable(true);
     mainWindow = new MainWindow(nullptr);
     return true;
 }

@@ -7,6 +7,7 @@
 extern const int DEFAULT_SETTINGS_INDEX;
 
 class PlayerData;
+class PlayerClass;
 
 class ClassGenerationSettings : public GeneratorDataBase // settings from GUI
 {
@@ -43,7 +44,9 @@ public:
 	int index;
 	bool generationEnabled;
 	PlayerData& playerData;
-	// TODO: guaranteed classes
+
+	PlayerClass* guaranteedClass;
+	bool useGuaranteedClass;
 	// TODO: MM7 & MERGE unavailable promotion quests if generating two path characters
 
 	template<typename Player>

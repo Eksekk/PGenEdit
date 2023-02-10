@@ -23,6 +23,8 @@ public:
 	PlayerClass(int id, std::string name, int tier, PlayerClass* baseClass, Alignment alignment = ALIGNMENT_NEUTRAL);
 	~PlayerClass();
 
+	PlayerClass* getStarterClass();
+
 	static std::vector<PlayerClass*> getEntireClassTree(int id);
 	static std::vector<PlayerClass*> getEntireClassTree(PlayerClass* clas);
 	std::vector<PlayerClass*> getEntireClassTree();

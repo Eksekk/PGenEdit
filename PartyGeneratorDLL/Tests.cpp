@@ -327,6 +327,7 @@ std::vector<wxString> Tests::testJson()
 			wxLogError("%d json errors written to error file", jsonErrors.size());
 		}
 		wxLog::FlushActive();
+		jsonErrors.clear();
 	}
 	return errors;
 }

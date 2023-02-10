@@ -220,7 +220,9 @@ MainWindow::MainWindow(wxWindow* parent, wxWindowID id, const wxString& title, c
 	mainPanel->Layout();
 
 	Bind(wxEVT_CLOSE_WINDOW, &MainWindow::onClose, this);
-	Bind(wxEVT_KEY_DOWN, &MainWindow::onKeyDown, this);
+	//Bind(wxEVT_KEY_DOWN, &MainWindow::onKeyDown, this);
+	Bind(wxEVT_KEY_UP, &MainWindow::onKeyDown, this);
+	Bind(wxEVT_CHAR, &MainWindow::onKeyDown, this);
 	
 	this->Layout();
 }

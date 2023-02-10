@@ -9,6 +9,7 @@ class wxNotebook;
 class GeneralPanel;
 class DefaultPlayerPanel;
 
+// TODO: swap player settings?
 class MainWindow : public wxFrame
 {
 private:
@@ -60,7 +61,7 @@ public:
 	static const wxString WARNING_FORMAT;
 
 	MainWindow(wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = _("Party generator"), const wxPoint& pos = wxDefaultPosition,
-		const wxSize& size = wxSize(800, 700), long style = (wxDEFAULT_FRAME_STYLE | wxTAB_TRAVERSAL) & ~wxRESIZE_BORDER);
+		const wxSize& size = wxSize(800, 700), long style = (wxDEFAULT_FRAME_STYLE | wxTAB_TRAVERSAL | wxWANTS_CHARS) & ~wxRESIZE_BORDER);
 
 	~MainWindow();
 

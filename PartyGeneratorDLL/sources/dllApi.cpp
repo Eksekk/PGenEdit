@@ -85,6 +85,7 @@ extern "C"
                     case 0xEC:
                         MMVER = 6;
                         MAX_PLAYERS = 4;
+                        MAX_MASTERY = Mastery::MASTER;
                         break;
                     case 0x45:
                         MMVER = 7;
@@ -110,38 +111,17 @@ extern "C"
                 {
                     IS_ELEMENTAL_MOD = true;
                 }
-                // TODO: two versions of comctl32.dll are loaded (old first) and when wxwidgets dll tries to get module handle,
+                // two versions of comctl32.dll are loaded (old first) and when wxwidgets dll tries to get module handle,
                 // it gets the old one
                 // SOLUTION:
                 // 1. make mm7.exe.manifest file with comctl32.dll 6.0 version requested
-                // example below:
-				/* < ? xml version = '1.0' encoding = 'UTF-8' standalone = 'yes' ? >
-				<assembly xmlns = 'urn:schemas-microsoft-com:asm.v1' manifestVersion = '1.0'>
-					<dependency>
-						<dependentAssembly>
-						    <assemblyIdentity type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'/>
-						</dependentAssembly>
-					</dependency>
-				</assembly>
-                */
                 // 2. touch mm7.exe (update modification date)
                 
                 // unwanted effect: mmeditor's buttons etc. are also changed
 
 
-
-				/*INITCOMMONCONTROLSEX whatToInit;
-                whatToInit.dwICC = 0x8000FFFF; // that's all that can be initialized successfully
-				whatToInit.dwSize = sizeof(INITCOMMONCONTROLSEX);
-                if (!InitCommonControlsEx(&whatToInit))
-                {
-                    DWORD err = GetLastError();
-                    char buffer[500];
-                    FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM, nullptr, err, 0, buffer, 500, nullptr);
-                    wxLogError("Couldn't init common controls from comctl32.dll. Error message: %s", buffer);
-                    wxLog::FlushActive();
-                }*/
                 // TODO: test for Merge (run lua script?)
+                makeEnums();
                 generator = new Generator();
                 break;
                 /* call comctl32.dll init common controls ex (change call address!)
@@ -160,15 +140,7 @@ extern "C"
             }
 
         case DLL_PROCESS_DETACH:
-            // detach from process
-            //wxUninitialize();
-            //MSGBOX("x");
             delete generator;
-            //app->OnExit();
-            // OnExit isn't called by CleanUp so must be called explicitly.
-            //app->OnExit();
-            //app->CleanUp();
-            //MessageBoxA(nullptr, "Library unloaded successfully.", "Unloaded!", 0);
             break;
         case DLL_THREAD_ATTACH:
             // attach to thread
@@ -237,6 +209,8 @@ extern "C"
         }
     }
 
+    DLL_EXPORT void __stdcall setPlayerPointers(void** ptrs);
+    
     DLL_EXPORT void __stdcall init()
     {
         //run_wx_gui_from_dll();
@@ -256,10 +230,14 @@ extern "C"
         if (inMM && MMVER == 6)
         {
             hookJump(0x458BD6, setPartyCountMm6);
+			void* ptrs[]{ (void*)0x908F34, (void*)0x90A550, (void*)0x90BB6C, (void*)0x90D188 };
+			setPlayerPointers(ptrs);
         }
         else if (inMM && MMVER == 7)
         {
-            hookJump(0x46074E, setPartyCountMm7, 7);
+			hookJump(0x46074E, setPartyCountMm7, 7);
+			void* ptrs[]{ (void*)0xACD804, (void*)0xACF340, (void*)0xAD0E7C, (void*)0xAD29B8 };
+			setPlayerPointers(ptrs);
         }
         
         //MSGBOX((std::string("app: ") + std::to_string((int)app)).c_str());

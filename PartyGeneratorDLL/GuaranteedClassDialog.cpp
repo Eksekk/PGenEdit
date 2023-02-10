@@ -4,9 +4,12 @@
 #include "GameData.h"
 #include "globals.h"
 #include "Utility.h"
+#include "SpecificClassChooserPanel.h"
 
 GuaranteedClassDialog::GuaranteedClassDialog(wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style) : wxDialog(parent, id, title, pos, size, style)
 {
+	specificClassChooserPanel = dynamic_cast<SpecificClassChooserPanel*>(parent);
+	wxASSERT(specificClassChooserPanel);
 	this->SetSizeHints(wxDefaultSize, wxDefaultSize);
 
 	wxBoxSizer* mainSizer;
@@ -49,11 +52,12 @@ GuaranteedClassDialog::GuaranteedClassDialog(wxWindow* parent, wxWindowID id, co
 
 	mainSizer->Add(gbSizer2, 0, wxEXPAND, 5);
 
-	classTable = new wxDataViewListCtrl(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxDV_HORIZ_RULES | wxDV_ROW_LINES | wxDV_SINGLE | wxDV_VARIABLE_LINE_HEIGHT);
-	classTableIdColumn = classTable->AppendTextColumn(_("#"), wxDATAVIEW_CELL_INERT, -1, static_cast<wxAlignment>(wxALIGN_LEFT), wxDATAVIEW_COL_RESIZABLE);
-	classTableNameColumn = classTable->AppendTextColumn(_("Name"), wxDATAVIEW_CELL_INERT, -1, static_cast<wxAlignment>(wxALIGN_LEFT), wxDATAVIEW_COL_RESIZABLE);
-	classTableTierColumn = classTable->AppendTextColumn(_("Tier"), wxDATAVIEW_CELL_INERT, -1, static_cast<wxAlignment>(wxALIGN_LEFT), wxDATAVIEW_COL_RESIZABLE);
-	classTableAlignmentColumn = classTable->AppendTextColumn(_("Alignment"), wxDATAVIEW_CELL_INERT, -1, static_cast<wxAlignment>(wxALIGN_LEFT), wxDATAVIEW_COL_RESIZABLE);
+	classTable = new wxDataViewCtrl(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxDV_HORIZ_RULES | wxDV_ROW_LINES | wxDV_SINGLE | wxDV_VARIABLE_LINE_HEIGHT);
+	classTable->AppendTextColumn(_("#"), 0);
+	classTable->AppendTextColumn(_("Name"), 1);
+	classTable->AppendTextColumn(_("Tier"), 2);
+	classTable->AppendTextColumn(_("Alignment"), 3);
+	classTable->AssociateModel(new ClassTableViewModel(*this));
 	mainSizer->Add(classTable, 0, wxALL | wxEXPAND, 5);
 
 	m_staticline6 = new wxStaticLine(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL);
@@ -69,10 +73,12 @@ GuaranteedClassDialog::GuaranteedClassDialog(wxWindow* parent, wxWindowID id, co
 	mainSizer->Add(bSizer46, 1, wxEXPAND, 5);
 
 	buttonsSizer = new wxStdDialogButtonSizer();
-	buttonsSizerSave = new wxButton(this, wxID_SAVE);
-	buttonsSizer->AddButton(buttonsSizerSave);
-	buttonsSizerCancel = new wxButton(this, wxID_CANCEL);
-	buttonsSizer->AddButton(buttonsSizerCancel);
+	saveButton = new wxButton(this, wxID_SAVE);
+	saveButton->Bind(wxEVT_BUTTON, &GuaranteedClassDialog::onSavePress, this);
+	buttonsSizer->AddButton(saveButton);
+	cancelButton = new wxButton(this, wxID_CANCEL);
+	cancelButton->Bind(wxEVT_BUTTON, &GuaranteedClassDialog::onCancelPress, this);
+	buttonsSizer->AddButton(cancelButton);
 	buttonsSizer->Realize();
 
 	mainSizer->Add(buttonsSizer, 0, wxALIGN_CENTER_HORIZONTAL | wxBOTTOM, 5);
@@ -86,29 +92,6 @@ GuaranteedClassDialog::GuaranteedClassDialog(wxWindow* parent, wxWindowID id, co
 
 GuaranteedClassDialog::~GuaranteedClassDialog()
 {
-}
-
-void GuaranteedClassDialog::fillOutTable()
-{
-	assert(classTable->GetStore()->GetItemCount() == 0);
-	int i = 0;
-	wxVector<wxVariant> data;
-	for (auto& [id, clas] : GameData::classes)
-	{
-		classIdsToTableIndexes[id] = i++;
-		data.clear();
-		data.push_back(wxVariant(id));
-		data.push_back(wxVariant(clas.name));
-		data.push_back(wxVariant(clas.getFormattedTier()));
-		data.push_back(wxVariant(clas.getFormattedAlignment()));
-		classTable->AppendItem(data, (wxUIntPtr) &clas);
-		/*classTable = new wxDataViewListCtrl(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxDV_HORIZ_RULES | wxDV_ROW_LINES | wxDV_SINGLE | wxDV_VARIABLE_LINE_HEIGHT);
-		classTableIdColumn = classTable->AppendTextColumn(_("#"), wxDATAVIEW_CELL_INERT, -1, static_cast<wxAlignment>(wxALIGN_LEFT), wxDATAVIEW_COL_RESIZABLE);
-		classTableNameColumn = classTable->AppendTextColumn(_("Name"), wxDATAVIEW_CELL_INERT, -1, static_cast<wxAlignment>(wxALIGN_LEFT), wxDATAVIEW_COL_RESIZABLE);
-		classTableTierColumn = classTable->AppendTextColumn(_("Tier"), wxDATAVIEW_CELL_INERT, -1, static_cast<wxAlignment>(wxALIGN_LEFT), wxDATAVIEW_COL_RESIZABLE);
-		classTableAlignmentColumn = classTable->AppendTextColumn(_("Alignment"), wxDATAVIEW_CELL_INERT, -1, static_cast<wxAlignment>(wxALIGN_LEFT), wxDATAVIEW_COL_RESIZABLE);*/
-	}
-	classTable->SelectRow(0);
 }
 
 void GuaranteedClassDialog::fillOutClassChoice()
@@ -161,18 +144,7 @@ Json GuaranteedClassDialog::writeToJsonR(Json& json)
 
 void GuaranteedClassDialog::applyFilters()
 {
-	auto store = classTable->GetStore();
-	int n = store->GetItemCount();
-
-	for (int i = 0; i < n; ++i)
-	{
-		wxDataViewItem item = store->GetItem(i);
-		PlayerClass* clas = (PlayerClass*)item.GetID();
-		if (clas->alignment != alignmentRadioBox->getSelectedAlignment() && alignmentRadioBox->getSelectedAlignment() != ALIGNMENT_ANY)
-		{
-			//store->
-		}
-	}
+	classTable->GetModel()->Cleared();
 }
 
 void GuaranteedClassDialog::onFilterChange(wxCommandEvent& event)
@@ -180,31 +152,117 @@ void GuaranteedClassDialog::onFilterChange(wxCommandEvent& event)
 	applyFilters();
 }
 
+void GuaranteedClassDialog::onSavePress(wxCommandEvent& event)
+{
+	if (classTable->GetSelection().IsOk())
+	{
+		specificClassChooserPanel->linkedClassData->guaranteedClass = reinterpret_cast<PlayerClass*>(classTable->GetSelection().GetID());
+	}
+	specificClassChooserPanel->processClassChange();
+	Show(false);
+}
+
+void GuaranteedClassDialog::onCancelPress(wxCommandEvent& event)
+{
+	Show(false);
+}
+
 void ClassTableViewModel::GetValue(wxVariant& variant, const wxDataViewItem& item, unsigned int col) const
 {
-	throw std::logic_error("The method or operation is not implemented.");
+	PlayerClass* clas = reinterpret_cast<PlayerClass*>(item.GetID());
+	switch (col)
+	{
+	case 0: variant = (long)clas->id; break;
+	case 1: variant = clas->name; break;
+	case 2: variant = clas->getFormattedTier(); break;
+	case 3: variant = clas->getFormattedAlignment(); break;
+	default: wxLogError("Unexpected column (%d) in ClassTableViewModel::GetValue", col); wxLog::FlushActive();
+	}
 }
 
 bool ClassTableViewModel::SetValue(const wxVariant& variant, const wxDataViewItem& item, unsigned int col)
 {
-	throw std::logic_error("The method or operation is not implemented.");
+	return false;
 }
 
 wxDataViewItem ClassTableViewModel::GetParent(const wxDataViewItem& item) const
 {
-	throw std::logic_error("The method or operation is not implemented.");
+	return wxDataViewItem(nullptr);
 }
 
 bool ClassTableViewModel::IsContainer(const wxDataViewItem& item) const
 {
-	throw std::logic_error("The method or operation is not implemented.");
+	return !item.IsOk();
 }
 
 unsigned int ClassTableViewModel::GetChildren(const wxDataViewItem& item, wxDataViewItemArray& children) const
 {
-	throw std::logic_error("The method or operation is not implemented.");
+	int num = 0;
+	if (!item.IsOk()) // invisible root node
+	{
+		auto& classes = GameData::classes;
+		for (auto& [id, clas]: classes)
+		{
+			if (clas.alignment != dialog.alignmentRadioBox->getSelectedAlignment() && dialog.alignmentRadioBox->getSelectedAlignment() != ALIGNMENT_ANY)
+			{
+				continue;
+			}
+			// TODO: fix hardcode
+			if (clas.tier != dialog.tierRadioBox->GetSelection() - 1 && dialog.tierRadioBox->GetSelection() != 0)
+			{
+				continue;
+			}
+			int id = dialog.choicesToClassIds.at(dialog.classChoice->GetSelection());
+			PlayerClass* base = clas.getStarterClass();
+			if (id != base->id && id != INVALID_ID)
+			{
+				continue;
+			}
+			++num;
+			children.Add(wxDataViewItem(&clas));
+		}
+	}
+	return num;
 }
 
-void ClassTableViewModel::createRows()
+unsigned int ClassTableViewModel::GetColumnCount() const
 {
+	return 4;
+}
+
+wxString ClassTableViewModel::GetColumnType(unsigned int col) const
+{
+	if (col == 0)
+	{
+		return "long";
+	}
+	return "string";
+}
+
+// void ClassTableViewModel::fillOutTable()
+// {
+// 	assert(data.empty());
+// 	int i = 0;
+// 	wxVector<wxVariant> row;
+// 	for (auto& [id, clas] : GameData::classes)
+// 	{
+// 		classIdsToTableIndexes[id] = i++;
+// 		row.clear();
+// 		row.push_back(wxVariant(id));
+// 		row.push_back(wxVariant(clas.name));
+// 		row.push_back(wxVariant(clas.getFormattedTier()));
+// 		row.push_back(wxVariant(clas.getFormattedAlignment()));
+// 		classTable->AppendItem(row, (wxUIntPtr)&clas);
+// 		/*classTable = new wxDataViewListCtrl(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxDV_HORIZ_RULES | wxDV_ROW_LINES | wxDV_SINGLE | wxDV_VARIABLE_LINE_HEIGHT);
+// 		classTableIdColumn = classTable->AppendTextColumn(_("#"), wxDATAVIEW_CELL_INERT, -1, static_cast<wxAlignment>(wxALIGN_LEFT), wxDATAVIEW_COL_RESIZABLE);
+// 		classTableNameColumn = classTable->AppendTextColumn(_("Name"), wxDATAVIEW_CELL_INERT, -1, static_cast<wxAlignment>(wxALIGN_LEFT), wxDATAVIEW_COL_RESIZABLE);
+// 		classTableTierColumn = classTable->AppendTextColumn(_("Tier"), wxDATAVIEW_CELL_INERT, -1, static_cast<wxAlignment>(wxALIGN_LEFT), wxDATAVIEW_COL_RESIZABLE);
+// 		classTableAlignmentColumn = classTable->AppendTextColumn(_("Alignment"), wxDATAVIEW_CELL_INERT, -1, static_cast<wxAlignment>(wxALIGN_LEFT), wxDATAVIEW_COL_RESIZABLE);*/
+// 	}
+// 	classTable->SelectRow(0);
+// }
+
+ClassTableViewModel::ClassTableViewModel(GuaranteedClassDialog& dialog) : dialog(dialog)
+{
+	
 }

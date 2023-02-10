@@ -90,3 +90,13 @@ wxString PlayerClass::getFormattedAlignment()
 	if (alignment == ALIGNMENT_LIGHT) return "light";
 	return "neutral";
 }
+
+PlayerClass* PlayerClass::getStarterClass()
+{
+	PlayerClass* clas = baseClass;
+	while (clas != nullptr)
+	{
+		clas = clas->baseClass;
+	}
+	return clas;
+}
