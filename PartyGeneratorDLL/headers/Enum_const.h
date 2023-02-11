@@ -156,6 +156,9 @@ enum SpellType
 
 // GAME ENUMS
 // decided to use dynamically set ints - reason: I don't like million ifs due to using templates
+// type safety will be okayish, because I intend to only use PlayerStructAccessor and the like to actually use the "enums",
+// and since all accesses will be in one place, it's easy to add checks for invalid values
+// could be better (static checking), but like I said I don't like template verbosity
 
 extern int
 STAT_MIGHT,

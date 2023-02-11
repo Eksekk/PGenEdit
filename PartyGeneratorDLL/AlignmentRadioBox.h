@@ -8,10 +8,13 @@ public:
 	static const wxString texts[4];
 	static const std::map<Alignment, int> alignmentIndexes;
 
-	AlignmentRadioBox(wxWindow* parent, wxString&& label);
-	AlignmentRadioBox(wxWindow* parent, const wxString& label);
+	AlignmentRadioBox(wxWindow* parent, wxString&& label, bool useAny = true);
+	AlignmentRadioBox(wxWindow* parent, const wxString& label, bool useAny = true);
 
 	Alignment getSelectedAlignment();
 	bool setSelection(Alignment alignment);
 	bool setSelection(const wxString& str);
+private:
+	bool useAny;
+	int firstIndex;
 };

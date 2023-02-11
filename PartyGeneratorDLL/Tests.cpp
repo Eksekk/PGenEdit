@@ -119,48 +119,48 @@ std::vector<wxString> Tests::testSkillFunctions()
 	SKILL_BITS = 6;
 	// rules as in mm7+
 
-	myassert(splitSkill(0b1000101) == Skill({ 5, 2 }));
-	myassert(splitSkill(0b1001010) == Skill({ 10, 2 }));
-	myassert(splitSkill(0b100000001) == Skill({ 1, 4 }));
-	myassert(splitSkill(0b0) == Skill({ 0, 0 }));
-	myassert(splitSkill(0b100111111) == Skill({ 63, 4 }));
-	myassert(splitSkill(0b10001111) == Skill({ 15, 3 }));
-	myassert(splitSkill(0b10000001) == Skill({ 1, 3 }));
-	myassert(splitSkill(0b1) == Skill({ 1, 1 }));
-	myassert(splitSkill(0b0) == Skill({ 0, 0 }));
+	myassert(splitSkill(0b1000101) == SkillValue({ 5, 2 }));
+	myassert(splitSkill(0b1001010) == SkillValue({ 10, 2 }));
+	myassert(splitSkill(0b100000001) == SkillValue({ 1, 4 }));
+	myassert(splitSkill(0b0) == SkillValue({ 0, 0 }));
+	myassert(splitSkill(0b100111111) == SkillValue({ 63, 4 }));
+	myassert(splitSkill(0b10001111) == SkillValue({ 15, 3 }));
+	myassert(splitSkill(0b10000001) == SkillValue({ 1, 3 }));
+	myassert(splitSkill(0b1) == SkillValue({ 1, 1 }));
+	myassert(splitSkill(0b0) == SkillValue({ 0, 0 }));
 
 	MASTERY_BITS = { -1, -1, 13, 14, 16 };
 	SKILL_BITS = 10;
-	myassert(splitSkill(0b11) == Skill({ 3, 1 }));
-	myassert(splitSkill(0b10000000001010) == Skill({ 10, 2 }));
-	myassert(splitSkill(0b10000001000000000) == Skill({ 512, 4 }));
-	myassert(splitSkill(0b111111) == Skill({ 63, 1 }));
-	myassert(splitSkill(0b100000000011001) == Skill({ 25, 3 }));
-	myassert(splitSkill(0b1) == Skill({ 1, 1 }));
-	myassert(splitSkill(0b10000000000110111) == Skill({ 55, 4 }));
-	myassert(splitSkill(0b0) == Skill({ 0, 0 }));
+	myassert(splitSkill(0b11) == SkillValue({ 3, 1 }));
+	myassert(splitSkill(0b10000000001010) == SkillValue({ 10, 2 }));
+	myassert(splitSkill(0b10000001000000000) == SkillValue({ 512, 4 }));
+	myassert(splitSkill(0b111111) == SkillValue({ 63, 1 }));
+	myassert(splitSkill(0b100000000011001) == SkillValue({ 25, 3 }));
+	myassert(splitSkill(0b1) == SkillValue({ 1, 1 }));
+	myassert(splitSkill(0b10000000000110111) == SkillValue({ 55, 4 }));
+	myassert(splitSkill(0b0) == SkillValue({ 0, 0 }));
 
 	SKILL_COMBINE_MODE = PACKED;
 	SKILL_BITS = 4;
-	myassert(splitSkill(0b11) == Skill({ 3, 1 }));
-	myassert(splitSkill(0b101100) == Skill({ 12, 3 }));
-	myassert(splitSkill(0b1) == Skill({ 1, 1 }));
-	myassert(splitSkill(0b111111) == Skill({ 15, 4 }));
-	myassert(splitSkill(0b100010) == Skill({ 2, 3 }));
-	myassert(splitSkill(0b0) == Skill({ 0, 0 }));
-	myassert(splitSkill(0b100011) == Skill({ 3, 3 }));
-	myassert(splitSkill(0b110010) == Skill({ 2, 4 }));
+	myassert(splitSkill(0b11) == SkillValue({ 3, 1 }));
+	myassert(splitSkill(0b101100) == SkillValue({ 12, 3 }));
+	myassert(splitSkill(0b1) == SkillValue({ 1, 1 }));
+	myassert(splitSkill(0b111111) == SkillValue({ 15, 4 }));
+	myassert(splitSkill(0b100010) == SkillValue({ 2, 3 }));
+	myassert(splitSkill(0b0) == SkillValue({ 0, 0 }));
+	myassert(splitSkill(0b100011) == SkillValue({ 3, 3 }));
+	myassert(splitSkill(0b110010) == SkillValue({ 2, 4 }));
 
 	SKILL_BITS = 6; // like in mm6
-	myassert(splitSkill(0b11) == Skill({ 3, 1 }));
-	myassert(splitSkill(0b10001100) == Skill({ 12, 3 }));
-	myassert(splitSkill(0b1) == Skill({ 1, 1 }));
-	myassert(splitSkill(0b100) == Skill({ 4, 1 }));
-	myassert(splitSkill(0b111111) == Skill({ 63, 1 }));
-	myassert(splitSkill(0b11111111) == Skill({ 63, 4 }));
-	myassert(splitSkill(0b10001100) == Skill({ 12, 3 }));
-	myassert(splitSkill(0b0) == Skill({ 0, 0 }));
-	myassert(splitSkill(0b10000001) == Skill({ 1, 3 }));
+	myassert(splitSkill(0b11) == SkillValue({ 3, 1 }));
+	myassert(splitSkill(0b10001100) == SkillValue({ 12, 3 }));
+	myassert(splitSkill(0b1) == SkillValue({ 1, 1 }));
+	myassert(splitSkill(0b100) == SkillValue({ 4, 1 }));
+	myassert(splitSkill(0b111111) == SkillValue({ 63, 1 }));
+	myassert(splitSkill(0b11111111) == SkillValue({ 63, 4 }));
+	myassert(splitSkill(0b10001100) == SkillValue({ 12, 3 }));
+	myassert(splitSkill(0b0) == SkillValue({ 0, 0 }));
+	myassert(splitSkill(0b10000001) == SkillValue({ 1, 3 }));
 
 	// restore old values
 	std::tie(SKILL_COMBINE_MODE, MASTERY_BITS, SKILL_BITS) = std::make_tuple(old1, old2, old3);

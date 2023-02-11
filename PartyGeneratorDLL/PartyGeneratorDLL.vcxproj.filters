@@ -61,6 +61,12 @@
     <Filter Include="Pliki źródłowe\Editor\GUI">
       <UniqueIdentifier>{39b6a253-a239-4d10-9888-02cb03d2952b}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Pliki nagłówkowe\Shared GUI">
+      <UniqueIdentifier>{702392e1-ff9e-455d-8aae-f278703777f6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Pliki źródłowe\Shared GUI">
+      <UniqueIdentifier>{e5f56afe-a50d-478e-92a3-e086c6f354ea}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="headers\globals.h">
@@ -159,9 +165,6 @@
     <ClInclude Include="headers\GeneratorDataBase.h">
       <Filter>Pliki nagłówkowe\Generator</Filter>
     </ClInclude>
-    <ClInclude Include="AlignmentRadioBox.h">
-      <Filter>Pliki nagłówkowe\Generator\GUI</Filter>
-    </ClInclude>
     <ClInclude Include="GeneratorGuiBase.h">
       <Filter>Pliki nagłówkowe\Generator\GUI</Filter>
     </ClInclude>
@@ -183,8 +186,11 @@
     <ClInclude Include="PlayerSpell.h">
       <Filter>Pliki nagłówkowe\GameData</Filter>
     </ClInclude>
+    <ClInclude Include="AlignmentRadioBox.h">
+      <Filter>Pliki nagłówkowe\Shared GUI</Filter>
+    </ClInclude>
     <ClInclude Include="headers\GuiApplication.h">
-      <Filter>Pliki nagłówkowe</Filter>
+      <Filter>Pliki nagłówkowe\Shared GUI</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -254,9 +260,6 @@
     <ClCompile Include="PlayerPanelBase.cpp">
       <Filter>Pliki źródłowe\Generator\GUI</Filter>
     </ClCompile>
-    <ClCompile Include="AlignmentRadioBox.cpp">
-      <Filter>Pliki źródłowe\Generator\GUI</Filter>
-    </ClCompile>
     <ClCompile Include="GeneratorGuiBase.cpp">
       <Filter>Pliki źródłowe\Generator\GUI</Filter>
     </ClCompile>
@@ -302,8 +305,11 @@
     <ClCompile Include="PlayerSpell.cpp">
       <Filter>Pliki źródłowe\GameData</Filter>
     </ClCompile>
+    <ClCompile Include="AlignmentRadioBox.cpp">
+      <Filter>Pliki źródłowe\Shared GUI</Filter>
+    </ClCompile>
     <ClCompile Include="sources\GuiApplication.cpp">
-      <Filter>Pliki źródłowe</Filter>
+      <Filter>Pliki źródłowe\Shared GUI</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

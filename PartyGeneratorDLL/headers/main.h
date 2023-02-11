@@ -24,7 +24,7 @@ struct lua_State;
     bool : bits // name is optional
 //#define NEXTBYTE() int : 0 // allocates at next byte, can use skipbits instead
 
-#define SAME(unknownType, knownType) std::is_same_v<std::decay_t<decltype(unknownType)>, knownType>
+#define SAME(unknownType, knownType) std::is_same_v<unknownType, knownType>
 #define TYPE(x) std::decay_t<decltype(x)>
 
 #define JSON_DIAGNOSTICS 1

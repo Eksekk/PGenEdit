@@ -3,15 +3,22 @@
 #include "main.h"
 #include "Enum_const.h"
 
-struct Skill
+struct SkillValue
 {
 	int level, mastery;
 
-	bool operator==(const Skill& other);
+	bool operator==(const SkillValue& other);
 };
 
-Skill splitSkill(int skill);
-int joinSkill(Skill skill);
+SkillValue splitSkill(int skill);
+int joinSkill(SkillValue skill);
+
+class PlayerSkill;
+struct PlayerSkillValue
+{
+	PlayerSkill* skill;
+	SkillValue value;
+};
 
 class PlayerSkill
 {
