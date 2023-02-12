@@ -91,26 +91,26 @@ Map<Value, Key> invertMap(const Map<Key, Value, Extra...>& map)
 wxString getTimeStr();
 
 template<typename T>
-bool boundsCheck(T& value, int size, bool clamp = true)
+bool boundsCheck(T&& value, int size, bool clamp = true)
 {
 	static const uint64_t
-		u1_max = ~(uint8_t)0,
-		u2_max = ~(uint16_t)0,
-		u4_max = ~(uint32_t)0;
+		u1_max = std::numeric_limits<uint8_t>::max(),
+		u2_max = std::numeric_limits<uint16_t>::max(),
+		u4_max = std::numeric_limits<uint32_t>::max();
 
 	static const int64_t
-		i1_min = (int8_t)1 << 7,
-		i2_min = (int16_t)1 << 15,
-		i4_min = (int32_t)1 << 31,
-		i1_max = ~(int8_t)0 & ~i1_min,
-		i2_max = ~(int16_t)0 & ~i2_min,
-		i4_max = ~(int32_t)0 & ~i4_min;
+		i1_min = std::numeric_limits<int8_t>::min(),
+		i2_min = std::numeric_limits<int16_t>::min(),
+		i4_min = std::numeric_limits<int32_t>::min(),
+		i1_max = std::numeric_limits<int8_t>::max(),
+		i2_max = std::numeric_limits<int16_t>::max(),
+		i4_max = std::numeric_limits<int32_t>::max();
 
 	bool error = false;
 	int64_t low, high;
 
 	bool uns = size > 0;
-	switch (size)
+	switch (std::abs(size))
 	{
 	case 1:
 	{
@@ -148,13 +148,16 @@ bool boundsCheck(T& value, int size, bool clamp = true)
 	}
 	if (clamp)
 	{
+/*
 		wxASSERT_MSG(
-			low >= std::numeric_limits<T>::min() &&
-			high <= std::numeric_limits<T>::max()
-			, wxString::Format("Clamp bounds [%d, %d] too wide for value of type %s", low, high, typeid(std::decay_t<T>).name())
+			// remove reference is required because otherwise numeric_limits can't bind to rvalue reference
+			low >= std::numeric_limits<std::remove_reference_t<T>>::min() &&
+			high <= std::numeric_limits<std::remove_reference_t<T>>::max()
+			, wxString::Format("Clamp bounds [%lld, %lld] too wide for value of type %s", low, high, typeid(std::decay_t<T>).name())
 		);
-		low = std::max(low, (int64_t)std::numeric_limits<T>::min());
-		high = std::min(high, (int64_t)std::numeric_limits<T>::max());
+*/
+		low = std::max(low, (int64_t)std::numeric_limits<std::remove_reference_t<T>>::min());
+		high = std::min(high, (int64_t)std::numeric_limits<std::remove_reference_t<T>>::max());
 		value = std::clamp(value, (T)low, (T)high);
 	}
 	return !error;

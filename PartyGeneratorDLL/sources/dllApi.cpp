@@ -361,13 +361,12 @@ extern "C"
             }
             if (errors.size() > 0)
             {
-                wxString str = concatWxStrings(errors);
-                wxLogError(str);
-                std::fstream file("pgen_errors.txt", std::ios::out | std::ios::trunc);
-                wxLogWarning(wxString::Format("%d", file.is_open()));
-                wxLog::FlushActive();
-                file << str;
-                file.close();
+				wxString str = concatWxStrings(errors);
+				std::fstream file("pgen_errors.txt", std::ios::out | std::ios::trunc);
+				file << str;
+				file.close();
+				wxLogError("%d tests failed. Error messages:\n\n" + str);
+				wxLog::FlushActive();
             }
         }
         catch (const std::exception& ex)
