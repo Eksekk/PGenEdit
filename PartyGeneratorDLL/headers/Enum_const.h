@@ -154,6 +154,10 @@ enum SpellType
 	SPELL_TYPE_MISC
 };
 
+void setFieldSizes_6();
+void setFieldSizes_7();
+void setFieldSizes_8();
+
 // GAME ENUMS
 // decided to use dynamically set ints - reason: I don't like million ifs due to using templates
 // type safety will be okayish, because I intend to only use PlayerStructAccessor and the like to actually use the "enums",

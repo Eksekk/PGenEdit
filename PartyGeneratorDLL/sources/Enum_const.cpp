@@ -2,6 +2,7 @@
 #include "main.h"
 #include "Enum_const.h"
 #include "Utility.h"
+#include "PlayerStructAccessor.h"
 
 extern const int INVALID_ID;
 extern int MMVER;
@@ -38,6 +39,19 @@ const std::unordered_map<int, std::string> plTypeEnumIdToString = invertMap(plTy
 const std::unordered_map<int, std::string> skillTypeEnumIdToString = invertMap(skillTypeEnumStringToId);
 const std::unordered_map<int, std::string> skillSpecialEnumIdToString = invertMap(skillSpecialEnumStringToId);
 const std::unordered_map<int, std::string> alignmentIdToString = invertMap(alignmentStringToId);
+
+void setFieldSizes_6()
+{
+	PlayerStructAccessor::FieldSizes::skill = 1;
+}
+void setFieldSizes_7()
+{
+
+}
+void setFieldSizes_8()
+{
+	PlayerStructAccessor::FieldSizes::biography = 256; // exact size unknown, according to Grayface
+}
 
 // GAME ENUMS
 

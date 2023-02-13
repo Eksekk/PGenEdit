@@ -315,18 +315,22 @@ function getArrayPointerString(arrays, last) -- for testing: https://cdecl.org/
 	local explicitArray = "[%d]"
 	local arrayOfPointers = "(*[%d])"
 	local pointerToArray = explicitPointer .. explicitArray
-	local str = (last.ptr and "*" or "") .. (last.constPtr and "const " or "") .. last.name
+	local stdArray = "std::array<%s, %d>"
 	--if last.bit then debug.Message(dump(arrays), dump(last)) end
+	local type, name = last.typeName .. (last.ptr and "*" or "") .. (last.constPtr and "const" or ""), last.name
 	for i, arr in ipairs(arrays) do
-		local a = arr.count ~= 0 and explicitArray:format(arr.count) or "[]"
-		if arr.ptr then
-			str = "(*" .. str .. ")" .. a
+		if arr.count == 0 then
+			if arr.ptr then
+				type = "(*" .. type .. ")[]"
+			else
+				--str = "(" .. str .. ")" .. "[]" -- commented out because it clutters up code in overwhelming majority of the cases
+				type = type .. "[]" -- TODOOOOOOOOOO: STD::ARRAY (has .size())
+			end
 		else
-			--str = "(" .. str .. ")" .. a -- commented out because it clutters up code in overwhelming majority of the cases
-			str = str .. a -- TODOOOOOOOOOO: STD::ARRAY (has .size())
+			type = stdArray:format(type, arr.count) .. (arr.ptr and "*" or "")
 		end
 	end
-	return str
+	return type .. " " .. name
 end
 
 local globalReplacements = {class = "clas"}
@@ -368,11 +372,11 @@ local function processSingle(data, indentLevel)
 		if data.formatTypeName then
 			s = s .. data.typeName:format(name)
 		else
-			s = s .. data.typeName
+			-- std::array<std::array<int, 5>, 20> arr;
 			if arrays then
-				s = s .. " " .. getArrayPointerString(arrays, data)
+				s = s .. getArrayPointerString(arrays, data)
 			else
-				s = s .. (data.ptr and "*" or "") .. " " .. name
+				s = s .. data.typeName .. (data.ptr and "*" or "") .. " " .. name
 			end
 		end
 	end
@@ -645,7 +649,7 @@ function printStruct(name, includeMembers, indentLevel)
 	local code = {}
 	for sname, v in pairs(processed) do
 		if sname ~= name then
-			setmetatable(v.code, {})
+			setmetatable(v.code, nil)
 			code = table.join(code, v.code)
 			code[#code + 1] = "" -- newline
 		end
@@ -658,6 +662,13 @@ function pr(str)
 	reload();printStruct(str)
 end
 
+--[[
+mem_internal = getU(mem.free, "internal")
+old_callback = mem_internal.member_callback
+function mem_internal.member_callback(n, ...) old_callback(n, ...); print(n) end
+mem_internal.UpdateCallbacks()
+mem.struct(structs.f.GameMap)
+]]
 
 -- fuck msvc
 -- outside struct type has size x

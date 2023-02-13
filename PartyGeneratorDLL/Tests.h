@@ -3,6 +3,7 @@
 #include "main.h"
 #include "Generator.h"
 #include "Utility.h"
+#include "PlayerStructAccessor.h"
 
 #define myassert(cond, ...) myasserter(__FUNCTION__, __FILE__, __LINE__, (cond), "Assertion failed! (" #cond ")" __VA_OPT__(,) __VA_ARGS__)
 
@@ -39,6 +40,8 @@ public:
 
 	static std::vector<wxString> testJson();
 	static std::vector<wxString> testGui();
+	template<typename Player, typename Game>
+	static std::vector<wxString> testPlayerStructAccessor();
 
 	template<typename Player, typename Game>
 	static std::vector<wxString> run();
@@ -46,6 +49,12 @@ public:
 	template<typename Player, typename Game>
 	static std::vector<wxString> testMisc();
 };
+
+template<typename Player, typename Game>
+std::vector<wxString> Tests::run()
+{
+	return mergeVectors(testMisc<Player, Game>(), testSkillFunctions(), testJson(), testGui(), testPlayerStructAccessor<Player, Game>());
+}
 
 template<typename Player, typename Game>
 inline std::vector<wxString> Tests::testClassGeneration(Player* player)
@@ -166,11 +175,97 @@ std::vector<wxString> Tests::testMisc()
 	myassert(!boundsCheck(i32_max + 1, -4));
 	myassert(!boundsCheck(i32_max + 34252432, -4));
 
+	// test clamping
+	int x = 145;
+	int x2 = 145;
+	boundsCheck(x2, -1);
+	myassert(x != x2);
+
 	return errors;
 }
 
 template<typename Player, typename Game>
-std::vector<wxString> Tests::run()
+std::vector<wxString> Tests::testPlayerStructAccessor()
 {
-	return mergeVectors(testMisc<Player, Game>(), testSkillFunctions(), testJson(), testGui());
+	std::vector<wxString> errors;
+	bool failed = false;
+	Asserter myasserter(errors, failed);
+
+	static_assert(SAME(Player, mm7::Player), "Tests for other games not implemented yet");
+
+	Player* pl = new Player;
+	memset(pl, 0, sizeof(Player));
+
+	wxLogNull noLog;
+
+	void* oldPlayerZero = generator->players[0];
+	generator->players[0] = pl;
+	(void)playerAccessor[0]; // switch to player 0
+	// full hp bonus, full sp bonus, ranged/melee attack/damage bonus
+	if constexpr (SAME(Player, mm6::Player) || SAME(Player, mm7::Player))
+	{
+		pl->fullHPBonus = 50;
+		pl->fullSPBonus = 122;
+		myassert(playerAccessor->getFullHpBonus() == pl->fullHPBonus);
+		myassert(playerAccessor->getFullSpBonus() == pl->fullSPBonus);
+
+		playerAccessor->setFullHpBonus(100);
+		playerAccessor->setFullSpBonus(44);
+		myassert(playerAccessor->getFullHpBonus() == pl->fullHPBonus && pl->fullHPBonus == 100);
+		myassert(playerAccessor->getFullSpBonus() == pl->fullSPBonus && pl->fullSPBonus == 44);
+
+		myassert(playerAccessor->getMeleeAttackBonus() == 0);
+		pl->meleeAttackBonus = 12;
+		pl->meleeDamageBonus = 43;
+		myassert(playerAccessor->getMeleeAttackBonus() == 12);
+		myassert(playerAccessor->getMeleeDamageBonus() == 43);
+		playerAccessor->setMeleeAttackBonus(playerAccessor->getMeleeAttackBonus() + 34);
+		myassert(playerAccessor->getMeleeAttackBonus() == 12 + 34 && pl->meleeAttackBonus == 12 + 34);
+		playerAccessor->setMeleeAttackBonus(-5);
+		myassert(playerAccessor->getMeleeAttackBonus() == -5 && pl->meleeAttackBonus == -5);
+
+		pl->rangedAttackBonus = -22;
+		pl->rangedDamageBonus = 55;
+		myassert(playerAccessor->getRangedAttackBonus() == -22);
+		myassert(playerAccessor->getRangedDamageBonus() == 55);
+		playerAccessor->setRangedDamageBonus(115);
+		myassert(playerAccessor->getRangedDamageBonus() == 115 && pl->rangedDamageBonus == 115);
+		playerAccessor->setRangedAttackBonus(playerAccessor->getRangedAttackBonus() + 55);
+		myassert(playerAccessor->getRangedAttackBonus() == -22 + 55 && pl->rangedAttackBonus == -22 + 55);
+		playerAccessor->setRangedDamageBonus(playerAccessor->getRangedDamageBonus() + 3);
+		myassert(playerAccessor->getRangedDamageBonus() == 115 + 3 && pl->rangedDamageBonus == 115 + 3);
+	}
+
+	// hp
+	pl->HP = 24342;
+	myassert(playerAccessor->getHp() == 23242);
+	pl->HP = -5555555;
+	myassert(playerAccessor->getHp() == -5555555);
+	playerAccessor->setHp(543543);
+	myassert(playerAccessor->getHp() == 543543 && pl->HP == 543543);
+	playerAccessor->setHp(0);
+	myassert(playerAccessor->getHp() == 0 && pl->HP == 0);
+	
+	// sp
+	pl->SP = 24342;
+	myassert(playerAccessor->getSp() == 23242);
+	pl->SP = -5555555;
+	myassert(playerAccessor->getSp() == -5555555);
+	playerAccessor->setSp(543543);
+	myassert(playerAccessor->getSp() == 543543 && pl->SP == 543543);
+	playerAccessor->setSp(0);
+	myassert(playerAccessor->getSp() == 0 && pl->SP == 0);
+
+	// ac bonus
+	myassert(playerAccessor->getAcBonus() == 0);
+	pl->armorClassBonus = 55;
+	myassert(playerAccessor->getAcBonus() == 55);
+	playerAccessor->setAcBonus(24);
+	myassert(playerAccessor->getAcBonus() == 24 && pl->armorClassBonus == 24);
+
+	// skills
+	// TODO
+	generator->players[0] = oldPlayerZero;
+	delete pl;
+	return errors;
 }

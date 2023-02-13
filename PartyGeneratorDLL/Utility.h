@@ -58,6 +58,7 @@ wxString concatWxStrings(const Container<wxString, Extra...>& container, const w
 
 std::string tolowerStr(const std::string& source);
 
+// TODO: replace with initializer_list
 template<typename Vector>
 Vector mergeVectors(const Vector& first, const Vector& second)
 {
@@ -90,8 +91,12 @@ Map<Value, Key> invertMap(const Map<Key, Value, Extra...>& map)
 
 wxString getTimeStr();
 
-template<typename T>
-bool boundsCheck(T&& value, int size, bool clamp = true)
+struct Bounds
+{
+	int64_t low, high;
+};
+
+Bounds getBounds(int size)
 {
 	static const uint64_t
 		u1_max = std::numeric_limits<uint8_t>::max(),
@@ -106,7 +111,6 @@ bool boundsCheck(T&& value, int size, bool clamp = true)
 		i2_max = std::numeric_limits<int16_t>::max(),
 		i4_max = std::numeric_limits<int32_t>::max();
 
-	bool error = false;
 	int64_t low, high;
 
 	bool uns = size > 0;
@@ -116,31 +120,42 @@ bool boundsCheck(T&& value, int size, bool clamp = true)
 	{
 		low = uns ? 0 : i1_min;
 		high = uns ? u1_max : i1_max;
-		error = value < low || value > high;
 		break;
 	}
 	case 2:
 	{
 		low = uns ? 0 : i2_min;
 		high = uns ? u2_max : i2_max;
-		error = value < low || value > high;
 		break;
 	}
 	case 4:
 	{
 		low = uns ? 0 : i4_min;
 		high = uns ? u4_max : i4_max;
-		error = value < low || value > high;
 		break;
+	}
+	case 8:
+	{
+		low = 0;
+		high = u4_max;
+		wxLogError("8-byte bounds are not implemented yet");
+		wxLog::FlushActive();
 	}
 	default:
 	{
-		wxLogError("Unknown size (%d) in PlayerStructAccessor::boundsCheck()\n%s", size);
+		wxLogError("Unknown size (%d) in getBounds()\n%s", size);
 		wxLog::FlushActive();
-		return false;
+		return Bounds{ 0, 0 };
 	}
 
 	}
+	return Bounds{ low, high };
+}
+
+template<typename T>
+bool boundsCheck(T&& value, int64_t low, int64_t high, bool clamp = true)
+{
+	bool error = value < low || value > high;
 	if (error)
 	{
 		wxLogError("Value %d out of bounds [%d, %d]", value, low, high);
@@ -148,17 +163,27 @@ bool boundsCheck(T&& value, int size, bool clamp = true)
 	}
 	if (clamp)
 	{
-/*
-		wxASSERT_MSG(
-			// remove reference is required because otherwise numeric_limits can't bind to rvalue reference
-			low >= std::numeric_limits<std::remove_reference_t<T>>::min() &&
-			high <= std::numeric_limits<std::remove_reference_t<T>>::max()
-			, wxString::Format("Clamp bounds [%lld, %lld] too wide for value of type %s", low, high, typeid(std::decay_t<T>).name())
-		);
-*/
+		/*
+				wxASSERT_MSG(
+					// remove reference is required because otherwise numeric_limits can't bind to rvalue reference
+					low >= std::numeric_limits<std::remove_reference_t<T>>::min() &&
+					high <= std::numeric_limits<std::remove_reference_t<T>>::max()
+					, wxString::Format("Clamp bounds [%lld, %lld] too wide for value of type %s", low, high, typeid(std::decay_t<T>).name())
+				);
+		*/
 		low = std::max(low, (int64_t)std::numeric_limits<std::remove_reference_t<T>>::min());
 		high = std::min(high, (int64_t)std::numeric_limits<std::remove_reference_t<T>>::max());
 		value = std::clamp(value, (T)low, (T)high);
 	}
 	return !error;
 }
+
+template<typename T>
+bool boundsCheck(T&& value, int size, bool clamp = true)
+{
+	auto [low, high] = getBounds(size);
+	return boundsCheck(value, low, high, clamp)
+}
+
+template<typename T>
+using checkBounds = boundsCheck<T>;

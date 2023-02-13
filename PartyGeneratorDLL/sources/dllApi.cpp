@@ -16,6 +16,7 @@
 #include "Tests.h"
 #include <fstream>
 #include "Enum_const.h"
+#include "PlayerStructAccessor.h"
 
 extern bool inMM;
 
@@ -86,14 +87,20 @@ extern "C"
                         MMVER = 6;
                         MAX_PLAYERS = 4;
                         MAX_MASTERY = Mastery::MASTER;
+                        setFieldSizes_6();
+                        //playerAccessor = new PlayerStructAccessor_6;
                         break;
                     case 0x45:
                         MMVER = 7;
                         MAX_PLAYERS = 4;
+                        setFieldSizes_7();
+                        playerAccessor = new PlayerStructAccessor_7;
                         break;
                     case 0x53:
                         MMVER = 8;
                         MAX_PLAYERS = 5;
+                        setFieldSizes_8();
+                        //playerAccessor = new PlayerStructAccessor_8;
                         break;
                     default:
                         MessageBoxA(0, "This is not a supported Might and Magic game", "MMExtension Error", MB_ICONERROR);
