@@ -96,65 +96,17 @@ struct Bounds
 	int64_t low, high;
 };
 
-Bounds getBounds(int size)
-{
-	static const uint64_t
-		u1_max = std::numeric_limits<uint8_t>::max(),
-		u2_max = std::numeric_limits<uint16_t>::max(),
-		u4_max = std::numeric_limits<uint32_t>::max();
-
-	static const int64_t
-		i1_min = std::numeric_limits<int8_t>::min(),
-		i2_min = std::numeric_limits<int16_t>::min(),
-		i4_min = std::numeric_limits<int32_t>::min(),
-		i1_max = std::numeric_limits<int8_t>::max(),
-		i2_max = std::numeric_limits<int16_t>::max(),
-		i4_max = std::numeric_limits<int32_t>::max();
-
-	int64_t low, high;
-
-	bool uns = size > 0;
-	switch (std::abs(size))
-	{
-	case 1:
-	{
-		low = uns ? 0 : i1_min;
-		high = uns ? u1_max : i1_max;
-		break;
-	}
-	case 2:
-	{
-		low = uns ? 0 : i2_min;
-		high = uns ? u2_max : i2_max;
-		break;
-	}
-	case 4:
-	{
-		low = uns ? 0 : i4_min;
-		high = uns ? u4_max : i4_max;
-		break;
-	}
-	case 8:
-	{
-		low = 0;
-		high = u4_max;
-		wxLogError("8-byte bounds are not implemented yet");
-		wxLog::FlushActive();
-	}
-	default:
-	{
-		wxLogError("Unknown size (%d) in getBounds()\n%s", size);
-		wxLog::FlushActive();
-		return Bounds{ 0, 0 };
-	}
-
-	}
-	return Bounds{ low, high };
-}
+Bounds getBounds(int size);
 
 template<typename T>
 bool boundsCheck(T&& value, int64_t low, int64_t high, bool clamp = true)
 {
+	if (low > high)
+	{
+		wxLogError("Invalid bounds [%d, %d]", low, high);
+		wxLog::FlushActive();
+		return false;
+	}
 	bool error = value < low || value > high;
 	if (error)
 	{
@@ -182,8 +134,6 @@ template<typename T>
 bool boundsCheck(T&& value, int size, bool clamp = true)
 {
 	auto [low, high] = getBounds(size);
-	return boundsCheck(value, low, high, clamp)
+	// yay, my first real usecase for std::forward!
+	return boundsCheck<T>(std::forward<T>(value), low, high, clamp);
 }
-
-template<typename T>
-using checkBounds = boundsCheck<T>;

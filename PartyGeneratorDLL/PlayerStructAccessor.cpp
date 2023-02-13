@@ -10,6 +10,8 @@ PlayerStructAccessor* playerAccessor = nullptr;
 int PlayerStructAccessor::FieldSizes::biography = 0; // 0/0/256, set in dllApi.cpp
 int PlayerStructAccessor::FieldSizes::skill = -2; // 1/-2/-2
 
+PlayerStructAccessor::~PlayerStructAccessor() {}
+
 int PlayerStructAccessor::getPlayerIndex()
 {
 	static std::mt19937 gen(std::random_device{}());

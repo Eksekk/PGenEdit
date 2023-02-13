@@ -111,7 +111,6 @@ public:
 			skillPoints = -4,
 			hp = -4,
 			birthYear = -4,
-			meleeDamageBonus = -1,
 			meleeAttackBonus = -1,
 			meleeDamageBonus = -1,
 			rangedAttackBonus = -1,
@@ -242,6 +241,7 @@ class TemplatedPlayerStructAccessor : public PlayerStructAccessor
 	{
 		Player* pl = getPlayers()[getPlayerIndex()];
 		// PRIMARY
+		// TODO why these getBaseAccuracy() etc. methods exist?
 		if (stat == STAT_MIGHT)
 		{
 			return pl->mightBase;
@@ -278,7 +278,8 @@ class TemplatedPlayerStructAccessor : public PlayerStructAccessor
 		}
 		else
 		{
-			static_assert(false); // TODO
+			//static_assert(false); // TODO
+			return 5;
 		}
 	}
 

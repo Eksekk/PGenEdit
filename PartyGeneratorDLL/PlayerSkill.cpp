@@ -9,6 +9,10 @@ bool SkillValue::operator==(const SkillValue& other)
 {
 	return level == other.level && mastery == other.mastery;
 }
+bool SkillValue::operator!=(const SkillValue& other)
+{
+	return !operator==(other);
+}
 
 SkillValue splitSkill(int skill)
 {

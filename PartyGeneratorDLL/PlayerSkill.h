@@ -8,6 +8,7 @@ struct SkillValue
 	int level, mastery;
 
 	bool operator==(const SkillValue& other);
+	bool operator!=(const SkillValue& other);
 };
 
 SkillValue splitSkill(int skill);

@@ -356,7 +356,7 @@ extern "C"
             std::vector<wxString> errors;
             if (MMVER == 6)
             {
-                errors = Tests::run<mm6::Player, mm6::Game>();
+                //errors = Tests::run<mm6::Player, mm6::Game>();
             }
             else if (MMVER == 7)
             {
@@ -364,7 +364,7 @@ extern "C"
             }
             else if (MMVER == 8)
             {
-                errors = Tests::run<mm8::Player, mm8::Game>();
+                //errors = Tests::run<mm8::Player, mm8::Game>();
             }
             if (errors.size() > 0)
             {

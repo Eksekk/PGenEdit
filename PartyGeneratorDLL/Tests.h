@@ -4,6 +4,7 @@
 #include "Generator.h"
 #include "Utility.h"
 #include "PlayerStructAccessor.h"
+#include "GameData.h"
 
 #define myassert(cond, ...) myasserter(__FUNCTION__, __FILE__, __LINE__, (cond), "Assertion failed! (" #cond ")" __VA_OPT__(,) __VA_ARGS__)
 
@@ -184,6 +185,63 @@ std::vector<wxString> Tests::testMisc()
 	return errors;
 }
 
+// automatically tests single integral field from player struct, provided with pointer to field and pointers to accessor get/set
+// I think good use for pointers to members/member functions, other (ugly) alternative I can see is macros
+template<typename Player, typename IntegralFieldType, typename IntegralGetSetType = int>
+void testSettable(
+	Player* player,
+	IntegralFieldType Player::*playerFieldPtr,
+	void (PlayerStructAccessor::*setFunctionPtr)(IntegralGetSetType),
+	IntegralGetSetType (PlayerStructAccessor::*getFunctionPtr)(),
+	Bounds bounds,
+	Asserter& myasserter,
+	const wxString& logId
+)
+{
+	static_assert(std::is_integral_v<IntegralFieldType>);
+	static_assert(std::is_integral_v<IntegralGetSetType>);
+	
+	wxLogNull noLog;
+
+	auto [low, high] = bounds;
+	int64_t range = high - low + 1;
+	int64_t unit = range / 100;
+	std::array<int64_t, 23> tests{ low, low + 1, low + 3, low + 10, low + 50, low + unit, low + unit * 4, low + unit * 20, low + unit * 37, low + unit * 45, low + unit * 50,
+		1, 4, 10, 22, high - unit * 42, high - unit * 22, high - unit * 5, high - unit, high - 20, high - 3, high - 1, high };
+
+	int oldErrorsNum = myasserter.errors.size();
+	for (int i = 0; i < tests.size(); ++i)
+	{
+		int64_t test = tests[i];
+		int64_t fieldBefore = player->*playerFieldPtr, getterBefore = (playerAccessor->*getFunctionPtr)();
+		(playerAccessor->*setFunctionPtr)(test);
+		int64_t fieldAfter = player->*playerFieldPtr, getterAfter = (playerAccessor->*getFunctionPtr)();
+		if (fieldBefore != fieldAfter) // only perform checks if test value wasn't the original value
+		{
+
+		}
+
+		player->*playerFieldPtr = fieldBefore;
+		myassert((playerAccessor->*getFunctionPtr)() == fieldBefore, wxString::Format("[%s] Test #%d (value: %lld)", logId, i, test));
+	}
+	
+	if (oldErrorsNum != myasserter.errors.size())
+	{
+		std::vector<wxString> parts;
+		parts.reserve(tests.size());
+		std::transform(tests.begin(), tests.end(), std::back_inserter(parts), [](uint64_t test) -> wxString { return wxString::Format("%lld", test); });
+		myassert(false, wxString::Format("Test data: %s", concatWxStrings(parts, ", ")));
+	}
+
+	// for [getStat/setStat]-settable stats, either make new function similar to this one, but less templates and member pointers
+	// or experiment with std::bind (wxwidgets says, I think, that you can bind free function to member function pointer - see Bind())
+	
+	// for resistances, iterate over each "enum" value, check if it's present in data from lua, and if yes, then test it
+	// this takes care of elemental mod
+
+	// LET'S GOOOOO
+}
+
 template<typename Player, typename Game>
 std::vector<wxString> Tests::testPlayerStructAccessor()
 {
@@ -264,7 +322,78 @@ std::vector<wxString> Tests::testPlayerStructAccessor()
 	myassert(playerAccessor->getAcBonus() == 24 && pl->armorClassBonus == 24);
 
 	// skills
-	// TODO
+	auto& skillsMap = GameData::skills;
+	myassert(skillsMap.size() > 10);
+	// try 5 first, 5 last, every 3th and every 2th
+	std::vector<PlayerSkill*> skillsVector;
+	skillsVector.reserve(skillsMap.size());
+	std::transform(skillsMap.begin(), skillsMap.end(), std::back_inserter(skillsVector), [](auto& pair) -> PlayerSkill* { return &pair.second; });
+	static auto randomSkillValue = []() -> SkillValue
+	{
+		static std::mt19937 gen(std::random_device{}());
+		std::uniform_int_distribution mDist(0, (int)MAX_MASTERY), sDist(0, (1 << SKILL_BITS) - 1);
+		assert(mDist.b() >= MASTER && sDist.b() >= 63);
+		return SkillValue{ sDist(gen), mDist(gen) };
+	};
+	auto testSpecifiedSkillsByIndex = [&myasserter, &skillsMap, &skillsVector, pl](const std::vector<int>& indexes) -> void
+	{
+		std::vector<PlayerSkillValue> skillsToSet;
+		for (int i : indexes)
+		{
+			skillsToSet.push_back(PlayerSkillValue{ skillsVector[i], randomSkillValue() });
+		}
+		auto oldSkills = playerAccessor->getSkills();
+		playerAccessor->setSkills(skillsToSet);
+		auto newSkills = playerAccessor->getSkills();
+		for (int i = 0; i < skillsVector.size(); ++i)
+		{
+			const wxString iterationStr = wxString::Format("Iteration %d", i);
+			// skills map must contain key with value of i (I'm too lazy to use map here)
+
+			myassert(skillsMap.contains(i), iterationStr);
+
+			// if skill was intended to change:
+			//	1. old value must not be equal to new value from accessor
+			//	2. as above, but raw new value (access player struct)
+			//	3. new value from accessor must be equal to raw value
+			// else:
+			//	4. old == new (accessor)
+			//	5. old == new (raw)
+			//	6. see point 3
+
+			// IMPLEMENT EQUALITY OPERATOR MYSELF?
+
+			if (existsInVector(indexes, i)) // 1, 2, 3
+			{
+				// need to have explicitly defined operator !=, even if == is defined, otherwise there are ambiguity errors
+				myassert(oldSkills[i].value != newSkills[i].value, iterationStr); // 1
+				myassert(oldSkills[i].value != splitSkill(pl->skills[i]), iterationStr); // 2
+				myassert(newSkills[i].value == splitSkill(pl->skills[i]), iterationStr); // 3
+			}
+			else // 4, 5, 6
+			{
+				myassert(oldSkills[i].value == newSkills[i].value, iterationStr); // 4
+				myassert(oldSkills[i].value == splitSkill(pl->skills[i]), iterationStr); // 5
+				myassert(newSkills[i].value != splitSkill(pl->skills[i]), iterationStr); // 6
+			}
+		}
+	};
+	
+	int s = skillsMap.size();
+	std::vector<int> first5({0, 1, 2, 3, 4}), last5({s - 5, s - 4, s - 3, s - 2, s - 1});
+	std::vector<int> every2th, every3th;
+	every2th.resize((ceil(skillsVector.size() / 2.0)));
+	every3th.resize((ceil(skillsVector.size() / 3.0)));
+	int val = -2;
+	std::ranges::generate(every2th, [&] { return val += 2; });
+	val = -3;
+	std::ranges::generate(every3th, [&] { return val += 3; });
+
+	testSpecifiedSkillsByIndex(first5);
+	testSpecifiedSkillsByIndex(last5);
+	testSpecifiedSkillsByIndex(every2th);
+	testSpecifiedSkillsByIndex(every3th);
+
 	generator->players[0] = oldPlayerZero;
 	delete pl;
 	return errors;

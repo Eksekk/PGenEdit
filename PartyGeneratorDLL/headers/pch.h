@@ -32,5 +32,6 @@
 #include <chrono>
 #include <ctime>
 #include <limits>
+#include <ranges>
 
 #endif //PCH_H
