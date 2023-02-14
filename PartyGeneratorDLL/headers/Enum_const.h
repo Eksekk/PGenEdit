@@ -219,6 +219,15 @@ STAT_LEARNING,
 STAT_DARK_ELF,
 STAT_VAMPIRE,
 STAT_DRAGON;
+// MY ADDITIONS
+extern int
+STAT_LIGHT_RESISTANCE,
+STAT_DARK_RESISTANCE,
+STAT_RANGED_ATTACK_BONUS,
+STAT_RANGED_DAMAGE_BONUS,
+STAT_MELEE_ATTACK_BONUS,
+STAT_MELEE_DAMAGE_BONUS;
+// ~~MY ADDITIONS~~
 
 extern void makeEnumStats_6();
 extern void makeEnumStats_7();
@@ -230,3 +239,31 @@ extern std::vector<int> STATS_RESISTANCES;
 extern std::vector<int> STATS_MELEE_RANGED;
 extern std::vector<int> STATS_SKILLS;
 extern std::vector<int> STATS_OTHER;
+extern std::vector<int> STATS_ALL;
+
+extern int
+DMG_PHYS,
+DMG_MAGIC,
+DMG_FIRE,
+DMG_ELEC,
+DMG_COLD,
+DMG_POISON,
+DMG_ENERGY,
+DMG_AIR,
+DMG_WATER,
+DMG_EARTH,
+DMG_SPIRIT,
+DMG_MIND,
+DMG_BODY,
+DMG_LIGHT,
+DMG_DARK,
+DMG_DRAGON;
+
+extern void makeEnumDamage_6();
+extern void makeEnumDamage_7();
+extern void makeEnumDamage_8();
+
+extern std::vector<int> DAMAGE_ALL_TYPES;
+
+inline void checkStatValidity(int stat);
+inline void checkDamageTypeValidity(int dmg);

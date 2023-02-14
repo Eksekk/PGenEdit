@@ -185,14 +185,15 @@ std::vector<wxString> Tests::testMisc()
 	return errors;
 }
 
-// automatically tests single integral field from player struct, provided with pointer to field and pointers to accessor get/set
-// I think good use for pointers to members/member functions, other (ugly) alternative I can see is macros
+// automatically tests single integral field from player struct, provided with pointer to field and accessor get/set functions
+// I think good use for pointers to members/member functions, other (ugly) alternative I can see is macros // pointers to functions are obsolete,
+// old version used them but I couldn't use std::bind and then pass them
 template<typename Player, typename IntegralFieldType, typename IntegralGetSetType = int>
-void testSettable(
+void testSettableField(
 	Player* player,
-	IntegralFieldType Player::*playerFieldPtr,
-	void (PlayerStructAccessor::*setFunctionPtr)(IntegralGetSetType),
-	IntegralGetSetType (PlayerStructAccessor::*getFunctionPtr)(),
+	IntegralFieldType Player::* playerFieldPtr,
+	std::function<int()> getFunction, // of accessor
+	std::function<void(IntegralGetSetType)> setFunction, // of accessor
 	Bounds bounds,
 	Asserter& myasserter,
 	const wxString& logId
@@ -204,25 +205,33 @@ void testSettable(
 	wxLogNull noLog;
 
 	auto [low, high] = bounds;
+	myassert(low <= high, wxString::Format("[%s] bounds [%d, %d] too wide", logId, low, high));
 	int64_t range = high - low + 1;
 	int64_t unit = range / 100;
-	std::array<int64_t, 23> tests{ low, low + 1, low + 3, low + 10, low + 50, low + unit, low + unit * 4, low + unit * 20, low + unit * 37, low + unit * 45, low + unit * 50,
-		1, 4, 10, 22, high - unit * 42, high - unit * 22, high - unit * 5, high - unit, high - 20, high - 3, high - 1, high };
+	std::array<int64_t, 24> tests{ low, low + 1, low + 3, low + 10, low + 50, low + unit, low + unit * 4, low + unit * 20, low + unit * 37, low + unit * 45, low + unit * 50,
+		0, 1, 4, 10, 22, high - unit * 42, high - unit * 22, high - unit * 5, high - unit, high - 20, high - 3, high - 1, high };
 
 	int oldErrorsNum = myasserter.errors.size();
 	for (int i = 0; i < tests.size(); ++i)
 	{
 		int64_t test = tests[i];
-		int64_t fieldBefore = player->*playerFieldPtr, getterBefore = (playerAccessor->*getFunctionPtr)();
-		(playerAccessor->*setFunctionPtr)(test);
-		int64_t fieldAfter = player->*playerFieldPtr, getterAfter = (playerAccessor->*getFunctionPtr)();
-		if (fieldBefore != fieldAfter) // only perform checks if test value wasn't the original value
+		wxString failMsg = wxString::Format("[%s] Test #%d (value: %lld) failed", logId, i, test);
+		int64_t fieldValueBefore = player->*playerFieldPtr, getterValueBefore = getFunction();
+		setFunction(test);
+		int64_t fieldValueAfter = player->*playerFieldPtr, getterValueAfter = getFunction();
+		if (fieldValueBefore != fieldValueAfter) // only perform checks if test value wasn't the original value
 		{
-
+			myassert(fieldValueBefore != getterValueAfter, failMsg);
+			myassert(getterValueBefore != getterValueAfter, failMsg);
+			myassert(getterValueBefore != fieldValueAfter, failMsg);
+		}
+		else
+		{
+			myassert(getterValueBefore == getterValueAfter, failMsg);
 		}
 
-		player->*playerFieldPtr = fieldBefore;
-		myassert((playerAccessor->*getFunctionPtr)() == fieldBefore, wxString::Format("[%s] Test #%d (value: %lld)", logId, i, test));
+		player->*playerFieldPtr = fieldValueBefore;
+		myassert(getFunction() == fieldValueBefore, failMsg);
 	}
 	
 	if (oldErrorsNum != myasserter.errors.size())
@@ -320,6 +329,57 @@ std::vector<wxString> Tests::testPlayerStructAccessor()
 	myassert(playerAccessor->getAcBonus() == 55);
 	playerAccessor->setAcBonus(24);
 	myassert(playerAccessor->getAcBonus() == 24 && pl->armorClassBonus == 24);
+
+	// NEW CODE FOR EASIER TESTING (keeping old just in case new breaks)
+	using namespace std::placeholders;
+
+	// helper function (less typing!) which binds placeholders they receive to [get/set]StatBase method, so you can ultimately do:
+	// testPrimaryStatBase(STAT_MIGHT, &Player::mightBase, "Might base");
+
+	auto testStatBase = [&pl, &myasserter] (int statId, auto Player::*baseField, const wxString& logId) -> void
+	{
+		// tried making lambda passing placeholder (argument) to bind (two level indirection; see below), didn't work
+		std::function<int(void)> boundBaseGet{ std::bind(&PlayerStructAccessor::getStatBase, playerAccessor, statId) };
+		std::function<void(int)> boundBaseSet{ std::bind(&PlayerStructAccessor::setStatBase, playerAccessor, statId, _1) };
+
+		// without decay won't work
+		
+		// small explanation for future myself:
+		// pl->*baseField gets value from pointer "pl" with pointer-to-member value
+		// decltype() returns declaration type (doesn't actually execute, only returns a type, kinda like assembly "lea" versus "mov")
+		// std::decay_t<> strips all "decorations" from a type such as const, volatile, pointer, reference, array etc., making it suitable for comparisons
+		using IntegerType = std::decay_t<decltype(pl->*baseField)>;
+		static_assert(std::is_integral_v<IntegerType> && sizeof(IntegerType) <= 4, "Field type must be integer <= 4 bytes");
+		testSettableField<Player, IntegerType>(pl, baseField, boundBaseGet, boundBaseSet, boundsByType<IntegerType>, myasserter, logId);
+	};
+	auto testStatBonus = [&pl, &myasserter] (int statId, auto Player::*bonusField, const wxString& logId) -> void
+	{
+		std::function<int(void)> boundBonusGet{ std::bind(&PlayerStructAccessor::getStatBonus, playerAccessor, statId) };
+		std::function<void(int)> boundBonusSet{ std::bind(&PlayerStructAccessor::setStatBonus, playerAccessor, statId, _1) };
+
+		using IntegerType = std::decay_t<decltype(pl->*bonusField)>;
+		static_assert(std::is_integral_v<IntegerType> && sizeof(IntegerType) <= 4, "Field type must be integer <= 4 bytes");
+		testSettableField<Player, IntegerType>(pl, bonusField, boundBonusGet, boundBonusSet, boundsByType<IntegerType>, myasserter, logId);
+	};
+
+	auto testStatBaseBonus = [&pl, &myasserter, &testStatBase, &testStatBonus](int statId, auto Player::* baseField, auto Player::* bonusField, const wxString& logId)
+	{
+		static_assert(std::is_same_v<std::decay_t<decltype(pl->*baseField)>, std::decay_t<decltype(pl->*bonusField)>>, "Integer types for base and bonus fields are different");
+		testStatBase(statId, baseField, logId + " base");
+		testStatBonus(statId, bonusField, logId + " bonus");
+	};
+	// NOT WORKING
+	// auto bindGetBase = [](auto placeholderStatId) { return std::bind(&PlayerStructAccessor::getStatBase, playerAccessor, placeholderStatId); };
+	// auto bindSetBase = [](auto placeholderStatId) { return std::bind(std::mem_fn(&PlayerStructAccessor::setStatBase), playerAccessor, placeholderStatId); };
+	// std::function<void(int statId, int16_t Player::* field, const wxString& logId)> testPrimaryStatBase = std::bind(testSettableField<Player, int16_t>, pl, _2, bindGetBase(_1), bindSetBase(_1), getBounds(-2), myasserter, _3);
+	
+	testStatBaseBonus(STAT_MIGHT, &Player::mightBase, &Player::mightBonus, "Might");
+	testStatBaseBonus(STAT_INTELLECT, &Player::intellectBase, &Player::intellectBase, "Intellect");
+	testStatBaseBonus(STAT_PERSONALITY, &Player::personalityBase, &Player::personalityBonus, "Personality");
+	testStatBaseBonus(STAT_ENDURANCE, &Player::enduranceBase, &Player::enduranceBonus, "Endurance");
+	testStatBaseBonus(STAT_ACCURACY, &Player::accuracyBase, &Player::accuracyBonus, "Accuracy");
+	testStatBaseBonus(STAT_SPEED, &Player::speedBase, &Player::speedBonus, "Speed");
+	testStatBaseBonus(STAT_LUCK, &Player::luckBase, &Player::luckBonus, "Luck");
 
 	// skills
 	auto& skillsMap = GameData::skills;

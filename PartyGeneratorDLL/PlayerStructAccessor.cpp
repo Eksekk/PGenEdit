@@ -10,7 +10,7 @@ PlayerStructAccessor* playerAccessor = nullptr;
 int PlayerStructAccessor::FieldSizes::biography = 0; // 0/0/256, set in dllApi.cpp
 int PlayerStructAccessor::FieldSizes::skill = -2; // 1/-2/-2
 
-PlayerStructAccessor::~PlayerStructAccessor() {}
+PlayerStructAccessor::~PlayerStructAccessor() noexcept {}
 
 int PlayerStructAccessor::getPlayerIndex()
 {

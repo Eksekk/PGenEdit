@@ -91,7 +91,7 @@ public:
 	virtual int getSp() = 0;
 	virtual void setSp(int value) = 0;
 
-	virtual ~PlayerStructAccessor();
+	virtual ~PlayerStructAccessor() noexcept;
 
 	// FIELD SIZES
 	// only those sizes that are used in the ui???
@@ -125,19 +125,141 @@ public:
 		static int skill; // 1/-2/-2
 	};
 	static FieldSizes FIELD_SIZES;
+
+	// return void if function returns void, otherwise vector of results
+	// trailing return type required?
+	// invoke_result_t needs to have Args expanded
+	// rvalue reference is automatically added by invoke_result_t
+	template<typename Function, typename... Args>
+	auto forAllPlayersApply(Function f, Args&&... args) ->
+	std::conditional_t<
+		std::is_same_v<std::invoke_result_t<Function, Args...>, void>,
+		void,
+		std::vector<std::invoke_result_t<Function, Args...>>
+	>
+	{
+		int old = playerIndex;
+		using ReturnType = std::invoke_result_t<Function, Args...>;
+		if constexpr (SAME(ReturnType, void))
+		{
+			for (int i = 0; i < CURRENT_PARTY_SIZE; ++i)
+			{
+				(void)operator[](i);
+				f(std::forward<Args>(args)...);
+			}
+			playerIndex = old;
+		}
+		else
+		{
+			//static_assert(std::is_copy_assignable_v<ReturnType>, "Return type is not copy assignable");
+			std::vector<ReturnType> ret;
+			ret.reserve(CURRENT_PARTY_SIZE);
+			for (int i = 0; i < CURRENT_PARTY_SIZE; ++i)
+			{
+				(void)operator[](i);
+				ret.push_back(f(std::forward<Args>(args)...));
+			}
+			playerIndex = old;
+			return ret;
+		}
+	}
 };
 
 // ENTER CONFIRMS TEMPLATE FOR INTELLISENSE
 template<typename Player>
 class TemplatedPlayerStructAccessor : public PlayerStructAccessor
 {
+	virtual ~TemplatedPlayerStructAccessor() noexcept;
+
 	inline Player** getPlayers()
 	{
 		return (Player**)generator->players;
 	}
 
+	template<typename FieldType>
+	struct BaseOrBonusPointer
+	{
+		FieldType Player::* base;
+		FieldType Player::* bonus;
+	};
+
+	template<typename FieldType>
+	static std::unordered_map<int, BaseOrBonusPointer<FieldType>> baseBonusFieldToStatMap;
+	template<typename FieldType>
+	static std::unordered_map<int, FieldType Player::*> singleTypeFieldToStatMap;
+
+	static class InitMaps // IF PROBLEMS ARISE, MOVE INITIALIZATION TO FUNCTION AND CALL WHEN NEEDED
+	{
+		InitMaps()
+		{
+			// primary stats
+			baseBonusFieldToStatMap<int16_t>[STAT_MIGHT] = { &Player::mightBase, &Player::mightBonus };
+			baseBonusFieldToStatMap<int16_t>[STAT_INTELLECT] = { &Player::intellectBase, &Player::intellectBonus };
+			baseBonusFieldToStatMap<int16_t>[STAT_PERSONALITY] = { &Player::personalityBase, &Player::personalityBonus };
+			baseBonusFieldToStatMap<int16_t>[STAT_ENDURANCE] = { &Player::enduranceBase, &Player::enduranceBonus };
+			baseBonusFieldToStatMap<int16_t>[STAT_ACCURACY] = { &Player::accuracyBase, &Player::accuracyBonus };
+			baseBonusFieldToStatMap<int16_t>[STAT_SPEED] = { &Player::speedBase, &Player::speedBonus };
+			baseBonusFieldToStatMap<int16_t>[STAT_LUCK] = { &Player::luckBase, &Player::luckBonus };
+
+			// resistances
+			if constexpr (SAME(Player, mm6::Player))
+			{
+				// TODO
+				//fieldToStatMap<int16_t>[STAT_FIRE_RESISTANCE] = Player::
+			}
+			else
+			{
+				baseBonusFieldToStatMap<int16_t>[STAT_FIRE_RESISTANCE] = { &Player::fireResistanceBase, &Player::fireResistanceBonus };
+				baseBonusFieldToStatMap<int16_t>[STAT_WATER_RESISTANCE] = { &Player::waterResistanceBase, &Player::waterResistanceBonus };
+				baseBonusFieldToStatMap<int16_t>[STAT_AIR_RESISTANCE] = { &Player::airResistanceBase, &Player::airResistanceBonus };
+				baseBonusFieldToStatMap<int16_t>[STAT_EARTH_RESISTANCE] = { &Player::earthResistanceBase, &Player::earthResistanceBonus };
+
+				baseBonusFieldToStatMap<int16_t>[STAT_MIND_RESISTANCE] = { &Player::mindResistanceBase, &Player::mindResistanceBonus };
+				baseBonusFieldToStatMap<int16_t>[STAT_SPIRIT_RESISTANCE] = { &Player::spiritResistanceBase, &Player::spiritResistanceBonus };
+				baseBonusFieldToStatMap<int16_t>[STAT_BODY_RESISTANCE] = { &Player::bodyResistanceBase, &Player::bodyResistanceBonus };
+
+				baseBonusFieldToStatMap<int16_t>[STAT_LIGHT_RESISTANCE] = { &Player::lightResistanceBase, &Player::lightResistanceBonus };
+				baseBonusFieldToStatMap<int16_t>[STAT_DARK_RESISTANCE] = { &Player::darkResistanceBase, &Player::darkResistanceBonus };
+			}
+
+			
+
+			// mm6/7 extras
+			if constexpr (SAME(Player, mm6::Player) || SAME(Player, mm7::Player))
+			{
+				singleTypeFieldToStatMap<int8_t>[STAT_MELEE_ATTACK_BONUS] = &Player::meleeAttackBonus;
+				singleTypeFieldToStatMap<int8_t>[STAT_MELEE_DAMAGE_BONUS] = &Player::meleeDamageBonus;
+				singleTypeFieldToStatMap<int8_t>[STAT_RANGED_ATTACK_BONUS] = &Player::meleeAttackBonus;
+				singleTypeFieldToStatMap<int8_t>[STAT_RANGED_DAMAGE_BONUS] = &Player::meleeDamageBonus;
+			}
+
+			// hp, sp
+			if constexpr (SAME(Player, mm8::Player))
+			{
+				// TODO
+			}
+			else
+			{
+				singleTypeFieldToStatMap<int32_t>[STAT_HIT_POINTS] = &Player::HP;
+				singleTypeFieldToStatMap<int32_t>[STAT_SPELL_POINTS] = &Player::SP;
+
+				singleTypeFieldToStatMap<int8_t>[STAT_MELEE_ATTACK_BONUS] = &Player::meleeAttackBonus;
+				singleTypeFieldToStatMap<int8_t>[STAT_MELEE_DAMAGE_BONUS] = &Player::meleeDamageBonus;
+				singleTypeFieldToStatMap<int8_t>[STAT_RANGED_ATTACK_BONUS] = &Player::rangedAttackBonus;
+				singleTypeFieldToStatMap<int8_t>[STAT_RANGED_DAMAGE_BONUS] = &Player::rangedDamageBonus;
+			}
+		}
+	} _initMaps;
+
 	int getAcBonus() override
 	{
+		// works!!!
+		if (false)
+		{
+			forAllPlayersApply(std::function<void(int)>(std::bind(&TemplatedPlayerStructAccessor<Player>::setAcBonus, this, std::placeholders::_1)), 5);
+			auto x = forAllPlayersApply(std::function<int()>(std::bind(&TemplatedPlayerStructAccessor<Player>::getAcBonus, this)));
+		}
+		
 		return getPlayers()[getPlayerIndex()]->armorClassBonus;
 	}
 
@@ -236,44 +358,21 @@ class TemplatedPlayerStructAccessor : public PlayerStructAccessor
 		getPlayers()[getPlayerIndex()]->rangedDamageBonus = value;
 	}
 
-
 	int getStatBase(int stat) override
 	{
+		checkStatValidity(stat);
 		Player* pl = getPlayers()[getPlayerIndex()];
 		// PRIMARY
 		// TODO why these getBaseAccuracy() etc. methods exist?
-		if (stat == STAT_MIGHT)
+		if (existsInVector(STATS_PRIMARY, stat))
 		{
-			return pl->mightBase;
-		}
-		else if (stat == STAT_PERSONALITY)
-		{
-			return pl->personalityBase;
-		}
-		else if (stat == STAT_INTELLECT)
-		{
-			return pl->intellectBase;
-		}
-		else if (stat == STAT_ENDURANCE)
-		{
-			return pl->enduranceBase;
-		}
-		else if (stat == STAT_SPEED)
-		{
-			return pl->speedBase;
-		}
-		else if (stat == STAT_ACCURACY)
-		{
-			return pl->accuracyBase;
-		}
-		else if (stat == STAT_PERSONALITY)
-		{
-			return pl->luckBase;
+			auto field = baseBonusFieldToStatMap<int16_t>.at(stat).base;
+			return pl->*field;
 		}
 		// OTHER
 		else if (stat == STAT_ARMOR_CLASS)
 		{
-			typedef int(__thiscall *getArmorClassPtr)(void*);
+			typedef int(__thiscall *getArmorClassPtr)(Player*);
 			return reinterpret_cast<getArmorClassPtr>(mmv(0x482700, 0x48E687, 0x48DAF2))(pl);
 		}
 		else
@@ -283,22 +382,39 @@ class TemplatedPlayerStructAccessor : public PlayerStructAccessor
 		}
 	}
 
-
 	void setStatBase(int stat, int value) override
 	{
-		throw std::logic_error("The method or operation is not implemented.");
+		checkStatValidity(stat);
+		Player* pl = getPlayers()[getPlayerIndex()];
+		if (existsInVector(STATS_PRIMARY, stat))
+		{
+			boundsCheck(value, boundsByType<int16_t>);
+			auto field = baseBonusFieldToStatMap<int16_t>.at(stat).base;
+			pl->*field = value;
+		}
 	}
-
 
 	int getStatBonus(int stat) override
 	{
-		throw std::logic_error("The method or operation is not implemented.");
+		checkStatValidity(stat);
+		Player* pl = getPlayers()[getPlayerIndex()];
+		if (existsInVector(STATS_PRIMARY, stat))
+		{
+			auto field = baseBonusFieldToStatMap<int16_t>.at(stat).bonus;
+			return pl->*field;
+		}
 	}
-
 
 	void setStatBonus(int stat, int value) override
 	{
-		throw std::logic_error("The method or operation is not implemented.");
+		checkStatValidity(stat);
+		Player* pl = getPlayers()[getPlayerIndex()];
+		if (existsInVector(STATS_PRIMARY, stat))
+		{
+			boundsCheck(value, boundsByType<int16_t>);
+			auto field = baseBonusFieldToStatMap<int16_t>.at(stat).base;
+			pl->*field = value;
+		}
 	}
 
 
@@ -393,6 +509,19 @@ public:
 
 };
 
+template<typename Player>
+TemplatedPlayerStructAccessor<Player>::~TemplatedPlayerStructAccessor() noexcept
+{
+
+}
+
+template<typename Player>
+template<typename FieldType>
+std::unordered_map<int, typename TemplatedPlayerStructAccessor<Player>::template BaseOrBonusPointer<FieldType>> TemplatedPlayerStructAccessor<Player>::baseBonusFieldToStatMap;
+
+template<typename Player>
+template<typename FieldType>
+std::unordered_map<int, FieldType Player::*> TemplatedPlayerStructAccessor<Player>::singleTypeFieldToStatMap;
 
 //template class TemplatedPlayerStructAccessor<mm6::Player>;
 template class TemplatedPlayerStructAccessor<mm7::Player>;

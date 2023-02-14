@@ -98,6 +98,25 @@ struct Bounds
 
 Bounds getBounds(int size);
 
+template<int size>
+const Bounds boundsBySize = getBounds(size);
+
+template<typename T>
+const Bounds boundsByType{ 1000, 0 }; // error at runtime, "= delete" doesn't work
+
+template<>
+const Bounds boundsByType<uint8_t> = boundsBySize<1>;
+template<>
+const Bounds boundsByType<int8_t> = boundsBySize<-1>;
+template<>
+const Bounds boundsByType<uint16_t> = boundsBySize<2>;
+template<>
+const Bounds boundsByType<int16_t> = boundsBySize<-2>;
+template<>
+const Bounds boundsByType<uint32_t> = boundsBySize<4>;
+template<>
+const Bounds boundsByType<int32_t> = boundsBySize<-4>;
+
 template<typename T>
 bool boundsCheck(T&& value, int64_t low, int64_t high, bool clamp = true)
 {
@@ -116,13 +135,14 @@ bool boundsCheck(T&& value, int64_t low, int64_t high, bool clamp = true)
 	if (clamp)
 	{
 		/*
-				wxASSERT_MSG(
-					// remove reference is required because otherwise numeric_limits can't bind to rvalue reference
-					low >= std::numeric_limits<std::remove_reference_t<T>>::min() &&
-					high <= std::numeric_limits<std::remove_reference_t<T>>::max()
-					, wxString::Format("Clamp bounds [%lld, %lld] too wide for value of type %s", low, high, typeid(std::decay_t<T>).name())
-				);
+			wxASSERT_MSG(
+				low >= std::numeric_limits<std::remove_reference_t<T>>::min() &&
+				high <= std::numeric_limits<std::remove_reference_t<T>>::max()
+				, wxString::Format("Clamp bounds [%lld, %lld] too wide for value of type %s", low, high, typeid(std::decay_t<T>).name())
+			);
 		*/
+
+		// remove reference is required because otherwise numeric_limits can't bind to rvalue reference
 		low = std::max(low, (int64_t)std::numeric_limits<std::remove_reference_t<T>>::min());
 		high = std::min(high, (int64_t)std::numeric_limits<std::remove_reference_t<T>>::max());
 		value = std::clamp(value, (T)low, (T)high);
@@ -131,9 +151,15 @@ bool boundsCheck(T&& value, int64_t low, int64_t high, bool clamp = true)
 }
 
 template<typename T>
+bool boundsCheck(T&& value, const Bounds& b, bool clamp = true)
+{
+	return boundsCheck(std::forward<T>(value), b.low, b.high, clamp);
+}
+
+template<typename T>
 bool boundsCheck(T&& value, int size, bool clamp = true)
 {
 	auto [low, high] = getBounds(size);
-	// yay, my first real usecase for std::forward!
-	return boundsCheck<T>(std::forward<T>(value), low, high, clamp);
+	// yay, my first real usecase for std::forward! code breaks without it
+	return boundsCheck(std::forward<T>(value), low, high, clamp);
 }

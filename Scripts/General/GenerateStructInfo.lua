@@ -680,7 +680,7 @@ mem.struct(structs.f.GameMap)
 
 
 -- "ENUM" GENERATOR
-local namePrefixes = {["Stats"] = "STAT"}
+local namePrefixes = {["Stats"] = "STAT", ["Skills"] = "SKILL", ["Damage"] = "DMG"}
 local consts, header, source = {}, {}, {}
 function processConst(name)
 	if not consts[6] then
@@ -761,7 +761,7 @@ function processConst(name)
 	table.insert(source, "")
 end
 
-local constsToProcess = {"Stats"}
+local constsToProcess = {"Damage"}
 function writeConsts()
 	for _, const in ipairs(constsToProcess) do
 		processConst(const)

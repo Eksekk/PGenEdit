@@ -4,6 +4,6 @@ end
 json = require"json"
 reloadM()
 if not M.dll then
-	M.loadDll()
+	--M.loadDll()
 end
 

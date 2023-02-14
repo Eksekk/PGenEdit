@@ -33,5 +33,6 @@
 #include <ctime>
 #include <limits>
 #include <ranges>
+#include <functional>
 
 #endif //PCH_H

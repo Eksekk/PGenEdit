@@ -77,6 +77,7 @@ extern "C"
         {
         case DLL_PROCESS_ATTACH:
             {
+			    makeEnums(); // might have to be defined before TemplatedPlayerStructAccessor::fieldToStatMap static initializer runs
                 // code from MMExtension
                 const int addr = 0x41EDE1;
                 if (GetModuleHandleA("mm6.exe") || GetModuleHandleA("mm7.exe") || GetModuleHandleA("mm8.exe")) // are we injected into mm[678].exe?
@@ -128,7 +129,6 @@ extern "C"
 
 
                 // TODO: test for Merge (run lua script?)
-                makeEnums();
                 generator = new Generator();
                 break;
                 /* call comctl32.dll init common controls ex (change call address!)

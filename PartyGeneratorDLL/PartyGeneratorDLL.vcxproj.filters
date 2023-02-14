@@ -105,9 +105,6 @@
     <ClInclude Include="GameData.h">
       <Filter>Pliki nagłówkowe\GameData</Filter>
     </ClInclude>
-    <ClInclude Include="GUIEnums.h">
-      <Filter>Pliki nagłówkowe</Filter>
-    </ClInclude>
     <ClInclude Include="PlayerItem.h">
       <Filter>Pliki nagłówkowe\GameData</Filter>
     </ClInclude>
@@ -238,9 +235,6 @@
     </ClCompile>
     <ClCompile Include="GameData.cpp">
       <Filter>Pliki źródłowe\GameData</Filter>
-    </ClCompile>
-    <ClCompile Include="GUIEnums.cpp">
-      <Filter>Pliki źródłowe</Filter>
     </ClCompile>
     <ClCompile Include="PlayerItem.cpp">
       <Filter>Pliki źródłowe\GameData</Filter>
