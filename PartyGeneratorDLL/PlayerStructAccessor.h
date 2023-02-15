@@ -6,6 +6,8 @@
 #include "Player.h"
 #include "Utility.h"
 #include "PlayerSkill.h"
+#include "GameData.h"
+#include "LowLevel.h"
 
 extern const bool MALE, FEMALE;
 
@@ -14,6 +16,10 @@ extern Generator* generator;
 
 class PlayerStructAccessor;
 extern PlayerStructAccessor* playerAccessor;
+
+extern void setFieldSizes_6();
+extern void setFieldSizes_7();
+extern void setFieldSizes_8();
 
 // convenience class for accessing player properties without barrage of ifs scattered all around the code due to three game versions
 // not included in player structs because I'd have to duplicate most code three times, and idk if that wouldn't break the POD status
@@ -48,37 +54,42 @@ public:
 		wxASSERT_MSG(found, wxString::Format("Invalid player pointer (%X) passed to PlayerStructAccessor.operator[]", (uint32_t)player));
 		return *this;
 	}
-
-	virtual int getAcBonus() = 0;
-	virtual void setAcBonus(int value) = 0;
-	virtual int getFullHpBonus() = 0;
-	virtual void setFullHpBonus(int value) = 0;
-	virtual int getFullSpBonus() = 0;
-	virtual void setFullSpBonus(int value) = 0;
-	virtual int getMeleeAttackBonus() = 0;
-	virtual void setMeleeAttackBonus(int value) = 0;
-	virtual int getRangedAttackBonus() = 0;
-	virtual void setRangedAttackBonus(int value) = 0;
-	virtual int getMeleeDamageBonus() = 0;
-	virtual void setMeleeDamageBonus(int value) = 0;
-	virtual int getRangedDamageBonus() = 0;
-	virtual void setRangedDamageBonus(int value) = 0;
-
 	virtual int getStatBase(int stat) = 0;
 	virtual void setStatBase(int stat, int value) = 0;
 
 	virtual int getStatBonus(int stat) = 0;
 	virtual void setStatBonus(int stat, int value) = 0;
 
+	virtual void setStatBaseBonus(int stat, const BaseBonus& value);
+	virtual BaseBonus getStatBaseBonus(int stat);
+
+	static int spentPerSkill(SkillValue sv);
+
 	virtual int getSkillPoints() = 0;
 	virtual void setSkillPoints(int value) = 0;
 	virtual int getSpentSkillPoints() = 0;
+	virtual int getSpentSkillPointsForGivenSkills(const std::vector<PlayerSkillValue>& skillsAndValues);
 
-	virtual char* getOrSetName() = 0;
-	virtual int getNameMaxLength() = 0;
+	virtual int64_t getExperience() = 0;
+	virtual int64_t getMinimumExperienceForLevel(int level);
+	/// affectLevel = true reduces level to maximum possible if value is reduced
+	virtual void setExperience(int64_t value, bool affectLevel = true) = 0;
 
-	virtual char* getOrSetBiography() = 0;
-	virtual int getBiographyMaxLength() = 0;
+	static int getMinimumLevelForExperience(int64_t experience);
+
+	virtual int getLevel() = 0;
+	virtual int getTrainableLevel();
+	/// affectExperience = true increases experience to minimum possible if level is increased
+	virtual void setLevel(int value, bool affectExperience = true) = 0;
+
+	virtual std::string getName() = 0;
+	virtual int getNameMaxUsableLength() = 0;
+
+	virtual std::string getBiography() = 0;
+	virtual int getBiographyMaxUsableLength() = 0;
+
+	virtual void setName(const std::string& name) = 0;
+	virtual void setBiography(const std::string& biography) = 0;
 
 	virtual std::vector<PlayerSkillValue> getSkills() = 0;
 	virtual void setSkills(const std::vector<PlayerSkillValue>& values) = 0;
@@ -86,10 +97,19 @@ public:
 	virtual void setSkill(int skillId, SkillValue value) = 0;
 
 	// common stats
-	virtual int getHp() = 0;
-	virtual void setHp(int value) = 0;
-	virtual int getSp() = 0;
-	virtual void setSp(int value) = 0;
+	virtual int getHp();
+	virtual void setHp(int value);
+	virtual int getSp();
+	virtual void setSp(int value);
+
+	/*
+	TODO:
+	- hp/sp
+	- armor class
+	- skill "stats"?
+	- items
+	- etc.
+	*/
 
 	virtual ~PlayerStructAccessor() noexcept;
 
@@ -123,6 +143,7 @@ public:
 		// could have done conditional compilation and produce dll for each game, but I chose the other approach
 		static int biography; // 0/0/256, set in dllApi.cpp
 		static int skill; // 1/-2/-2
+		static int name; // 16/16/32
 	};
 	static FieldSizes FIELD_SIZES;
 
@@ -144,7 +165,7 @@ public:
 		{
 			for (int i = 0; i < CURRENT_PARTY_SIZE; ++i)
 			{
-				(void)operator[](i);
+				(void)operator[](i); // switch player
 				f(std::forward<Args>(args)...);
 			}
 			playerIndex = old;
@@ -177,17 +198,19 @@ class TemplatedPlayerStructAccessor : public PlayerStructAccessor
 	}
 
 	template<typename FieldType>
-	struct BaseOrBonusPointer
+	struct BaseOrBonusFieldPointer
 	{
 		FieldType Player::* base;
 		FieldType Player::* bonus;
 	};
 
 	template<typename FieldType>
-	static std::unordered_map<int, BaseOrBonusPointer<FieldType>> baseBonusFieldToStatMap;
+	static std::unordered_map<int, BaseOrBonusFieldPointer<FieldType>> baseBonusFieldToStatMap;
 	template<typename FieldType>
-	static std::unordered_map<int, FieldType Player::*> singleTypeFieldToStatMap;
+	static std::unordered_map<int, FieldType Player::*> singleTypeFieldToStatMap; // either base or bonus, this includes hp/sp because "base" is 4 byte, while bonus 1
 
+	// C++ limitation, no static initializers for template classes (almost sure)
+private:
 	static class InitMaps // IF PROBLEMS ARISE, MOVE INITIALIZATION TO FUNCTION AND CALL WHEN NEEDED
 	{
 		InitMaps()
@@ -204,8 +227,11 @@ class TemplatedPlayerStructAccessor : public PlayerStructAccessor
 			// resistances
 			if constexpr (SAME(Player, mm6::Player))
 			{
-				// TODO
-				//fieldToStatMap<int16_t>[STAT_FIRE_RESISTANCE] = Player::
+				fieldToStatMap<int16_t>[STAT_FIRE_RESISTANCE] = { &Player::fireResistanceBase, &Player::fireResistanceBonus };
+				fieldToStatMap<int16_t>[STAT_ELEC_RESISTANCE] = { &Player::elecResistanceBase, &Player::elecResistanceBase };
+				fieldToStatMap<int16_t>[STAT_COLD_RESISTANCE] = { &Player::coldResistanceBase, &Player::coldResistanceBase };
+				fieldToStatMap<int16_t>[STAT_POISON_RESISTANCE] = { &Player::poisonResistanceBase, &Player::poisonResistanceBase };
+				fieldToStatMap<int16_t>[STAT_MAGIC_RESISTANCE] = { &Player::magicResistanceBase, &Player::magicResistanceBase };
 			}
 			else
 			{
@@ -222,149 +248,36 @@ class TemplatedPlayerStructAccessor : public PlayerStructAccessor
 				baseBonusFieldToStatMap<int16_t>[STAT_DARK_RESISTANCE] = { &Player::darkResistanceBase, &Player::darkResistanceBonus };
 			}
 
-			
-
-			// mm6/7 extras
-			if constexpr (SAME(Player, mm6::Player) || SAME(Player, mm7::Player))
-			{
-				singleTypeFieldToStatMap<int8_t>[STAT_MELEE_ATTACK_BONUS] = &Player::meleeAttackBonus;
-				singleTypeFieldToStatMap<int8_t>[STAT_MELEE_DAMAGE_BONUS] = &Player::meleeDamageBonus;
-				singleTypeFieldToStatMap<int8_t>[STAT_RANGED_ATTACK_BONUS] = &Player::meleeAttackBonus;
-				singleTypeFieldToStatMap<int8_t>[STAT_RANGED_DAMAGE_BONUS] = &Player::meleeDamageBonus;
-			}
-
 			// hp, sp
-			if constexpr (SAME(Player, mm8::Player))
-			{
-				// TODO
-			}
-			else
-			{
-				singleTypeFieldToStatMap<int32_t>[STAT_HIT_POINTS] = &Player::HP;
-				singleTypeFieldToStatMap<int32_t>[STAT_SPELL_POINTS] = &Player::SP;
 
+			singleTypeFieldToStatMap<int32_t>[STAT_HIT_POINTS] = &Player::HP;
+			singleTypeFieldToStatMap<int32_t>[STAT_SPELL_POINTS] = &Player::SP;
+
+			// mm6/7 bonuses
+			if constexpr (!SAME(Player, mm8::Player))
+			{
 				singleTypeFieldToStatMap<int8_t>[STAT_MELEE_ATTACK_BONUS] = &Player::meleeAttackBonus;
 				singleTypeFieldToStatMap<int8_t>[STAT_MELEE_DAMAGE_BONUS] = &Player::meleeDamageBonus;
 				singleTypeFieldToStatMap<int8_t>[STAT_RANGED_ATTACK_BONUS] = &Player::rangedAttackBonus;
 				singleTypeFieldToStatMap<int8_t>[STAT_RANGED_DAMAGE_BONUS] = &Player::rangedDamageBonus;
+				singleTypeFieldToStatMap<int8_t>[STAT_HIT_POINTS_BONUS] = &Player::fullHPBonus;
+				singleTypeFieldToStatMap<int8_t>[STAT_SPELL_POINTS_BONUS] = &Player::fullSPBonus;
 			}
+
+			// other
+			baseBonusFieldToStatMap<int16_t>[STAT_LEVEL] = { &Player::levelBase, &Player::levelBonus };
+			singleTypeFieldToStatMap<int16_t>[STAT_ARMOR_CLASS] = { &Player::armorClassBonus };
+
+			singleTypeFieldToStatMap<int16_t>[STAT_AGE] = &Player::ageBonus;
 		}
 	} _initMaps;
-
-	int getAcBonus() override
-	{
-		// works!!!
-		if (false)
-		{
-			forAllPlayersApply(std::function<void(int)>(std::bind(&TemplatedPlayerStructAccessor<Player>::setAcBonus, this, std::placeholders::_1)), 5);
-			auto x = forAllPlayersApply(std::function<int()>(std::bind(&TemplatedPlayerStructAccessor<Player>::getAcBonus, this)));
-		}
-		
-		return getPlayers()[getPlayerIndex()]->armorClassBonus;
-	}
-
-	void setAcBonus(int value) override
-	{
-		boundsCheck(value, FIELD_SIZES.acBonus);
-		getPlayers()[getPlayerIndex()]->armorClassBonus = value;
-	}
-
-	int getFullHpBonus() override
-	{
-		static_assert(SAME(Player, mm6::Player) || SAME(Player, mm7::Player));
-		return getPlayers()[getPlayerIndex()]->fullHPBonus;
-	}
-
-
-	void setFullHpBonus(int value) override
-	{
-		static_assert(SAME(Player, mm6::Player) || SAME(Player, mm7::Player));
-		boundsCheck(value, FIELD_SIZES.fullHPBonus);
-		getPlayers()[getPlayerIndex()]->fullHPBonus = value;
-	}
-
-
-	int getFullSpBonus() override
-	{
-		static_assert(SAME(Player, mm6::Player) || SAME(Player, mm7::Player));
-		return getPlayers()[getPlayerIndex()]->fullSPBonus;
-	}
-
-
-	void setFullSpBonus(int value) override
-	{
-		static_assert(SAME(Player, mm6::Player) || SAME(Player, mm7::Player));
-		boundsCheck(value, FIELD_SIZES.fullSPBonus);
-		getPlayers()[getPlayerIndex()]->fullSPBonus = value;
-	}
-
-
-	int getMeleeAttackBonus() override
-	{
-		static_assert(SAME(Player, mm6::Player) || SAME(Player, mm7::Player));
-		return getPlayers()[getPlayerIndex()]->meleeAttackBonus;
-	}
-
-
-	void setMeleeAttackBonus(int value) override
-	{
-		static_assert(SAME(Player, mm6::Player) || SAME(Player, mm7::Player));
-		boundsCheck(value, FIELD_SIZES.meleeAttackBonus);
-		getPlayers()[getPlayerIndex()]->meleeAttackBonus = value;
-	}
-
-
-	int getRangedAttackBonus() override
-	{
-		static_assert(SAME(Player, mm6::Player) || SAME(Player, mm7::Player));
-		return getPlayers()[getPlayerIndex()]->rangedAttackBonus;
-	}
-
-
-	void setRangedAttackBonus(int value) override
-	{
-		static_assert(SAME(Player, mm6::Player) || SAME(Player, mm7::Player));
-		boundsCheck(value, FIELD_SIZES.rangedAttackBonus);
-		getPlayers()[getPlayerIndex()]->rangedAttackBonus = value;
-	}
-
-
-	int getMeleeDamageBonus() override
-	{
-		static_assert(SAME(Player, mm6::Player) || SAME(Player, mm7::Player));
-		return getPlayers()[getPlayerIndex()]->meleeDamageBonus;
-	}
-
-
-	void setMeleeDamageBonus(int value) override
-	{
-		static_assert(SAME(Player, mm6::Player) || SAME(Player, mm7::Player));
-		boundsCheck(value, FIELD_SIZES.meleeDamageBonus);
-		getPlayers()[getPlayerIndex()]->meleeDamageBonus = value;
-	}
-
-
-	int getRangedDamageBonus() override
-	{
-		static_assert(SAME(Player, mm6::Player) || SAME(Player, mm7::Player));
-		return getPlayers()[getPlayerIndex()]->rangedDamageBonus;
-	}
-
-
-	void setRangedDamageBonus(int value) override
-	{
-		static_assert(SAME(Player, mm6::Player) || SAME(Player, mm7::Player));
-		boundsCheck(value, FIELD_SIZES.rangedDamageBonus);
-		getPlayers()[getPlayerIndex()]->rangedDamageBonus = value;
-	}
-
+public:
 	int getStatBase(int stat) override
 	{
 		checkStatValidity(stat);
 		Player* pl = getPlayers()[getPlayerIndex()];
-		// PRIMARY
 		// TODO why these getBaseAccuracy() etc. methods exist?
-		if (existsInVector(STATS_PRIMARY, stat))
+		if (existsInVector(STATS_PRIMARY, stat) || existsInVector(STATS_RESISTANCES, stat) || stat == STAT_LEVEL)
 		{
 			auto field = baseBonusFieldToStatMap<int16_t>.at(stat).base;
 			return pl->*field;
@@ -372,139 +285,259 @@ class TemplatedPlayerStructAccessor : public PlayerStructAccessor
 		// OTHER
 		else if (stat == STAT_ARMOR_CLASS)
 		{
-			typedef int(__thiscall *getArmorClassPtr)(Player*);
-			return reinterpret_cast<getArmorClassPtr>(mmv(0x482700, 0x48E687, 0x48DAF2))(pl);
+			return callMemoryAddress<int>(mmv(0x482700, 0x48E687, 0x48DAF2), 1, pl);
 		}
-		else
+		else if (stat == STAT_HIT_POINTS || stat == STAT_SPELL_POINTS)
 		{
-			//static_assert(false); // TODO
-			return 5;
+			auto field = singleTypeFieldToStatMap<int32_t>.at(stat);
+			return pl->*field;
 		}
+		wxASSERT_MSG(false, wxString::Format("Invalid stat %d", stat));
+		return 0;
 	}
 
 	void setStatBase(int stat, int value) override
 	{
 		checkStatValidity(stat);
 		Player* pl = getPlayers()[getPlayerIndex()];
-		if (existsInVector(STATS_PRIMARY, stat))
+		if (existsInVector(STATS_PRIMARY, stat) || existsInVector(STATS_RESISTANCES, stat) || stat == STAT_LEVEL)
 		{
 			boundsCheck(value, boundsByType<int16_t>);
 			auto field = baseBonusFieldToStatMap<int16_t>.at(stat).base;
 			pl->*field = value;
+			return;
 		}
+		else if (stat == STAT_HIT_POINTS || stat == STAT_SPELL_POINTS)
+		{
+			auto field = singleTypeFieldToStatMap<int32_t>.at(stat);
+			pl->*field = value;
+			return;
+		}
+		wxASSERT_MSG(false, wxString::Format("Invalid stat %d", stat));
 	}
 
 	int getStatBonus(int stat) override
 	{
 		checkStatValidity(stat);
 		Player* pl = getPlayers()[getPlayerIndex()];
-		if (existsInVector(STATS_PRIMARY, stat))
+		if constexpr (!SAME(Player, mm8::Player))
+		{
+			if (existsInVector(STATS_MM67_BONUSES, stat))
+			{
+				auto field = singleTypeFieldToStatMap<int8_t>.at(stat);
+				return pl->*field;
+			}
+		}
+		if (existsInVector(STATS_PRIMARY, stat) || existsInVector(STATS_RESISTANCES, stat) || stat == STAT_LEVEL)
 		{
 			auto field = baseBonusFieldToStatMap<int16_t>.at(stat).bonus;
 			return pl->*field;
 		}
+		else if (stat == STAT_ARMOR_CLASS)
+		{
+			auto field = singleTypeFieldToStatMap<int16_t>.at(STAT_ARMOR_CLASS);
+			return pl->*field;
+		}
+		else if (stat == STAT_HIT_POINTS_BONUS || stat == STAT_SPELL_POINTS_BONUS)
+		{
+			auto field = singleTypeFieldToStatMap<int8_t>.at(stat);
+			return pl->*field;
+		}
+		wxASSERT_MSG(false, wxString::Format("Invalid stat %d", stat));
+		return 0;
 	}
 
 	void setStatBonus(int stat, int value) override
 	{
 		checkStatValidity(stat);
 		Player* pl = getPlayers()[getPlayerIndex()];
-		if (existsInVector(STATS_PRIMARY, stat))
+		if constexpr (!SAME(Player, mm8::Player))
+		{
+			if (existsInVector(STATS_MM67_BONUSES, stat))
+			{
+				boundsCheck(value, boundsByType<int8_t>);
+				auto field = singleTypeFieldToStatMap<int8_t>.at(stat);
+				pl->*field = value;
+				return;
+			}
+		}
+		if (existsInVector(STATS_PRIMARY, stat) || existsInVector(STATS_RESISTANCES, stat) || stat == STAT_LEVEL)
 		{
 			boundsCheck(value, boundsByType<int16_t>);
 			auto field = baseBonusFieldToStatMap<int16_t>.at(stat).base;
 			pl->*field = value;
+			return;
 		}
+		else if (stat == STAT_ARMOR_CLASS)
+		{
+			auto field = singleTypeFieldToStatMap<int16_t>.at(STAT_ARMOR_CLASS);
+			pl->*field = value;
+			return;
+		}
+		else if (stat == STAT_HIT_POINTS_BONUS || stat == STAT_SPELL_POINTS_BONUS)
+		{
+			auto field = singleTypeFieldToStatMap<int8_t>.at(stat);
+			pl->*field = value;
+			return;
+		}
+		wxASSERT_MSG(false, wxString::Format("Invalid stat %d", stat));
 	}
-
 
 	int getSkillPoints() override
 	{
-		throw std::logic_error("The method or operation is not implemented.");
+		return getPlayers()[getPlayerIndex()]->skillPoints;
 	}
-
 
 	void setSkillPoints(int value) override
 	{
-		throw std::logic_error("The method or operation is not implemented.");
+		// int is i4, but let's add check anyway
+		boundsCheck(value, -4);
+		getPlayers()[getPlayerIndex()]->skillPoints = value;
 	}
-
 
 	int getSpentSkillPoints() override
 	{
-		throw std::logic_error("The method or operation is not implemented.");
+		std::vector<PlayerSkillValue> skills = getSkills();
+		int result = 0;
+		for (auto& [skillPtr, skillValue] : skills)
+		{
+			result += std::max(0, spentPerSkill(skillValue));
+		}
+		return result;
 	}
 
-
-	char* getOrSetName() override
+	int getNameMaxUsableLength() override
 	{
-		throw std::logic_error("The method or operation is not implemented.");
+		return FIELD_SIZES.name;
 	}
 
-
-	int getNameMaxLength() override
+	int getBiographyMaxUsableLength() override
 	{
-		throw std::logic_error("The method or operation is not implemented.");
+		return FIELD_SIZES.biography;
 	}
-
-
-	char* getOrSetBiography() override
-	{
-		throw std::logic_error("The method or operation is not implemented.");
-	}
-
-
-	int getBiographyMaxLength() override
-	{
-		throw std::logic_error("The method or operation is not implemented.");
-	}
-
 
 	std::vector<PlayerSkillValue> getSkills() override
 	{
-		throw std::logic_error("The method or operation is not implemented.");
+		Player* pl = getPlayers()[getPlayerIndex()];
+		std::vector<PlayerSkillValue> ret;
+		for (int i = 0; i < pl->skills.size(); ++i)
+		{
+			SkillValue val = splitSkill(pl->skills[i]);
+			if (val.level == 0 || val.mastery == 0)
+			{
+				continue;
+			}
+			auto itr = GameData::skills.find(i);
+			wxASSERT_MSG(itr != GameData::skills.end(), wxString::Format("Skill %d not found in game data", i));
+			ret.push_back({ &(itr->second), val });
+		}
+		return ret;
 	}
-
 
 	void setSkills(const std::vector<PlayerSkillValue>& values) override
 	{
-		throw std::logic_error("The method or operation is not implemented.");
+		Player* pl = getPlayers()[getPlayerIndex()];
+		for (auto& [skillPtr, skillValue] : values)
+		{
+			pl->skills.at(skillPtr->id) = joinSkill(skillValue);
+		}
 	}
-
 
 	void setSkill(PlayerSkill* skill, SkillValue value) override
 	{
-		throw std::logic_error("The method or operation is not implemented.");
+		wxASSERT(skill != nullptr);
+		Player* pl = getPlayers()[getPlayerIndex()];
+		pl->skills.at(skill->id) = joinSkill(value);
 	}
-
 
 	void setSkill(int skillId, SkillValue value) override
 	{
-		throw std::logic_error("The method or operation is not implemented.");
+		Player* pl = getPlayers()[getPlayerIndex()];
+		pl->skills.at(skillId) = joinSkill(value);
 	}
 
-public:
-	int getHp() override
+	int64_t getExperience() override
 	{
-		throw std::logic_error("The method or operation is not implemented.");
+		Player* pl = getPlayers()[getPlayerIndex()];
+		return pl->experience;
 	}
 
-
-	void setHp(int value) override
+	void setExperience(int64_t value, bool affectLevel = true) override
 	{
-		throw std::logic_error("The method or operation is not implemented.");
+		Player* pl = getPlayers()[getPlayerIndex()];
+		int64_t old = pl->experience;
+		pl->experience = value;
+		if (affectLevel && value < old)
+		{
+			pl->levelBase = std::max(1, getMinimumLevelForExperience(value));
+		}
 	}
 
-
-	int getSp() override
+	int getLevel() override
 	{
-		throw std::logic_error("The method or operation is not implemented.");
+		Player* pl = getPlayers()[getPlayerIndex()];
+		return getStatBase(STAT_LEVEL);
 	}
 
-
-	void setSp(int value) override
+	void setLevel(int value, bool affectExperience = true) override
 	{
-		throw std::logic_error("The method or operation is not implemented.");
+		Player* pl = getPlayers()[getPlayerIndex()];
+		int old = getStatBase(STAT_LEVEL);
+		setStatBase(STAT_LEVEL, value);
+		if (affectExperience && value > old)
+		{
+			setExperience(std::max(getExperience(), getMinimumExperienceForLevel(value)));
+		}
+	}
+
+	std::string getName() override
+	{
+		Player* pl = getPlayers()[getPlayerIndex()];
+		return std::string(pl->name.data());
+	}
+
+	std::string getBiography() override
+	{
+		wxASSERT_MSG(MMVER == 8, "This function is for MM8 only");
+		Player* pl = getPlayers()[getPlayerIndex()];
+		if constexpr (SAME(Player, mm8::Player))
+		{
+			return std::string(pl->biography.data());
+		}
+		else
+		{
+			return "";
+		}
+	}
+
+	void setName(const std::string& name) override
+	{
+		Player* pl = getPlayers()[getPlayerIndex()];
+		size_t max = getNameMaxUsableLength();
+		std::string nameToSet = name;
+		if (name.size() > max)
+		{
+			nameToSet = name.substr(0, max);
+			wxLogError("Too big name length (%d). Truncated to %d", name.size(), max);
+			wxLog::FlushActive();
+		}
+		memcpy(pl->name.data(), nameToSet.data(), nameToSet.size());
+		pl->name[nameToSet.size()] = 0;
+	}
+
+	void setBiography(const std::string& biography) override
+	{
+		Player* pl = getPlayers()[getPlayerIndex()];
+		size_t max = getBiographyMaxUsableLength();
+		std::string biographyToSet = biography;
+		if (biography.size() > max)
+		{
+			biographyToSet = biographyToSet.substr(0, max);
+			wxLogError("Too big biography length (%d). Truncated to %d", biography.size(), max);
+			wxLog::FlushActive();
+		}
+		memcpy(pl->name.data(), biographyToSet.data(), biographyToSet.size());
+		pl->name[biographyToSet.size()] = 0;
 	}
 
 };
@@ -517,15 +550,18 @@ TemplatedPlayerStructAccessor<Player>::~TemplatedPlayerStructAccessor() noexcept
 
 template<typename Player>
 template<typename FieldType>
-std::unordered_map<int, typename TemplatedPlayerStructAccessor<Player>::template BaseOrBonusPointer<FieldType>> TemplatedPlayerStructAccessor<Player>::baseBonusFieldToStatMap;
+std::unordered_map<int, typename TemplatedPlayerStructAccessor<Player>::template BaseOrBonusFieldPointer<FieldType>> TemplatedPlayerStructAccessor<Player>::baseBonusFieldToStatMap;
 
 template<typename Player>
 template<typename FieldType>
 std::unordered_map<int, FieldType Player::*> TemplatedPlayerStructAccessor<Player>::singleTypeFieldToStatMap;
 
-//template class TemplatedPlayerStructAccessor<mm6::Player>;
+template class TemplatedPlayerStructAccessor<mm6::Player>;
+template class TemplatedPlayerStructAccessor<mm6::Player>::InitMaps;
 template class TemplatedPlayerStructAccessor<mm7::Player>;
-//template class TemplatedPlayerStructAccessor<mm8::Player>;
+template class TemplatedPlayerStructAccessor<mm7::Player>::InitMaps;
+template class TemplatedPlayerStructAccessor<mm8::Player>;
+template class TemplatedPlayerStructAccessor<mm8::Player>::InitMaps;
 
 using PlayerStructAccessor_6 = TemplatedPlayerStructAccessor<mm6::Player>;
 using PlayerStructAccessor_7 = TemplatedPlayerStructAccessor<mm7::Player>;

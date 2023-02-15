@@ -40,19 +40,6 @@ const std::unordered_map<int, std::string> skillTypeEnumIdToString = invertMap(s
 const std::unordered_map<int, std::string> skillSpecialEnumIdToString = invertMap(skillSpecialEnumStringToId);
 const std::unordered_map<int, std::string> alignmentIdToString = invertMap(alignmentStringToId);
 
-void setFieldSizes_6()
-{
-	PlayerStructAccessor::FieldSizes::skill = 1;
-}
-void setFieldSizes_7()
-{
-
-}
-void setFieldSizes_8()
-{
-	PlayerStructAccessor::FieldSizes::biography = 256; // exact size unknown, according to Grayface
-}
-
 // GAME ENUMS
 
 int nextFreeCustomId()
@@ -123,7 +110,10 @@ STAT_DARK_RESISTANCE = INVALID_ID,
 STAT_RANGED_ATTACK_BONUS = INVALID_ID,
 STAT_RANGED_DAMAGE_BONUS = INVALID_ID,
 STAT_MELEE_ATTACK_BONUS = INVALID_ID,
-STAT_MELEE_DAMAGE_BONUS = INVALID_ID;
+STAT_MELEE_DAMAGE_BONUS = INVALID_ID,
+STAT_HIT_POINTS_BONUS = INVALID_ID,
+STAT_SPELL_POINTS_BONUS = INVALID_ID,
+STAT_AGE = INVALID_ID;
 
 void makeEnumStats_6()
 {
@@ -152,10 +142,13 @@ void makeEnumStats_6()
 	STAT_RANGED_DAMAGE_MAX = 22;
 	STAT_MAGIC_RESISTANCE = 23;
 
-	STAT_RANGED_ATTACK_BONUS = nextFreeCustomId(),
-	STAT_RANGED_DAMAGE_BONUS = nextFreeCustomId(),
-	STAT_MELEE_ATTACK_BONUS = nextFreeCustomId(),
+	STAT_RANGED_ATTACK_BONUS = nextFreeCustomId();
+	STAT_RANGED_DAMAGE_BONUS = nextFreeCustomId();
+	STAT_MELEE_ATTACK_BONUS = nextFreeCustomId();
 	STAT_MELEE_DAMAGE_BONUS = nextFreeCustomId();
+	STAT_HIT_POINTS_BONUS = nextFreeCustomId();
+	STAT_SPELL_POINTS_BONUS = nextFreeCustomId();
+	STAT_AGE = nextFreeCustomId();
 }
 
 void makeEnumStats_7()
@@ -208,12 +201,13 @@ void makeEnumStats_7()
 	STAT_SHIELD = 45;
 	STAT_LEARNING = 46;
 
-	STAT_LIGHT_RESISTANCE = nextFreeCustomId(),
-	STAT_DARK_RESISTANCE = nextFreeCustomId(),
-	STAT_RANGED_ATTACK_BONUS = nextFreeCustomId(),
-	STAT_RANGED_DAMAGE_BONUS = nextFreeCustomId(),
-	STAT_MELEE_ATTACK_BONUS = nextFreeCustomId(),
+	STAT_LIGHT_RESISTANCE = nextFreeCustomId();
+	STAT_DARK_RESISTANCE = nextFreeCustomId();
+	STAT_RANGED_ATTACK_BONUS = nextFreeCustomId();
+	STAT_RANGED_DAMAGE_BONUS = nextFreeCustomId();
+	STAT_MELEE_ATTACK_BONUS = nextFreeCustomId();
 	STAT_MELEE_DAMAGE_BONUS = nextFreeCustomId();
+	STAT_AGE = nextFreeCustomId();
 }
 
 void makeEnumStats_8()
@@ -271,6 +265,7 @@ void makeEnumStats_8()
 
 	STAT_LIGHT_RESISTANCE = nextFreeCustomId();
 	STAT_DARK_RESISTANCE = nextFreeCustomId();
+	STAT_AGE = nextFreeCustomId();
 }
 
 std::vector<int> STATS_PRIMARY;
@@ -306,6 +301,11 @@ void makeEnums()
 
 	// STATS
 	{
+		if (MMVER < 8)
+		{
+			STATS_MM67_BONUSES.insert(STATS_MM67_BONUSES.begin(), { STAT_MELEE_ATTACK_BONUS, STAT_MELEE_DAMAGE_BONUS, STAT_RANGED_ATTACK_BONUS,
+				STAT_RANGED_DAMAGE_BONUS, STAT_HIT_POINTS_BONUS, STAT_SPELL_POINTS_BONUS });
+		}
 		if (MMVER > 6)
 		{
 			STATS_RESISTANCES.insert(STATS_RESISTANCES.end(), { STAT_FIRE_RESISTANCE, STAT_WATER_RESISTANCE, STAT_AIR_RESISTANCE, STAT_EARTH_RESISTANCE, STAT_BODY_RESISTANCE,
@@ -320,7 +320,7 @@ void makeEnums()
 		STATS_MELEE_RANGED.insert(STATS_MELEE_RANGED.end(), { STAT_MELEE_ATTACK, STAT_MELEE_DAMAGE_BASE, STAT_MELEE_DAMAGE_MAX, STAT_MELEE_DAMAGE_MIN,
 			STAT_RANGED_ATTACK, STAT_RANGED_DAMAGE_BASE, STAT_RANGED_DAMAGE_MAX, STAT_RANGED_DAMAGE_MIN });
 
-		STATS_OTHER.insert(STATS_OTHER.end(), { STAT_HIT_POINTS, STAT_SPELL_POINTS, STAT_ARMOR_CLASS, STAT_LEVEL });
+		STATS_OTHER.insert(STATS_OTHER.end(), { STAT_HIT_POINTS, STAT_SPELL_POINTS, STAT_ARMOR_CLASS, STAT_LEVEL, STAT_AGE });
 
 		// all
 		STATS_ALL.insert(STATS_ALL.end(), STATS_PRIMARY.begin(), STATS_PRIMARY.end());
@@ -328,6 +328,7 @@ void makeEnums()
 		STATS_ALL.insert(STATS_ALL.end(), STATS_RESISTANCES.begin(), STATS_RESISTANCES.end());
 		STATS_ALL.insert(STATS_ALL.end(), STATS_SKILLS.begin(), STATS_SKILLS.end());
 		STATS_ALL.insert(STATS_ALL.end(), STATS_OTHER.begin(), STATS_OTHER.end());
+		STATS_ALL.insert(STATS_ALL.end(), STATS_MM67_BONUSES.begin(), STATS_MM67_BONUSES.end());
 	}
 	
 	// DAMAGE
@@ -415,7 +416,7 @@ inline void checkStatValidity(int stat)
 {
 	wxASSERT_MSG(existsInVector(STATS_ALL, stat), wxString::Format("Stat %d doesn't exist in game version %d", stat, MMVER));
 }
-inline void checkDamageTypeValidity(int dmg)
+inline void checkDamageTypeValidity(int dmgType)
 {
-	wxASSERT_MSG(existsInVector(DAMAGE_ALL_TYPES, dmg), wxString::Format("Damage type %d doesn't exist in game version %d", dmg, MMVER));
+	wxASSERT_MSG(existsInVector(DAMAGE_ALL_TYPES, dmgType), wxString::Format("Damage type %d doesn't exist in game version %d", dmgType, MMVER));
 }

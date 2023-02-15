@@ -499,7 +499,9 @@ local function processStruct(args)
 	end
 	local indentOuter, indentInner = string.rep(INDENT_CHARS, args.indentLevel), string.rep(INDENT_CHARS, args.indentLevel + 1)
 	for mname, f in pairs(members) do
-		if (args.includeMembers and not table.find(args.includeMembers, mname)) or (type(mname) == "string" and mname:len() == 0) then -- last check is for dummy names
+		if (type(args.includeMembers) == "table" and not table.find(args.includeMembers, mname)) or (type(mname) == "string" and mname:len() == 0) then -- last check is for dummy names
+			goto continue
+		elseif type(args.excludeMembers) == "table" and table.find(args.excludeMembers, mname) then
 			goto continue
 		end
 		local data = getMemberData(args.name, mname, f, offsets, members, class, rofields)
@@ -640,10 +642,10 @@ local function processStruct(args)
 	return code, structureDependencies, size, args.processedStructs
 end
 
-function printStruct(name, includeMembers, indentLevel)
+function printStruct(name, includeMembers, excludeMembers, indentLevel)
 	local processed = {}
 	indentLevel = indentLevel or 1
-	local t, dep = processStruct{name = name, includeMembers = includeMembers, indentLevel = indentLevel, processDependencies = true, prependNamespace = true, processedStructs = processed}
+	local t, dep = processStruct{name = name, includeMembers = includeMembers, indentLevel = indentLevel, processDependencies = true, prependNamespace = true, processedStructs = processed, excludeMembers = excludeMembers}
 	--print(table.concat(t, "\n") .. "\n\nDependencies: " .. table.concat(dep, "\t"))
 	_G.t, _G.dep, _G.processed = t, dep, processed
 	local code = {}
@@ -659,7 +661,7 @@ function printStruct(name, includeMembers, indentLevel)
 end
 
 function pr(str)
-	reload();printStruct(str)
+	reload();printStruct(str, nil, str == "Player" and {"Attrs"} or nil) -- attrs is from merge
 end
 
 --[[

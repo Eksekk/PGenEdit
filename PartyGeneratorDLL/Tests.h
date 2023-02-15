@@ -273,34 +273,34 @@ std::vector<wxString> Tests::testPlayerStructAccessor()
 	{
 		pl->fullHPBonus = 50;
 		pl->fullSPBonus = 122;
-		myassert(playerAccessor->getFullHpBonus() == pl->fullHPBonus);
-		myassert(playerAccessor->getFullSpBonus() == pl->fullSPBonus);
+		myassert(playerAccessor->getStatBonus(STAT_HIT_POINTS_BONUS) == pl->fullHPBonus);
+		myassert(playerAccessor->getStatBonus(STAT_HIT_POINTS_BONUS) == pl->fullSPBonus);
 
-		playerAccessor->setFullHpBonus(100);
-		playerAccessor->setFullSpBonus(44);
-		myassert(playerAccessor->getFullHpBonus() == pl->fullHPBonus && pl->fullHPBonus == 100);
-		myassert(playerAccessor->getFullSpBonus() == pl->fullSPBonus && pl->fullSPBonus == 44);
+		playerAccessor->setStatBonus(STAT_HIT_POINTS_BONUS, 100);
+		playerAccessor->setStatBonus(STAT_SPELL_POINTS_BONUS, 44);
+		myassert(playerAccessor->getStatBonus(STAT_HIT_POINTS_BONUS) == pl->fullHPBonus && pl->fullHPBonus == 100);
+		myassert(playerAccessor->getStatBonus(STAT_HIT_POINTS_BONUS) == pl->fullSPBonus && pl->fullSPBonus == 44);
 
-		myassert(playerAccessor->getMeleeAttackBonus() == 0);
+		myassert(playerAccessor->getStatBonus(STAT_MELEE_ATTACK_BONUS) == 0);
 		pl->meleeAttackBonus = 12;
 		pl->meleeDamageBonus = 43;
-		myassert(playerAccessor->getMeleeAttackBonus() == 12);
-		myassert(playerAccessor->getMeleeDamageBonus() == 43);
-		playerAccessor->setMeleeAttackBonus(playerAccessor->getMeleeAttackBonus() + 34);
-		myassert(playerAccessor->getMeleeAttackBonus() == 12 + 34 && pl->meleeAttackBonus == 12 + 34);
-		playerAccessor->setMeleeAttackBonus(-5);
-		myassert(playerAccessor->getMeleeAttackBonus() == -5 && pl->meleeAttackBonus == -5);
+		myassert(playerAccessor->getStatBonus(STAT_MELEE_ATTACK_BONUS) == 12);
+		myassert(playerAccessor->getStatBonus(STAT_MELEE_DAMAGE_BONUS) == 43);
+		playerAccessor->setStatBonus(STAT_MELEE_ATTACK_BONUS, playerAccessor->getStatBonus(STAT_MELEE_ATTACK_BONUS) + 34);
+		myassert(playerAccessor->getStatBonus(STAT_MELEE_ATTACK_BONUS) == 12 + 34 && pl->meleeAttackBonus == 12 + 34);
+		playerAccessor->setStatBonus(STAT_MELEE_ATTACK_BONUS, -5);
+		myassert(playerAccessor->getStatBonus(STAT_MELEE_ATTACK_BONUS) == -5 && pl->meleeAttackBonus == -5);
 
 		pl->rangedAttackBonus = -22;
 		pl->rangedDamageBonus = 55;
-		myassert(playerAccessor->getRangedAttackBonus() == -22);
-		myassert(playerAccessor->getRangedDamageBonus() == 55);
-		playerAccessor->setRangedDamageBonus(115);
-		myassert(playerAccessor->getRangedDamageBonus() == 115 && pl->rangedDamageBonus == 115);
-		playerAccessor->setRangedAttackBonus(playerAccessor->getRangedAttackBonus() + 55);
-		myassert(playerAccessor->getRangedAttackBonus() == -22 + 55 && pl->rangedAttackBonus == -22 + 55);
-		playerAccessor->setRangedDamageBonus(playerAccessor->getRangedDamageBonus() + 3);
-		myassert(playerAccessor->getRangedDamageBonus() == 115 + 3 && pl->rangedDamageBonus == 115 + 3);
+		myassert(playerAccessor->getStatBonus(STAT_RANGED_ATTACK_BONUS) == -22);
+		myassert(playerAccessor->getStatBonus(STAT_RANGED_DAMAGE_BONUS) == 55);
+		playerAccessor->setStatBonus(STAT_RANGED_DAMAGE_BONUS, 115);
+		myassert(playerAccessor->getStatBonus(STAT_RANGED_DAMAGE_BONUS) == 115 && pl->rangedDamageBonus == 115);
+		playerAccessor->setStatBonus(STAT_RANGED_ATTACK_BONUS, playerAccessor->getStatBonus(STAT_RANGED_ATTACK_BONUS) + 55);
+		myassert(playerAccessor->getStatBonus(STAT_RANGED_ATTACK_BONUS) == -22 + 55 && pl->rangedAttackBonus == -22 + 55);
+		playerAccessor->setStatBonus(STAT_RANGED_DAMAGE_BONUS, playerAccessor->getStatBonus(STAT_RANGED_DAMAGE_BONUS) + 3);
+		myassert(playerAccessor->getStatBonus(STAT_RANGED_DAMAGE_BONUS) == 115 + 3 && pl->rangedDamageBonus == 115 + 3);
 	}
 
 	// hp
@@ -324,11 +324,11 @@ std::vector<wxString> Tests::testPlayerStructAccessor()
 	myassert(playerAccessor->getSp() == 0 && pl->SP == 0);
 
 	// ac bonus
-	myassert(playerAccessor->getAcBonus() == 0);
+	myassert(playerAccessor->getStatBonus(STAT_ARMOR_CLASS) == 0);
 	pl->armorClassBonus = 55;
-	myassert(playerAccessor->getAcBonus() == 55);
-	playerAccessor->setAcBonus(24);
-	myassert(playerAccessor->getAcBonus() == 24 && pl->armorClassBonus == 24);
+	myassert(playerAccessor->getStatBonus(STAT_ARMOR_CLASS) == 55);
+	playerAccessor->setStatBonus(STAT_ARMOR_CLASS, 24);
+	myassert(playerAccessor->getStatBonus(STAT_ARMOR_CLASS) == 24 && pl->armorClassBonus == 24);
 
 	// NEW CODE FOR EASIER TESTING (keeping old just in case new breaks)
 	using namespace std::placeholders;
@@ -373,6 +373,8 @@ std::vector<wxString> Tests::testPlayerStructAccessor()
 	// auto bindSetBase = [](auto placeholderStatId) { return std::bind(std::mem_fn(&PlayerStructAccessor::setStatBase), playerAccessor, placeholderStatId); };
 	// std::function<void(int statId, int16_t Player::* field, const wxString& logId)> testPrimaryStatBase = std::bind(testSettableField<Player, int16_t>, pl, _2, bindGetBase(_1), bindSetBase(_1), getBounds(-2), myasserter, _3);
 	
+
+	// PRIMARY
 	testStatBaseBonus(STAT_MIGHT, &Player::mightBase, &Player::mightBonus, "Might");
 	testStatBaseBonus(STAT_INTELLECT, &Player::intellectBase, &Player::intellectBase, "Intellect");
 	testStatBaseBonus(STAT_PERSONALITY, &Player::personalityBase, &Player::personalityBonus, "Personality");
@@ -381,7 +383,128 @@ std::vector<wxString> Tests::testPlayerStructAccessor()
 	testStatBaseBonus(STAT_SPEED, &Player::speedBase, &Player::speedBonus, "Speed");
 	testStatBaseBonus(STAT_LUCK, &Player::luckBase, &Player::luckBonus, "Luck");
 
-	// skills
+	// RESISTANCES
+	if constexpr (SAME(Player, mm6::Player))
+	{
+		testStatBaseBonus(STAT_FIRE_RESISTANCE, &Player::fireResistanceBase, &Player::fireResistanceBonus, "Fire resistance");
+		testStatBaseBonus(STAT_ELEC_RESISTANCE, &Player::elecResistanceBase, &Player::elecResistanceBonus, "Elec resistance");
+		testStatBaseBonus(STAT_COLD_RESISTANCE, &Player::coldResistanceBase, &Player::coldResistanceBonus, "Cold resistance");
+		testStatBaseBonus(STAT_POISON_RESISTANCE, &Player::poisonResistanceBase, &Player::poisonResistanceBonus, "Poison resistance");
+		testStatBaseBonus(STAT_MAGIC_RESISTANCE, &Player::magicResistanceBase, &Player::magicResistanceBonus, "Magic resistance");
+	}
+	else
+	{
+		testStatBaseBonus(STAT_FIRE_RESISTANCE, &Player::fireResistanceBase, &Player::fireResistanceBonus, "Fire resistance");
+		testStatBaseBonus(STAT_AIR_RESISTANCE, &Player::airResistanceBase, &Player::airResistanceBonus, "Air resistance");
+		testStatBaseBonus(STAT_WATER_RESISTANCE, &Player::waterResistanceBase, &Player::waterResistanceBonus, "Water resistance");
+		testStatBaseBonus(STAT_EARTH_RESISTANCE, &Player::earthResistanceBase, &Player::earthResistanceBonus, "Earth resistance");
+
+		testStatBaseBonus(STAT_BODY_RESISTANCE, &Player::bodyResistanceBase, &Player::bodyResistanceBonus, "Body resistance");
+		testStatBaseBonus(STAT_MIND_RESISTANCE, &Player::mindResistanceBase, &Player::mindResistanceBonus, "Mind resistance");
+		testStatBaseBonus(STAT_SPIRIT_RESISTANCE, &Player::spiritResistanceBase, &Player::spiritResistanceBonus, "Spirit resistance");
+
+		testStatBaseBonus(STAT_LIGHT_RESISTANCE, &Player::lightResistanceBase, &Player::lightResistanceBonus, "Light resistance");
+		testStatBaseBonus(STAT_DARK_RESISTANCE, &Player::darkResistanceBase, &Player::darkResistanceBonus, "Dark resistance");
+	}
+
+	// mm6/7 bonus
+	if constexpr (!SAME(Player, mm8::Player))
+	{
+		testStatBonus(STAT_MELEE_ATTACK_BONUS, &Player::meleeAttackBonus, "Melee attack bonus");
+		testStatBonus(STAT_MELEE_DAMAGE_BONUS, &Player::meleeDamageBonus, "Melee damage bonus");
+		testStatBonus(STAT_RANGED_ATTACK_BONUS, &Player::rangedAttackBonus, "Ranged attack bonus");
+		testStatBonus(STAT_RANGED_DAMAGE_BONUS, &Player::rangedDamageBonus, "Ranged damage bonus");
+		testStatBonus(STAT_HIT_POINTS_BONUS, &Player::fullHPBonus, "Full HP bonus");
+		testStatBonus(STAT_SPELL_POINTS_BONUS, &Player::fullSPBonus, "Full SP bonus");
+	}
+
+	// other
+
+	testStatBonus(STAT_ARMOR_CLASS, &Player::armorClassBonus, "Armor class bonus");
+	testStatBaseBonus(STAT_LEVEL, &Player::levelBase, &Player::levelBonus, "Level");
+	testStatBase(STAT_HIT_POINTS, &Player::hitPoints, "Hit points base");
+	testStatBase(STAT_SPELL_POINTS, &Player::spellPoints, "Spell points base");
+
+	auto testStringProperty = [pl, &myasserter](auto& array, std::function<std::string(void)> getter, std::function<void(const std::string&)> setter, size_t maxSize) -> void
+	{
+		static const auto randomString = [](size_t len) -> std::string
+		{
+			static const std::string keyspace = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+			static const std::mt19937 gen(std::random_device{}());
+			static const std::uniform_int_distribution dist(0, keyspace.size() - 1);
+			std::string ret(len, '_');
+			for (int i = 0; i < len; ++i)
+			{
+				ret[i] = keyspace[dist(gen)];
+			}
+			return ret;
+		};
+		const std::vector<int> sizes{ 0, 1, 3, 5, maxSize - 10, maxSize - 5, maxSize - 1, maxSize };
+		for (int i = 0; i < sizes.size(); ++i)
+		{
+			const std::string oldVal{ array.data() };
+			const std::string test = randomString(sizes[i]);
+			wxASSERT(test.size() < array.size());
+			setter(test);
+			const std::string newVal = getter();
+
+			const wxString failMsg = wxString::Format("Old: %s, new: %s", oldVal, test);
+			if (oldVal != test)
+			{
+				myassert(oldVal != newVal, failMsg);
+				myassert(test == newVal, failMsg);
+			}
+			else
+			{
+				myassert(newVal == oldVal, failMsg);
+				myassert(test == newVal, failMsg);
+			}
+
+			memcpy(array.data(), oldVal.data(), oldVal.size());
+			array[oldVal.size()] = 0;
+			myassert(getter() == oldVal, failMsg);
+		}
+	};
+
+	auto nameGetter = std::bind(&PlayerStructAccessor::getName, playerAccessor);
+	auto nameSetter = std::bind(&PlayerStructAccessor::setName, playerAccessor, _1);
+
+	testStringProperty(pl->name, nameGetter, nameSetter, playerAccessor->getNameMaxUsableLength());
+
+	if constexpr (SAME(Player, mm8::Player))
+	{
+		auto biographyGetter = std::bind(&PlayerStructAccessor::getBiography, playerAccessor);
+		auto biographySetter = std::bind(&PlayerStructAccessor::setBiography, playerAccessor, _1);
+
+		testStringProperty(pl->biography, biographyGetter, biographySetter, playerAccessor->getBiographyMaxUsableLength());
+	}
+
+	auto expTest = [pl, &myasserter](int64_t exp, int level)
+	{
+		int64_t old = pl->experience;
+		pl->experience = exp;
+		auto expLevelMsg = "Exp %lld, level %d";
+		myassert(playerAccessor->getMinimumLevelForExperience(exp) == level, exp, playerAccessor->getMinimumLevelForExperience(exp)); // can also call static methods on objects (but they don't get "this" param)
+		myassert(playerAccessor->getTrainableLevel() == level);
+		pl->experience = exp;
+		playerAccessor->setExperience(0);
+		myassert(playerAccessor->getLevel() == 1, wxString::Format("Level %d", playerAccessor->getLevel()));
+		myassert(playerAccessor->getStatBase(STAT_LEVEL) == 1, wxString::Format("Level %d", playerAccessor->getLevel()));
+		playerAccessor->setLevel(level);
+		myassert(playerAccessor->getMinimumLevelForExperience(exp) == level, exp, playerAccessor->getMinimumLevelForExperience(exp));
+		myassert(playerAccessor->getTrainableLevel() == wxString::Format("Level %d, trainable %d", playerAccessor->getLevel(), playerAccessor->getTrainableLevel()));
+		myassert(playerAccessor->getExperience() == exp, wxString::Format("Getter exp %lld, test value %lld", playerAccessor->getExperience(), exp));
+	};
+	expTest(999, 1);
+	expTest(1000, 2);
+	expTest(1001, 2);
+	expTest(2999, 2);
+	expTest(3000, 3);
+	expTest(4777, 3);
+	expTest(6000, 4);
+	expTest(11111, 5);
+
+	// skills (not stat-like ones, but full-fledged)
 	auto& skillsMap = GameData::skills;
 	myassert(skillsMap.size() > 10);
 	// try 5 first, 5 last, every 3th and every 2th

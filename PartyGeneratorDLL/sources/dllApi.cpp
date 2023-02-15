@@ -89,7 +89,7 @@ extern "C"
                         MAX_PLAYERS = 4;
                         MAX_MASTERY = Mastery::MASTER;
                         setFieldSizes_6();
-                        //playerAccessor = new PlayerStructAccessor_6;
+                        playerAccessor = new PlayerStructAccessor_6;
                         break;
                     case 0x45:
                         MMVER = 7;
@@ -101,7 +101,7 @@ extern "C"
                         MMVER = 8;
                         MAX_PLAYERS = 5;
                         setFieldSizes_8();
-                        //playerAccessor = new PlayerStructAccessor_8;
+                        playerAccessor = new PlayerStructAccessor_8;
                         break;
                     default:
                         MessageBoxA(0, "This is not a supported Might and Magic game", "MMExtension Error", MB_ICONERROR);
@@ -148,6 +148,7 @@ extern "C"
 
         case DLL_PROCESS_DETACH:
             delete generator;
+            delete playerAccessor;
             break;
         case DLL_THREAD_ATTACH:
             // attach to thread

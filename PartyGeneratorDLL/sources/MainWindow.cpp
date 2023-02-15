@@ -68,7 +68,7 @@ std::vector<wxString> MainWindow::getPlayerNames()
 	int i;
 	for (i = 0; i < CURRENT_PARTY_SIZE; ++i)
 	{
-		names.push_back(reinterpret_cast<Player*>(generator->players[i])->name);
+		names.push_back(reinterpret_cast<Player*>(generator->players[i])->name.data());
 	}
 	for (; i < MAX_PLAYERS; ++i)
 	{

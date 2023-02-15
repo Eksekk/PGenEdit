@@ -5,9 +5,7 @@
 #pragma pack(push, 1)
 namespace mm6
 {
-	struct Item
-	{
-	};
+	
 }
 
 namespace mm7
@@ -46,9 +44,7 @@ namespace mm7
 
 namespace mm8
 {
-	struct Item
-	{
-	};
+	
 }
 #pragma pack(pop)
 

@@ -91,6 +91,11 @@ Map<Value, Key> invertMap(const Map<Key, Value, Extra...>& map)
 
 wxString getTimeStr();
 
+struct BaseBonus
+{
+	int base, bonus;
+};
+
 struct Bounds
 {
 	int64_t low, high;

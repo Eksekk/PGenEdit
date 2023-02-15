@@ -41,3 +41,34 @@ void patchBytes(uint32_t addr, void* bytes, uint32_t size, bool store);
 
 void removeHooks();
 void removeHook(uint32_t addr);
+
+template<typename ReturnType, typename Address, typename... Args>
+ReturnType callMemoryAddress(Address address, int registerParamsNum, Args&&... args)
+{
+	wxASSERT_MSG(registerParamsNum >= 0 && registerParamsNum <= 2, "Invalid number of register parameters");
+	void* ptr;
+	if (std::is_pointer_v<Address>)
+	{
+		ptr = (void*)address;
+	}
+	else
+	{
+		static_assert(std::is_integral_v<Address>, "Neither pointer nor integer type passed to callMemoryAddress");
+		ptr = (void*)address;
+	}
+	if (registerParamsNum == 0)
+	{
+		typedef ReturnType(*Function)(Args...);
+		return reinterpret_cast<Function>(ptr)(args...);
+	}
+	else if (registerParamsNum == 1)
+	{
+		typedef ReturnType(__thiscall *Function)(Args...);
+		return reinterpret_cast<Function>(ptr)(args...);
+	}
+	else
+	{
+		typedef ReturnType(__fastcall* Function)(Args...);
+		return reinterpret_cast<Function>(ptr)(args...);
+	}
+}

@@ -226,7 +226,11 @@ STAT_DARK_RESISTANCE,
 STAT_RANGED_ATTACK_BONUS,
 STAT_RANGED_DAMAGE_BONUS,
 STAT_MELEE_ATTACK_BONUS,
-STAT_MELEE_DAMAGE_BONUS;
+STAT_MELEE_DAMAGE_BONUS,
+STAT_HIT_POINTS_BONUS,
+STAT_SPELL_POINTS_BONUS,
+STAT_AGE;
+
 // ~~MY ADDITIONS~~
 
 extern void makeEnumStats_6();
@@ -237,6 +241,7 @@ extern void makeEnums();
 extern std::vector<int> STATS_PRIMARY;
 extern std::vector<int> STATS_RESISTANCES;
 extern std::vector<int> STATS_MELEE_RANGED;
+extern std::vector<int> STATS_MM67_BONUSES;
 extern std::vector<int> STATS_SKILLS;
 extern std::vector<int> STATS_OTHER;
 extern std::vector<int> STATS_ALL;

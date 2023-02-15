@@ -17450,14 +17450,14 @@
                                                                         <property name="wrap">-1</property>
                                                                     </object>
                                                                 </object>
-                                                                <object class="gbsizeritem" expanded="1">
+                                                                <object class="gbsizeritem" expanded="0">
                                                                     <property name="border">5</property>
                                                                     <property name="colspan">1</property>
                                                                     <property name="column">1</property>
                                                                     <property name="flag">wxALL|wxALIGN_CENTER_HORIZONTAL</property>
                                                                     <property name="row">1</property>
                                                                     <property name="rowspan">1</property>
-                                                                    <object class="wxStaticText" expanded="1">
+                                                                    <object class="wxStaticText" expanded="0">
                                                                         <property name="BottomDockable">1</property>
                                                                         <property name="LeftDockable">1</property>
                                                                         <property name="RightDockable">1</property>
@@ -17514,14 +17514,14 @@
                                                                         <property name="wrap">-1</property>
                                                                     </object>
                                                                 </object>
-                                                                <object class="gbsizeritem" expanded="1">
+                                                                <object class="gbsizeritem" expanded="0">
                                                                     <property name="border">5</property>
                                                                     <property name="colspan">1</property>
                                                                     <property name="column">2</property>
                                                                     <property name="flag">wxALL|wxALIGN_CENTER_HORIZONTAL</property>
                                                                     <property name="row">1</property>
                                                                     <property name="rowspan">1</property>
-                                                                    <object class="wxStaticText" expanded="1">
+                                                                    <object class="wxStaticText" expanded="0">
                                                                         <property name="BottomDockable">1</property>
                                                                         <property name="LeftDockable">1</property>
                                                                         <property name="RightDockable">1</property>
@@ -26351,7 +26351,7 @@
                 </object>
             </object>
         </object>
-        <object class="Panel" expanded="0">
+        <object class="Panel" expanded="1">
             <property name="aui_managed">0</property>
             <property name="aui_manager_style">wxAUI_MGR_DEFAULT</property>
             <property name="bg"></property>
@@ -26367,14 +26367,14 @@
             <property name="minimum_size"></property>
             <property name="name">MapSettings</property>
             <property name="pos"></property>
-            <property name="size">731,484</property>
+            <property name="size">788,528</property>
             <property name="subclass">; ; forward_declare</property>
             <property name="tooltip"></property>
             <property name="two_step_creation">0</property>
             <property name="window_extra_style"></property>
             <property name="window_name"></property>
             <property name="window_style">wxTAB_TRAVERSAL</property>
-            <object class="wxBoxSizer" expanded="0">
+            <object class="wxBoxSizer" expanded="1">
                 <property name="minimum_size"></property>
                 <property name="name">bSizer55</property>
                 <property name="orient">wxVERTICAL</property>
@@ -26382,40 +26382,32 @@
                 <object class="sizeritem" expanded="0">
                     <property name="border">5</property>
                     <property name="flag">wxEXPAND</property>
-                    <property name="proportion">1</property>
-                    <object class="wxBoxSizer" expanded="0">
-                        <property name="minimum_size"></property>
-                        <property name="name">bSizer56</property>
-                        <property name="orient">wxHORIZONTAL</property>
-                        <property name="permission">none</property>
-                        <object class="sizeritem" expanded="0">
-                            <property name="border">5</property>
-                            <property name="flag"></property>
-                            <property name="proportion">1</property>
-                            <object class="wxStaticBoxSizer" expanded="0">
-                                <property name="id">wxID_ANY</property>
-                                <property name="label">label</property>
-                                <property name="minimum_size"></property>
-                                <property name="name">Respawn</property>
-                                <property name="orient">wxVERTICAL</property>
-                                <property name="parent">1</property>
-                                <property name="permission">none</property>
-                            </object>
-                        </object>
-                    </object>
-                </object>
-                <object class="sizeritem" expanded="0">
-                    <property name="border">5</property>
-                    <property name="flag">wxEXPAND</property>
-                    <property name="proportion">1</property>
+                    <property name="proportion">0</property>
                     <object class="wxStaticBoxSizer" expanded="0">
                         <property name="id">wxID_ANY</property>
                         <property name="label">Teleport to map</property>
                         <property name="minimum_size"></property>
-                        <property name="name">teleportToMapLabel</property>
+                        <property name="name">teleportToMapSbSizer</property>
                         <property name="orient">wxHORIZONTAL</property>
                         <property name="parent">1</property>
                         <property name="permission">none</property>
+                        <object class="sizeritem" expanded="1">
+                            <property name="border">5</property>
+                            <property name="flag">wxEXPAND</property>
+                            <property name="proportion">1</property>
+                            <object class="wxGridBagSizer" expanded="1">
+                                <property name="empty_cell_size"></property>
+                                <property name="flexible_direction">wxBOTH</property>
+                                <property name="growablecols"></property>
+                                <property name="growablerows"></property>
+                                <property name="hgap">0</property>
+                                <property name="minimum_size"></property>
+                                <property name="name">teleportToMapGbSizer</property>
+                                <property name="non_flexible_grow_mode">wxFLEX_GROWMODE_SPECIFIED</property>
+                                <property name="permission">none</property>
+                                <property name="vgap">0</property>
+                            </object>
+                        </object>
                     </object>
                 </object>
             </object>
