@@ -70,6 +70,8 @@ void updatePartySizeAndPlayerPtrs()
 
 extern "C"
 {
+	DLL_EXPORT void __stdcall setPlayerPointers(void** ptrs);
+
     GuiApplication* app = nullptr;
     DLL_EXPORT BOOL __stdcall APIENTRY DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
     {
@@ -77,7 +79,6 @@ extern "C"
         {
         case DLL_PROCESS_ATTACH:
             {
-			    makeEnums(); // might have to be defined before TemplatedPlayerStructAccessor::fieldToStatMap static initializer runs
                 // code from MMExtension
                 const int addr = 0x41EDE1;
                 if (GetModuleHandleA("mm6.exe") || GetModuleHandleA("mm7.exe") || GetModuleHandleA("mm8.exe")) // are we injected into mm[678].exe?
@@ -89,18 +90,36 @@ extern "C"
                         MAX_PLAYERS = 4;
                         MAX_MASTERY = Mastery::MASTER;
                         setFieldSizes_6();
+						makeEnums(); // BEFORE _initMaps()
+						PlayerStructAccessor_6::_initMaps();
+						generator = new Generator(); // BEFORE setPlayerPointers()
+						// new scope so compiler doesn't complain
+						{
+							void* ptrs[]{ (void*)0x908F34, (void*)0x90A550, (void*)0x90BB6C, (void*)0x90D188 };
+							setPlayerPointers(ptrs);
+						}
                         playerAccessor = new PlayerStructAccessor_6;
                         break;
                     case 0x45:
                         MMVER = 7;
                         MAX_PLAYERS = 4;
-                        setFieldSizes_7();
+						setFieldSizes_7();
+                        makeEnums();
+                        generator = new Generator();
+						PlayerStructAccessor_7::_initMaps();
+						{
+							void* ptrs[]{ (void*)0xACD804, (void*)0xACF340, (void*)0xAD0E7C, (void*)0xAD29B8 };
+							setPlayerPointers(ptrs);
+						}
                         playerAccessor = new PlayerStructAccessor_7;
                         break;
                     case 0x53:
                         MMVER = 8;
                         MAX_PLAYERS = 5;
                         setFieldSizes_8();
+                        makeEnums();
+                        generator = new Generator();
+                        PlayerStructAccessor_8::_initMaps();
                         playerAccessor = new PlayerStructAccessor_8;
                         break;
                     default:
@@ -113,6 +132,7 @@ extern "C"
                 {
                     MMVER = 7;
                     MAX_PLAYERS = 4;
+                    generator = new Generator();
                 }
 
                 if (MMVER == 7 && GetModuleHandleA("elemental.dll"))
@@ -129,7 +149,6 @@ extern "C"
 
 
                 // TODO: test for Merge (run lua script?)
-                generator = new Generator();
                 break;
                 /* call comctl32.dll init common controls ex (change call address!)
                 
@@ -216,8 +235,6 @@ extern "C"
             jmp ecx
         }
     }
-
-    DLL_EXPORT void __stdcall setPlayerPointers(void** ptrs);
     
     DLL_EXPORT void __stdcall init()
     {
@@ -238,14 +255,10 @@ extern "C"
         if (inMM && MMVER == 6)
         {
             hookJump(0x458BD6, setPartyCountMm6);
-			void* ptrs[]{ (void*)0x908F34, (void*)0x90A550, (void*)0x90BB6C, (void*)0x90D188 };
-			setPlayerPointers(ptrs);
         }
         else if (inMM && MMVER == 7)
         {
 			hookJump(0x46074E, setPartyCountMm7, 7);
-			void* ptrs[]{ (void*)0xACD804, (void*)0xACF340, (void*)0xAD0E7C, (void*)0xAD29B8 };
-			setPlayerPointers(ptrs);
         }
         
         //MSGBOX((std::string("app: ") + std::to_string((int)app)).c_str());
@@ -373,7 +386,7 @@ extern "C"
 				std::fstream file("pgen_errors.txt", std::ios::out | std::ios::trunc);
 				file << str;
 				file.close();
-				wxLogError("%d tests failed. Error messages:\n\n" + str);
+				wxLogError("%d tests failed. Error messages:\n\n%s", errors.size(), str);
 				wxLog::FlushActive();
             }
         }

@@ -11,6 +11,7 @@
 #include "GeneralPanel.h"
 #include "DefaultPlayerPanel.h"
 #include <wx/artprov.h>
+#include "PlayerStructAccessor.h"
 
 ///////////////////////////////////////////////////////////////////////////
 
@@ -20,10 +21,9 @@ extern Generator* generator;
 
 const wxString MainWindow::WARNING_FORMAT = "Warning: your party count is %d. Only %d leftmost players' tabs will be generated, the rest is implicitly disabled.";
 
-template<typename Player>
 void MainWindow::update()
 {
-	auto names = getPlayerNames<Player>();
+	auto names = getPlayerNames();
 	
 	for (int i = 0; i < MAX_PLAYERS; ++i)
 	{
@@ -61,21 +61,19 @@ void MainWindow::update()
 	//}
 }
 
-template<typename Player>
 std::vector<wxString> MainWindow::getPlayerNames()
 {
-	std::vector<wxString> names;
+	std::vector<wxString> ret;
 	int i;
 	for (i = 0; i < CURRENT_PARTY_SIZE; ++i)
 	{
-		names.push_back(reinterpret_cast<Player*>(generator->players[i])->name.data());
+		ret.push_back(playerAccessor[i].getName());
 	}
 	for (; i < MAX_PLAYERS; ++i)
 	{
-		names.push_back(wxString::Format("Player %d", i + 1));
+		ret.push_back(wxString::Format("Player %d", i + 1));
 	}
-	
-	return names;
+	return ret;
 }
 
 MainWindow::MainWindow(wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style) : wxFrame(parent, id, title, pos, size, style)
@@ -190,19 +188,7 @@ MainWindow::MainWindow(wxWindow* parent, wxWindowID id, const wxString& title, c
 
 		generalPanel = new GeneralPanel(tabs, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
 		tabs->AddPage(generalPanel, _("General"), true);
-		std::vector<wxString> playerNames;
-		if (MMVER == 6)
-		{
-			//playerNames = getPlayerNames<mm6::Player>();
-		}
-		else if (MMVER == 7)
-		{
-			playerNames = getPlayerNames<mm7::Player>();
-		}
-		else if (MMVER == 8)
-		{
-			//playerNames = getPlayerNames<mm8::Player>();
-		}
+		std::vector<wxString> playerNames = getPlayerNames();
 
 		defaultSettings = new DefaultPlayerPanel(tabs, &generator->defaultPlayerData);
 		tabs->AddPage(defaultSettings, _("Default"), false);
@@ -271,18 +257,7 @@ MainWindow::~MainWindow()
 
 void MainWindow::onTimer(wxTimerEvent& event)
 {
-	if (MMVER == 6)
-	{
-		//update<mm6::Player>();
-	}
-	else if (MMVER == 7)
-	{
-		update<mm7::Player>();
-	}
-	else if (MMVER == 8)
-	{
-		//update<mm8::Player>();
-	}
+	update();
 }
 
 void MainWindow::onShow(wxShowEvent& event)

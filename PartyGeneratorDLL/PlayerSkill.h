@@ -7,8 +7,10 @@ struct SkillValue
 {
 	int level, mastery;
 
-	bool operator==(const SkillValue& other);
-	bool operator!=(const SkillValue& other);
+	bool operator==(const SkillValue& other) const;
+	bool operator!=(const SkillValue& other) const;
+	bool isZero() const;
+	std::string toString() const;
 };
 
 SkillValue splitSkill(int skill);

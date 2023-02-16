@@ -15,7 +15,7 @@ struct Asserter
 	std::vector<wxString>& errors;
 	bool& failed;
 	template<typename... Args>
-	bool operator()(const char* func, const char* file, int line, bool cond, const wxString& errorMsg, const Args&... args);
+	bool operator()(const char* func, const char* file, int line, bool cond, const wxString& errorMsg, Args&&... args);
 
 	Asserter(std::vector<wxString>& errors, bool& failed);
 
@@ -24,6 +24,42 @@ struct Asserter
 	Asserter(Asserter&&) = delete;
 	Asserter& operator=(const Asserter&) = delete;
 };
+
+wxString rep(const wxString& str, int n = 1);
+
+template<typename T>
+wxString my_to_string(const T& t)
+{
+	return wxString().operator<<(t); // sorry for clever code, couldn't help myself!
+	// we are calling operator<< (which inserts argument into string) on temporary string,
+	// taking advantage that it returns modified string (intended to allow chaining,
+	// like str << "x" << "y" << 5)
+}
+
+template<typename... Args>
+bool Asserter::operator()(const char* func, const char* file, int line, bool cond, const wxString& rawErrorMsg, Args&&... args)
+{
+	if (!cond)
+	{
+		std::string file2 = file;
+		size_t index = file2.rfind('/');
+		if (index != std::string::npos)
+		{
+			file2 = file2.substr(index + 1);
+		}
+		static const wxString errorFormat("%s(%s:%d) %s");
+		wxString errorMsg = rawErrorMsg;
+		if constexpr (sizeof...(args) > 0)
+		{
+			errorMsg << ("\nExtra data:" + rep("\n%s", sizeof...(args)));
+			errorMsg = wxString::Format(errorMsg, my_to_string(args)...);
+		}
+		errors.push_back(wxString::Format(errorFormat, func, file2, line, errorMsg));
+		failed = true;
+		return false;
+	}
+	return true;
+}
 
 class Tests
 {
@@ -54,7 +90,7 @@ public:
 template<typename Player, typename Game>
 std::vector<wxString> Tests::run()
 {
-	return mergeVectors(testMisc<Player, Game>(), testSkillFunctions(), testJson(), testGui(), testPlayerStructAccessor<Player, Game>());
+	return mergeVectors({ testMisc<Player, Game>(), testSkillFunctions(), testJson(), testGui(), testPlayerStructAccessor<Player, Game>() });
 }
 
 template<typename Player, typename Game>
@@ -84,7 +120,8 @@ std::vector<wxString> Tests::testMisc()
 	}
 
 	// bounds check
-	wxLogNull noLog;
+	//wxLogNull noLog;
+	bool old = wxLog::EnableLogging(false);
 
 	// uint8_t
 	myassert(boundsCheck(0, 1));
@@ -182,6 +219,8 @@ std::vector<wxString> Tests::testMisc()
 	boundsCheck(x2, -1);
 	myassert(x != x2);
 
+	wxLog::EnableLogging(old);
+
 	return errors;
 }
 
@@ -202,10 +241,10 @@ void testSettableField(
 	static_assert(std::is_integral_v<IntegralFieldType>);
 	static_assert(std::is_integral_v<IntegralGetSetType>);
 	
-	wxLogNull noLog;
+	//wxLogNull noLog;
 
 	auto [low, high] = bounds;
-	myassert(low <= high, wxString::Format("[%s] bounds [%d, %d] too wide", logId, low, high));
+	myassert(low <= high, wxString::Format("[%s] bounds [%lld, %lld] too wide", logId, low, high));
 	int64_t range = high - low + 1;
 	int64_t unit = range / 100;
 	std::array<int64_t, 24> tests{ low, low + 1, low + 3, low + 10, low + 50, low + unit, low + unit * 4, low + unit * 20, low + unit * 37, low + unit * 45, low + unit * 50,
@@ -221,17 +260,17 @@ void testSettableField(
 		int64_t fieldValueAfter = player->*playerFieldPtr, getterValueAfter = getFunction();
 		if (fieldValueBefore != fieldValueAfter) // only perform checks if test value wasn't the original value
 		{
-			myassert(fieldValueBefore != getterValueAfter, failMsg);
-			myassert(getterValueBefore != getterValueAfter, failMsg);
-			myassert(getterValueBefore != fieldValueAfter, failMsg);
+			myassert(fieldValueBefore != getterValueAfter, wxString::Format(failMsg + " field before: %lld, getter after: %lld", fieldValueBefore, getterValueAfter));
+			myassert(getterValueBefore != getterValueAfter, wxString::Format(failMsg + " getter before: %lld, getter after: %lld", getterValueBefore, getterValueAfter));
+			myassert(getterValueBefore != fieldValueAfter, wxString::Format(failMsg + " getter before: %lld, field after: %lld", getterValueBefore, fieldValueAfter));
 		}
 		else
 		{
-			myassert(getterValueBefore == getterValueAfter, failMsg);
+			myassert(getterValueBefore == getterValueAfter, wxString::Format(failMsg + " getter before: %lld, getter after: %lld", getterValueBefore, getterValueAfter));
 		}
 
 		player->*playerFieldPtr = fieldValueBefore;
-		myassert(getFunction() == fieldValueBefore, failMsg);
+		myassert((int64_t)getFunction() == fieldValueBefore, wxString::Format(failMsg + " [member pointer assign] getter: %lld, field: %lld", (int64_t)getFunction(), fieldValueBefore));
 	}
 	
 	if (oldErrorsNum != myasserter.errors.size())
@@ -262,8 +301,10 @@ std::vector<wxString> Tests::testPlayerStructAccessor()
 
 	Player* pl = new Player;
 	memset(pl, 0, sizeof(Player));
+	int oldCURRENT_PARTY_SIZE = CURRENT_PARTY_SIZE;
+	CURRENT_PARTY_SIZE = 1;
 
-	wxLogNull noLog;
+	//wxLogNull noLog;
 
 	void* oldPlayerZero = generator->players[0];
 	generator->players[0] = pl;
@@ -274,12 +315,12 @@ std::vector<wxString> Tests::testPlayerStructAccessor()
 		pl->fullHPBonus = 50;
 		pl->fullSPBonus = 122;
 		myassert(playerAccessor->getStatBonus(STAT_HIT_POINTS_BONUS) == pl->fullHPBonus);
-		myassert(playerAccessor->getStatBonus(STAT_HIT_POINTS_BONUS) == pl->fullSPBonus);
+		myassert(playerAccessor->getStatBonus(STAT_SPELL_POINTS_BONUS) == pl->fullSPBonus);
 
 		playerAccessor->setStatBonus(STAT_HIT_POINTS_BONUS, 100);
 		playerAccessor->setStatBonus(STAT_SPELL_POINTS_BONUS, 44);
 		myassert(playerAccessor->getStatBonus(STAT_HIT_POINTS_BONUS) == pl->fullHPBonus && pl->fullHPBonus == 100);
-		myassert(playerAccessor->getStatBonus(STAT_HIT_POINTS_BONUS) == pl->fullSPBonus && pl->fullSPBonus == 44);
+		myassert(playerAccessor->getStatBonus(STAT_SPELL_POINTS_BONUS) == pl->fullSPBonus && pl->fullSPBonus == 44);
 
 		myassert(playerAccessor->getStatBonus(STAT_MELEE_ATTACK_BONUS) == 0);
 		pl->meleeAttackBonus = 12;
@@ -305,7 +346,7 @@ std::vector<wxString> Tests::testPlayerStructAccessor()
 
 	// hp
 	pl->HP = 24342;
-	myassert(playerAccessor->getHp() == 23242);
+	myassert(playerAccessor->getHp() == 24342);
 	pl->HP = -5555555;
 	myassert(playerAccessor->getHp() == -5555555);
 	playerAccessor->setHp(543543);
@@ -315,7 +356,7 @@ std::vector<wxString> Tests::testPlayerStructAccessor()
 	
 	// sp
 	pl->SP = 24342;
-	myassert(playerAccessor->getSp() == 23242);
+	myassert(playerAccessor->getSp() == 24342);
 	pl->SP = -5555555;
 	myassert(playerAccessor->getSp() == -5555555);
 	playerAccessor->setSp(543543);
@@ -336,7 +377,7 @@ std::vector<wxString> Tests::testPlayerStructAccessor()
 	// helper function (less typing!) which binds placeholders they receive to [get/set]StatBase method, so you can ultimately do:
 	// testPrimaryStatBase(STAT_MIGHT, &Player::mightBase, "Might base");
 
-	auto testStatBase = [&pl, &myasserter] (int statId, auto Player::*baseField, const wxString& logId) -> void
+	auto testStatBase = [pl, &myasserter] (int statId, auto Player::*baseField, const wxString& logId) -> void
 	{
 		// tried making lambda passing placeholder (argument) to bind (two level indirection; see below), didn't work
 		std::function<int(void)> boundBaseGet{ std::bind(&PlayerStructAccessor::getStatBase, playerAccessor, statId) };
@@ -352,7 +393,7 @@ std::vector<wxString> Tests::testPlayerStructAccessor()
 		static_assert(std::is_integral_v<IntegerType> && sizeof(IntegerType) <= 4, "Field type must be integer <= 4 bytes");
 		testSettableField<Player, IntegerType>(pl, baseField, boundBaseGet, boundBaseSet, boundsByType<IntegerType>, myasserter, logId);
 	};
-	auto testStatBonus = [&pl, &myasserter] (int statId, auto Player::*bonusField, const wxString& logId) -> void
+	auto testStatBonus = [pl, &myasserter] (int statId, auto Player::*bonusField, const wxString& logId) -> void
 	{
 		std::function<int(void)> boundBonusGet{ std::bind(&PlayerStructAccessor::getStatBonus, playerAccessor, statId) };
 		std::function<void(int)> boundBonusSet{ std::bind(&PlayerStructAccessor::setStatBonus, playerAccessor, statId, _1) };
@@ -362,7 +403,7 @@ std::vector<wxString> Tests::testPlayerStructAccessor()
 		testSettableField<Player, IntegerType>(pl, bonusField, boundBonusGet, boundBonusSet, boundsByType<IntegerType>, myasserter, logId);
 	};
 
-	auto testStatBaseBonus = [&pl, &myasserter, &testStatBase, &testStatBonus](int statId, auto Player::* baseField, auto Player::* bonusField, const wxString& logId)
+	auto testStatBaseBonus = [pl, &myasserter, &testStatBase, &testStatBonus](int statId, auto Player::* baseField, auto Player::* bonusField, const wxString& logId)
 	{
 		static_assert(std::is_same_v<std::decay_t<decltype(pl->*baseField)>, std::decay_t<decltype(pl->*bonusField)>>, "Integer types for base and bonus fields are different");
 		testStatBase(statId, baseField, logId + " base");
@@ -376,7 +417,7 @@ std::vector<wxString> Tests::testPlayerStructAccessor()
 
 	// PRIMARY
 	testStatBaseBonus(STAT_MIGHT, &Player::mightBase, &Player::mightBonus, "Might");
-	testStatBaseBonus(STAT_INTELLECT, &Player::intellectBase, &Player::intellectBase, "Intellect");
+	testStatBaseBonus(STAT_INTELLECT, &Player::intellectBase, &Player::intellectBonus, "Intellect");
 	testStatBaseBonus(STAT_PERSONALITY, &Player::personalityBase, &Player::personalityBonus, "Personality");
 	testStatBaseBonus(STAT_ENDURANCE, &Player::enduranceBase, &Player::enduranceBonus, "Endurance");
 	testStatBaseBonus(STAT_ACCURACY, &Player::accuracyBase, &Player::accuracyBonus, "Accuracy");
@@ -430,8 +471,10 @@ std::vector<wxString> Tests::testPlayerStructAccessor()
 		static const auto randomString = [](size_t len) -> std::string
 		{
 			static const std::string keyspace = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-			static const std::mt19937 gen(std::random_device{}());
-			static const std::uniform_int_distribution dist(0, keyspace.size() - 1);
+			// can't be const - error
+			static std::mt19937 gen(std::random_device{}());
+			// can't be const either - another error
+			static std::uniform_int_distribution dist(0, (int)keyspace.size() - 1);
 			std::string ret(len, '_');
 			for (int i = 0; i < len; ++i)
 			{
@@ -439,7 +482,7 @@ std::vector<wxString> Tests::testPlayerStructAccessor()
 			}
 			return ret;
 		};
-		const std::vector<int> sizes{ 0, 1, 3, 5, maxSize - 10, maxSize - 5, maxSize - 1, maxSize };
+		const std::vector<size_t> sizes{ 0, 1, 3, 5, maxSize - 10, maxSize - 5, maxSize - 1, maxSize };
 		for (int i = 0; i < sizes.size(); ++i)
 		{
 			const std::string oldVal{ array.data() };
@@ -481,18 +524,20 @@ std::vector<wxString> Tests::testPlayerStructAccessor()
 
 	auto expTest = [pl, &myasserter](int64_t exp, int level)
 	{
-		int64_t old = pl->experience;
+		int64_t oldExp = pl->experience;
+		int oldLevel = pl->levelBase;
 		pl->experience = exp;
 		auto expLevelMsg = "Exp %lld, level %d";
-		myassert(playerAccessor->getMinimumLevelForExperience(exp) == level, exp, playerAccessor->getMinimumLevelForExperience(exp)); // can also call static methods on objects (but they don't get "this" param)
+		myassert(playerAccessor->getMinimumLevelForExperience(exp) == level, wxString::Format(expLevelMsg, exp, playerAccessor->getMinimumLevelForExperience(exp))); // can also call static methods on objects (but they don't get "this" param)
 		myassert(playerAccessor->getTrainableLevel() == level);
-		pl->experience = exp;
 		playerAccessor->setExperience(0);
 		myassert(playerAccessor->getLevel() == 1, wxString::Format("Level %d", playerAccessor->getLevel()));
 		myassert(playerAccessor->getStatBase(STAT_LEVEL) == 1, wxString::Format("Level %d", playerAccessor->getLevel()));
 		playerAccessor->setLevel(level);
-		myassert(playerAccessor->getMinimumLevelForExperience(exp) == level, exp, playerAccessor->getMinimumLevelForExperience(exp));
-		myassert(playerAccessor->getTrainableLevel() == wxString::Format("Level %d, trainable %d", playerAccessor->getLevel(), playerAccessor->getTrainableLevel()));
+		myassert(playerAccessor->getStatBase(STAT_LEVEL) == level, wxString::Format("Level %d", playerAccessor->getLevel()));
+		myassert(playerAccessor->getMinimumLevelForExperience(exp) == level, wxString::Format(expLevelMsg, exp, playerAccessor->getMinimumLevelForExperience(exp)));
+		myassert(playerAccessor->getTrainableLevel() == level, wxString::Format("Level %d, trainable %d", playerAccessor->getLevel(), playerAccessor->getTrainableLevel()));
+		pl->experience = exp;
 		myassert(playerAccessor->getExperience() == exp, wxString::Format("Getter exp %lld, test value %lld", playerAccessor->getExperience(), exp));
 	};
 	expTest(999, 1);
@@ -511,29 +556,38 @@ std::vector<wxString> Tests::testPlayerStructAccessor()
 	std::vector<PlayerSkill*> skillsVector;
 	skillsVector.reserve(skillsMap.size());
 	std::transform(skillsMap.begin(), skillsMap.end(), std::back_inserter(skillsVector), [](auto& pair) -> PlayerSkill* { return &pair.second; });
-	static auto randomSkillValue = []() -> SkillValue
+	std::sort(skillsVector.begin(), skillsVector.end(), [](PlayerSkill* a, PlayerSkill* b) -> bool { return a->id < b->id; });
+	myassert(skillsVector[5]->id == 5);
+	auto randomSkillValue = [](int id) -> SkillValue
 	{
-		static std::mt19937 gen(std::random_device{}());
+		std::mt19937 gen(id); // seed with id to get consistent values
 		std::uniform_int_distribution mDist(0, (int)MAX_MASTERY), sDist(0, (1 << SKILL_BITS) - 1);
 		assert(mDist.b() >= MASTER && sDist.b() >= 63);
 		return SkillValue{ sDist(gen), mDist(gen) };
 	};
-	auto testSpecifiedSkillsByIndex = [&myasserter, &skillsMap, &skillsVector, pl](const std::vector<int>& indexes) -> void
+	auto testSpecifiedSkillsByIndex = [&randomSkillValue, &myasserter, &skillsMap, &skillsVector, pl](const std::vector<int>& skillIdsToChange) -> void
 	{
 		std::vector<PlayerSkillValue> skillsToSet;
-		for (int i : indexes)
+		std::vector<bool> changed;
+		for (int i : skillIdsToChange)
 		{
-			skillsToSet.push_back(PlayerSkillValue{ skillsVector[i], randomSkillValue() });
+			skillsToSet.push_back(PlayerSkillValue{ skillsVector[i], randomSkillValue(i) });
+			changed.push_back(skillsToSet.back().value != playerAccessor->getSkillValue(i));
 		}
+		wxString msg;
+		for (auto& psv : skillsToSet)
+		{
+			msg << psv.value.toString();
+			msg << "\n\n";
+		}
+		wxLogMessage(msg);
 		auto oldSkills = playerAccessor->getSkills();
 		playerAccessor->setSkills(skillsToSet);
 		auto newSkills = playerAccessor->getSkills();
-		for (int i = 0; i < skillsVector.size(); ++i)
+		for (int skillId = 0; skillId < skillsVector.size(); ++skillId)
 		{
-			const wxString iterationStr = wxString::Format("Iteration %d", i);
-			// skills map must contain key with value of i (I'm too lazy to use map here)
-
-			myassert(skillsMap.contains(i), iterationStr);
+			const wxString iterationStr = wxString::Format("Iteration %d, skill name: %s, old value: %s, new value: %s", skillId,
+				skillsMap.at(skillId).name, oldSkills[skillId].value.toString(), newSkills[skillId].value.toString());
 
 			// if skill was intended to change:
 			//	1. old value must not be equal to new value from accessor
@@ -544,20 +598,20 @@ std::vector<wxString> Tests::testPlayerStructAccessor()
 			//	5. old == new (raw)
 			//	6. see point 3
 
-			// IMPLEMENT EQUALITY OPERATOR MYSELF?
-
-			if (existsInVector(indexes, i)) // 1, 2, 3
+			int index = indexInVector(skillIdsToChange, skillId);
+			if (index != -1 && changed[index]) // 1, 2, 3
 			{
 				// need to have explicitly defined operator !=, even if == is defined, otherwise there are ambiguity errors
-				myassert(oldSkills[i].value != newSkills[i].value, iterationStr); // 1
-				myassert(oldSkills[i].value != splitSkill(pl->skills[i]), iterationStr); // 2
-				myassert(newSkills[i].value == splitSkill(pl->skills[i]), iterationStr); // 3
+				// TODO use map, not vector?
+				myassert(oldSkills[skillId].value != newSkills[skillId].value, iterationStr); // 1
+				myassert(oldSkills[skillId].value != splitSkill(pl->skills[skillId]), iterationStr); // 2
+				myassert(newSkills[skillId].value == splitSkill(pl->skills[skillId]), iterationStr); // 3
 			}
 			else // 4, 5, 6
 			{
-				myassert(oldSkills[i].value == newSkills[i].value, iterationStr); // 4
-				myassert(oldSkills[i].value == splitSkill(pl->skills[i]), iterationStr); // 5
-				myassert(newSkills[i].value != splitSkill(pl->skills[i]), iterationStr); // 6
+				myassert(oldSkills[skillId].value == newSkills[skillId].value, iterationStr); // 4
+				myassert(oldSkills[skillId].value == splitSkill(pl->skills[skillId]), iterationStr); // 5
+				myassert(newSkills[skillId].value == splitSkill(pl->skills[skillId]), iterationStr); // 6
 			}
 		}
 	};
@@ -568,9 +622,9 @@ std::vector<wxString> Tests::testPlayerStructAccessor()
 	every2th.resize((ceil(skillsVector.size() / 2.0)));
 	every3th.resize((ceil(skillsVector.size() / 3.0)));
 	int val = -2;
-	std::ranges::generate(every2th, [&] { return val += 2; });
+	std::ranges::generate(every2th, [&]() mutable { return val += 2; });
 	val = -3;
-	std::ranges::generate(every3th, [&] { return val += 3; });
+	std::ranges::generate(every3th, [&]() mutable { return val += 3; });
 
 	testSpecifiedSkillsByIndex(first5);
 	testSpecifiedSkillsByIndex(last5);
@@ -579,5 +633,6 @@ std::vector<wxString> Tests::testPlayerStructAccessor()
 
 	generator->players[0] = oldPlayerZero;
 	delete pl;
+	CURRENT_PARTY_SIZE = oldCURRENT_PARTY_SIZE;
 	return errors;
 }

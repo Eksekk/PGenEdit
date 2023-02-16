@@ -14,7 +14,7 @@ extern Generator* generator;
 
 Asserter::Asserter(std::vector<wxString>& errors, bool& failed) : errors(errors), failed(failed) {}
 
-wxString rep(const wxString& str, int n = 1)
+wxString rep(const wxString& str, int n)
 {
 	wxString ret = str;
 	for (int i = 0; i < n - 1; ++i)
@@ -22,39 +22,6 @@ wxString rep(const wxString& str, int n = 1)
 		ret << str;
 	}
 	return ret;
-}
-
-template<typename T>
-wxString my_to_string(const T& t)
-{
-	return wxString().operator<<(t); // sorry for clever code, couldn't help myself!
-	// we are calling operator<< (which inserts argument into string) on temporary string,
-	// taking advantage that it returns modified string (intended to allow chaining,
-	// like str << "x" << "y" << 5)
-}
-
-template<typename... Args>
-bool Asserter::operator()(const char* func, const char* file, int line, bool cond, const wxString& rawErrorMsg, const Args&... args)
-{
-	if (!cond)
-	{
-		std::string file2 = file;
-		size_t index = file2.rfind('/');
-		if (index != std::string::npos)
-		{
-			file2 = file2.substr(index + 1);
-		}
-		static const wxString errorFormat("%s(%s:%d) %s");
-		wxString errorMsg = rawErrorMsg;
-		if constexpr (sizeof...(args) > 0)
-		{
-			errorMsg << ("Extra data:" + rep("\n%s", sizeof...(args)));
-		}
-		errors.push_back(wxString::Format(errorFormat, func, file2, line, errorMsg, my_to_string(args)...));
-		failed = true;
-		return false;
-	}
-	return true;
 }
 
 std::vector<wxString> Tests::testSkillFunctions()
@@ -354,5 +321,5 @@ std::vector<wxString> Tests::testGui()
 			myassert(p->linkedGenerationData, wxString::Format("iteration %d", i));
 		}
 	}
-	return mergeVectors(errors, testAlignmentRadioBox());
+	return mergeVectors({ errors, testAlignmentRadioBox() });
 }

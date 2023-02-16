@@ -4,6 +4,9 @@ end
 json = require"json"
 reloadM()
 if not M.dll then
-	--M.loadDll()
+	-- IMPORTANT: run after game is initialized, otherwise skill names, class names etc. will be empty
+	function events.GameInitialized2()
+		M.loadDll()
+	end
 end
 

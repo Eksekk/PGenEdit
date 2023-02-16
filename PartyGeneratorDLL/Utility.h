@@ -19,6 +19,19 @@ bool existsInVector(const std::vector<T>& vec, const T& val)
 }
 
 template<typename T>
+int indexInVector(const std::vector<T>& vec, const T& val)
+{
+	for (int i = 0; i < vec.size(); ++i)
+	{
+		if (vec[i] == val)
+		{
+			return i;
+		}
+	}
+	return -1;
+}
+
+template<typename T>
 const T& mmv(const T& e6, const T& e7, const T& e8)
 {
 	if (MMVER == 6)
@@ -58,24 +71,21 @@ wxString concatWxStrings(const Container<wxString, Extra...>& container, const w
 
 std::string tolowerStr(const std::string& source);
 
-// TODO: replace with initializer_list
 template<typename Vector>
-Vector mergeVectors(const Vector& first, const Vector& second)
+Vector mergeVectors(std::initializer_list<Vector> list)
 {
-	size_t n = first.size();
-	auto out = first;
-	out.resize(n + second.size());
-	for (int i = 0; i < second.size(); ++i)
+	size_t n = 0;
+	for (auto& vec : list)
 	{
-		out[n + i] = second[i];
+		n += vec.size();
+	}
+	Vector out;
+	out.reserve(n);
+	for (auto& vec: list)
+	{
+		out.insert(out.end(), vec.begin(), vec.end());
 	}
 	return out;
-}
-
-template<typename Vector, typename... Vectors>
-Vector mergeVectors(const Vector& first, const Vector& second, const Vectors&... vectors)
-{
-	return mergeVectors(mergeVectors(first, second), vectors...);
 }
 
 template<template<typename, typename, typename...> typename Map, typename Key, typename Value, typename... Extra>
@@ -108,7 +118,21 @@ const Bounds boundsBySize = getBounds(size);
 
 template<typename T>
 const Bounds boundsByType{ 1000, 0 }; // error at runtime, "= delete" doesn't work
+template<>
+const Bounds boundsByType<uint8_t> = { 0, 255 };
+template<>
+const Bounds boundsByType<int8_t> = { -128, 127 };
+template<>
+const Bounds boundsByType<uint16_t> = { 0, 65535 };
+template<>
+const Bounds boundsByType<int16_t> = { -32768, 32767 };
+template<>
+const Bounds boundsByType<uint32_t> = { 0, 4294967295 };
+template<>
+const Bounds boundsByType<int32_t> = { -2147483648, 2147483647 };
 
+// TODO causes runtime errors - boundsByType<int8_t> is {0, 0}
+/*
 template<>
 const Bounds boundsByType<uint8_t> = boundsBySize<1>;
 template<>
@@ -120,21 +144,21 @@ const Bounds boundsByType<int16_t> = boundsBySize<-2>;
 template<>
 const Bounds boundsByType<uint32_t> = boundsBySize<4>;
 template<>
-const Bounds boundsByType<int32_t> = boundsBySize<-4>;
+const Bounds boundsByType<int32_t> = boundsBySize<-4>;*/
 
 template<typename T>
 bool boundsCheck(T&& value, int64_t low, int64_t high, bool clamp = true)
 {
 	if (low > high)
 	{
-		wxLogError("Invalid bounds [%d, %d]", low, high);
+		wxLogError("Invalid bounds [%lld, %lld]", low, high);
 		wxLog::FlushActive();
 		return false;
 	}
 	bool error = value < low || value > high;
 	if (error)
 	{
-		wxLogError("Value %d out of bounds [%d, %d]", value, low, high);
+		wxLogError("Value %s out of bounds [%lld, %lld]", std::to_string(value), low, high);
 		wxLog::FlushActive();
 	}
 	if (clamp)
@@ -167,4 +191,14 @@ bool boundsCheck(T&& value, int size, bool clamp = true)
 	auto [low, high] = getBounds(size);
 	// yay, my first real usecase for std::forward! code breaks without it
 	return boundsCheck(std::forward<T>(value), low, high, clamp);
+}
+
+// show deduced type (compile-time error)
+template <typename T>
+struct deduced_type;
+
+template<typename T>
+void f(T&&) {
+
+	deduced_type<T>::show;
 }

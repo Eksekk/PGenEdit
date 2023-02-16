@@ -5,17 +5,33 @@
 
 extern const int INVALID_ID;
 
-bool SkillValue::operator==(const SkillValue& other)
+bool SkillValue::operator==(const SkillValue& other) const
 {
-	return level == other.level && mastery == other.mastery;
+	// treat novice (1) and none (0) as equal
+	bool masteriesEqual = (!mastery && other.mastery == 1) || (mastery == 1 && !other.mastery) || mastery == other.mastery;
+	return (level == other.level && masteriesEqual) && (isZero() == other.isZero());
 }
-bool SkillValue::operator!=(const SkillValue& other)
+bool SkillValue::operator!=(const SkillValue& other) const
 {
 	return !operator==(other);
 }
 
+bool SkillValue::isZero() const
+{
+	return level == 0;
+}
+
+std::string SkillValue::toString() const
+{
+	return "{" + std::to_string(level) + ", " + std::to_string(mastery) + "}";
+}
+
 SkillValue splitSkill(int skill)
 {
+	if (skill == 0)
+	{
+		return SkillValue{ 0, 0 };
+	}
 	int mask = (1 << SKILL_BITS) - 1;
 	int lev = skill & mask;
 	if (SKILL_COMBINE_MODE == BIT_PER_MASTERY)
@@ -41,11 +57,11 @@ SkillValue splitSkill(int skill)
 
 int joinSkill(SkillValue skill)
 {
-	int result = skill.level;
-	if (!result || !skill.mastery)
+	if (skill.isZero())
 	{
 		return 0;
 	}
+	int result = skill.level;
 	if (SKILL_COMBINE_MODE == BIT_PER_MASTERY)
 	{
 		return result | (skill.mastery > NOVICE ? (1 << MASTERY_BITS[skill.mastery]) : 0);

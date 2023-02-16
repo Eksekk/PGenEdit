@@ -33,27 +33,9 @@ protected:
 	int playerIndex = 0;
 	int getPlayerIndex();
 public:
-	PlayerStructAccessor& operator[](int index)
-	{
-		wxASSERT_MSG(index < CURRENT_PARTY_SIZE || index == PLAYER_ACTIVE || index == PLAYER_RANDOM, wxString::Format("Invalid player index (%d) passed to PlayerStructAccessor.operator[]", index));
-		playerIndex = index;
-		return *this;
-	}
-	PlayerStructAccessor& operator[](void* player)
-	{
-		bool found = false;
-		for (int i = 0; i < CURRENT_PARTY_SIZE; ++i)
-		{
-			if ((uint32_t)player == (uint32_t)generator->players[i])
-			{
-				found = true;
-				playerIndex = i;
-				break;
-			}
-		}
-		wxASSERT_MSG(found, wxString::Format("Invalid player pointer (%X) passed to PlayerStructAccessor.operator[]", (uint32_t)player));
-		return *this;
-	}
+	PlayerStructAccessor& operator[](int index);
+	PlayerStructAccessor& operator[](void* player);
+
 	virtual int getStatBase(int stat) = 0;
 	virtual void setStatBase(int stat, int value) = 0;
 
@@ -92,6 +74,8 @@ public:
 	virtual void setBiography(const std::string& biography) = 0;
 
 	virtual std::vector<PlayerSkillValue> getSkills() = 0;
+	virtual SkillValue getSkillValue(int skillId) = 0;
+	virtual SkillValue getSkillValue(PlayerSkill* skill) = 0;
 	virtual void setSkills(const std::vector<PlayerSkillValue>& values) = 0;
 	virtual void setSkill(PlayerSkill* skill, SkillValue value) = 0;
 	virtual void setSkill(int skillId, SkillValue value) = 0;
@@ -210,68 +194,65 @@ class TemplatedPlayerStructAccessor : public PlayerStructAccessor
 	static std::unordered_map<int, FieldType Player::*> singleTypeFieldToStatMap; // either base or bonus, this includes hp/sp because "base" is 4 byte, while bonus 1
 
 	// C++ limitation, no static initializers for template classes (almost sure)
-private:
-	static class InitMaps // IF PROBLEMS ARISE, MOVE INITIALIZATION TO FUNCTION AND CALL WHEN NEEDED
-	{
-		InitMaps()
-		{
-			// primary stats
-			baseBonusFieldToStatMap<int16_t>[STAT_MIGHT] = { &Player::mightBase, &Player::mightBonus };
-			baseBonusFieldToStatMap<int16_t>[STAT_INTELLECT] = { &Player::intellectBase, &Player::intellectBonus };
-			baseBonusFieldToStatMap<int16_t>[STAT_PERSONALITY] = { &Player::personalityBase, &Player::personalityBonus };
-			baseBonusFieldToStatMap<int16_t>[STAT_ENDURANCE] = { &Player::enduranceBase, &Player::enduranceBonus };
-			baseBonusFieldToStatMap<int16_t>[STAT_ACCURACY] = { &Player::accuracyBase, &Player::accuracyBonus };
-			baseBonusFieldToStatMap<int16_t>[STAT_SPEED] = { &Player::speedBase, &Player::speedBonus };
-			baseBonusFieldToStatMap<int16_t>[STAT_LUCK] = { &Player::luckBase, &Player::luckBonus };
-
-			// resistances
-			if constexpr (SAME(Player, mm6::Player))
-			{
-				fieldToStatMap<int16_t>[STAT_FIRE_RESISTANCE] = { &Player::fireResistanceBase, &Player::fireResistanceBonus };
-				fieldToStatMap<int16_t>[STAT_ELEC_RESISTANCE] = { &Player::elecResistanceBase, &Player::elecResistanceBase };
-				fieldToStatMap<int16_t>[STAT_COLD_RESISTANCE] = { &Player::coldResistanceBase, &Player::coldResistanceBase };
-				fieldToStatMap<int16_t>[STAT_POISON_RESISTANCE] = { &Player::poisonResistanceBase, &Player::poisonResistanceBase };
-				fieldToStatMap<int16_t>[STAT_MAGIC_RESISTANCE] = { &Player::magicResistanceBase, &Player::magicResistanceBase };
-			}
-			else
-			{
-				baseBonusFieldToStatMap<int16_t>[STAT_FIRE_RESISTANCE] = { &Player::fireResistanceBase, &Player::fireResistanceBonus };
-				baseBonusFieldToStatMap<int16_t>[STAT_WATER_RESISTANCE] = { &Player::waterResistanceBase, &Player::waterResistanceBonus };
-				baseBonusFieldToStatMap<int16_t>[STAT_AIR_RESISTANCE] = { &Player::airResistanceBase, &Player::airResistanceBonus };
-				baseBonusFieldToStatMap<int16_t>[STAT_EARTH_RESISTANCE] = { &Player::earthResistanceBase, &Player::earthResistanceBonus };
-
-				baseBonusFieldToStatMap<int16_t>[STAT_MIND_RESISTANCE] = { &Player::mindResistanceBase, &Player::mindResistanceBonus };
-				baseBonusFieldToStatMap<int16_t>[STAT_SPIRIT_RESISTANCE] = { &Player::spiritResistanceBase, &Player::spiritResistanceBonus };
-				baseBonusFieldToStatMap<int16_t>[STAT_BODY_RESISTANCE] = { &Player::bodyResistanceBase, &Player::bodyResistanceBonus };
-
-				baseBonusFieldToStatMap<int16_t>[STAT_LIGHT_RESISTANCE] = { &Player::lightResistanceBase, &Player::lightResistanceBonus };
-				baseBonusFieldToStatMap<int16_t>[STAT_DARK_RESISTANCE] = { &Player::darkResistanceBase, &Player::darkResistanceBonus };
-			}
-
-			// hp, sp
-
-			singleTypeFieldToStatMap<int32_t>[STAT_HIT_POINTS] = &Player::HP;
-			singleTypeFieldToStatMap<int32_t>[STAT_SPELL_POINTS] = &Player::SP;
-
-			// mm6/7 bonuses
-			if constexpr (!SAME(Player, mm8::Player))
-			{
-				singleTypeFieldToStatMap<int8_t>[STAT_MELEE_ATTACK_BONUS] = &Player::meleeAttackBonus;
-				singleTypeFieldToStatMap<int8_t>[STAT_MELEE_DAMAGE_BONUS] = &Player::meleeDamageBonus;
-				singleTypeFieldToStatMap<int8_t>[STAT_RANGED_ATTACK_BONUS] = &Player::rangedAttackBonus;
-				singleTypeFieldToStatMap<int8_t>[STAT_RANGED_DAMAGE_BONUS] = &Player::rangedDamageBonus;
-				singleTypeFieldToStatMap<int8_t>[STAT_HIT_POINTS_BONUS] = &Player::fullHPBonus;
-				singleTypeFieldToStatMap<int8_t>[STAT_SPELL_POINTS_BONUS] = &Player::fullSPBonus;
-			}
-
-			// other
-			baseBonusFieldToStatMap<int16_t>[STAT_LEVEL] = { &Player::levelBase, &Player::levelBonus };
-			singleTypeFieldToStatMap<int16_t>[STAT_ARMOR_CLASS] = { &Player::armorClassBonus };
-
-			singleTypeFieldToStatMap<int16_t>[STAT_AGE] = &Player::ageBonus;
-		}
-	} _initMaps;
 public:
+	static void _initMaps()
+	{
+		// primary stats
+		baseBonusFieldToStatMap<int16_t>[STAT_MIGHT] = { &Player::mightBase, &Player::mightBonus };
+		baseBonusFieldToStatMap<int16_t>[STAT_INTELLECT] = { &Player::intellectBase, &Player::intellectBonus };
+		baseBonusFieldToStatMap<int16_t>[STAT_PERSONALITY] = { &Player::personalityBase, &Player::personalityBonus };
+		baseBonusFieldToStatMap<int16_t>[STAT_ENDURANCE] = { &Player::enduranceBase, &Player::enduranceBonus };
+		baseBonusFieldToStatMap<int16_t>[STAT_ACCURACY] = { &Player::accuracyBase, &Player::accuracyBonus };
+		baseBonusFieldToStatMap<int16_t>[STAT_SPEED] = { &Player::speedBase, &Player::speedBonus };
+		baseBonusFieldToStatMap<int16_t>[STAT_LUCK] = { &Player::luckBase, &Player::luckBonus };
+
+		// resistances
+		if constexpr (SAME(Player, mm6::Player))
+		{
+			baseBonusFieldToStatMap<int16_t>[STAT_FIRE_RESISTANCE] = { &Player::fireResistanceBase, &Player::fireResistanceBonus };
+			baseBonusFieldToStatMap<int16_t>[STAT_ELEC_RESISTANCE] = { &Player::elecResistanceBase, &Player::elecResistanceBase };
+			baseBonusFieldToStatMap<int16_t>[STAT_COLD_RESISTANCE] = { &Player::coldResistanceBase, &Player::coldResistanceBase };
+			baseBonusFieldToStatMap<int16_t>[STAT_POISON_RESISTANCE] = { &Player::poisonResistanceBase, &Player::poisonResistanceBase };
+			baseBonusFieldToStatMap<int16_t>[STAT_MAGIC_RESISTANCE] = { &Player::magicResistanceBase, &Player::magicResistanceBase };
+		}
+		else
+		{
+			baseBonusFieldToStatMap<int16_t>[STAT_FIRE_RESISTANCE] = { &Player::fireResistanceBase, &Player::fireResistanceBonus };
+			baseBonusFieldToStatMap<int16_t>[STAT_WATER_RESISTANCE] = { &Player::waterResistanceBase, &Player::waterResistanceBonus };
+			baseBonusFieldToStatMap<int16_t>[STAT_AIR_RESISTANCE] = { &Player::airResistanceBase, &Player::airResistanceBonus };
+			baseBonusFieldToStatMap<int16_t>[STAT_EARTH_RESISTANCE] = { &Player::earthResistanceBase, &Player::earthResistanceBonus };
+
+			baseBonusFieldToStatMap<int16_t>[STAT_MIND_RESISTANCE] = { &Player::mindResistanceBase, &Player::mindResistanceBonus };
+			baseBonusFieldToStatMap<int16_t>[STAT_SPIRIT_RESISTANCE] = { &Player::spiritResistanceBase, &Player::spiritResistanceBonus };
+			baseBonusFieldToStatMap<int16_t>[STAT_BODY_RESISTANCE] = { &Player::bodyResistanceBase, &Player::bodyResistanceBonus };
+
+			baseBonusFieldToStatMap<int16_t>[STAT_LIGHT_RESISTANCE] = { &Player::lightResistanceBase, &Player::lightResistanceBonus };
+			baseBonusFieldToStatMap<int16_t>[STAT_DARK_RESISTANCE] = { &Player::darkResistanceBase, &Player::darkResistanceBonus };
+		}
+
+		// hp, sp
+
+		singleTypeFieldToStatMap<int32_t>[STAT_HIT_POINTS] = &Player::HP;
+		singleTypeFieldToStatMap<int32_t>[STAT_SPELL_POINTS] = &Player::SP;
+
+		// mm6/7 bonuses
+		if constexpr (!SAME(Player, mm8::Player))
+		{
+			singleTypeFieldToStatMap<int8_t>[STAT_MELEE_ATTACK_BONUS] = &Player::meleeAttackBonus;
+			singleTypeFieldToStatMap<int8_t>[STAT_MELEE_DAMAGE_BONUS] = &Player::meleeDamageBonus;
+			singleTypeFieldToStatMap<int8_t>[STAT_RANGED_ATTACK_BONUS] = &Player::rangedAttackBonus;
+			singleTypeFieldToStatMap<int8_t>[STAT_RANGED_DAMAGE_BONUS] = &Player::rangedDamageBonus;
+			singleTypeFieldToStatMap<int8_t>[STAT_HIT_POINTS_BONUS] = &Player::fullHPBonus;
+			singleTypeFieldToStatMap<int8_t>[STAT_SPELL_POINTS_BONUS] = &Player::fullSPBonus;
+		}
+
+		// other
+		baseBonusFieldToStatMap<int16_t>[STAT_LEVEL] = { &Player::levelBase, &Player::levelBonus };
+		singleTypeFieldToStatMap<int16_t>[STAT_ARMOR_CLASS] = { &Player::armorClassBonus };
+
+		singleTypeFieldToStatMap<int16_t>[STAT_AGE] = &Player::ageBonus;
+	};
+
 	int getStatBase(int stat) override
 	{
 		checkStatValidity(stat);
@@ -309,6 +290,7 @@ public:
 		}
 		else if (stat == STAT_HIT_POINTS || stat == STAT_SPELL_POINTS)
 		{
+			boundsCheck(value, boundsByType<int32_t>);
 			auto field = singleTypeFieldToStatMap<int32_t>.at(stat);
 			pl->*field = value;
 			return;
@@ -364,18 +346,20 @@ public:
 		if (existsInVector(STATS_PRIMARY, stat) || existsInVector(STATS_RESISTANCES, stat) || stat == STAT_LEVEL)
 		{
 			boundsCheck(value, boundsByType<int16_t>);
-			auto field = baseBonusFieldToStatMap<int16_t>.at(stat).base;
+			auto field = baseBonusFieldToStatMap<int16_t>.at(stat).bonus;
 			pl->*field = value;
 			return;
 		}
 		else if (stat == STAT_ARMOR_CLASS)
 		{
+			boundsCheck(value, boundsByType<int16_t>);
 			auto field = singleTypeFieldToStatMap<int16_t>.at(STAT_ARMOR_CLASS);
 			pl->*field = value;
 			return;
 		}
 		else if (stat == STAT_HIT_POINTS_BONUS || stat == STAT_SPELL_POINTS_BONUS)
 		{
+			boundsCheck(value, boundsByType<int8_t>);
 			auto field = singleTypeFieldToStatMap<int8_t>.at(stat);
 			pl->*field = value;
 			return;
@@ -423,10 +407,6 @@ public:
 		for (int i = 0; i < pl->skills.size(); ++i)
 		{
 			SkillValue val = splitSkill(pl->skills[i]);
-			if (val.level == 0 || val.mastery == 0)
-			{
-				continue;
-			}
 			auto itr = GameData::skills.find(i);
 			wxASSERT_MSG(itr != GameData::skills.end(), wxString::Format("Skill %d not found in game data", i));
 			ret.push_back({ &(itr->second), val });
@@ -446,6 +426,10 @@ public:
 	void setSkill(PlayerSkill* skill, SkillValue value) override
 	{
 		wxASSERT(skill != nullptr);
+		if (skill == nullptr)
+		{
+			return;
+		}
 		Player* pl = getPlayers()[getPlayerIndex()];
 		pl->skills.at(skill->id) = joinSkill(value);
 	}
@@ -540,6 +524,18 @@ public:
 		pl->name[biographyToSet.size()] = 0;
 	}
 
+	SkillValue getSkillValue(int skillId) override
+	{
+		Player* pl = getPlayers()[getPlayerIndex()];
+		return splitSkill(pl->skills.at(skillId));
+	}
+
+	SkillValue getSkillValue(PlayerSkill* skill) override
+	{
+		Player* pl = getPlayers()[getPlayerIndex()];
+		return splitSkill(pl->skills.at(skill->id));
+	}
+
 };
 
 template<typename Player>
@@ -556,13 +552,10 @@ template<typename Player>
 template<typename FieldType>
 std::unordered_map<int, FieldType Player::*> TemplatedPlayerStructAccessor<Player>::singleTypeFieldToStatMap;
 
-template class TemplatedPlayerStructAccessor<mm6::Player>;
-template class TemplatedPlayerStructAccessor<mm6::Player>::InitMaps;
-template class TemplatedPlayerStructAccessor<mm7::Player>;
-template class TemplatedPlayerStructAccessor<mm7::Player>::InitMaps;
-template class TemplatedPlayerStructAccessor<mm8::Player>;
-template class TemplatedPlayerStructAccessor<mm8::Player>::InitMaps;
-
 using PlayerStructAccessor_6 = TemplatedPlayerStructAccessor<mm6::Player>;
 using PlayerStructAccessor_7 = TemplatedPlayerStructAccessor<mm7::Player>;
 using PlayerStructAccessor_8 = TemplatedPlayerStructAccessor<mm8::Player>;
+
+template class TemplatedPlayerStructAccessor<mm6::Player>;
+template class TemplatedPlayerStructAccessor<mm7::Player>;
+template class TemplatedPlayerStructAccessor<mm8::Player>;

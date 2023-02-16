@@ -25,6 +25,29 @@ void setFieldSizes_8()
 	PlayerStructAccessor::FieldSizes::name = 31;
 }
 
+PlayerStructAccessor& PlayerStructAccessor::operator[](int index)
+{
+	wxASSERT_MSG(index < CURRENT_PARTY_SIZE || index == PLAYER_ACTIVE || index == PLAYER_RANDOM, wxString::Format("Invalid player index (%d) passed to PlayerStructAccessor.operator[]", index));
+	playerIndex = index;
+	return *this;
+}
+
+PlayerStructAccessor& PlayerStructAccessor::operator[](void* player)
+{
+	bool found = false;
+	for (int i = 0; i < CURRENT_PARTY_SIZE; ++i)
+	{
+		if ((uint32_t)player == (uint32_t)generator->players[i])
+		{
+			found = true;
+			playerIndex = i;
+			break;
+		}
+	}
+	wxASSERT_MSG(found, wxString::Format("Invalid player pointer (%X) passed to PlayerStructAccessor.operator[]", (uint32_t)player));
+	return *this;
+}
+
 void PlayerStructAccessor::setStatBaseBonus(int stat, const BaseBonus& value)
 {
 	setStatBase(stat, value.base);

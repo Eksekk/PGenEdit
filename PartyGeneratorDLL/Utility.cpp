@@ -62,10 +62,11 @@ Bounds getBounds(int size)
 		high = u4_max;
 		wxLogError("8-byte bounds are not implemented yet");
 		wxLog::FlushActive();
+		break;
 	}
 	default:
 	{
-		wxLogError("Unknown size (%d) in getBounds()\n%s", size);
+		wxLogError("Unknown size (%d) in getBounds()", size);
 		wxLog::FlushActive();
 		return Bounds{ 0, 0 };
 	}

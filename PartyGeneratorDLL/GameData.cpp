@@ -210,6 +210,7 @@ bool GameData::processSkillDataJson(const char* str)
             int id = skillEntry["id"];
             sk.id = id;
             sk.name = skillEntry["name"];
+            //assert(!sk.name.empty());
             auto maxMasteryByClass = skillEntry["maxMasteryByClass"].get<std::vector<int> >();
             for (int i = 0; i < maxMasteryByClass.size(); ++i)
             {

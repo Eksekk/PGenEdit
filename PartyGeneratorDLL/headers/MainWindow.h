@@ -65,10 +65,8 @@ public:
 
 	~MainWindow();
 
-	template<typename Player>
 	void update();
 	void updateSettingsFromLinked();
-	template<typename Player>
 	[[nodiscard]] std::vector<wxString> getPlayerNames();
 };
 

@@ -45,7 +45,7 @@ void removeHook(uint32_t addr);
 template<typename ReturnType, typename Address, typename... Args>
 ReturnType callMemoryAddress(Address address, int registerParamsNum, Args&&... args)
 {
-	wxASSERT_MSG(registerParamsNum >= 0 && registerParamsNum <= 2, "Invalid number of register parameters");
+	wxASSERT_MSG(registerParamsNum >= -1 && registerParamsNum <= 2, "Invalid number of register parameters");
 	void* ptr;
 	if (std::is_pointer_v<Address>)
 	{
@@ -56,9 +56,14 @@ ReturnType callMemoryAddress(Address address, int registerParamsNum, Args&&... a
 		static_assert(std::is_integral_v<Address>, "Neither pointer nor integer type passed to callMemoryAddress");
 		ptr = (void*)address;
 	}
-	if (registerParamsNum == 0)
+	if (registerParamsNum == -1)
 	{
-		typedef ReturnType(*Function)(Args...);
+		typedef ReturnType(__cdecl* Function)(Args...);
+		return reinterpret_cast<Function>(ptr)(args...);
+	}
+	else if (registerParamsNum == 0)
+	{
+		typedef ReturnType(__stdcall *Function)(Args...);
 		return reinterpret_cast<Function>(ptr)(args...);
 	}
 	else if (registerParamsNum == 1)

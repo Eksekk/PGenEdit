@@ -66,9 +66,9 @@ function M.ptrs()
 		mem.freeMM(ptrs)
 	end
 end
-pgenData.ptrs = M.ptrs
+--pgenData.ptrs = M.ptrs
 
-events.LoadMap = pgenData.ptrs
+--events.LoadMap = pgenData.ptrs
 
 function M.reloadDll()
 	M.unloadDll()
