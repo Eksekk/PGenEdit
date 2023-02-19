@@ -23,7 +23,7 @@ const wxString MainWindow::WARNING_FORMAT = "Warning: your party count is %d. On
 
 void MainWindow::update()
 {
-	auto names = getPlayerNames();
+	auto names = playerAccessor->getPlayerNames();
 	
 	for (int i = 0; i < MAX_PLAYERS; ++i)
 	{
@@ -59,21 +59,6 @@ void MainWindow::update()
 	//{
 	//	tabs->SetSelection(FIRST_PLAYER_PAGE - 1 + CURRENT_PARTY_SIZE); // set to last enabled player
 	//}
-}
-
-std::vector<wxString> MainWindow::getPlayerNames()
-{
-	std::vector<wxString> ret;
-	int i;
-	for (i = 0; i < CURRENT_PARTY_SIZE; ++i)
-	{
-		ret.push_back(playerAccessor[i].getName());
-	}
-	for (; i < MAX_PLAYERS; ++i)
-	{
-		ret.push_back(wxString::Format("Player %d", i + 1));
-	}
-	return ret;
 }
 
 MainWindow::MainWindow(wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style) : wxFrame(parent, id, title, pos, size, style)
@@ -188,7 +173,7 @@ MainWindow::MainWindow(wxWindow* parent, wxWindowID id, const wxString& title, c
 
 		generalPanel = new GeneralPanel(tabs, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
 		tabs->AddPage(generalPanel, _("General"), true);
-		std::vector<wxString> playerNames = getPlayerNames();
+		std::vector<wxString> playerNames = playerAccessor->getPlayerNames();
 
 		defaultSettings = new DefaultPlayerPanel(tabs, &generator->defaultPlayerData);
 		tabs->AddPage(defaultSettings, _("Default"), false);

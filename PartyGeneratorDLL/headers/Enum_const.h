@@ -91,35 +91,6 @@ enum PlayerType
 extern const std::unordered_map<std::string, int> plTypeEnumStringToId;
 extern const std::unordered_map<int, std::string> plTypeEnumIdToString;
 
-enum SkillType
-{
-	SKILL_GENERIC = 0, // see above
-	SKILL_MELEE,
-	SKILL_RANGED,
-	SKILL_DEFENSIVE,
-	SKILL_MAGIC,
-	SKILL_UTILITY,
-	SKILL_TYPE_COUNT
-};
-
-extern const std::unordered_map<std::string, int> skillTypeEnumStringToId;
-extern const std::unordered_map<int, std::string> skillTypeEnumIdToString;
-
-enum SkillSpecial // don't make hundreds of skill types, instead associate additional property with certain skills
-{
-	SKSPC_NONE = 0,
-	SKSPC_BLASTER,
-	SKSPC_SHIELD,
-	SKSPC_ELEMENTAL,
-	SKSPC_SELF,
-	SKSPC_MAGIC_EXCLUSIVE,
-	SKSPC_MEDITATION,
-	SKSPC_RACE_SKILL
-};
-
-extern const std::unordered_map<std::string, int> skillSpecialEnumStringToId;
-extern const std::unordered_map<int, std::string> skillSpecialEnumIdToString;
-
 enum Alignment
 {
 	ALIGNMENT_ANY = 0,

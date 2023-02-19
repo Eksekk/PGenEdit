@@ -5,6 +5,8 @@ EXPORTS
 	unloadCleanup
 	runEventLoopOnce
 	displayMainWindow
+	displayEditorMainWindow
+	displayControlPanel
 	setLuaState
 	setClassData
 	setSkillData

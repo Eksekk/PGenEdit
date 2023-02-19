@@ -1,7 +1,6 @@
 #include "pch.h"
 #include "Tests.h"
 #include "PlayerSkill.h"
-#include <cstdarg>
 #include "GuiApplication.h"
 #include <wx/notebook.h>
 #include "GeneralPanel.h"
@@ -9,6 +8,9 @@
 #include "DefaultPlayerPanel.h"
 #include "PlayerPanel.h"
 #include "globals.h"
+#include "MainWindow.h"
+#include "EditorMainWindow.h"
+#include "EditorPlayerWindow.h"
 
 extern Generator* generator;
 
@@ -308,7 +310,7 @@ std::vector<wxString> Tests::testGui()
 	myassert(tabs->GetPageCount() == MainWindow::FIRST_PLAYER_PAGE + MAX_PLAYERS);
 	myassert(dynamic_cast<GeneralPanel*>(tabs->GetPage(MainWindow::GENERAL_PANEL_PAGE)));
 	auto p = dynamic_cast<DefaultPlayerPanel*>(tabs->GetPage(MainWindow::DEFAULT_PLAYER_PAGE));
-	if (myassert(p))
+	if (myassert(p) && p != nullptr)
 	{
 		myassert(dynamic_cast<PlayerData*>(p->linkedGenerationData));
 	}
@@ -321,5 +323,38 @@ std::vector<wxString> Tests::testGui()
 			myassert(p->linkedGenerationData, wxString::Format("iteration %d", i));
 		}
 	}
+	/*void EditorMainWindow::onPlayerButtonClick(wxCommandEvent & event)
+	{
+		for (int i = 0; i < CURRENT_PARTY_SIZE; ++i)
+		{
+			if (event.GetId() == playerButtonIds[i])
+			{
+				playerWindows[i]->Show();
+				return;
+			}
+		}
+		wxFAIL_MSG(wxString::Format("Invalid player button index"));
+	}
+
+	void EditorMainWindow::update(wxTimerEvent & event)
+	{
+		auto names = playerAccessor->getPlayerNames();
+		for (int i = 0; i < MAX_PLAYERS; ++i)
+		{
+			playerButtons[i]->SetLabel(names[i]);
+			playerButtons[i]->Enable(i < CURRENT_PARTY_SIZE);
+		}
+	}*/
+	auto eWindow = wxGetApp().editorMainWindow;
+	for (int i = 0; i < MAX_PLAYERS; ++i)
+	{
+		bool wasVisiblePreviously = eWindow->playerWindows[i]->IsVisible();
+		wxCommandEvent event;
+		event.SetId(eWindow->playerButtonIds[i]);
+		eWindow->ProcessEvent(event);
+		myassert(eWindow->playerWindows[i]->IsVisible(), i);
+		eWindow->playerWindows[i]->Show(wasVisiblePreviously);
+	}
+
 	return mergeVectors({ errors, testAlignmentRadioBox() });
 }

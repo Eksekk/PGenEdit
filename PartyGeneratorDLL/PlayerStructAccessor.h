@@ -16,6 +16,7 @@ extern Generator* generator;
 
 class PlayerStructAccessor;
 extern PlayerStructAccessor* playerAccessor;
+class PlayerClass;
 
 extern void setFieldSizes_6();
 extern void setFieldSizes_7();
@@ -81,10 +82,18 @@ public:
 	virtual void setSkill(int skillId, SkillValue value) = 0;
 
 	// common stats
+	// TODO get full/current/bonus
 	virtual int getHp();
 	virtual void setHp(int value);
 	virtual int getSp();
 	virtual void setSp(int value);
+
+	virtual PlayerClass* getClass() = 0;
+
+	virtual std::vector<wxString> getPlayerNames() = 0;
+	// LATER
+	// virtual void setClass(PlayerClass* clas, bool affectSkills = false, bool affectSpells = false, bool removeInvalidEquippedItems = false,
+	//     bool affectAwards = false, bool tryToKeepTierAndAlignment = false) = 0;
 
 	/*
 	TODO:
@@ -404,6 +413,7 @@ public:
 	{
 		Player* pl = getPlayers()[getPlayerIndex()];
 		std::vector<PlayerSkillValue> ret;
+		ret.reserve(GameData::skills.size());
 		for (int i = 0; i < pl->skills.size(); ++i)
 		{
 			SkillValue val = splitSkill(pl->skills[i]);
@@ -459,13 +469,11 @@ public:
 
 	int getLevel() override
 	{
-		Player* pl = getPlayers()[getPlayerIndex()];
 		return getStatBase(STAT_LEVEL);
 	}
 
 	void setLevel(int value, bool affectExperience = true) override
 	{
-		Player* pl = getPlayers()[getPlayerIndex()];
 		int old = getStatBase(STAT_LEVEL);
 		setStatBase(STAT_LEVEL, value);
 		if (affectExperience && value > old)
@@ -511,17 +519,21 @@ public:
 
 	void setBiography(const std::string& biography) override
 	{
+		wxASSERT_MSG(MMVER == 8, "This function is for MM8 only");
 		Player* pl = getPlayers()[getPlayerIndex()];
-		size_t max = getBiographyMaxUsableLength();
-		std::string biographyToSet = biography;
-		if (biography.size() > max)
+		if constexpr (SAME(Player, mm8::Player))
 		{
-			biographyToSet = biographyToSet.substr(0, max);
-			wxLogError("Too big biography length (%d). Truncated to %d", biography.size(), max);
-			wxLog::FlushActive();
+			size_t max = getBiographyMaxUsableLength();
+			std::string biographyToSet = biography;
+			if (biography.size() > max)
+			{
+				biographyToSet = biographyToSet.substr(0, max);
+				wxLogError("Too big biography length (%d). Truncated to %d", biography.size(), max);
+				wxLog::FlushActive();
+			}
+			memcpy(pl->biography.data(), biographyToSet.data(), biographyToSet.size());
+			pl->biography[biographyToSet.size()] = 0;
 		}
-		memcpy(pl->name.data(), biographyToSet.data(), biographyToSet.size());
-		pl->name[biographyToSet.size()] = 0;
 	}
 
 	SkillValue getSkillValue(int skillId) override
@@ -536,6 +548,29 @@ public:
 		return splitSkill(pl->skills.at(skill->id));
 	}
 
+	PlayerClass* getClass() override
+	{
+		Player* pl = getPlayers()[getPlayerIndex()];
+		return &(GameData::classes.at(pl->clas));
+	}
+
+	std::vector<wxString> getPlayerNames() override
+	{
+		std::vector<wxString> ret;
+		int i;
+		int old = playerIndex;
+		for (i = 0; i < CURRENT_PARTY_SIZE; ++i)
+		{
+			playerIndex = i;
+			ret.push_back(getName());
+		}
+		for (; i < MAX_PLAYERS; ++i)
+		{
+			ret.push_back(wxString::Format("Player %d", i + 1));
+		}
+		playerIndex = old;
+		return ret;
+	}
 };
 
 template<typename Player>

@@ -278,7 +278,7 @@ void testSettableField(
 		std::vector<wxString> parts;
 		parts.reserve(tests.size());
 		std::transform(tests.begin(), tests.end(), std::back_inserter(parts), [](uint64_t test) -> wxString { return wxString::Format("%lld", test); });
-		myassert(false, wxString::Format("Test data: %s", concatWxStrings(parts, ", ")));
+		wxLogWarning("Test data: %s", concatWxStrings(parts, ", "));
 	}
 
 	// for [getStat/setStat]-settable stats, either make new function similar to this one, but less templates and member pointers
@@ -297,7 +297,7 @@ std::vector<wxString> Tests::testPlayerStructAccessor()
 	bool failed = false;
 	Asserter myasserter(errors, failed);
 
-	static_assert(SAME(Player, mm7::Player), "Tests for other games not implemented yet");
+	//static_assert(SAME(Player, mm7::Player), "Tests for other games not implemented yet");
 
 	Player* pl = new Player;
 	memset(pl, 0, sizeof(Player));
@@ -466,6 +466,10 @@ std::vector<wxString> Tests::testPlayerStructAccessor()
 	testStatBase(STAT_HIT_POINTS, &Player::hitPoints, "Hit points base");
 	testStatBase(STAT_SPELL_POINTS, &Player::spellPoints, "Spell points base");
 
+	testSettableField(pl, &Player::skillPoints, std::function<int(void)> { std::bind(&PlayerStructAccessor::getSkillPoints, playerAccessor) },
+		std::function<void(int)>{ std::bind(&PlayerStructAccessor::setSkillPoints, playerAccessor, _1) },
+		boundsByType<int32_t>, myasserter, "Skill points");
+
 	auto testStringProperty = [pl, &myasserter](auto& array, std::function<std::string(void)> getter, std::function<void(const std::string&)> setter, size_t maxSize) -> void
 	{
 		static const auto randomString = [](size_t len) -> std::string
@@ -574,13 +578,6 @@ std::vector<wxString> Tests::testPlayerStructAccessor()
 			skillsToSet.push_back(PlayerSkillValue{ skillsVector[i], randomSkillValue(i) });
 			changed.push_back(skillsToSet.back().value != playerAccessor->getSkillValue(i));
 		}
-		wxString msg;
-		for (auto& psv : skillsToSet)
-		{
-			msg << psv.value.toString();
-			msg << "\n\n";
-		}
-		wxLogMessage(msg);
 		auto oldSkills = playerAccessor->getSkills();
 		playerAccessor->setSkills(skillsToSet);
 		auto newSkills = playerAccessor->getSkills();

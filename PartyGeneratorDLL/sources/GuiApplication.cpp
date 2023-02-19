@@ -2,10 +2,14 @@
 #include "GuiApplication.h"
 #include "globals.h"
 #include "MainWindow.h"
+#include "EditorMainWindow.h"
+#include "ControlPanel.h"
 
 GuiApplication::GuiApplication()
 {
     mainWindow = nullptr;
+    editorMainWindow = nullptr;
+    controlPanel = nullptr;
     // Keep the wx "main" thread running even without windows. This greatly
     // simplifies threads handling, because we don't have to correctly
     // implement wx-thread restarting.
@@ -23,6 +27,7 @@ GuiApplication::GuiApplication()
 	wxToolTip::Enable(true);
 }
 
+/*
 void GuiApplication::OnShowWindow(wxThreadEvent& event)
 {
     mainWindow->Show(event.GetInt());
@@ -33,7 +38,7 @@ void GuiApplication::OnTerminate(wxThreadEvent& event)
     MessageBoxA(0, "OnTerminate()", "", 0);
     //mainWindow->Destroy();
     ExitMainLoop();
-}
+}*/
 
 bool GuiApplication::OnInit()
 {
@@ -44,6 +49,8 @@ bool GuiApplication::OnInit()
     //wxMessageBox("OnInit()");
     //MSGBOX("OnInit()");
     mainWindow = new MainWindow(nullptr);
+    editorMainWindow = new EditorMainWindow(nullptr);
+    controlPanel = new ControlPanel(nullptr);
     return true;
 }
 

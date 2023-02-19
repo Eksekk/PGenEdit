@@ -3,7 +3,6 @@
 #include "main.h"
 #include "PlayerClass.h"
 #include "PlayerSkill.h"
-#include <vector>
 
 extern bool inMM;
 

@@ -8,11 +8,6 @@
 class GuaranteedClassDialog;
 class SpecificClassChooserPanel;
 
-class ClassTableViewModelNode
-{
-
-};
-
 class ClassTableViewModel : public wxDataViewModel
 {
 private:
@@ -30,7 +25,6 @@ public:
 
 	unsigned int GetColumnCount() const override;
 	wxString GetColumnType(unsigned int col) const override;
-	void fillOutTable();
 	GuaranteedClassDialog& dialog;
 
 	std::unordered_map<int, int> classIdsToTableIndexes;

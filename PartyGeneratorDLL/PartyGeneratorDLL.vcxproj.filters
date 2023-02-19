@@ -189,6 +189,15 @@
     <ClInclude Include="headers\GuiApplication.h">
       <Filter>Pliki nagłówkowe\Shared GUI</Filter>
     </ClInclude>
+    <ClInclude Include="EditorMainWindow.h">
+      <Filter>Pliki nagłówkowe\Editor\GUI</Filter>
+    </ClInclude>
+    <ClInclude Include="EditorPlayerWindow.h">
+      <Filter>Pliki nagłówkowe\Editor\GUI</Filter>
+    </ClInclude>
+    <ClInclude Include="ControlPanel.h">
+      <Filter>Pliki nagłówkowe\Shared GUI</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="sources\dllApi.cpp">
@@ -303,6 +312,15 @@
       <Filter>Pliki źródłowe\Shared GUI</Filter>
     </ClCompile>
     <ClCompile Include="sources\GuiApplication.cpp">
+      <Filter>Pliki źródłowe\Shared GUI</Filter>
+    </ClCompile>
+    <ClCompile Include="EditorMainWindow.cpp">
+      <Filter>Pliki źródłowe\Editor\GUI</Filter>
+    </ClCompile>
+    <ClCompile Include="EditorPlayerWindow.cpp">
+      <Filter>Pliki źródłowe\Editor\GUI</Filter>
+    </ClCompile>
+    <ClCompile Include="ControlPanel.cpp">
       <Filter>Pliki źródłowe\Shared GUI</Filter>
     </ClCompile>
   </ItemGroup>

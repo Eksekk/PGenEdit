@@ -3,6 +3,7 @@
 #include "LowLevel.h"
 #include <cassert>
 #include <cstring>
+#include "wx/debug.h"
 
 std::unordered_map<uint32_t, std::vector<uint8_t> > hookRestoreList;
 
@@ -133,4 +134,71 @@ void removeHook(uint32_t addr)
 	auto& data = hookRestoreList[addr];
 	patchBytes(addr, data.data(), data.size(), false);
 	hookRestoreList.erase(addr);
+}
+
+std::unordered_map<uint32_t, HookFunc> hookFuncMap;
+
+void __fastcall dispatchHook(uint32_t esp)
+{
+	HookData* d = reinterpret_cast<HookData*>(esp);
+	DWORD hookAddr = dword(d->esp) - 5;
+	auto itr = hookFuncMap.find(hookAddr);
+	if (itr != hookFuncMap.end())
+	{
+		HookFunc f = itr->second;
+		try
+		{
+			f(d);
+		}
+		catch (const std::exception& ex)
+		{
+			wxLogError(ex.what());
+			wxLog::FlushActive();
+		}
+	}
+	else
+	{
+		wxLogError("Unknown hook address 0x%X", hookAddr);
+		wxLog::FlushActive();
+	}
+}
+
+void __declspec(naked) myHookProc()
+{
+	// code taken from MMExtension RSMem.cpp
+	_asm
+	{
+		pushfd // push eflags first, because below sub would corrupt them, and we want to preserve them
+		// don't know yet why that is required (I think some free space for another functions to allocate, or return data to vanilla functions),
+		// but I can't confirm that so I simply commented this out and will find out what it's for when something breaks :)
+		// sub esp, 0xFFC
+		push eax // push eax so that we can overwrite it with old esp value
+		// lea eax, dword ptr[esp + 0x1004] // points to return address to vanilla code (esp + 4 is first address before hook call)
+		lea eax, dword ptr[esp + 8]
+		// push registers
+		push ebx
+		push ecx
+		push edx
+		push eax // old value of esp
+		push ebp
+		push esi
+		push edi
+		push dword ptr[eax - 4] // push flags again to have contiguous access to old register values
+		mov ecx, esp // pass current esp to hook function to let it access values
+		call dispatchHook
+		popfd // pop flags
+		// pop registers
+		pop edi
+		pop esi
+		pop ebp
+		// now here's the thing, if we popped esp right now we wouldn't have easy access to old values and had to do monstrosities like [esp + 0x1008]
+		// so move values manually
+		mov edx, [esp + 4]
+		mov ecx, [esp + 8]
+		mov ebx, [esp + 12]
+		mov eax, [esp + 16]
+		// restore old esp to clean up the stack - points to return address now
+		mov esp, [esp]
+		ret
+	}
 }

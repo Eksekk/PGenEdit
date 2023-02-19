@@ -645,7 +645,8 @@ end
 function printStruct(name, includeMembers, excludeMembers, indentLevel)
 	local processed = {}
 	indentLevel = indentLevel or 1
-	local t, dep = processStruct{name = name, includeMembers = includeMembers, indentLevel = indentLevel, processDependencies = true, prependNamespace = true, processedStructs = processed, excludeMembers = excludeMembers}
+	local t, dep = processStruct{name = name, includeMembers = includeMembers, indentLevel = indentLevel, processDependencies = true,
+		prependNamespace = true, processedStructs = processed, excludeMembers = excludeMembers}
 	--print(table.concat(t, "\n") .. "\n\nDependencies: " .. table.concat(dep, "\t"))
 	_G.t, _G.dep, _G.processed = t, dep, processed
 	local code = {}

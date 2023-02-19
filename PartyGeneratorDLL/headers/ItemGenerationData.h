@@ -2,7 +2,6 @@
 #include "pch.h"
 #include "main.h"
 #include "Player.h"
-#include <type_traits>
 #include "GeneratorDataBase.h"
 #include "Enum_const.h"
 #include "Player.h"

@@ -2,9 +2,6 @@
 #include "pch.h"
 #include "main.h"
 #include "Enum_const.h"
-#include <string>
-#include <vector>
-#include <unordered_map>
 class PlayerClass // holds data about classes, both from game structs and lua
 {
 public:

@@ -1,7 +1,6 @@
 #pragma once
 #include "pch.h"
 #include "main.h"
-#include "ClassWindow.h"
 #include <wx/statline.h>
 
 class PlayerPanel;
@@ -67,6 +66,7 @@ public:
 
 	void update();
 	void updateSettingsFromLinked();
-	[[nodiscard]] std::vector<wxString> getPlayerNames();
+
+	friend class Tests; // to allow ProcessEvent()
 };
 

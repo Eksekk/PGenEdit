@@ -1,18 +1,25 @@
 #pragma once
 #include "pch.h"
 #include "main.h"
-#include "MainWindow.h"
+
+class MainWindow;
+class EditorMainWindow;
+class ControlPanel;
+
 class GuiApplication : public wxApp
 {
 public:
-    GuiApplication();
     MainWindow* mainWindow;
+    EditorMainWindow* editorMainWindow;
+    ControlPanel* controlPanel;
 
+    GuiApplication();
     virtual bool OnInit();
 
+/*
 private:
-    void OnShowWindow(wxThreadEvent& event);
-    void OnTerminate(wxThreadEvent& event);
+	void OnShowWindow(wxThreadEvent& event);
+	void OnTerminate(wxThreadEvent& event);*/
 };
 
 wxDECLARE_APP(GuiApplication);

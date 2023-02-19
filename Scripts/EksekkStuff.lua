@@ -98,7 +98,7 @@ function M.installKeyboardHandlers()
 	local function loadUnload(t)
 		if t.Key == const.Keys.F3 and Game.CtrlPressed then
 			t.Handled = true
-			M.dll.displayMainWindow(true)
+			M.dll.displayControlPanel(true)
 		elseif t.Key == const.Keys.F4 and Game.CtrlPressed then
 			t.Handled = true
 			if M.dll then

@@ -16,21 +16,25 @@
 #ifndef WX_PRECOMP
 	#include <wx/wx.h>
 #endif
+
 #include <cstdint>
 #include <cstring>
-#include <string>
-#include <unordered_map>
-#include <vector>
+#include <cassert>
+#include <ctime>
+
 //#include <WinSock2.h>
 #define WIN32_LEAN_AND_MEAN // prevents above winsock problem (error if windows.h is included before winsock)
 #include <windows.h>
+
+#include <string>
+#include <unordered_map>
+#include <vector>
 #include <format>
 #include <type_traits>
 #include <random>
 #include <fstream>
 #include <filesystem>
 #include <chrono>
-#include <ctime>
 #include <limits>
 #include <ranges>
 #include <functional>

@@ -1,6 +1,5 @@
 #include "pch.h"
 #include "PlayerPanel.h"
-#include "ClassSettingsTab.h"
 
 PlayerPanel::PlayerPanel(wxWindow* parent, PlayerData* linkedGenerationData) : PlayerPanelBase(parent, linkedGenerationData)
 {

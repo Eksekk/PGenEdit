@@ -4,14 +4,14 @@
 #include "Utility.h"
 #include "Generator.h"
 #include "globals.h"
-#include <cassert>
 #include "GuiApplication.h"
 #include "PlayerData.h"
 #include "PlayerPanel.h"
 #include "wx/notebook.h"
 #include "ClassSettingsTab.h"
-#include <fstream>
 #include "DefaultPlayerPanel.h"
+#include "ClassWindow.h"
+#include "MainWindow.h"
 
 std::unordered_map<int, PlayerClass> GameData::classes;
 std::unordered_map<int, PlayerSkill> GameData::skills;
@@ -169,6 +169,7 @@ bool GameData::processClassDataJson(const char* str)
     catch (const nlohmann::json::exception& ex)
     {
         wxLogMessage("Exception received! Type: %s\n\nwhat(): %s", typeid(ex).name(), wxString(ex.what()));
+        wxLog::FlushActive();
         return false;
     }
     postProcess();
@@ -241,6 +242,39 @@ bool GameData::processSkillDataJson(const char* str)
                     wxLogWarning("Unknown special %s for skill %d", std::string(skillEntry["special"]), sk.id);
                 }
             }
+            if (skillEntry.contains("category"))
+            {
+                auto itr = skillCategoryEnumStringToId.find(skillEntry["category"]);
+                if (itr != skillCategoryEnumStringToId.end())
+                {
+                    sk.category = (SkillCategory)itr->second;
+                }
+                else
+                {
+                    wxLogWarning("Unknown category %s for skill %d", std::string(skillEntry["category"]), sk.id);
+                }
+            }
+            else
+            {
+                wxLogError("Missing category for skill %d", sk.id);
+            }
+            if (skillEntry.contains("trainCost"))
+            {
+                auto vec = skillEntry["trainCost"].get<std::vector<int>>();
+                for (int i = 0; i < vec.size(); ++i)
+                {
+                    int index = NOVICE + i;
+                    sk.trainCost.at(index) = vec[i];
+                }
+                if (vec.size() != MAX_MASTERY)
+                {
+                    wxLogWarning("Skill %d has %d trainCost[] size - %d expected", sk.id, vec.size(), MAX_MASTERY);
+                }
+            }
+            else
+            {
+                wxLogError("Missing train cost for skill %d", sk.id);
+            }
             for (auto& [plTypeStr, affinity] : skillEntry["affinityByPlayerType"].items())
             {
                 auto itr = plTypeEnumStringToId.find(plTypeStr);
@@ -259,6 +293,7 @@ bool GameData::processSkillDataJson(const char* str)
     catch (const nlohmann::json::exception& ex)
     {
         wxLogMessage("Exception received! Type: %s\n\nwhat(): %s", typeid(ex).name(), wxString(ex.what()));
+        wxLog::FlushActive();
         return false;
     }
     postProcess();

@@ -26,18 +26,10 @@ int NUM_CLASSES = 30;
 
 const std::unordered_map<std::string, int> plTypeEnumStringToId = { {"caster", PLAYER_CASTER}, {"melee", PLAYER_MELEE}, {"defensive", PLAYER_DEFENSIVE}
 	, {"utility", PLAYER_UTILITY}, {"ranged", PLAYER_RANGED} };
-
-const std::unordered_map<std::string, int> skillTypeEnumStringToId = { {"melee", SKILL_MELEE}, {"ranged", SKILL_RANGED }, {"defensive", SKILL_DEFENSIVE},
-	{"magic", SKILL_MAGIC}, {"utility", SKILL_UTILITY} };
-
-const std::unordered_map<std::string, int> skillSpecialEnumStringToId = { {"blaster", SKSPC_BLASTER}, {"meditation", SKSPC_MEDITATION}, {"elemental", SKSPC_ELEMENTAL},
-	{"self", SKSPC_SELF}, {"magicExclusive", SKSPC_MAGIC_EXCLUSIVE}, {"shield", SKSPC_SHIELD}, {"raceSkill", SKSPC_RACE_SKILL} };
 const std::unordered_map<std::string, int> alignmentStringToId = { {"neutral", ALIGNMENT_NEUTRAL}, {"light", ALIGNMENT_LIGHT}, {"dark", ALIGNMENT_DARK}, {"any", ALIGNMENT_ANY} };
 
 
 const std::unordered_map<int, std::string> plTypeEnumIdToString = invertMap(plTypeEnumStringToId);
-const std::unordered_map<int, std::string> skillTypeEnumIdToString = invertMap(skillTypeEnumStringToId);
-const std::unordered_map<int, std::string> skillSpecialEnumIdToString = invertMap(skillSpecialEnumStringToId);
 const std::unordered_map<int, std::string> alignmentIdToString = invertMap(alignmentStringToId);
 
 // GAME ENUMS

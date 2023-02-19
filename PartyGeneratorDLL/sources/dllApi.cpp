@@ -1,22 +1,22 @@
 #include "pch.h"
 #include "main.h"
-#include <globals.h>
 #include "Generator.h"
 #include <cstdlib>
 #include "LowLevel.h"
 #include "MainWindow.h"
 #include "GuiApplication.h"
 #include "GameData.h"
-#include <string>
 #include "Utility.h"
 #include "PlayerData.h"
 #include "PlayerPanel.h"
 #include "ClassWindow.h"
 #include "GameData.h"
 #include "Tests.h"
-#include <fstream>
 #include "Enum_const.h"
 #include "PlayerStructAccessor.h"
+#include "globals.h"
+#include "EditorMainWindow.h"
+#include "ControlPanel.h"
 
 extern bool inMM;
 
@@ -278,25 +278,46 @@ extern "C"
         //wxLogFatalError("app pointer: %X, mainWindow pointer: %X, playerPanels pointer: %X", (unsigned int)app, (unsigned int)app->mainWindow, (unsigned int)&app->mainWindow->playerPanels);
     }
 
+    bool checkBeforeShowingWindows()
+    {
+		if (!GameData::allDataReceived)
+		{
+			std::vector<wxString> errors;
+			if (GameData::classes.empty()) // TODO change check, as data will be partially filled from game structures
+			{
+				errors.push_back("Game class info wasn't received from lua yet!");
+			}
+			if (GameData::skills.empty())
+			{
+				errors.push_back("Game skill info wasn't received from lua yet!");
+			}
+			// TODO: check all data to be received from lua
+			wxMessageBox(concatWxStrings(errors, "\n"), "Error", wxOK | wxICON_ERROR);
+			return false;
+		}
+        return true;
+    }
+
     DLL_EXPORT void __stdcall displayMainWindow(bool visible)
     {
-        if (!GameData::allDataReceived)
+        if (checkBeforeShowingWindows())
         {
-            std::vector<wxString> errors;
-            if (GameData::classes.empty()) // TODO change check, as data will be partially filled from game structures
-            {
-                errors.push_back("Game class info wasn't received from lua yet!");
-            }
-            if (GameData::skills.empty())
-            {
-                errors.push_back("Game skill info wasn't received from lua yet!");
-            }
-            // TODO: check all data to be received from lua
-            wxMessageBox(concatWxStrings(errors, "\n"), "Error", wxOK | wxICON_ERROR);
-            return;
+            wxGetApp().mainWindow->Show(visible);
         }
-        wxGetApp().mainWindow->Show(visible);
     }
+
+	DLL_EXPORT void __stdcall displayEditorMainWindow(bool visible)
+	{
+		if (checkBeforeShowingWindows())
+		{
+			wxGetApp().editorMainWindow->Show(visible);
+		}
+	}
+    
+	DLL_EXPORT void __stdcall displayControlPanel(bool visible)
+	{
+        wxGetApp().controlPanel->Show(visible);
+	}
 
     DLL_EXPORT void __stdcall unloadCleanup()
     {
@@ -370,7 +391,7 @@ extern "C"
             std::vector<wxString> errors;
             if (MMVER == 6)
             {
-                //errors = Tests::run<mm6::Player, mm6::Game>();
+                errors = Tests::run<mm6::Player, mm6::Game>();
             }
             else if (MMVER == 7)
             {
@@ -378,7 +399,7 @@ extern "C"
             }
             else if (MMVER == 8)
             {
-                //errors = Tests::run<mm8::Player, mm8::Game>();
+                errors = Tests::run<mm8::Player, mm8::Game>();
             }
             if (errors.size() > 0)
             {

@@ -2,8 +2,21 @@
 #include "main.h"
 #include "PlayerSkill.h"
 #include "GameData.h"
+#include "Utility.h"
 
 extern const int INVALID_ID;
+
+const std::unordered_map<std::string, int> skillTypeEnumStringToId = { {"melee", SKILL_MELEE}, {"ranged", SKILL_RANGED }, {"defensive", SKILL_DEFENSIVE},
+	{"magic", SKILL_MAGIC}, {"utility", SKILL_UTILITY} };
+
+const std::unordered_map<std::string, int> skillSpecialEnumStringToId = { {"blaster", SKSPC_BLASTER}, {"meditation", SKSPC_MEDITATION}, {"elemental", SKSPC_ELEMENTAL},
+	{"self", SKSPC_SELF}, {"magicExclusive", SKSPC_MAGIC_EXCLUSIVE}, {"shield", SKSPC_SHIELD}, {"raceSkill", SKSPC_RACE_SKILL} };
+
+const std::unordered_map<std::string, int> skillCategoryEnumStringToId = { { "weapon", SKILLCAT_WEAPON}, { "armor", SKILLCAT_ARMOR}, { "magic", SKILLCAT_MAGIC}, {"misc", SKILLCAT_MISC} };
+
+const std::unordered_map<int, std::string> skillTypeEnumIdToString = invertMap(skillTypeEnumStringToId);
+const std::unordered_map<int, std::string> skillSpecialEnumIdToString = invertMap(skillSpecialEnumStringToId);
+const std::unordered_map<int, std::string> skillCategoryEnumIdToString = invertMap(skillCategoryEnumStringToId);
 
 bool SkillValue::operator==(const SkillValue& other) const
 {
@@ -36,7 +49,7 @@ SkillValue splitSkill(int skill)
 	int lev = skill & mask;
 	if (SKILL_COMBINE_MODE == BIT_PER_MASTERY)
 	{
-		for (int i = GRAND_MASTER; i > NOVICE; --i)
+		for (int i = MAX_MASTERY; i > NOVICE; --i)
 		{
 			if (skill & (1 << MASTERY_BITS[i]))
 			{
@@ -85,4 +98,6 @@ PlayerSkill::PlayerSkill()
 	}
 	doNotGenerate = false;
 	special = SKSPC_NONE;
+	category = SKILLCAT_WEAPON;
+	memset(trainCost.data(), 0, trainCost.size() * sizeof(std::decay_t<decltype(trainCost[0])>));
 }
