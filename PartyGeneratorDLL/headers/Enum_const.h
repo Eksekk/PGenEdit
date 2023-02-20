@@ -241,5 +241,5 @@ extern void makeEnumDamage_8();
 
 extern std::vector<int> DAMAGE_ALL_TYPES;
 
-inline void checkStatValidity(int stat);
-inline void checkDamageTypeValidity(int dmg);
+void checkStatValidity(int stat);
+void checkDamageTypeValidity(int dmg);

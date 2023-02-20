@@ -9,6 +9,7 @@ function events.GameInitialized1()
 	mem.LoadDll "wxbase321ud_vc_custom.dll"
 end
 local runEventLoopOnce
+local getLuaState
 function M.unloadDll()
 	--wtf = M.dll -- stack overflow
 	--debug.Message"a"
@@ -43,12 +44,28 @@ function M.loadDll()
 		end
 		d = M.dll
 		_G.oldDll = M.dll
+		M.dll.setLuaState(getLuaState())
 		M.dll.init()
 		runEventLoopOnce = function() M.dll.runEventLoopOnce() end
 		events.Tick = runEventLoopOnce
 		M.dll.setClassData(json.encode(M.C()))
 		M.dll.setSkillData(json.encode(M.Sk()))
 		M.dll.runTests()
+		rawset(M.dll, "runLua", M.dll.runLuaScriptFromDLL)
+	end
+end
+
+function getLuaState()
+	for k, v in pairs(debug.getregistry()) do
+		if type(k) == "userdata" and getU(v, "HookData") then
+			return
+			mem.u4[
+				tonumber(
+					tostring(k):match("x([%dA-Fa-f]+)")
+					, 16
+				)
+			]
+		end
 	end
 end
 
@@ -139,7 +156,7 @@ function universalEnum(t, array, unlimitedElementAmount)
 		meta.__call and type(meta.__call) == "function" and {t} or {(array and ipairs or pairs)(t or {})}) do
 		c[k] = v
 		i = i + 1
-		if not unlimitedElementAmount and i == 100000 then
+		if i == 100000 and not unlimitedElementAmount then
 			error("Infinite loop or more than 100000 elements (pass true as third argument to override)", 2)
 		end
 	end
@@ -310,8 +327,10 @@ M.kill = kill
 
 local mapIdsToItemNames = {}
 
-for i, entry in Game.ItemsTxt do
-	mapIdsToItemNames[entry.Name:lower()] = i
+function events.GameInitialized2()
+	for i, entry in Game.ItemsTxt do
+		mapIdsToItemNames[entry.Name:lower()] = i
+	end
 end
 
 function item(id)

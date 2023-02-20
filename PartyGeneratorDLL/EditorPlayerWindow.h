@@ -23,10 +23,12 @@ public:
 
 	EditorPlayerWindow(wxWindow* parent, int playerIndex);
 
+	void onUpdateTimer(wxTimerEvent& event);
 	~EditorPlayerWindow();
 
 	void onCloseWindow(wxCloseEvent& event);
 private:
 	wxBoxSizer* mainSizer;
+	wxTimer* updateTimer;
 };
 

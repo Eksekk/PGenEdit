@@ -39,4 +39,10 @@
 #include <ranges>
 #include <functional>
 
+extern "C"
+{
+#include <lua.h>
+#include <lauxlib.h>
+}
+
 #endif //PCH_H

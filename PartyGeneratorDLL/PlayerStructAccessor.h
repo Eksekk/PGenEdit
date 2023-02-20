@@ -34,39 +34,44 @@ protected:
 	int playerIndex = 0;
 	int getPlayerIndex();
 public:
-	PlayerStructAccessor& operator[](int index);
-	PlayerStructAccessor& operator[](void* player);
+	// NOT WORKING - accesses next "instance" of accessor instead of setting player
+	/*PlayerStructAccessor& operator[](int index);
+	PlayerStructAccessor& operator[](void* player);*/
 
-	virtual int getStatBase(int stat) = 0;
+	// note that these functions set player for all future accesses! I think it's more comfortable this way
+	PlayerStructAccessor* forPlayer(int index);
+	PlayerStructAccessor* forPlayer(void* player);
+
+	[[nodiscard]] virtual int getStatBase(int stat) = 0;
 	virtual void setStatBase(int stat, int value) = 0;
 
-	virtual int getStatBonus(int stat) = 0;
+	[[nodiscard]] virtual int getStatBonus(int stat) = 0;
 	virtual void setStatBonus(int stat, int value) = 0;
 
 	virtual void setStatBaseBonus(int stat, const BaseBonus& value);
 	virtual BaseBonus getStatBaseBonus(int stat);
 
-	static int spentPerSkill(SkillValue sv);
+	[[nodiscard]] static int spentPerSkill(SkillValue sv);
 
-	virtual int getSkillPoints() = 0;
+	[[nodiscard]] virtual int getSkillPoints() = 0;
 	virtual void setSkillPoints(int value) = 0;
-	virtual int getSpentSkillPoints() = 0;
-	virtual int getSpentSkillPointsForGivenSkills(const std::vector<PlayerSkillValue>& skillsAndValues);
+	[[nodiscard]] virtual int getSpentSkillPoints() = 0;
+	[[nodiscard]] virtual int getSpentSkillPointsForGivenSkills(const std::vector<PlayerSkillValue>& skillsAndValues);
 
 	virtual int64_t getExperience() = 0;
 	virtual int64_t getMinimumExperienceForLevel(int level);
 	/// affectLevel = true reduces level to maximum possible if value is reduced
 	virtual void setExperience(int64_t value, bool affectLevel = true) = 0;
 
-	static int getMinimumLevelForExperience(int64_t experience);
+	[[nodiscard]] static int getMinimumLevelForExperience(int64_t experience);
 
-	virtual int getLevel() = 0;
-	virtual int getTrainableLevel();
+	[[nodiscard]] virtual int getLevel() = 0;
+	[[nodiscard]] virtual int getTrainableLevel();
 	/// affectExperience = true increases experience to minimum possible if level is increased
 	virtual void setLevel(int value, bool affectExperience = true) = 0;
 
-	virtual std::string getName() = 0;
-	virtual int getNameMaxUsableLength() = 0;
+	[[nodiscard]] virtual std::string getName() = 0;
+	[[nodiscard]] virtual int getNameMaxUsableLength() = 0;
 
 	virtual std::string getBiography() = 0;
 	virtual int getBiographyMaxUsableLength() = 0;
@@ -74,23 +79,24 @@ public:
 	virtual void setName(const std::string& name) = 0;
 	virtual void setBiography(const std::string& biography) = 0;
 
-	virtual std::vector<PlayerSkillValue> getSkills() = 0;
-	virtual SkillValue getSkillValue(int skillId) = 0;
-	virtual SkillValue getSkillValue(PlayerSkill* skill) = 0;
+	[[nodiscard]] virtual std::vector<PlayerSkillValue> getSkills() = 0;
+	[[nodiscard]] virtual SkillValue getSkillValue(int skillId) = 0;
+	[[nodiscard]] virtual SkillValue getSkillValue(PlayerSkill* skill) = 0;
 	virtual void setSkills(const std::vector<PlayerSkillValue>& values) = 0;
 	virtual void setSkill(PlayerSkill* skill, SkillValue value) = 0;
 	virtual void setSkill(int skillId, SkillValue value) = 0;
 
 	// common stats
 	// TODO get full/current/bonus
-	virtual int getHp();
-	virtual void setHp(int value);
-	virtual int getSp();
-	virtual void setSp(int value);
+	[[nodiscard]] virtual int getHp();
+	[[nodiscard]] virtual void setHp(int value);
+	[[nodiscard]] virtual int getSp();
+	[[nodiscard]] virtual void setSp(int value);
 
-	virtual PlayerClass* getClass() = 0;
+	[[nodiscard]] virtual PlayerClass* getClass() = 0;
 
-	virtual std::vector<wxString> getPlayerNames() = 0;
+	[[nodiscard]] virtual std::vector<wxString> getPlayerNames() = 0;
+	[[nodiscard]] virtual wxString getNameOrDefault(int overridePlayerIndex) = 0;
 	// LATER
 	// virtual void setClass(PlayerClass* clas, bool affectSkills = false, bool affectSpells = false, bool removeInvalidEquippedItems = false,
 	//     bool affectAwards = false, bool tryToKeepTierAndAlignment = false) = 0;
@@ -158,7 +164,7 @@ public:
 		{
 			for (int i = 0; i < CURRENT_PARTY_SIZE; ++i)
 			{
-				(void)operator[](i); // switch player
+				(void)forPlayer(i); // switch player
 				f(std::forward<Args>(args)...);
 			}
 			playerIndex = old;
@@ -170,7 +176,7 @@ public:
 			ret.reserve(CURRENT_PARTY_SIZE);
 			for (int i = 0; i < CURRENT_PARTY_SIZE; ++i)
 			{
-				(void)operator[](i);
+				(void)forPlayer(i);
 				ret.push_back(f(std::forward<Args>(args)...));
 			}
 			playerIndex = old;
@@ -557,20 +563,32 @@ public:
 	std::vector<wxString> getPlayerNames() override
 	{
 		std::vector<wxString> ret;
-		int i;
-		int old = playerIndex;
-		for (i = 0; i < CURRENT_PARTY_SIZE; ++i)
+		for (int i = 0; i < MAX_PLAYERS; ++i)
 		{
-			playerIndex = i;
-			ret.push_back(getName());
+			ret.push_back(getNameOrDefault(i));
 		}
-		for (; i < MAX_PLAYERS; ++i)
-		{
-			ret.push_back(wxString::Format("Player %d", i + 1));
-		}
-		playerIndex = old;
 		return ret;
 	}
+
+	wxString getNameOrDefault(int overridePlayerIndex) override
+	{
+		if (overridePlayerIndex == INVALID_ID)
+		{
+			return getName();
+		}
+		else if (overridePlayerIndex < CURRENT_PARTY_SIZE)
+		{
+			int old = playerIndex;
+			auto name = forPlayer(overridePlayerIndex)->getName();
+			forPlayer(old);
+			return name;
+		}
+		else
+		{
+			return wxString::Format("Player %d", overridePlayerIndex + 1);
+		}
+	}
+
 };
 
 template<typename Player>
@@ -590,7 +608,3 @@ std::unordered_map<int, FieldType Player::*> TemplatedPlayerStructAccessor<Playe
 using PlayerStructAccessor_6 = TemplatedPlayerStructAccessor<mm6::Player>;
 using PlayerStructAccessor_7 = TemplatedPlayerStructAccessor<mm7::Player>;
 using PlayerStructAccessor_8 = TemplatedPlayerStructAccessor<mm8::Player>;
-
-template class TemplatedPlayerStructAccessor<mm6::Player>;
-template class TemplatedPlayerStructAccessor<mm7::Player>;
-template class TemplatedPlayerStructAccessor<mm8::Player>;

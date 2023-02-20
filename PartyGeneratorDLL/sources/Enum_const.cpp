@@ -407,11 +407,11 @@ void makeEnumDamage_8()
 
 std::vector<int> DAMAGE_ALL_TYPES;
 
-inline void checkStatValidity(int stat)
+void checkStatValidity(int stat)
 {
 	wxASSERT_MSG(existsInVector(STATS_ALL, stat), wxString::Format("Stat %d doesn't exist in game version %d", stat, MMVER));
 }
-inline void checkDamageTypeValidity(int dmgType)
+void checkDamageTypeValidity(int dmgType)
 {
 	wxASSERT_MSG(existsInVector(DAMAGE_ALL_TYPES, dmgType), wxString::Format("Damage type %d doesn't exist in game version %d", dmgType, MMVER));
 }

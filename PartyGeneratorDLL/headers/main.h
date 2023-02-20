@@ -2,8 +2,6 @@
 #define __MAIN_H__
 #include "pch.h"
 
-struct lua_State;
-
 #define BUILD_DLL
 #ifdef BUILD_DLL
     #define DLL_EXPORT __declspec(dllexport)

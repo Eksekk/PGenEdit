@@ -17,6 +17,7 @@
 #include "globals.h"
 #include "EditorMainWindow.h"
 #include "ControlPanel.h"
+#include "LuaFunctions.h"
 
 extern bool inMM;
 
@@ -350,7 +351,12 @@ extern "C"
             end
         end
         */
+        bool init = Lua == nullptr; // only once
         Lua = (lua_State*)ptr;
+        if (init)
+        {
+            luaInit();
+        }
     }
 
     DLL_EXPORT void __stdcall setClassData(const char* jsonStr)
@@ -382,6 +388,11 @@ extern "C"
         {
             generator->players[i] = ptrs[i];
         }
+    }
+
+    DLL_EXPORT bool __stdcall runLuaScriptFromDLL(const char* str)
+    {
+        return runScript(str);
     }
 
     DLL_EXPORT void __stdcall runTests()

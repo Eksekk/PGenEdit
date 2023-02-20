@@ -1,12 +1,17 @@
 #include "pch.h"
 #include "EditorPlayerWindow.h"
 #include <wx/notebook.h>
+#include "PlayerStructAccessor.h"
 
-EditorPlayerWindow::EditorPlayerWindow(wxWindow* parent, int playerIndex) : wxFrame(parent, wxID_ANY, wxString::Format("Edit player %d", playerIndex + 1),
+EditorPlayerWindow::EditorPlayerWindow(wxWindow* parent, int playerIndex) : wxFrame(parent, wxID_ANY, "Edit " + playerAccessor->getNameOrDefault(playerIndex),
 	wxDefaultPosition, wxSize(770, 670), (wxDEFAULT_FRAME_STYLE | wxTAB_TRAVERSAL) & ~wxRESIZE_BORDER), playerIndex(playerIndex)
 {
 	this->SetSizeHints(wxDefaultSize, wxDefaultSize);
 	this->SetBackgroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW));
+
+	updateTimer = new wxTimer(this);
+	Bind(wxEVT_TIMER, &EditorPlayerWindow::onUpdateTimer, this);
+	updateTimer->Start(250, wxTIMER_CONTINUOUS);
 
 	mainPanel = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
 	mainSizer = new wxBoxSizer(wxVERTICAL);
@@ -45,8 +50,15 @@ EditorPlayerWindow::EditorPlayerWindow(wxWindow* parent, int playerIndex) : wxFr
 	Bind(wxEVT_CLOSE_WINDOW, &EditorPlayerWindow::onCloseWindow, this);
 }
 
+// TODO: three windows have update timer now. Do one timer with multiple Bind()s?
+void EditorPlayerWindow::onUpdateTimer(wxTimerEvent& event)
+{
+	SetTitle("Edit " + playerAccessor->getNameOrDefault(playerIndex));
+}
+
 EditorPlayerWindow::~EditorPlayerWindow()
 {
+	delete updateTimer;
 }
 
 void EditorPlayerWindow::onCloseWindow(wxCloseEvent& event)

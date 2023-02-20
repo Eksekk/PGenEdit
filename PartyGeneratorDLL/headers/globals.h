@@ -3,16 +3,14 @@
 #include "main.h"
 #include "Player.h"
 #include "Structs.h"
-#include "Generator.h"
 
+class Generator;
 extern Generator* generator;
 
 extern int MMVER;
 
 extern const int INVALID_ID;
 extern const int DEFAULT_SETTINGS_INDEX;
-
-extern lua_State* Lua;
 
 extern void* game;
 

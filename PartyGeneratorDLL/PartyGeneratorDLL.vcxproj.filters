@@ -198,6 +198,9 @@
     <ClInclude Include="ControlPanel.h">
       <Filter>Pliki nagłówkowe\Shared GUI</Filter>
     </ClInclude>
+    <ClInclude Include="LuaFunctions.h">
+      <Filter>Pliki nagłówkowe</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="sources\dllApi.cpp">
@@ -322,6 +325,9 @@
     </ClCompile>
     <ClCompile Include="ControlPanel.cpp">
       <Filter>Pliki źródłowe\Shared GUI</Filter>
+    </ClCompile>
+    <ClCompile Include="LuaFunctions.cpp">
+      <Filter>Pliki źródłowe</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

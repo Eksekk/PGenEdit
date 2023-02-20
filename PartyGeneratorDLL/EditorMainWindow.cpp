@@ -58,19 +58,6 @@ EditorMainWindow::EditorMainWindow(wxWindow* parent, wxWindowID id, const wxStri
 	Bind(wxEVT_CLOSE_WINDOW, &EditorMainWindow::onCloseWindow, this);
 }
 
-void EditorMainWindow::onPlayerButtonClick(wxCommandEvent& event)
-{
-	for (int i = 0; i < CURRENT_PARTY_SIZE; ++i)
-	{
-		if (event.GetId() == playerButtonIds[i])
-		{
-			playerWindows[i]->Show();
-			return;
-		}
-	}
-	wxFAIL_MSG(wxString::Format("Invalid player button index"));
-}
-
 void EditorMainWindow::setupGlobalSettingsControls()
 {
 	wxBoxSizer* miscGlobalSettingsSizer;
@@ -170,14 +157,29 @@ void EditorMainWindow::setupMenusAndStatusBar()
 	statusBar = this->CreateStatusBar(1, wxSTB_ELLIPSIZE_END, wxID_ANY);
 }
 
+void EditorMainWindow::onPlayerButtonClick(wxCommandEvent& event)
+{
+	for (int i = 0; i < CURRENT_PARTY_SIZE; ++i)
+	{
+		if (event.GetId() == playerButtonIds[i])
+		{
+			playerWindows[i]->Show();
+			return;
+		}
+	}
+	wxFAIL_MSG(wxString::Format("Invalid player button index"));
+}
+
 void EditorMainWindow::update(wxTimerEvent& event)
 {
 	auto names = playerAccessor->getPlayerNames();
+	Freeze();
 	for (int i = 0; i < MAX_PLAYERS; ++i)
 	{
 		playerButtons[i]->SetLabel(names[i]);
 		playerButtons[i]->Enable(i < CURRENT_PARTY_SIZE);
 	}
+	Thaw();
 }
 
 void EditorMainWindow::onCloseWindow(wxCloseEvent& event)

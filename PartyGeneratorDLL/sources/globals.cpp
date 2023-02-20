@@ -2,10 +2,6 @@
 #include "main.h"
 #include "globals.h"
 #include "MainWindow.h"
-#include <unordered_map>
-#include <string>
-#include "Structs.h"
-#include <variant>
 #include "Generator.h"
 
 Generator* generator = nullptr;

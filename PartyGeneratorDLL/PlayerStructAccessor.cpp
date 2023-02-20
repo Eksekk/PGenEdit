@@ -1,4 +1,5 @@
 #include "pch.h"
+#include "main.h"
 #include "PlayerStructAccessor.h"
 #include "LowLevel.h"
 
@@ -25,14 +26,15 @@ void setFieldSizes_8()
 	PlayerStructAccessor::FieldSizes::name = 31;
 }
 
-PlayerStructAccessor& PlayerStructAccessor::operator[](int index)
+
+PlayerStructAccessor* PlayerStructAccessor::forPlayer(int index)
 {
 	wxASSERT_MSG(index < CURRENT_PARTY_SIZE || index == PLAYER_ACTIVE || index == PLAYER_RANDOM, wxString::Format("Invalid player index (%d) passed to PlayerStructAccessor.operator[]", index));
 	playerIndex = index;
-	return *this;
+	return this;
 }
 
-PlayerStructAccessor& PlayerStructAccessor::operator[](void* player)
+PlayerStructAccessor* PlayerStructAccessor::forPlayer(void* player)
 {
 	bool found = false;
 	for (int i = 0; i < CURRENT_PARTY_SIZE; ++i)
@@ -45,7 +47,7 @@ PlayerStructAccessor& PlayerStructAccessor::operator[](void* player)
 		}
 	}
 	wxASSERT_MSG(found, wxString::Format("Invalid player pointer (%X) passed to PlayerStructAccessor.operator[]", (uint32_t)player));
-	return *this;
+	return this;
 }
 
 void PlayerStructAccessor::setStatBaseBonus(int stat, const BaseBonus& value)
@@ -143,3 +145,7 @@ void PlayerStructAccessor::setSp(int value)
 {
 	setStatBase(STAT_SPELL_POINTS, value);
 }
+
+template class TemplatedPlayerStructAccessor<mm6::Player>;
+template class TemplatedPlayerStructAccessor<mm7::Player>;
+template class TemplatedPlayerStructAccessor<mm8::Player>;

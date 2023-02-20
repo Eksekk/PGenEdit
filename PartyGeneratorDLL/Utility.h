@@ -197,7 +197,7 @@ template <typename T>
 struct deduced_type;
 
 template<typename T>
-void f(T&&) {
+void showDeducedType(T&&) {
 
 	deduced_type<T>::show;
 }

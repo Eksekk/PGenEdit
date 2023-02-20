@@ -13,3 +13,4 @@ EXPORTS
 	setCallbacks
 	setPlayerPointers
 	runTests
+	runLuaScriptFromDLL

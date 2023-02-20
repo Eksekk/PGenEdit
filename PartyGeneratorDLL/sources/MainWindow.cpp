@@ -242,7 +242,9 @@ MainWindow::~MainWindow()
 
 void MainWindow::onTimer(wxTimerEvent& event)
 {
+	Freeze();
 	update();
+	Thaw();
 }
 
 void MainWindow::onShow(wxShowEvent& event)
