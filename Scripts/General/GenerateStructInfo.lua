@@ -114,7 +114,7 @@ all possible attributes:
 - comments - table of strings
 - struct - is struct (or pointer to it if ptr is set)
 ]]
-local function getMemberData(structName, memberName, member, offsets, members, class, rofields)
+local function getMemberData(structName, memberName, member, offsets, members, class, rofields, customFieldSizes)
 	rofields = rofields or {}
 	member = member or members[memberName]
 	local data = {name = memberName or "", offset = offsets[memberName or ""] or 0}
@@ -147,7 +147,7 @@ local function getMemberData(structName, memberName, member, offsets, members, c
 		data.dataType = types.union
 	elseif up.count then -- array
 		data.array = true
-		data.innerType = getMemberData(structName, memberName, handler, offsets, members, class)
+		data.innerType = getMemberData(structName, memberName, handler, offsets, members, class, rofields, customFieldSizes)
 		if data.innerType.replaceWith then
 			data.replaceWith = data.innerType.replaceWith
 			return data
@@ -281,7 +281,7 @@ local function getMemberData(structName, memberName, member, offsets, members, c
 		print(string.format("Warning: unknown type structs.%s.%s encountered!", structName, memberName))
 		data.array = true
 		data.innerType = {size = 1, typeName = commonTypeNamesToCpp.u1}
-		data.count = (customTypeSizes[structName] or {})[memberName] or error("Unknown custom type name: " .. memberName, 2)
+		data.count = customFieldSizes[memberName] or error("Unknown custom type name: " .. memberName, 2)
 		data.low = 0
 		data.size = data.count
 		data.name = memberName
@@ -463,6 +463,19 @@ local function processGroup(group, indentLevel)
 	code[#code + 1] = indentOuter .. "};"
 	return code
 end
+
+local function getCustomFieldSizes(structName)
+	local oldMember = mem.structs.types.CustomType
+	local fieldSizes = {}
+	function mem.structs.types.CustomType(name, size, f, ...)
+		fieldSizes[name] = size
+		return oldMember(name, size, f, ...)
+	end
+	mem.struct(structs.f[structName])
+	mem.structs.types.CustomType = oldMember
+	return fieldSizes
+end
+
 --[[
 args = table with:
 	name - structure/union name
@@ -498,13 +511,14 @@ local function processStruct(args)
 		end
 	end
 	local indentOuter, indentInner = string.rep(INDENT_CHARS, args.indentLevel), string.rep(INDENT_CHARS, args.indentLevel + 1)
+	local customFieldSizes = not args.union and getCustomFieldSizes(args.name) or nil
 	for mname, f in pairs(members) do
 		if (type(args.includeMembers) == "table" and not table.find(args.includeMembers, mname)) or (type(mname) == "string" and mname:len() == 0) then -- last check is for dummy names
 			goto continue
 		elseif type(args.excludeMembers) == "table" and table.find(args.excludeMembers, mname) then
 			goto continue
 		end
-		local data = getMemberData(args.name, mname, f, offsets, members, class, rofields)
+		local data = getMemberData(args.name, mname, f, offsets, members, class, rofields, customFieldSizes)
 		if data then
 			if args.union and tonumber(data.name) then
 				-- array with some fields rearranged, so it can't be indexed with const.* in all cases
@@ -671,6 +685,30 @@ old_callback = mem_internal.member_callback
 function mem_internal.member_callback(n, ...) old_callback(n, ...); print(n) end
 mem_internal.UpdateCallbacks()
 mem.struct(structs.f.GameMap)
+]]
+
+--[[
+local up = debug.upvalues(mem.structs.types.i4)
+oldMember = up.member
+fieldSizes = {}
+function mymember(name, size, f, ...)
+	fieldSizes[name] = size
+	return oldMember(name, size, f, ...)
+end
+up.member = mymember
+mem.struct(structs.f.GameMap)
+up.member = oldMember
+]]
+
+--[[
+oldMember = mem.structs.types.CustomType
+fieldSizes = {}
+function mem.structs.types.CustomType(name, size, f, ...)
+	fieldSizes[name] = size
+	return oldMember(name, size, f, ...)
+end
+mem.struct(structs.f.GameMap)
+mem.structs.types.CustomType = oldMember
 ]]
 
 -- fuck msvc

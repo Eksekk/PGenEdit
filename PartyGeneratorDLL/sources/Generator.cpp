@@ -29,15 +29,11 @@ Generator::Generator() : defaultPlayerData(DEFAULT_SETTINGS_INDEX)
 	seed = 0;
 	randomInFileIsExact = true;
 	setDefaults(); // also sets defaults for player data and activates generation for every player
-	players = nullptr;
 }
 
 Generator::~Generator()
 {
-	if (players)
-	{
-		delete[] players; // deletes only stored player pointer array, not actual player structs
-	}
+	
 }
 
 bool Generator::readFromJson(const Json& json)
@@ -102,7 +98,7 @@ template<typename Player>
 bool Generator::generate()
 {
 	state = Generator::State(); // explicitly create fresh state
-	Player** players = (Player**)this->players;
+	Player** players = (Player**)players;
 	if constexpr (SAME(Player, mm6::Player))
 	{
 		// PartyMm6 party = (GameMm6)game->party;

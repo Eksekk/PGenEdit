@@ -1,8 +1,11 @@
 #include "pch.h"
 #include "main.h"
 #include "PlayerClass.h"
+#include "Utility.h"
+#include "GameData.h"
 
 extern const int INVALID_ID;
+const int MAX_TIER = 2;
 
 PlayerClass::PlayerClass() : id(INVALID_ID), name(""), tier(0), baseClass(nullptr), alignment(ALIGNMENT_NEUTRAL), playerTypeAffinity()
 {
@@ -34,46 +37,76 @@ PlayerClass::~PlayerClass()
 	
 }
 
-std::vector<PlayerClass*> PlayerClass::getEntireClassTree(int id)
+std::vector<PlayerClass*> PlayerClass::getClassTree(const TreeOptions& options)
 {
-	try
+	auto vals = getEntireClassTree();
+	auto itr = std::remove_if(vals.begin(), vals.end(), [this, &options](PlayerClass* const cls) -> bool
 	{
-
-	}
-	catch (...)
-	{
-	}
-	return std::vector<PlayerClass*>();
+		if (!options.equal && cls->tier == this->tier && cls != this)
+		{
+			return true;
+		}
+		else if (!options.higher && cls->tier > this->tier)
+		{
+			return true;
+		}
+		else if (!options.lower && cls->tier < this->tier)
+		{
+			return true;
+		}
+		else
+		{
+			return false;
+		}
+	});
+	vals.erase(itr, vals.end());
+	return vals;
 }
 
-std::vector<PlayerClass*> PlayerClass::getEntireClassTree(PlayerClass* clas)
+// probably overkill to use graph algorithms here, but I recall Merge had two base classes for "mage" class - sorcerer and necromancer
+void dfsHelper(PlayerClass* cls, std::vector<PlayerClass*>& visited)
 {
-	return std::vector<PlayerClass*>();
+	auto toCheck = cls->promotionClasses;
+	toCheck.push_back(cls->baseClass);
+	for (PlayerClass* neighbor : toCheck)
+	{
+		if (neighbor != nullptr && !existsInVector(visited, neighbor))
+		{
+			visited.push_back(neighbor);
+			dfsHelper(neighbor, visited);
+		}
+	}
 }
 
-std::vector<PlayerClass*> PlayerClass::getEntireClassTree()
+std::vector<PlayerClass*> PlayerClass::getEntireClassTree(PlayerClass* start)
 {
-	return std::vector<PlayerClass*>();
+	std::vector<PlayerClass*> ret;
+	dfsHelper(start != nullptr ? start : this, ret);
+	return ret;
 }
 
 bool PlayerClass::areInSameClassTree(int id1, int id2)
 {
-	return false;
+	return GameData::classes.at(id1).isInSameClassTreeAs(id2);
 }
 
 bool PlayerClass::areInSameClassTree(PlayerClass* clas1, PlayerClass* clas2)
 {
-	return false;
+	return clas1->isInSameClassTreeAs(clas2);
 }
 
-bool PlayerClass::areInSameClassTree(PlayerClass* other)
+bool PlayerClass::isInSameClassTreeAs(PlayerClass* other)
 {
-	return false;
+	return existsInVector(getEntireClassTree(), other);
 }
 
-bool PlayerClass::areInSameClassTree(int otherId)
+bool PlayerClass::isInSameClassTreeAs(int otherId)
 {
-	return false;
+	auto vals = getEntireClassTree();
+	return std::find_if(vals.begin(), vals.end(), [otherId](PlayerClass* const cls) -> bool
+		{
+			return cls->id == otherId;
+		}) != vals.end();
 }
 
 wxString PlayerClass::getFormattedTier()

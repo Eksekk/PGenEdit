@@ -39,7 +39,7 @@ PlayerStructAccessor* PlayerStructAccessor::forPlayer(void* player)
 	bool found = false;
 	for (int i = 0; i < CURRENT_PARTY_SIZE; ++i)
 	{
-		if ((uint32_t)player == (uint32_t)generator->players[i])
+		if ((uint32_t)player == (uint32_t)players[i])
 		{
 			found = true;
 			playerIndex = i;
@@ -64,24 +64,19 @@ BaseBonus PlayerStructAccessor::getStatBaseBonus(int stat)
 	return bb;
 }
 
-int PlayerStructAccessor::spentPerSkill(SkillValue sv)
-{
-	return sv.level * (sv.level + 1) / 2 - 1;
-}
-
 int PlayerStructAccessor::getSpentSkillPointsForGivenSkills(const std::vector<PlayerSkillValue>& skillsAndValues)
 {
 	int result = 0;
 	for (auto& [skillPtr, value] : skillsAndValues)
 	{
-		result += spentPerSkill(value);
+		result += skillpointsSpentForSkill(value);
 	}
 	return result;
 }
 
 int64_t PlayerStructAccessor::getMinimumExperienceForLevel(int level)
 {
-	return (int64_t)level * (level - 1) * 500;
+	return (int64_t)level * ((int64_t)level - 1) * 500;
 }
 
 int PlayerStructAccessor::getMinimumLevelForExperience(int64_t experience)

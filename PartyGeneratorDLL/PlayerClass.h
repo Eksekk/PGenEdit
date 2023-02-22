@@ -2,6 +2,9 @@
 #include "pch.h"
 #include "main.h"
 #include "Enum_const.h"
+
+extern const int MAX_TIER;
+
 class PlayerClass // holds data about classes, both from game structs and lua
 {
 public:
@@ -22,14 +25,20 @@ public:
 
 	PlayerClass* getStarterClass();
 
-	static std::vector<PlayerClass*> getEntireClassTree(int id);
-	static std::vector<PlayerClass*> getEntireClassTree(PlayerClass* clas);
-	std::vector<PlayerClass*> getEntireClassTree();
+	struct TreeOptions
+	{
+		bool lower; // include lower tier?
+		bool higher; // include higher tier?
+		bool equal; // include same tier?
+		TreeOptions(bool lower = true, bool higher = true, bool equal = true) : lower(lower), higher(higher), equal(equal) {}
+	};
+	std::vector<PlayerClass*> getClassTree(const TreeOptions& options);
+	std::vector<PlayerClass*> getEntireClassTree(PlayerClass* start = nullptr);
 
 	static bool areInSameClassTree(int id1, int id2);
 	static bool areInSameClassTree(PlayerClass* clas1, PlayerClass* clas2);
-	bool areInSameClassTree(PlayerClass* other);
-	bool areInSameClassTree(int otherId);
+	bool isInSameClassTreeAs(PlayerClass* other);
+	bool isInSameClassTreeAs(int otherId);
 
 	wxString getFormattedTier();
 	wxString getFormattedAlignment();

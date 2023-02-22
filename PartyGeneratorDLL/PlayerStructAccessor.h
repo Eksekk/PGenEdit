@@ -12,7 +12,7 @@
 extern const bool MALE, FEMALE;
 
 extern const int PLAYER_ACTIVE, PLAYER_RANDOM;
-extern Generator* generator;
+extern void** players;
 
 class PlayerStructAccessor;
 extern PlayerStructAccessor* playerAccessor;
@@ -51,8 +51,6 @@ public:
 	virtual void setStatBaseBonus(int stat, const BaseBonus& value);
 	virtual BaseBonus getStatBaseBonus(int stat);
 
-	[[nodiscard]] static int spentPerSkill(SkillValue sv);
-
 	[[nodiscard]] virtual int getSkillPoints() = 0;
 	virtual void setSkillPoints(int value) = 0;
 	[[nodiscard]] virtual int getSpentSkillPoints() = 0;
@@ -79,12 +77,31 @@ public:
 	virtual void setName(const std::string& name) = 0;
 	virtual void setBiography(const std::string& biography) = 0;
 
+	enum ClassConstraint
+	{
+		CLASS_CONSTRAINT_NONE = 0,
+		CLASS_CONSTRAINT_CURRENT_CLASS,
+		CLASS_CONSTRAINT_ANY_PROMOTION_CLASS
+	};
+	struct SkillOptions
+	{
+		bool affectSkillpoints, allowNegativeSkillpoints, affectGold, allowNegativeGold;
+		ClassConstraint classConstraint;
+		std::vector<SkillCategory> batchSetAffectWhichSkillCategories; // only affects setting multiple skills at once
+
+		SkillOptions() : affectSkillpoints(false), allowNegativeSkillpoints(false), affectGold(false), allowNegativeGold(false),
+			classConstraint(CLASS_CONSTRAINT_NONE), batchSetAffectWhichSkillCategories({ SKILLCAT_WEAPON, SKILLCAT_ARMOR, SKILLCAT_MAGIC, SKILLCAT_MISC }) {}
+	};
+
 	[[nodiscard]] virtual std::vector<PlayerSkillValue> getSkills() = 0;
-	[[nodiscard]] virtual SkillValue getSkillValue(int skillId) = 0;
-	[[nodiscard]] virtual SkillValue getSkillValue(PlayerSkill* skill) = 0;
-	virtual void setSkills(const std::vector<PlayerSkillValue>& values) = 0;
-	virtual void setSkill(PlayerSkill* skill, SkillValue value) = 0;
-	virtual void setSkill(int skillId, SkillValue value) = 0;
+	[[nodiscard]] virtual SkillValue getSkill(int skillId) = 0;
+	[[nodiscard]] virtual SkillValue getSkill(PlayerSkill* skill) = 0;
+	virtual bool setSkills(const std::vector<PlayerSkillValue>& values, const SkillOptions& options = SkillOptions()) = 0;
+	virtual bool setSkill(PlayerSkill* skill, SkillValue value, const SkillOptions& options = SkillOptions()) = 0;
+	virtual bool setSkill(int skillId, SkillValue value, const SkillOptions& options = SkillOptions()) = 0;
+	[[nodiscard]] virtual Mastery getSkillMaxMastery(PlayerSkill* skill, const SkillOptions& options = SkillOptions()) = 0;
+	[[nodiscard]] virtual std::unordered_map<PlayerSkill*, Mastery> getSkillMaxMasteries(const std::vector<PlayerSkill*>& skills, const SkillOptions& options = SkillOptions()) = 0;
+	virtual void applyClassConstraints(const SkillOptions& options) = 0;
 
 	// common stats
 	// TODO get full/current/bonus
@@ -93,7 +110,8 @@ public:
 	[[nodiscard]] virtual int getSp();
 	[[nodiscard]] virtual void setSp(int value);
 
-	[[nodiscard]] virtual PlayerClass* getClass() = 0;
+	[[nodiscard]] virtual int getClass() = 0;
+	[[nodiscard]] virtual PlayerClass* getClassPtr() = 0;
 
 	[[nodiscard]] virtual std::vector<wxString> getPlayerNames() = 0;
 	[[nodiscard]] virtual wxString getNameOrDefault(int overridePlayerIndex) = 0;
@@ -193,7 +211,7 @@ class TemplatedPlayerStructAccessor : public PlayerStructAccessor
 
 	inline Player** getPlayers()
 	{
-		return (Player**)generator->players;
+		return (Player**)players;
 	}
 
 	template<typename FieldType>
@@ -400,7 +418,7 @@ public:
 		int result = 0;
 		for (auto& [skillPtr, skillValue] : skills)
 		{
-			result += std::max(0, spentPerSkill(skillValue));
+			result += std::max(0, skillpointsSpentForSkill(skillValue));
 		}
 		return result;
 	}
@@ -430,30 +448,75 @@ public:
 		return ret;
 	}
 
-	void setSkills(const std::vector<PlayerSkillValue>& values) override
+private:
+	// returns false if skill points requirements cannot be met, otherwise subtracts cost and returns true (need to set skillpoints manually at the end!)
+	bool trySubtractSkillpoints(SkillValue newSkillValue, SkillValue oldSkillValue, bool affectSkillpoints, bool allowNegativeSkillpoints, int& sp)
+	{
+		if (affectSkillpoints)
+		{
+			int cost = skillpointsSpentForSkill(newSkillValue) - skillpointsSpentForSkill(oldSkillValue);
+			if (cost > sp && !allowNegativeSkillpoints)
+			{
+				return false;
+			}
+			sp -= cost;
+		}
+		return true;
+	}
+public:
+
+	// this function and two below return true if all skills could be set (due to affectSkillpoints parameter)
+	bool setSkills(const std::vector<PlayerSkillValue>& values, const SkillOptions& options = SkillOptions()) override
 	{
 		Player* pl = getPlayers()[getPlayerIndex()];
+		int sp = getSkillPoints();
+		bool ret = true;
 		for (auto& [skillPtr, skillValue] : values)
 		{
-			pl->skills.at(skillPtr->id) = joinSkill(skillValue);
+			if (existsInVector(options.batchSetAffectWhichSkillCategories, skillPtr->category))
+			{
+				ret = trySubtractSkillpoints(skillValue, getSkill(skillPtr), options.affectSkillpoints, options.allowNegativeSkillpoints, sp);
+				if (!ret)
+				{
+					break;
+				}
+				pl->skills.at(skillPtr->id) = joinSkill(skillValue);
+			}
+			
 		}
+		setSkillPoints(sp);
+		return ret;
 	}
 
-	void setSkill(PlayerSkill* skill, SkillValue value) override
+	bool setSkill(PlayerSkill* skill, SkillValue value, const SkillOptions& options = SkillOptions()) override
 	{
 		wxASSERT(skill != nullptr);
 		if (skill == nullptr)
 		{
-			return;
+			return true;
+		}
+		int sp = getSkillPoints();
+		if (!trySubtractSkillpoints(value, getSkill(skill), options.affectSkillpoints, options.allowNegativeSkillpoints, sp))
+		{
+			return false;
 		}
 		Player* pl = getPlayers()[getPlayerIndex()];
 		pl->skills.at(skill->id) = joinSkill(value);
+		setSkillPoints(sp);
+		return true;
 	}
 
-	void setSkill(int skillId, SkillValue value) override
+	bool setSkill(int skillId, SkillValue value, const SkillOptions& options = SkillOptions()) override
 	{
+		int sp = getSkillPoints();
+		if (!trySubtractSkillpoints(value, getSkill(skillId), options.affectSkillpoints, options.allowNegativeSkillpoints, sp))
+		{
+			return false;
+		}
 		Player* pl = getPlayers()[getPlayerIndex()];
 		pl->skills.at(skillId) = joinSkill(value);
+		setSkillPoints(sp);
+		return true;
 	}
 
 	int64_t getExperience() override
@@ -542,19 +605,25 @@ public:
 		}
 	}
 
-	SkillValue getSkillValue(int skillId) override
+	SkillValue getSkill(int skillId) override
 	{
 		Player* pl = getPlayers()[getPlayerIndex()];
 		return splitSkill(pl->skills.at(skillId));
 	}
 
-	SkillValue getSkillValue(PlayerSkill* skill) override
+	SkillValue getSkill(PlayerSkill* skill) override
 	{
 		Player* pl = getPlayers()[getPlayerIndex()];
 		return splitSkill(pl->skills.at(skill->id));
 	}
 
-	PlayerClass* getClass() override
+	int getClass() override
+	{
+		Player* pl = getPlayers()[getPlayerIndex()];
+		return pl->clas;
+	}
+
+	PlayerClass* getClassPtr() override
 	{
 		Player* pl = getPlayers()[getPlayerIndex()];
 		return &(GameData::classes.at(pl->clas));
@@ -589,6 +658,82 @@ public:
 		}
 	}
 
+	virtual Mastery getSkillMaxMastery(PlayerSkill* skill, const SkillOptions& options) override
+	{
+		if (options.classConstraint == CLASS_CONSTRAINT_NONE)
+		{
+			return MAX_MASTERY;
+		}
+		else if (options.classConstraint == CLASS_CONSTRAINT_CURRENT_CLASS)
+		{
+			return GameData::classes.at(getClass()).maximumSkillMasteries.at(skill->id);
+		}
+		else //CLASS_CONSTRAINT_ANY_PROMOTION_CLASS
+		{
+			PlayerClass::TreeOptions opt(false, true, false);
+			auto tree = getClassPtr()->getClassTree(opt);
+			PlayerClass* max = *(
+				std::max_element(tree.begin(), tree.end(), [skill](PlayerClass* const cls1, PlayerClass* const cls2) -> bool
+					{
+						return cls1->maximumSkillMasteries.at(skill->id) < cls2->maximumSkillMasteries.at(skill->id);
+					})
+				);
+			return max->maximumSkillMasteries.at(skill->id);
+		}
+	}
+	virtual std::unordered_map<PlayerSkill*, Mastery> getSkillMaxMasteries(const std::vector<PlayerSkill*>& skills, const SkillOptions& options) override
+	{
+		std::unordered_map<PlayerSkill*, Mastery> ret;
+		if (options.classConstraint == CLASS_CONSTRAINT_NONE)
+		{
+			for (const auto skillPtr : skills)
+			{
+				ret[skillPtr] = MAX_MASTERY;
+			}
+			return ret;
+		}
+		else if (options.classConstraint == CLASS_CONSTRAINT_CURRENT_CLASS)
+		{
+			for (const auto skillPtr : skills)
+			{
+				ret[skillPtr] = getClassPtr()->maximumSkillMasteries.at(skillPtr->id);
+			}
+			return ret;
+		}
+		else //CLASS_CONSTRAINT_ANY_PROMOTION_CLASS
+		{
+			PlayerClass::TreeOptions opt(false, true, false); // !lower, higher, !equal
+			auto tree = getClassPtr()->getClassTree(opt);
+			for (const auto skillPtr : skills)
+			{
+				for (const auto clsPtr : tree)
+				{
+					ret[skillPtr] = std::max(ret.at(skillPtr), clsPtr->maximumSkillMasteries.at(skillPtr->id));
+				}
+			}
+			return ret;
+		}
+	}
+
+	void applyClassConstraints(const SkillOptions& options)
+	{
+		std::vector<PlayerSkillValue> skillsToSet;
+		std::transform(GameData::skills.begin(), GameData::skills.end(), std::back_inserter(skillsToSet), [this](auto& pair) -> PlayerSkillValue
+			{
+				return { &pair.second, getSkill(&pair.second) };
+			});
+		std::vector<PlayerSkill*> skillPtrs;
+		std::ranges::transform(skillsToSet, std::back_inserter(skillPtrs), [](PlayerSkillValue& psv) -> PlayerSkill*
+			{
+				return psv.skill;
+			});
+		auto masteries = getSkillMaxMasteries(skillPtrs, options);
+		for (PlayerSkillValue& psv : skillsToSet)
+		{
+			psv.value.mastery = std::min(static_cast<Mastery>(psv.value.mastery), masteries.at(psv.skill));
+		}
+		setSkills(skillsToSet, options);
+	}
 };
 
 template<typename Player>

@@ -114,9 +114,6 @@
     <ClInclude Include="Game.h">
       <Filter>Pliki nagłówkowe\Structs</Filter>
     </ClInclude>
-    <ClInclude Include="resource.h">
-      <Filter>Pliki nagłówkowe</Filter>
-    </ClInclude>
     <ClInclude Include="PlayerStructAccessor.h">
       <Filter>Pliki nagłówkowe\Structs</Filter>
     </ClInclude>

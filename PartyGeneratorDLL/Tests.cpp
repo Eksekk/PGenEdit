@@ -247,8 +247,8 @@ std::vector<wxString> Tests::testGui()
 
 	Player* player = new Player;
 	memset(player, 0, sizeof(Player));
-	void* oldPlayer = generator->players[1];
-	generator->players[1] = player;
+	void* oldPlayer = players[1];
+	players[1] = player;
 
 	auto oldName = playerAccessor->forPlayer(1)->getName();
 	playerAccessor->setName("abcd");
@@ -266,7 +266,7 @@ std::vector<wxString> Tests::testGui()
 		}
 		myassert(i < CURRENT_PARTY_SIZE ? eWindow->playerButtons[i]->IsEnabled() : !eWindow->playerButtons[i]->IsEnabled(), i);
 	}
-	generator->players[1] = oldPlayer;
+	players[1] = oldPlayer;
 	CURRENT_PARTY_SIZE = oldCURRENT_PARTY_SIZE;
 	eWindow->ProcessEvent(event2);
 	delete player;
@@ -295,8 +295,8 @@ std::vector<wxString> Tests::testPlayerStructAccessor()
 
 	//wxLogNull noLog;
 
-	void* oldPlayerZero = generator->players[0];
-	generator->players[0] = pl;
+	void* oldPlayerZero = players[0];
+	players[0] = pl;
 	(void)playerAccessor->forPlayer(0); // switch to player 0
 	// full hp bonus, full sp bonus, ranged/melee attack/damage bonus
 	if constexpr (SAME(Player, mm6::Player) || SAME(Player, mm7::Player))
@@ -565,7 +565,7 @@ std::vector<wxString> Tests::testPlayerStructAccessor()
 		for (int i : skillIdsToChange)
 		{
 			skillsToSet.push_back(PlayerSkillValue{ skillsVector[i], randomSkillValue(i) });
-			changed.push_back(skillsToSet.back().value != playerAccessor->getSkillValue(i));
+			changed.push_back(skillsToSet.back().value != playerAccessor->getSkill(i));
 		}
 		auto oldSkills = playerAccessor->getSkills();
 		playerAccessor->setSkills(skillsToSet);
@@ -617,7 +617,137 @@ std::vector<wxString> Tests::testPlayerStructAccessor()
 	testSpecifiedSkillsByIndex(every2th);
 	testSpecifiedSkillsByIndex(every3th);
 
-	generator->players[0] = oldPlayerZero;
+	/*
+		/*enum ClassConstraint
+		{
+			CLASS_CONSTRAINT_NONE = 0,
+			CLASS_CONSTRAINT_CURRENT_CLASS,
+			CLASS_CONSTRAINT_ANY_PROMOTION_CLASS
+		};
+		struct SkillOptions
+		{
+			bool affectSkillpoints, allowNegativeSkillpoints, affectGold, allowNegativeGold;
+			ClassConstraint classConstraint;
+			std::vector<SkillCategory> affectWhichSkillCategories;
+
+			SkillOptions() : affectSkillpoints(false), allowNegativeSkillpoints(false), affectGold(false), allowNegativeGold(false),
+				classConstraint(CLASS_CONSTRAINT_NONE), affectWhichSkillCategories({ SKILLCAT_WEAPON, SKILLCAT_ARMOR, SKILLCAT_MAGIC, SKILLCAT_MISC }) {}
+		};
+		virtual bool setSkills(const std::vector<PlayerSkillValue>& values, const SkillOptions& options = SkillOptions()) = 0;
+		virtual bool setSkill(PlayerSkill* skill, SkillValue value, const SkillOptions& options = SkillOptions()) = 0;
+		virtual bool setSkill(int skillId, SkillValue value, const SkillOptions& options = SkillOptions()) = 0;
+		[[nodiscard]] virtual Mastery getSkillMaxMastery(PlayerSkill* skill, const SkillOptions& options = SkillOptions()) = 0;
+		[[nodiscard]] virtual std::unordered_map<PlayerSkill*, Mastery> getSkillMaxMasteries(const std::vector<PlayerSkill*>& skills, const SkillOptions& options = SkillOptions()) = 0;*/
+	PlayerStructAccessor::SkillOptions opt;
+	opt.affectSkillpoints = true;
+	myassert(!playerAccessor->setSkill(3, { 4, 2 }, opt));
+	myassert(!playerAccessor->setSkill(5, { 20, 3 }, opt));
+	myassert(playerAccessor->setSkill(5, { 1, 1 }, opt));
+	myassert(playerAccessor->setSkill(5, { 0, 1 }, opt));
+	// extra parentheses are required because otherwise preprocessor interprets "," as next macro argument
+	myassert((playerAccessor->getSkill(5) == SkillValue{ 0, 0 }));
+	opt.allowNegativeSkillpoints = true;
+	myassert(playerAccessor->setSkill(10, { 5, 4 }, opt));
+	myassert(playerAccessor->getSkillPoints() == -14);
+	myassert(playerAccessor->setSkill(10, { 3, 4 }, opt));
+	myassert((playerAccessor->getSkill(10) == SkillValue{ 3, 4 }));
+	myassert(playerAccessor->getSkillPoints() == -9);
+	myassert(playerAccessor->setSkill(12, { 2, 4 }, opt));
+	myassert(playerAccessor->getSkillPoints() == -11);
+	myassert((playerAccessor->getSkill(12) == SkillValue{ 2, 4 }));
+	auto& sk = GameData::skills;
+	std::vector<PlayerSkillValue> skillsToSet{ { &sk.at(10), {1, 1} }, { &sk.at(20), {6, 2} }, {&sk.at(2), {2, 3} } };
+	const int SP = 5000;
+	playerAccessor->setSkillPoints(SP);
+	playerAccessor->setSkills(skillsToSet, opt);
+	std::for_each(skillsToSet.begin(), skillsToSet.end(), [&myasserter](const PlayerSkillValue& psv)
+		{
+			myassert(playerAccessor->getSkill(psv.skill) == psv.value, psv.skill->name, playerAccessor->getSkill(psv.skill), psv.value);
+		});
+	myassert(playerAccessor->getSkillPoints() == SP + 5 - 20 - 2);
+	// TODO: more tests, preferably some automated automated testing (use lambdas to perform one test and then supply multiple of them)
+
+	// bits 0-3 - booleans
+	// bits 4-7 - affect what
+	// bits 8-9 - class constraint
+	auto getOptionsFromNumber = [](int n) -> PlayerStructAccessor::SkillOptions
+	{
+		PlayerStructAccessor::SkillOptions opt;
+		opt.affectSkillpoints = n & 0b1;
+		opt.allowNegativeSkillpoints = n & 0b10;
+		opt.affectGold = n & 0b100;
+		opt.allowNegativeGold = n & 0b1000;
+		for (int i = 4; i <= 7; ++i)
+		{
+			if (n & (1 << i))
+			{
+				opt.batchSetAffectWhichSkillCategories.push_back((SkillCategory)(i - 4));
+			}
+		}
+		opt.classConstraint = static_cast<PlayerStructAccessor::ClassConstraint>((n & 0b11'0000'0000) >> 8);
+		return opt;
+	};
+	
+	int gameGold = 500000;
+	auto testSkillFunctions = [pl, &myasserter, &gameGold](int testId, const std::unordered_map<PlayerSkill*, SkillValue>& setWhat, int gold, int skillpoints, const PlayerStructAccessor::SkillOptions& options) -> void
+	{
+		playerAccessor->setSkillPoints(skillpoints);
+		for (const auto& [skillPtr, value] : setWhat)
+		{
+			int prevGold = gameGold;
+			int prevSkillpoints = playerAccessor->getSkillPoints();
+			int expectedGoldChange = skillPtr->getFullTrainCostForMastery((Mastery)value.mastery) - skillPtr->getFullTrainCostForMastery(playerAccessor->getSkill(skillPtr).mastery);
+			int expectedSkillpointsChange = skillpointsSpentForSkill(value) - skillpointsSpentForSkill(playerAccessor->getSkill(skillPtr));
+			bool success = playerAccessor->setSkill(skillPtr, value);
+			std::vector<wxString> failReasons;
+			if (options.affectGold && !options.allowNegativeGold && prevGold < expectedGoldChange)
+			{
+				failReasons.push_back(
+					wxString::Format(
+						"Test #%d should fail (partially), because gold is affected, negative not allowed, and "
+						"current gold (%d) was less than required gold (%d) for skill %s",
+						testId, prevGold, expectedGoldChange, skillPtr->name
+					)
+				);
+			}
+			if (options.affectSkillpoints && !options.allowNegativeSkillpoints && prevSkillpoints < expectedSkillpointsChange)
+			{
+				failReasons.push_back(
+					wxString::Format(
+						"Test #%d should fail (partially), because skillpoints are affected, negative not allowed, and "
+						"current skillpoints (%d) were less than required skillpoints (%d) for skill %s (level: %s)",
+						testId, prevSkillpoints, expectedSkillpointsChange, skillPtr->name, value.toString()
+					)
+				);
+			}
+			Mastery masteryConstrainedByClass = MAX_MASTERY;
+			if (options.classConstraint == PlayerStructAccessor::CLASS_CONSTRAINT_NONE)
+			{
+				masteryConstrainedByClass = MAX_MASTERY;
+			}
+			else if (options.classConstraint == PlayerStructAccessor::CLASS_CONSTRAINT_CURRENT_CLASS)
+			{
+				masteryConstrainedByClass = playerAccessor->getClassPtr()->maximumSkillMasteries.at(skillPtr->id);
+			}
+			else
+			{
+				// nothing, idk if repeating code from accessor is a good idea
+			}
+			static const std::string constraintNames[] = {"none", "current class", "any promotion class"};
+			if (value.mastery > (int)masteryConstrainedByClass && playerAccessor->getSkill(skillPtr).mastery > masteryConstrainedByClass)
+			{
+				failReasons.push_back(
+					wxString::Format(
+						"Test #%d should fail (partially), because class constraint (\"%s\") is not satisfied - "
+						"maximum mastery is %d, new mastery is %d"
+						testId, constraintNames[(int)options.classConstraint], (int)masteryConstrainedByClass, playerAccessor->getSkill(skillPtr).mastery
+					)
+				);
+			}
+		}
+	};
+
+	players[0] = oldPlayerZero;
 	delete pl;
 	CURRENT_PARTY_SIZE = oldCURRENT_PARTY_SIZE;
 	return errors;
@@ -627,13 +757,17 @@ template std::vector<wxString> Tests::testPlayerStructAccessor<mm6::Player, mm6:
 template std::vector<wxString> Tests::testPlayerStructAccessor<mm7::Player, mm7::Game>();
 template std::vector<wxString> Tests::testPlayerStructAccessor<mm8::Player, mm8::Game>();
 
+#pragma warning(push)
+#pragma warning(disable: 6001)
+#pragma warning(disable: 4700)// definitely initialized in dllApi.cpp, and if not I'll just get a segfault and fix it
+// (I test with low level debugger on at all time, so should be easy
 template<typename Player, typename Game>
 std::vector<wxString> Tests::testMisc()
 {
 	std::vector<wxString> errors;
 	bool failed;
 	Asserter myasserter(errors, failed);
-	Player** players = (Player**)generator->players;
+	Player** players = (Player**)players;
 	for (int i = 0; i < MAX_PLAYERS; ++i) // TODO: player count can be different in mm8
 	{
 
@@ -743,6 +877,7 @@ std::vector<wxString> Tests::testMisc()
 
 	return errors;
 }
+#pragma warning(pop)
 
 template std::vector<wxString> Tests::testMisc<mm6::Player, mm6::Game>();
 template std::vector<wxString> Tests::testMisc<mm7::Player, mm7::Game>();

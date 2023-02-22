@@ -89,6 +89,32 @@ int joinSkill(SkillValue skill)
 	}
 }
 
+[[nodiscard]] int skillpointsSpentForSkill(SkillValue sv)
+{
+	return std::max(0, sv.level * (sv.level + 1) / 2 - 1);
+}
+
+int PlayerSkill::getFullTrainCostForMastery(Mastery m)
+{
+	int cost = 0;
+	for (int i = 0; i < (int)m; ++i)
+	{
+		cost += trainCost[i];
+	}
+	return cost;
+}
+
+int PlayerSkill::getFullTrainCostForMastery(SkillValue sv)
+{
+	return getFullTrainCostForMastery((Mastery)sv.mastery);
+}
+
+int PlayerSkill::getFullTrainCostForMastery(int m)
+{
+	wxASSERT(m >= 0 && m <= MAX_MASTERY);
+	return getFullTrainCostForMastery((Mastery)m);
+}
+
 PlayerSkill::PlayerSkill()
 {
 	id = INVALID_ID;

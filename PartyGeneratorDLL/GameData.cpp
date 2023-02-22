@@ -304,3 +304,22 @@ void GameData::reparse(const char* data[DATA_TYPE_COUNT])
 {
     throw std::runtime_error("Not supported");
 }
+
+extern "C" bool checkIsInGame();
+void updatePartySizeAndPlayerPtrs(); // defined in dllApi.cpp
+void GameData::updateIsInGame(wxTimerEvent& event)
+{
+	inGame = checkIsInGame();
+	if (inGame && MMVER == 8)
+	{
+		updatePartySizeAndPlayerPtrs();
+	}
+	else if (inGame)
+	{
+		CURRENT_PARTY_SIZE = 4;
+	}
+	else
+	{
+		CURRENT_PARTY_SIZE = 0;
+	}
+}

@@ -13,6 +13,9 @@ extern const int INVALID_ID;
 extern const int DEFAULT_SETTINGS_INDEX;
 
 extern void* game;
+extern void** players;
+extern bool inGame;
+extern wxTimer* mainUpdateTimer;
 
 // functions from lua
 typedef bool (*isTwoHanded_ptr)(void*, int); // player ptr, item id

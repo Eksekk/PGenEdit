@@ -72,5 +72,22 @@ extern "C"
 			lua_pop(Lua, 1);
 		}*/
 	}
+
+	bool checkIsInGame()
+	{
+		lua_pushstring(Lua, "InGame");
+		lua_rawget(Lua, LUA_REGISTRYINDEX);
+		if (lua_type(Lua, -1) == LUA_TNIL)
+		{
+			lua_settop(Lua, 0);
+			return false;
+		}
+		else
+		{
+			bool ret = lua_toboolean(Lua, -1);
+			lua_settop(Lua, 0);
+			return ret;
+		}
+	}
 }
 

@@ -45,7 +45,6 @@ public:
 	virtual ~Generator();
 
 	PartyType partyType;
-	void** players;
 
 	bool unsetArtifactsFoundBits;
 	bool setArtifactsFoundBitsIfGenerated;

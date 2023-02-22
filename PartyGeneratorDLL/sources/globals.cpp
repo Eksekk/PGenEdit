@@ -12,6 +12,9 @@ const int DEFAULT_SETTINGS_INDEX = -2;
 int MMVER = INVALID_ID;
 
 void* game = 0;
+void** players = nullptr;
+bool inGame = false;
+wxTimer* mainUpdateTimer = nullptr;
 
 isTwoHanded_ptr isTwoHanded = (isTwoHanded_ptr)0;
 isEquippableInOffhand_ptr isEquippableInOffhand = (isEquippableInOffhand_ptr)0;

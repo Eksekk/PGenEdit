@@ -59,7 +59,6 @@
     <ClInclude Include="PlayerPanelBase.h" />
     <ClInclude Include="PlayerSkill.h" />
     <ClInclude Include="PlayerPanel.h" />
-    <ClInclude Include="resource.h" />
     <ClInclude Include="SpecificClassChooserPanel.h" />
     <ClInclude Include="Tests.h" />
     <ClInclude Include="Utility.h" />

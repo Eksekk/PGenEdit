@@ -63,6 +63,8 @@ enum SkillSpecial // don't make hundreds of skill types, instead associate addit
 extern const std::unordered_map<std::string, int> skillSpecialEnumStringToId;
 extern const std::unordered_map<int, std::string> skillSpecialEnumIdToString;
 
+[[nodiscard]] int skillpointsSpentForSkill(SkillValue sv);
+
 class PlayerSkill
 {
 public:
@@ -75,6 +77,10 @@ public:
 	std::unordered_map<int, Mastery> maxMasteryByClass; // <class, mastery>
 	std::unordered_map<int, double> affinityByPlayerType;
 	bool doNotGenerate; // for skills like diplomacy in mm7 (yes, it exists ingame)
+
+	int getFullTrainCostForMastery(Mastery m);
+	int getFullTrainCostForMastery(SkillValue sv);
+	int getFullTrainCostForMastery(int m);
 
 	PlayerSkill();
 };

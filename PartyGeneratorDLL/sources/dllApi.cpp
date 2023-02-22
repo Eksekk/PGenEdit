@@ -63,9 +63,13 @@ void updatePartySizeAndPlayerPtrs()
 {
     std::vector<void*> ptrs = getPlayerPointersMm8();
     CURRENT_PARTY_SIZE = ptrs.size();
+	if (!players)
+	{
+		players = new void* [MAX_PLAYERS];
+	}
     for (int i = 0; i < ptrs.size(); ++i)
     {
-        generator->players[i] = ptrs[i];
+        players[i] = ptrs[i];
     }
 }
 
@@ -151,24 +155,16 @@ extern "C"
 
                 // TODO: test for Merge (run lua script?)
                 break;
-                /* call comctl32.dll init common controls ex (change call address!)
-                
-                60 83 EC 08 C7 04 24 08 00 00 00 C7 44 24 04 FF FF 00 80 54 E8 C7 33 F9 6E 83 C4 08 61 C3
-                 
-				pushad
-				sub esp,8
-				mov dword ptr ss:[esp],8
-				mov dword ptr ss:[esp+4],8000FFFF
-				push esp
-				call 0x755D33E0
-				add esp,8
-				popad
-				ret */
             }
 
         case DLL_PROCESS_DETACH:
+            delete mainUpdateTimer;
             delete generator;
             delete playerAccessor;
+			if (players)
+			{
+				delete[] players; // deletes only stored player pointer array, not actual player structs
+			}
             break;
         case DLL_THREAD_ATTACH:
             // attach to thread
@@ -253,6 +249,11 @@ extern "C"
         app = &wxGetApp();
         app->CallOnInit();
 
+        // need to create after wxwidgets is initialized
+		mainUpdateTimer = new wxTimer;
+		mainUpdateTimer->Bind(wxEVT_TIMER, &GameData::updateIsInGame);
+		mainUpdateTimer->Start(150, wxTIMER_CONTINUOUS);
+
         if (inMM && MMVER == 6)
         {
             hookJump(0x458BD6, setPartyCountMm6);
@@ -269,12 +270,8 @@ extern "C"
     DLL_EXPORT void __stdcall runEventLoopOnce()
     {
         //assert(dynamic_cast<wxLogGui*>(wxLog::GetActiveTarget()));
-        if (MMVER == 8)
-        {
-            updatePartySizeAndPlayerPtrs();
-        }
         wxLog::FlushActive();
-        app->ProcessPendingEvents();
+        //app->ProcessPendingEvents();
         //wxGetApp().mainWindow->playerPanels.size()
         //wxLogFatalError("app pointer: %X, mainWindow pointer: %X, playerPanels pointer: %X", (unsigned int)app, (unsigned int)app->mainWindow, (unsigned int)&app->mainWindow->playerPanels);
     }
@@ -379,14 +376,14 @@ extern "C"
 
     DLL_EXPORT void __stdcall setPlayerPointers(void** ptrs)
     {
-        if (!generator->players)
+        if (!players)
         {
-            generator->players = new void* [MAX_PLAYERS];
+            players = new void* [MAX_PLAYERS];
         }
         // TODO: mm8 compatibility (player pointers and player names and even player count can change at runtime!)
         for (int i = 0; i < MAX_PLAYERS; ++i)
         {
-            generator->players[i] = ptrs[i];
+            players[i] = ptrs[i];
         }
     }
 
