@@ -2,6 +2,8 @@
 #include "pch.h"
 #include "main.h"
 
+#include "structsTest.h"
+
 #pragma pack(push, 1)
 namespace mm6
 {

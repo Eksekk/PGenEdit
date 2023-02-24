@@ -34,6 +34,7 @@
     <ClInclude Include="GuaranteedClassDialog.h" />
     <ClInclude Include="ClassGenerationData.h" />
     <ClInclude Include="LuaFunctions.h" />
+    <ClInclude Include="Map.h" />
     <ClInclude Include="PlayerClass.h" />
     <ClInclude Include="headers\GuiApplication.h" />
     <ClInclude Include="headers\Enum_const.h" />

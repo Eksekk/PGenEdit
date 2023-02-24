@@ -14,7 +14,7 @@ function M.unloadDll()
 	--wtf = M.dll -- stack overflow
 	--debug.Message"a"
 	if M.dll then
-		local ptr = M.dll.?ptr
+		local ptr = M.dll["?ptr"]
 		M.dll.unloadCleanup()
 		mem.UnloadDll(M.dll)
 		M.dll = nil
@@ -77,7 +77,7 @@ function M.ptrs()
 	if M.dll then
 		local ptrs = mem.allocMM(4 * Party.Count)
 		for i = 0, Party.Count - 1 do
-			mem.u4[i * 4 + ptrs] = Party[i].?ptr
+			mem.u4[i * 4 + ptrs] = Party[i]["?ptr"]
 		end
 		M.dll.setPlayerPointers(ptrs)
 		mem.freeMM(ptrs)
@@ -412,15 +412,12 @@ M.deepcopyMM = deepcopyMM
 function multipleInsert(t, index, ...)
 	local v = {...}
 	if #v == 1 and type(v[1]) == "table" then
-		v = {unpack(v[1])}
+		v = v[1]
 	end
 	local shift = #v
 	for i = #t, index, -1 do
 		t[i + shift] = t[i]
 	end
-	--if #v == 1 and type(v[1]) == "table" then
-	--	v = v[1]
-	--end
 	for i = 1, #v do
 		t[index + i - 1] = v[i]
 	end
@@ -466,6 +463,17 @@ function M.reloadApi()
 	dofile "C:\\Users\\Eksekk\\source\\repos\\PartyGenerator\\Scripts\\General\\PartyGeneratorApi.lua"
 end
 M.reloadApi()
+
+function debugTable(tbl) -- makes table print its contents in stacktrace instead of "(table: 0x0ff488f8)"
+	local mt = getmetatable(tbl) or {}
+	if not mt.__tostring then
+		function mt.__tostring(t)
+			rawset(getmetatable(t), "__tostring", nil)
+			return dump(t)
+		end
+	end
+	setmetatable(tbl, mt)
+end
 
 _G.oldDll = M.dll
 return M
