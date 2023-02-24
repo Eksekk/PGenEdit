@@ -39,6 +39,11 @@ std::string SkillValue::toString() const
 	return "{" + std::to_string(level) + ", " + std::to_string(mastery) + "}";
 }
 
+wxString& operator<<(wxString& str, const SkillValue& val)
+{
+	return str << val.toString();
+}
+
 SkillValue splitSkill(int skill)
 {
 	if (skill == 0)

@@ -15,6 +15,7 @@ struct SkillValue
 
 SkillValue splitSkill(int skill);
 int joinSkill(SkillValue skill);
+wxString& operator<<(wxString& str, const SkillValue& val);
 
 class PlayerSkill;
 struct PlayerSkillValue

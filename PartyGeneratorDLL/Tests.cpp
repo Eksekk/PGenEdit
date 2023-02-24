@@ -739,7 +739,7 @@ std::vector<wxString> Tests::testPlayerStructAccessor()
 				failReasons.push_back(
 					wxString::Format(
 						"Test #%d should fail (partially), because class constraint (\"%s\") is not satisfied - "
-						"maximum mastery is %d, new mastery is %d"
+						"maximum mastery is %d, new mastery is %d",
 						testId, constraintNames[(int)options.classConstraint], (int)masteryConstrainedByClass, playerAccessor->getSkill(skillPtr).mastery
 					)
 				);

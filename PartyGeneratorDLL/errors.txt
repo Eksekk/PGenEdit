@@ -1,1 +1,0 @@
-Tests::testSkillFunctions(C:\Users\Eksekk\source\repos\PartyGenerator\PartyGeneratorDLL\Tests.cpp:46) e›‡×êZAssertion failed! (joinSkill({ 10, 2 }) == 0b1000000001010)

@@ -97,9 +97,21 @@ local function getBaseTypeField(data, field)
 	return data2[field]
 end
 local getGroup
+local function getCustomFieldSizes(structName)
+	local oldMember = mem.structs.types.CustomType
+	local fieldSizes = {}
+	function mem.structs.types.CustomType(name, size, f, ...)
+		fieldSizes[name] = size
+		return oldMember(name, size, f, ...)
+	end
+	mem.struct(structs.f[structName])
+	mem.structs.types.CustomType = oldMember
+	return fieldSizes
+end
 
 -- helper functions
 -- DEFINED IN EksekkStuff.lua
+
 --[[
 all possible attributes:
 - array - is array
@@ -113,7 +125,7 @@ all possible attributes:
 - formatTypeName - %s is embedded in string and represents member name and thus must be formatted
 - ptr - is ptr to something (array, character string, structure etc.)
 - constPtr - pointer can't be changed
-- size
+- size - entire member size in memory, for arrays it's count * innerType.size
 - bit - is bit
 	- bitValue - used for named bits (like structs.Item.Stolen)
 	- bitIndex - index of bit in little endian starting from 0 (bit 0x200 of container 0xFE84 would have index 14), used only with named bits
@@ -122,7 +134,9 @@ all possible attributes:
 - comments - table of strings
 - struct - is struct (or pointer to it if ptr is set)
 - commentOut - self-explanatory, used for custom types with 0 size
+- padding
 - [added in processStruct] ptrValue - pointer with set value
+- [added in getGroup] padStart
 ]]
 local function getMemberData(structName, memberName, member, offsets, members, class, rofields, customFieldSizes, inArray)
 	rofields = rofields or {}
@@ -181,8 +195,11 @@ local function getMemberData(structName, memberName, member, offsets, members, c
 			addComment(string.format("MMExt: %d..%d, here %d..%d", data.low, data.low + data.count - 1, 0, data.count - 1))
 		end
 		data.size = ((data.ptr or data.count == 0) and 4 or data.count * up.size)
+		-- PADDING PROBLEMS, two solutions below:
 		if data.innerType.size and up.size > data.innerType.size then
 			data.innerType.padding = up.size - data.innerType.size
+			-- 1st, count padding as type size
+			--data.innerType.size = up.size
 		end
 		if data.innerType.bit then
 			local bytes = data.count:div(8)
@@ -190,7 +207,8 @@ local function getMemberData(structName, memberName, member, offsets, members, c
 			addComment("array of " .. (data.innerType.anti and "abits (real index = 7 - usual)" or "bits"))
 			data.size = bytes
 		else
-			data.size = (data.ptr or data.count == 0) and 4 or math.ceil(data.count * data.innerType.size)
+			-- 2nd, padding is distinct and add it only when necessary
+			data.size = (data.ptr or data.count == 0) and 4 or math.ceil(data.count * (data.innerType.size + (data.innerType.padding or 0)))
 		end
 		data.dataType = data.ptr and types.parray or types.array
 		-- change array to pointer
@@ -200,24 +218,17 @@ local function getMemberData(structName, memberName, member, offsets, members, c
 			setBaseTypeField(data, "static", true)
 			return data.innerType -- replace current array with pointer
 		end
-			
-		--if data.innerType.bit then debug.Message(dump(data.innerType)) end
 	elseif stringLen then -- string (fixed size, not pointer)
 		data.array = true
 		data.count = stringLen
 		data.low = 0
 		data.size = data.count
 		data.innerType = {typeName = "char", name = memberName, offset = 0, size = 1}
-		addComment(up.NoZero and "doesn't require null terminator" or "requires null terminator")
+		addComment("fixed size string, " .. (up.NoZero and "doesn't require null terminator" or "requires null terminator"))
 		data.dataType = types.string
 	elseif bitValue then
 		data.size = 1/8
-		local b, o = bitValue, 0
-		while b >= 256 do
-			b = b / 256
-			o = o + 1
-		end
-		data.bitIndex = o * 8 + (7 - bitIndex[b] or error("Not a valid bit", 1))
+		data.bitIndex = 7 - bitIndex[bitValue] or error("Not a valid bit", 1)
 		data.typeName = "bool %s : 1"
 		data.formatTypeName = true
 		data.bit = true
@@ -239,11 +250,12 @@ local function getMemberData(structName, memberName, member, offsets, members, c
 		data.typeName = "char"
 		data.ptr = true
 		data.dataType = types.editpchar
+		addComment("EditPChar")
 	elseif getUpvalueByValue(member, EditConstPChar_newindex) then
 		data.size = 4
 		data.typeName = "char"
 		data.ptr = true
-		addComment("unprotect before/protect after edit")
+		addComment("EditConstPChar - unprotect before/protect after edit")
 		data.dataType = types.editconstpchar
 	elseif boolsize then
 		if boolsize == 1 then
@@ -272,6 +284,7 @@ local function getMemberData(structName, memberName, member, offsets, members, c
 			data.constPtr = true
 			data.constValue = true
 			data.dataType = types.pchar
+			addComment("PChar (read-only)")
 			found = true
 		end
 		found = found or error("Unknown mem array type")
@@ -304,7 +317,7 @@ local function getMemberData(structName, memberName, member, offsets, members, c
 		data.size = isPtr and 4 or structs[sname]["?size"]
 		data.dataType = isPtr and types.pstruct or types.struct
 	else
-		print(string.format("Warning: unknown type structs.%s.%s encountered!", structName, memberName))
+		--print(string.format("Warning: unknown type structs.%s.%s encountered!", structName, memberName))
 		data.array = true
 		data.innerType = {size = 1, typeName = commonTypeNamesToCpp.u1, name = memberName}
 		data.count = customFieldSizes[memberName] or error("Unknown custom type name: " .. memberName, 2)
@@ -346,12 +359,7 @@ function getArrayPointerString(arrays, last, addPointer) -- for testing: https:/
 	for i = #arrays, 1, -1 do
 		local arr = arrays[i]
 		if arr.count == 0 then
-			if arr.ptr then
-				type = type .. "*"
-			else
-				--str = "(" .. str .. ")" .. "[]" -- commented out because it clutters up code in overwhelming majority of the cases
-				type = type .. "*"
-			end
+			type = type .. "*"
 		else
 			type = stdArray:format(type, arr.count) .. (arr.ptr and "*" or "")
 			-- std::array<std::array<uint8_t, 128>*, 128> heightMap;
@@ -366,8 +374,7 @@ local function toCamelCase(str)
 	return str
 end
 
-local firstPaddingProcessed
-local function processSingle(data, indentLevel, structName, namespaceStr)
+local function processSingle(data, indentLevel, structName, namespaceStr, debugLines)
 	debugTable(data)
 	indentLevel = indentLevel or 0
 	local indentOuter, indentInner = string.rep(INDENT_CHARS, indentLevel), string.rep(INDENT_CHARS, indentLevel + 1)
@@ -436,13 +443,6 @@ local function processSingle(data, indentLevel, structName, namespaceStr)
 			indentInner .. 		skipBytesText:format(data.padding),
 			indentOuter .. "};"
 		}
-		if firstPaddingProcessed then
-			firstPaddingProcessed = false
-			s[3], s[4] = s[4], s[3]
-		else
-			firstPaddingProcessed = true
-		end
-		local offset = arrays and arrays[1] and arrays[1].offset or data.offset or 0
 		data.name = old1
 		local old2, old3 = data.typeName, data.ptr -- hacky hacky
 		data.typeName = structName
@@ -462,7 +462,6 @@ local function processSingle(data, indentLevel, structName, namespaceStr)
 			s = s .. doBaseType(true)
 		end
 	end
-	if not data.padding then firstPaddingProcessed = false end
 	comments = table.join(comments, data.comments or {})
 	local commentsStr = #comments > 0 and (" // " .. table.concat(comments, " | ")) or ""
 	if type(s) == "table" then
@@ -474,23 +473,24 @@ local function processSingle(data, indentLevel, structName, namespaceStr)
 		local off = arrays and arrays[1] and arrays[1].offset or data.offset or 0
 		local formatStr = "%sstatic_assert(offsetof(%s, %s) == %d);"
 		if off ~= 0 and structName and not data.bit then
-			if type(s) == "table" then
-				s[#s + 1] = formatStr:format(indentOuter, namespaceStr .. structName, data.name, off)
-			else
-				s = s .. "\n" .. formatStr:format(indentOuter, namespaceStr .. structName, data.name, off)
-			end
+			table.insert(debugLines, formatStr:format(indentOuter, namespaceStr .. structName, data.name, off))
 		end
 	end
 	data = dataCopy
 	return s
 end
 
-local function processGroup(group, indentLevel, structName, namespaceStr)
+-- using visual studio code with "lua booster" extension
+-- need to dummy forward declare to not miss recursive call when using "find references"
+local processGroup
+function processGroup(group, indentLevel, structName, namespaceStr, debugLines)
 	-- messing around
 	--setmetatable(getfenv(1), {__index = function(t, k) if not xxx then print(k); return rawget(t, k) end end})
+	debugTable(group)
+	--if group[1].name == "QuestsTxt" then error"" end
 	indentLevel = indentLevel or 0
 	if #group == 1 then
-		return {processSingle(group[1], indentLevel, structName, namespaceStr)}
+		return {processSingle(group[1], indentLevel, structName, namespaceStr, debugLines)}
 	end
 	local indentOuter, indentInner = string.rep(INDENT_CHARS, indentLevel), string.rep(INDENT_CHARS, indentLevel + 1) -- 3, 4 for union
 	-- do union wrap
@@ -518,24 +518,25 @@ local function processGroup(group, indentLevel, structName, namespaceStr)
 		else
 			-- for now taken care of by processSingle
 			local padding = member.innerType and member.innerType.padding and member.innerType.padding
-			if padding and not skipFirst and false then
+			if padding and not skipFirst then
 				code[#code + 1] = indentInner .. "struct"
 				code[#code + 1] = indentInner .. "{"
 				indentLevel = indentLevel + 1
 				code[#code + 1] = string.rep(INDENT_CHARS, indentLevel + 1) .. skipBytesText:format(padding)
 			end
-			code[#code + 1] = processSingle(member, indentLevel + 1, structName, namespaceStr)
-			if padding and not skipFirst and false then
+			code[#code + 1] = processSingle(member, indentLevel + 1, structName, namespaceStr, debugLines)
+			if padding and not skipFirst then
 				indentLevel = indentLevel - 1
 				code[#code + 1] = indentInner .. "};"
 				dontSkipFirst = false
 			end
-			if padding and false then
+			if padding then
 				skipFirst = not skipFirst
 			end
 		end
 		offset = member.offset + member.size + ((member.innerType or {}).padding or 0)
 	end
+	--if member.name == "NPCText" then error(dump(wrap)) end
 	--[[if #wrap == 1 then -- one other size member can be inside union
 		code[#code + 1] = processSingle(wrap[1], indentLevel + 1)
 	else]]if #wrap > 0 then
@@ -596,9 +597,9 @@ local function processGroup(group, indentLevel, structName, namespaceStr)
 				end]]
 			end
 			if #members == 1 then
-				code[#code + 1] = processSingle(currentField, indentLevel + 2, structName, namespaceStr)
+				code[#code + 1] = processSingle(currentField, indentLevel + 2, structName, namespaceStr, debugLines)
 			else
-				code[#code + 1] = processGroup(members, indentLevel + 2, structName, namespaceStr) -- nested unions
+				code[#code + 1] = processGroup(members, indentLevel + 2, structName, namespaceStr, debugLines) -- nested unions
 			end
 			lastOffset = currentField.offset + currentField.size
 			if i > #wrap then break end
@@ -609,27 +610,12 @@ local function processGroup(group, indentLevel, structName, namespaceStr)
 	return code
 end
 
-local function getCustomFieldSizes(structName)
-	local oldMember = mem.structs.types.CustomType
-	local fieldSizes = {}
-	function mem.structs.types.CustomType(name, size, f, ...)
-		fieldSizes[name] = size
-		return oldMember(name, size, f, ...)
-	end
-	mem.struct(structs.f[structName])
-	mem.structs.types.CustomType = oldMember
-	return fieldSizes
-end
-
 local function findDependencies(args, data, structureDependencies)
 	debugTable(args)
 	local data2 = data
-	local n = #structureDependencies
 	while data2 do
 		if data2.struct then
-			--print(data2.typeName, table.find(structureDependencies, data2.typeName) and true or false)
 			if not table.find(structureDependencies, data2.typeName) then
-				--print(args.name, data2.typeName, #structureDependencies)
 				structureDependencies[#structureDependencies + 1] = data2.typeName
 			end
 			data2.typeName = (args.prependNamespace and namespaceStr or "") .. data2.typeName
@@ -641,36 +627,25 @@ end
 function getGroup(fields, firstField, i)
 	local members = {firstField} -- for doing unions
 	debugTable(firstField)
-	maxNextOffset = firstField.offset + firstField.size
-	local firstOffset = firstField.offset
-	local prevOffset = maxNextOffset
+	--if firstField.name == "QuestsTxt" then error"" end
+	local maxNextOffset = firstField.offset + firstField.size
 	for j = i + 1, #fields do
 		if fields[j].offset >= maxNextOffset then
 			return members, j, maxNextOffset
 		end
-		if fields[j].offset > prevOffset and fields[j].offset ~= firstOffset then
+		--if maxNextOffset > fields[j].offset and fields[j].array and fields[j].innerType.padding then
+		if maxNextOffset > fields[j].offset and fields[j].array and fields[j].innerType.padding then
+			print(fields[j].name, fields[j].offset)
 			--local diff = fields[j].offset - firstOffset
 			--assert(diff > 0 and not fields[j].bit, string.format("Field %s, firstOffset %f, fieldOffset %f, fieldSize %f, diff %f, maxNextOffset: %f, prevOffset: %f",
 			--	fields[j].name, firstOffset, fields[j].offset, fields[j].size, diff, maxNextOffset, prevOffset))
 			--fields[j].padStart = diff
 			--fields[j].offset = firstOffset
 		end
-		prevOffset = fields[j].offset + fields[j].size
-		maxNextOffset = math.max(maxNextOffset, prevOffset)
+		maxNextOffset = math.max(maxNextOffset, fields[j].offset + fields[j].size)
 		table.insert(members, fields[j])
 	end
 	return members, #fields + 1, maxNextOffset
-	--[[local nextI
-	-- "local j" wouldn't work here, loop variable shadows it instead of modifying
-	for j = i, #fields do
-		members[#members + 1] = fields[j]
-		if j == #fields or fields[j + 1] and fields[j + 1].offset >= maxNextOffset then
-			nextI = j + 1
-			break
-		end
-	end
-	i = nextI
-	return members, i, maxNextOffset]]
 end
 
 --[[
@@ -693,7 +668,8 @@ function returns table with definition lines, array of names of structures it de
 	calculated size (most useful for mmext unions) and "processedStructs" table (if you were too lazy to pass your own)
 ]]
 lastM = {}
-local function processStruct(args)
+local processStruct
+function processStruct(args)
 	debugTable(args)
 	args.processedStructs = args.processedStructs or {}
 	args.indentLevel = args.indentLevel or 0
@@ -747,11 +723,14 @@ local function processStruct(args)
 					args.prependNamespace and namespaceStr or "", data.typeName, toCamelCase(data.name)))
 				findDependencies(args, data, structureDependencies)
 				goto continue
+			--elseif args.name == "GameStructure" and data.name == "QuestsTxt" then
+			--	data.offset = data.offset - 4
 			elseif data.union then
 				local depends
 				data.code, depends, data.size = processStruct{name = data.name:sub(1, 1):lower() .. data.name:sub(2), offsets = data.offsets, members = data.fields, rofields = data.rofields,
 					union = true, indentLevel = 0, prependNamespace = args.prependNamespace, offset = data.offset, processedStructs = args.processedStructs, parent = args.name,
-					processDependencies = args.processDependencies, structOrder = args.structOrder}
+					processDependencies = args.processDependencies, structOrder = args.structOrder, shouldProcessDependencyFunc = args.shouldProcessDependencyFunc} -- unions have 0 indent level and this breaks normal structs processed as dependencies
+					-- this whole indent system should be probably redone anyways
 				multipleInsert(fields, #fields + 1, data)
 				mergeArraysShallowCopy(structureDependencies, depends, true)
 			elseif data.replaceWith then
@@ -789,19 +768,22 @@ local function processStruct(args)
 	local prevOffset = args.offset or 0 -- for skipping bytes
 	local i = 1
 	local maxNextOffset = 0
+	local debugLines = {}
 	while true do
-		if not fields[i] then break end
 		local currentField = fields[i]
+		if not currentField then break end
 		if not getBaseTypeField(currentField, "static") then
 			currentOffset = currentField.offset
-		end
-		local skip = currentOffset - prevOffset
-		if skip > 0 then
-			code[#code + 1] = indentInner .. skipBytesText:format(skip)
+			local skip = currentOffset - prevOffset
+			if skip > 0 then
+				-- ERROR HERE
+				--if skip == 3152 then error(dump(fields[i - 1]) .. string.format("%d %d", currentOffset, prevOffset)) end
+				code[#code + 1] = indentInner .. skipBytesText:format(skip)
+			end
 		end
 		local members
 		members, i, maxNextOffset = getGroup(fields, currentField, i)
-		local group = processGroup(members, args.indentLevel + 1, not args.union and args.name, not args.union and args.prependNamespace and namespaceStr or "")
+		local group = processGroup(members, args.indentLevel + 1, not args.union and args.name, not args.union and args.prependNamespace and namespaceStr or "", debugLines)
 		multipleInsert(code, #code + 1, group)
 		prevOffset = maxNextOffset
 	end
@@ -817,24 +799,29 @@ local function processStruct(args)
 	--local tmpname = prep .. (args.parent and (args.parent .. "::") or "") .. args.name
 	local tmpname = (not args.union and namespaceStr or "") .. args.name -- unions are inline&anonymous struct, so need to check instance of it, not type
 	code[#code + 1] = cppAssert:format(indentOuter, tmpname, size, tmpname)
-	if args.processDependencies and not args.union then -- unions have 0 indent level and this breaks normal structs processed as dependencies
-	-- this whole indent system should be probably redone anyways
-		local addDepNames = {}
-		for i, name in ipairs(structureDependencies) do
-			if not args.processedStructs[name] then
-				local depCode, depends, size = processStruct{name = name, indentLevel = args.indentLevel, prependNamespace = args.prependNamespace,
-				processedStructs = args.processedStructs, processDependencies = args.processDependencies, structOrder = args.structOrder}
-				--args.processedStructs[name] = {code = depCode, dependencies = depends, size = size} -- args.processedStructs is shared and written to a bit further
-				mergeArraysShallowCopy(addDepNames, depends, true)
+	for i, v in ipairs(debugLines) do
+		-- even out indentation
+		debugLines[i] = v:gsub(INDENT_CHARS .. "+", indentOuter)
+	end
+	multipleInsert(code, #code + 1, debugLines)
+	if not args.union then
+		if args.processDependencies then
+			local addDepNames = {}
+			for i, name in ipairs(structureDependencies) do
+				if not args.processedStructs[name] and (not args.shouldProcessDependencyFunc or args.shouldProcessDependencyFunc(name)) then
+					local depCode, depends, size = processStruct{name = name, indentLevel = args.indentLevel, prependNamespace = args.prependNamespace,
+						processedStructs = args.processedStructs, processDependencies = args.processDependencies, structOrder = args.structOrder,
+						shouldProcessDependencyFunc = args.shouldProcessDependencyFunc}
+					--args.processedStructs[name] = {code = depCode, dependencies = depends, size = size} -- args.processedStructs is shared and written to a bit further
+					mergeArraysShallowCopy(addDepNames, depends, true)
+				end
 			end
+			mergeArraysShallowCopy(structureDependencies, addDepNames, true)
 		end
-		mergeArraysShallowCopy(structureDependencies, addDepNames, true)
-	end
-	if not args.union and not args.processedStructs[args.name] then -- unions are inline
-		args.processedStructs[args.name] = {code = code, dependencies = structureDependencies, size = size}
-	end
-	args.structOrder = args.structOrder or {}
-	if not args.union then -- unions are not considered structs in many aspects
+		if not args.processedStructs[args.name] then -- unions are inline
+			args.processedStructs[args.name] = {code = code, dependencies = structureDependencies, size = size}
+		end
+		-- unions are not considered structs in many aspects
 		-- structure needs to be after all of its dependencies
 		local maxI = 1
 		for i, name in ipairs(args.structOrder) do
@@ -851,7 +838,8 @@ function printStruct(name, includeMembers, excludeMembers, indentLevel, wrapInHe
 	local processed = {}
 	indentLevel = wrapInHeaderStuff and 1 or indentLevel or 1 -- always 1 indentation level if wrapping
 	local args = {name = name, includeMembers = includeMembers, indentLevel = indentLevel, processDependencies = true,
-		prependNamespace = true, processedStructs = processed, excludeMembers = excludeMembers, structOrder = {}}
+		prependNamespace = true, processedStructs = processed, excludeMembers = excludeMembers, structOrder = {},
+		shouldProcessDependencyFunc = function(str) return not table.find({"Player", "BaseBonus", "Item", "SpellBuff"}, str) end}
 	local t, dep = processStruct(args)
 	--print(table.concat(t, "\n") .. "\n\nDependencies: " .. table.concat(dep, "\t"))
 	_G.t, _G.dep, _G.processed, _G.args = t, dep, processed, args
