@@ -32,6 +32,7 @@ end
 
 local FORMAT_MESSAGE_FROM_SYSTEM = 0x00001000
 function M.loadDll()
+	if Game.Version ~= 7 then return end
 	if not M.dll then
 		M.dll = mem.LoadDll("PartyGenerator.dll")
 		if not M.dll then
@@ -420,6 +421,133 @@ function multipleInsert(t, index, ...)
 	end
 	for i = 1, #v do
 		t[index + i - 1] = v[i]
+	end
+	return t
+end
+
+function getLocals(lev)
+	lev = lev + 1 -- because current function call effectively reduces supplied stack level by 1
+	local i = 1
+	assert(debug.getinfo(lev, "f"), "Invalid stack level")
+	local t = {}
+	while true do
+		local name, value = debug.getlocal(lev, i)
+		if not name then break end
+		t[name] = value
+		i = i + 1
+	end
+	return t
+end
+
+getLs = getLocals
+
+function dumpLocals(lev)
+	lev = lev + 1
+	for k, v in pairs(getLocals(lev)) do
+		print(k, v)
+	end
+end
+
+dumpL = dumpLocals
+
+function findLocal(lev, name)
+	lev = lev + 1
+	local locals = getLocals(lev)
+	if locals[name] ~= nil then
+		return name, value
+	end
+end
+
+findL = findLocal
+
+function setLocal(lev, name, value)
+	lev = lev + 1
+	local i = 1
+	local updateIndex -- set local with highest index (the "most local" one), since we return it in get and dump functions
+	assert(debug.getinfo(lev, "f"), "Invalid stack level")
+	while true do
+		local localName = debug.getlocal(lev, i)
+		if not localName then break end
+		if localName == name then
+			updateIndex = i
+		end
+		i = i + 1
+	end
+	if updateIndex then
+		debug.setlocal(lev, updateIndex, value)
+		return true
+	end
+	return false
+end
+
+setL = setLocal
+
+function setLocalsTable(lev)
+	LOCALS = M.deepcopyMM(getLocals(lev + 1))
+end
+
+setLT = setLocalsTable
+
+function setLocalsTableAndDump(lev)
+	lev = lev + 1
+	locals = getLocals(lev)
+	LOCALS = M.deepcopyMM(locals)
+	for k, v in pairs(locals) do
+		print(k, v)
+	end
+end
+
+function table.findIf(t, func)
+	for k, v in pairs(t) do
+		if func(v, k) then
+			return k, v
+		end
+	end
+end
+
+function table.map(t, func)
+	local out = {}
+	for k, v in pairs(t) do
+		out[k] = func(v, k)
+	end
+	return out
+end
+
+function table.foreach(t, func)
+	for k, v in pairs(t) do
+		func(v, k)
+	end
+end
+
+function table.filter(t, func)
+	local out = {}
+	for k, v in pairs(t) do
+		if func(v, k) then
+			out[k] = v
+		end
+	end
+	return out
+end
+
+function table.slice(tbl, first, last)
+	local n = #tbl
+	local tableFirstIndex = tbl[0] ~= nil and 0 or 1
+	first = first or tableFirstIndex
+	last = last or n
+	local orig1, orig2 = first, last
+	if first < 0 then
+		first = n + first + 1
+	end
+	if last < 0 then
+		last = n + last + 1
+	end
+	last = math.min(last, n)
+	if first < tableFirstIndex or first > last then
+		error(string.format("bad index values [%d, %d] (table size: %d)", orig1, orig2, n))
+	end
+	local t = {}
+	for i = first, last do
+		t[i - first + 1] = tbl[i]
 	end
 	return t
 end

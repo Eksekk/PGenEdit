@@ -39,6 +39,15 @@ std::string SkillValue::toString() const
 	return "{" + std::to_string(level) + ", " + std::to_string(mastery) + "}";
 }
 
+SkillValue::operator std::string() const
+{
+	return toString();
+}
+SkillValue::operator wxString() const
+{
+	return toString();
+}
+
 wxString& operator<<(wxString& str, const SkillValue& val)
 {
 	return str << val.toString();

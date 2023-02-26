@@ -199,18 +199,18 @@ std::vector<wxString> Tests::testGui()
 	auto tabs = wxGetApp().mainWindow->tabs;
 	myassert(tabs->GetPageCount() == MainWindow::FIRST_PLAYER_PAGE + MAX_PLAYERS);
 	myassert(dynamic_cast<GeneralPanel*>(tabs->GetPage(MainWindow::GENERAL_PANEL_PAGE)));
-	auto p = dynamic_cast<DefaultPlayerPanel*>(tabs->GetPage(MainWindow::DEFAULT_PLAYER_PAGE));
-	if (myassert(p) && p != nullptr)
+	auto defPanel = dynamic_cast<DefaultPlayerPanel*>(tabs->GetPage(MainWindow::DEFAULT_PLAYER_PAGE));
+	if (myassert(defPanel) && defPanel != nullptr)
 	{
-		myassert(dynamic_cast<PlayerData*>(p->linkedGenerationData));
+		myassert(dynamic_cast<PlayerData*>(defPanel->linkedGenerationData));
 	}
 	for (int i = 0; i < MAX_PLAYERS; ++i)
 	{
-		auto p = dynamic_cast<PlayerPanel*>(tabs->GetPage(i + MainWindow::FIRST_PLAYER_PAGE));
-		myassert(p, wxString::Format("iteration %d", i));
-		if (p)
+		auto playerPanel = dynamic_cast<PlayerPanel*>(tabs->GetPage(i + MainWindow::FIRST_PLAYER_PAGE));
+		myassert(playerPanel, wxString::Format("iteration %d", i));
+		if (playerPanel)
 		{
-			myassert(p->linkedGenerationData, wxString::Format("iteration %d", i));
+			myassert(playerPanel->linkedGenerationData, wxString::Format("iteration %d", i));
 		}
 	}
 
@@ -517,8 +517,6 @@ std::vector<wxString> Tests::testPlayerStructAccessor()
 
 	auto expTest = [pl, &myasserter](int64_t exp, int level)
 	{
-		int64_t oldExp = pl->experience;
-		int oldLevel = pl->levelBase;
 		pl->experience = exp;
 		auto expLevelMsg = "Exp %lld, level %d";
 		myassert(playerAccessor->getMinimumLevelForExperience(exp) == level, wxString::Format(expLevelMsg, exp, playerAccessor->getMinimumLevelForExperience(exp))); // can also call static methods on objects (but they don't get "this" param)

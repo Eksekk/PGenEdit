@@ -49,8 +49,7 @@ std::vector<void*> getPlayerPointersMm8()
                 inc esi
             skipField:
             dec edi
-            jne get
-        exit:
+        jne get
         mov count, esi
         pop edi
         pop esi

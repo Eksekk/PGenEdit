@@ -33,6 +33,7 @@
     <ClInclude Include="GeneratorGuiBase.h" />
     <ClInclude Include="GuaranteedClassDialog.h" />
     <ClInclude Include="ClassGenerationData.h" />
+    <ClInclude Include="headers\structsTest.h" />
     <ClInclude Include="LuaFunctions.h" />
     <ClInclude Include="Map.h" />
     <ClInclude Include="PlayerClass.h" />
@@ -120,6 +121,7 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <None Include="ClassDiagram.cd" />
     <None Include="Lib.def" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

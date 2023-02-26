@@ -11,6 +11,8 @@ struct SkillValue
 	bool operator!=(const SkillValue& other) const;
 	bool isZero() const;
 	std::string toString() const;
+	operator std::string() const;
+	operator wxString() const;
 };
 
 SkillValue splitSkill(int skill);

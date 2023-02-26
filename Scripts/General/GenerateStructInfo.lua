@@ -1,6 +1,7 @@
 function reload()
 	dofile("Scripts/Global/GenerateStructInfo.lua")
 end
+r = reload
 local mmver = offsets.MMVersion
 local function mm78(...)
 	local r = select(mmver - 6, ...)
@@ -62,12 +63,13 @@ local extra = -- extra fields in structs
 local globalReplacements = {class = "clas", ["if"] = "if_", ["else"] = "else_"}
 local arraysToPointers =
 {
-	[7] =
-	{
-		SpritesLod = {"SpritesSW"}
-	}
+	SpritesLod = {"SpritesSW"},
+	GameStructure = {"NPCDataTxt", "MonstersTxt", "CharacterPortraits", "TransportLocations", "NPCGroup", "NPCText", "TransTxt", "ShopTheftExpireTime",
+		"MapDoorSound", "GlobalEvtLines", "ItemsTxt", "NPC", "MixPotions", "ReagentSettings", "NPCNews", "MapFogChances",
+		"ShopItems", "GuildItems", "NPCTopic", "ShopSpecialItems", "AutonoteTxt", "MapStats", "Houses", "ClassNames", "HostileTxt",
+		"PlaceMonTxt", "AutonoteCategory", "QuestsTxt", "HousesExtra", "CharacterDollTypes", "HouseMovies", "NPCGreet", "TransportIndex",
+		"GuildNextRefill2", "ShopNextRefill"} -- from merge
 }
-local arraysToPointersCurrentGame = arraysToPointers[Game.Version]
 local booleanHandlers = {
 	[getUpvalue(mem.structs.types.b1, "handler")] = 1,
 	[getUpvalue(mem.structs.types.b2, "handler")] = 2,
@@ -107,6 +109,12 @@ local function getCustomFieldSizes(structName)
 	mem.struct(structs.f[structName])
 	mem.structs.types.CustomType = oldMember
 	return fieldSizes
+end
+local function stripNamespace(str)
+	if str:sub(1, namespaceStr:len()) == namespaceStr then
+		str = str:sub(namespaceStr:len() + 1)
+	end
+	return str
 end
 
 -- helper functions
@@ -212,11 +220,10 @@ local function getMemberData(structName, memberName, member, offsets, members, c
 		end
 		data.dataType = data.ptr and types.parray or types.array
 		-- change array to pointer
-		if arraysToPointersCurrentGame and arraysToPointersCurrentGame[structName] and table.find(arraysToPointersCurrentGame[structName], data.name) then
-			table.insert(tget(luaData, structName, arraysToPointersCurrentGame[structName]), data.name)
-			setBaseTypeField(data, "addPointer", true)
-			setBaseTypeField(data, "static", true)
-			return data.innerType -- replace current array with pointer
+		if arraysToPointers[structName] and table.find(arraysToPointers[structName], data.name) then
+			tget(luaData, structName, arraysToPointers[structName]).arrayName = data.name
+			setBaseTypeField(data, "arrayToPointer", true) -- setting this to explicitly signal to processStruct that it needs to convert length field into pointer
+			--setBaseTypeField(data, "padding", (getBaseTypeField(data, "padding") or 0) + getBaseTypeField(data, "size") - 4)
 		end
 	elseif stringLen then -- string (fixed size, not pointer)
 		data.array = true
@@ -355,7 +362,7 @@ vmethod = function: 0x02e19fe0\
 function getArrayPointerString(arrays, last, addPointer) -- for testing: https://cdecl.org/
 	local stdArray = "std::array<%s, %d>"
 	--if last.bit then debug.Message(dump(arrays), dump(last)) end
-	local type, name = last.typeName .. (last.ptr and "*" or "") .. (addPointer and "*" or "") .. (last.constPtr and "const" or ""), last.name
+	local type, name = last.typeName .. (last.ptr and "*" or "") .. (last.constPtr and "const" or ""), last.name
 	for i = #arrays, 1, -1 do
 		local arr = arrays[i]
 		if arr.count == 0 then
@@ -365,7 +372,7 @@ function getArrayPointerString(arrays, last, addPointer) -- for testing: https:/
 			-- std::array<std::array<uint8_t, 128>*, 128> heightMap;
 		end
 	end
-	return type .. " " .. name
+	return type .. (addPointer and "* " or " ") .. name
 end
 local function toCamelCase(str)
 	local twoUpper = str:len() >= 2 and str:sub(1, 2):upper() == str:sub(1, 2)
@@ -374,22 +381,25 @@ local function toCamelCase(str)
 	return str
 end
 
+local function getArraysCommentsAndBaseType(data)
+	-- collect array info and get to base type
+	local arrays, comments = {}, {}
+	while data.array do
+		comments = table.join(comments, data.comments or {})
+		arrays[#arrays + 1] = data
+		data = data.innerType
+	end
+	comments = table.join(comments, data.comments or {})
+	return arrays, comments, data
+end
+
 local function processSingle(data, indentLevel, structName, namespaceStr, debugLines)
-	debugTable(data)
 	indentLevel = indentLevel or 0
 	local indentOuter, indentInner = string.rep(INDENT_CHARS, indentLevel), string.rep(INDENT_CHARS, indentLevel + 1)
 	local dataCopy = data
 	
 	local s = indentOuter
-	
-	-- collect array info and get to base type
-	local arrays, comments = {}, {}
-	while data.array do
-		comments = table.join(comments, data.comments or {})
-		arrays[#arrays + 1] = {ptr = data.ptr, count = data.count, low = data.low}
-		data = data.innerType
-	end
-	local addPointer = data.addPointer
+	local arrays, comments, data = getArraysCommentsAndBaseType(data)
 	if #arrays == 0 then arrays = nil end
 	
 	data.name = tostring(data.name)
@@ -408,15 +418,9 @@ local function processSingle(data, indentLevel, structName, namespaceStr, debugL
 			result = result .. data.typeName:format(data.name)
 		else
 			if arrays and doArrays then
-				result = result .. getArrayPointerString(arrays, data, addPointer)
-				if data.ptrValue then
-					result = result .. string.format(" = 0x%X", data.ptrValue)
-				end
+				result = result .. getArrayPointerString(arrays, data)
 			else
-				result = result .. data.typeName .. (data.ptr and "*" or "") .. (addPointer and "*" or "") .. " " .. data.name
-				if data.ptrValue then
-					result = result .. string.format(" = 0x%X", data.ptrValue)
-				end
+				result = result .. data.typeName .. (data.ptr and "*" or "") .. " " .. data.name
 			end
 		end
 		local offset = arrays and arrays[1] and arrays[1].offset or data.offset or 0
@@ -430,7 +434,7 @@ local function processSingle(data, indentLevel, structName, namespaceStr, debugL
 		local code = data.code
 		s = {}
 		for i, v in ipairs(code) do
-			s[i] = indentOuter .. code[i]
+			s[i] = indentOuter .. v
 		end
 	elseif arrays and #arrays == 1 and data.padding then -- NPCTopic, NPCText - element size 4, "real" size 8, overlapping
 		local structName = "__" .. data.name
@@ -462,14 +466,13 @@ local function processSingle(data, indentLevel, structName, namespaceStr, debugL
 			s = s .. doBaseType(true)
 		end
 	end
-	comments = table.join(comments, data.comments or {})
 	local commentsStr = #comments > 0 and (" // " .. table.concat(comments, " | ")) or ""
 	if type(s) == "table" then
 		s[#s] = s[#s] .. commentsStr
 	else
 		s = s .. ";" .. commentsStr
 	end
-	if _DEBUG and not data.static then
+	if _DEBUG and not data.static and not data.commentOut then
 		local off = arrays and arrays[1] and arrays[1].offset or data.offset or 0
 		local formatStr = "%sstatic_assert(offsetof(%s, %s) == %d);"
 		if off ~= 0 and structName and not data.bit then
@@ -477,6 +480,7 @@ local function processSingle(data, indentLevel, structName, namespaceStr, debugL
 		end
 	end
 	data = dataCopy
+	if type(s) == "table" and table.findIf(s, function(t) return type(t) == "table" end) then error"" end
 	return s
 end
 
@@ -486,17 +490,18 @@ local processGroup
 function processGroup(group, indentLevel, structName, namespaceStr, debugLines)
 	-- messing around
 	--setmetatable(getfenv(1), {__index = function(t, k) if not xxx then print(k); return rawget(t, k) end end})
-	debugTable(group)
 	--if group[1].name == "QuestsTxt" then error"" end
 	indentLevel = indentLevel or 0
 	if #group == 1 then
-		return {processSingle(group[1], indentLevel, structName, namespaceStr, debugLines)}
+		local ret = processSingle(group[1], indentLevel, structName, namespaceStr, debugLines)
+		return type(ret) == "table" and ret or {ret}
 	end
 	local indentOuter, indentInner = string.rep(INDENT_CHARS, indentLevel), string.rep(INDENT_CHARS, indentLevel + 1) -- 3, 4 for union
 	-- do union wrap
 	local code = {indentOuter .. "union", indentOuter .. "{"}
 	setmetatable(code, {__newindex = function(t, k, v) -- used in processSingle(), for convenience value can be table
 		if type(v) == "table" then
+			--print(k, "x", type(v[1]), dump(v))
 			multipleInsert(t, k, v)
 		else
 			rawset(t, k, v)
@@ -511,13 +516,14 @@ function processGroup(group, indentLevel, structName, namespaceStr, debugLines)
 	local wrap = {}
 	local offset = group[1].offset
 	local skipFirst = true -- first is at right offset, second needs adjustment (usually by 4)
+	--if group[1].union and group[1].name:lower():find("delayed") then setLocalsTableAndDump(1); error"" end
 	for i, member in ipairs(group) do
-		debugTable(member)
+		--if structName == "Player" then print(member.name) end
 		if member.size ~= maxS then
 			wrap[#wrap + 1] = member
 		else
 			-- for now taken care of by processSingle
-			local padding = member.innerType and member.innerType.padding and member.innerType.padding
+			local padding = member.innerType and member.innerType.padding
 			if padding and not skipFirst then
 				code[#code + 1] = indentInner .. "struct"
 				code[#code + 1] = indentInner .. "{"
@@ -590,11 +596,6 @@ function processGroup(group, indentLevel, structName, namespaceStr, debugLines)
 					code[#code + 1] = indentInnerInner .. skipBitsText:format(skip)
 					skipBits = skipBits - skip
 				end
-				--[[while skipBits > 0 do
-					skip = math.min(skipBits, 8) -- no more than 8 bits in one go
-					code[#code + 1] = indentInnerInner .. skipBitsText:format(skip)
-					skipBits = skipBits - skip
-				end]]
 			end
 			if #members == 1 then
 				code[#code + 1] = processSingle(currentField, indentLevel + 2, structName, namespaceStr, debugLines)
@@ -607,6 +608,8 @@ function processGroup(group, indentLevel, structName, namespaceStr, debugLines)
 		code[#code + 1] = indentInner .. "};"
 	end
 	code[#code + 1] = indentOuter .. "};"
+	--if table.findIf(group, function(field) return field.name:lower():find("delayed") end) then setLocalsTableAndDump(1); error"" end
+	--table.foreach(group, function(field, key) if field.union then print("union", key, field.name, field.typeName) end end)
 	return code
 end
 
@@ -618,7 +621,6 @@ local function findDependencies(args, data, structureDependencies)
 			if not table.find(structureDependencies, data2.typeName) then
 				structureDependencies[#structureDependencies + 1] = data2.typeName
 			end
-			data2.typeName = (args.prependNamespace and namespaceStr or "") .. data2.typeName
 		end
 		data2 = data2.innerType
 	end
@@ -632,15 +634,6 @@ function getGroup(fields, firstField, i)
 	for j = i + 1, #fields do
 		if fields[j].offset >= maxNextOffset then
 			return members, j, maxNextOffset
-		end
-		--if maxNextOffset > fields[j].offset and fields[j].array and fields[j].innerType.padding then
-		if maxNextOffset > fields[j].offset and fields[j].array and fields[j].innerType.padding then
-			print(fields[j].name, fields[j].offset)
-			--local diff = fields[j].offset - firstOffset
-			--assert(diff > 0 and not fields[j].bit, string.format("Field %s, firstOffset %f, fieldOffset %f, fieldSize %f, diff %f, maxNextOffset: %f, prevOffset: %f",
-			--	fields[j].name, firstOffset, fields[j].offset, fields[j].size, diff, maxNextOffset, prevOffset))
-			--fields[j].padStart = diff
-			--fields[j].offset = firstOffset
 		end
 		maxNextOffset = math.max(maxNextOffset, fields[j].offset + fields[j].size)
 		table.insert(members, fields[j])
@@ -670,7 +663,6 @@ function returns table with definition lines, array of names of structures it de
 lastM = {}
 local processStruct
 function processStruct(args)
-	debugTable(args)
 	args.processedStructs = args.processedStructs or {}
 	args.indentLevel = args.indentLevel or 0
 	args.offset = args.offset or 0
@@ -696,11 +688,8 @@ function processStruct(args)
 	end
 	local indentOuter, indentInner = string.rep(INDENT_CHARS, args.indentLevel), string.rep(INDENT_CHARS, args.indentLevel + 1)
 	local customFieldSizes = not args.union and getCustomFieldSizes(args.name) or {}
-	local staticPtrCode = {}
+	local staticPtrCode, staticArrayToPointerCode = {}, {}
 	local size = not args.union and structs[args.name]["?size"] or 0
-	local function addExtraField(t)
-		fields[#fields + 1] = t
-	end
 	for mname, f in pairs(members) do
 		table.insert(lastM, mname)
 		if (type(args.includeMembers) == "table" and not table.find(args.includeMembers, mname)) or (type(mname) == "string" and mname:len() == 0) then -- last check is for dummy names
@@ -708,7 +697,7 @@ function processStruct(args)
 		elseif type(args.excludeMembers) == "table" and table.find(args.excludeMembers, mname) then
 			goto continue
 		end
-		local data = getMemberData(args.name, mname, f, offsets, members, class, rofields, customFieldSizes, false, addExtraField)
+		local data = getMemberData(args.name, mname, f, offsets, members, class, rofields, customFieldSizes, false)
 		--if args.name == "GameStructure" then print(data.name, data.size:tohex()) end
 		if data then
 			if args.union and tonumber(data.name) then
@@ -717,21 +706,45 @@ function processStruct(args)
 				data.name = "_" .. tostring(data.name)
 			end
 			-- add pointers for structs which don't really reside at 0 address, TODO: take into account limits removal relocation
-			if args.name == "GameStructure" and data.struct and data.offset == 0 then
+			if args.name == "GameStructure" and data.struct and data.offset == 0  then
 				--print(dump(data))
 				table.insert(staticPtrCode, string.format("%sstatic inline %s%s* const %s = 0;", indentInner,
 					args.prependNamespace and namespaceStr or "", data.typeName, toCamelCase(data.name)))
 				findDependencies(args, data, structureDependencies)
 				goto continue
-			--elseif args.name == "GameStructure" and data.name == "QuestsTxt" then
-			--	data.offset = data.offset - 4
+			elseif data.array and data.innerType.arrayToPointer then
+				findDependencies(args, data, structureDependencies)
+				local arrays, comments, baseData = getArraysCommentsAndBaseType(data)
+				local arraysOrig = M.deepcopyMM(arrays)
+				if #arrays > 0 then
+					table.remove(arrays, 1)
+				end
+				local old1, old2 = baseData.typeName, baseData.name
+				baseData.typeName = (baseData.struct and args.prependNamespace and namespaceStr or "") .. baseData.typeName
+				baseData.name = toCamelCase(baseData.name)
+				local resultTypeAndName = getArrayPointerString(arrays, baseData, true)
+				baseData.typeName, baseData.name = old1, old2
+				table.insert(staticArrayToPointerCode, string.format("%sstatic %s; // %s", indentInner, resultTypeAndName,
+					"array converted to pointer to not break with limits removal scripts"))
+				if arraysOrig[1] and arraysOrig[1].lenP then
+					table.insert(staticArrayToPointerCode, string.format("%sstatic %s* %s; // %s", indentInner,
+					commonTypeNamesToCpp["u" .. arraysOrig[1].lenA], toCamelCase(mname .. "_size"),
+					"pointer to size, set during initialization by getting data from lua"))
+					tget(luaData, args.name, baseData.name).sizePtrName = toCamelCase(mname .. "_size")
+				else
+					print(dump(arraysOrig))
+				end
 			elseif data.union then
 				local depends
 				data.code, depends, data.size = processStruct{name = data.name:sub(1, 1):lower() .. data.name:sub(2), offsets = data.offsets, members = data.fields, rofields = data.rofields,
 					union = true, indentLevel = 0, prependNamespace = args.prependNamespace, offset = data.offset, processedStructs = args.processedStructs, parent = args.name,
-					processDependencies = args.processDependencies, structOrder = args.structOrder, shouldProcessDependencyFunc = args.shouldProcessDependencyFunc} -- unions have 0 indent level and this breaks normal structs processed as dependencies
+					processDependencies = args.processDependencies, structOrder = args.structOrder, shouldProcessDependencyFunc = args.shouldProcessDependencyFunc}
+					-- unions have 0 indent level and this breaks normal structs processed as dependencies
 					-- this whole indent system should be probably redone anyways
-				multipleInsert(fields, #fields + 1, data)
+				--print(dump(data))
+				-- doesn't work with non-integer key tables
+				--multipleInsert(fields, #fields + 1, data)
+				table.insert(fields, data)
 				mergeArraysShallowCopy(structureDependencies, depends, true)
 			elseif data.replaceWith then
 				multipleInsert(fields, #fields + 1, data.replaceWith)
@@ -740,11 +753,20 @@ function processStruct(args)
 				table.insert(fields, data)
 				if data.array and data.lenP then
 					local t = {name = mname .. "_size", offset = data.lenP, size = data.lenA, typeName = commonTypeNamesToCpp["u" .. data.lenA]}
-					table.insert(tget(data, "comments"), string.format("size offset is 0x%X", data.lenP))
+					table.insert(tget(data, "comments"), string.format("size field offset is 0x%X", data.lenP))
 					table.insert(fields, t)
 				end
 			end
-			size = math.max(size, not getBaseTypeField(data, "static") and math.ceil(data.offset + (data.size or 0)) or 0)
+			local data2 = data
+			while data2 do
+				if data2.struct then
+					data2.typeName = (args.prependNamespace and namespaceStr or "") .. data2.typeName
+				end
+				data2 = data2.innerType
+			end
+			if not getBaseTypeField(data, "static") and not (data.array and data.innerType.arrayToPointer) then
+				size = math.max(size, math.ceil(data.offset + (data.size or 0)))
+			end
 		end
 		::continue::
 	end
@@ -756,6 +778,10 @@ function processStruct(args)
 	end)
 	local cppAssert = "%sstatic_assert(sizeof(%s) == 0x%X, \"Invalid \\\"%s\\\" structure size\");"
 	local code = {}
+	setmetatable(code, {__newindex = function(t, k, v)
+		--if type(v) == "table" then print(k, args.name, dump(debug.getinfo(3))); setLocalsTableAndDump(3) end
+		rawset(t, k, v)
+	end})
 	if not args.union then-- insert later, because size not known yet
 		code[#code + 1] = string.format("%sstruct %s // size: 0x%X", indentOuter, args.name, size)
 	end
@@ -764,6 +790,10 @@ function processStruct(args)
 		table.insert(staticPtrCode, "")
 	end
 	multipleInsert(code, #code + 1, staticPtrCode)
+	if #staticArrayToPointerCode > 0 then
+		table.insert(staticArrayToPointerCode, "")
+	end
+	multipleInsert(code, #code + 1, staticArrayToPointerCode)
 	local currentOffset = -1
 	local prevOffset = args.offset or 0 -- for skipping bytes
 	local i = 1
@@ -776,15 +806,16 @@ function processStruct(args)
 			currentOffset = currentField.offset
 			local skip = currentOffset - prevOffset
 			if skip > 0 then
-				-- ERROR HERE
-				--if skip == 3152 then error(dump(fields[i - 1]) .. string.format("%d %d", currentOffset, prevOffset)) end
 				code[#code + 1] = indentInner .. skipBytesText:format(skip)
 			end
 		end
 		local members
 		members, i, maxNextOffset = getGroup(fields, currentField, i)
 		local group = processGroup(members, args.indentLevel + 1, not args.union and args.name, not args.union and args.prependNamespace and namespaceStr or "", debugLines)
+		--if table.findIf(group, function(t) return type(t) == "table" end) then setLocalsTable(1); error"" end
+		-- GROUP[1] IS TABLE
 		multipleInsert(code, #code + 1, group)
+		--if currentField.name:lower() == "stats" then print("x" .. dump(table.slice(code, -50))) end
 		prevOffset = maxNextOffset
 	end
 	size = args.union and math.ceil(maxNextOffset - args.offset) or size -- ceil is for bits
@@ -808,6 +839,7 @@ function processStruct(args)
 		if args.processDependencies then
 			local addDepNames = {}
 			for i, name in ipairs(structureDependencies) do
+				--print(name)
 				if not args.processedStructs[name] and (not args.shouldProcessDependencyFunc or args.shouldProcessDependencyFunc(name)) then
 					local depCode, depends, size = processStruct{name = name, indentLevel = args.indentLevel, prependNamespace = args.prependNamespace,
 						processedStructs = args.processedStructs, processDependencies = args.processDependencies, structOrder = args.structOrder,
@@ -848,6 +880,12 @@ function printStruct(name, includeMembers, excludeMembers, indentLevel, wrapInHe
 	for i, name in ipairs(args.structOrder) do
 		local struct = processed[name]
 		setmetatable(struct.code, nil)
+		--local k, v = table.findIf(code, function(el) return type(el) == "table" end)
+		--assert(not k)
+		--assert(not table.findIf(code, function(str) return type(str) ~= "string" end))
+		--assert(not table.findIf(struct.code, function(str) return type(str) ~= "string" end))
+		--table.foreach(struct.code, function(str) if type(str) ~= "string" then print(name, dump(str)) end end)
+		-- delayedFaceAnimation is bad
 		code = table.join(code, struct.code)
 		code[#code + 1] = "" -- newline
 	end

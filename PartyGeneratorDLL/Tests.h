@@ -52,7 +52,7 @@ bool Asserter::operator()(const char* func, const char* file, int line, bool con
 		if constexpr (sizeof...(args) > 0)
 		{
 			errorMsg << ("\nExtra data:" + rep("\n%s", sizeof...(args)));
-			errorMsg = wxString::Format(errorMsg, my_to_string(args)...);
+			errorMsg = wxString::Format(errorMsg, my_to_string(std::forward<Args>(args))...);
 		}
 		errors.push_back(wxString::Format(errorFormat, func, file2, line, errorMsg));
 		failed = true;
@@ -115,7 +115,7 @@ template<typename Player, typename IntegralFieldType, typename IntegralGetSetTyp
 void testSettableField(
 	Player* player,
 	IntegralFieldType Player::* playerFieldPtr,
-	std::function<int()> getFunction, // of accessor
+	std::function<IntegralGetSetType()> getFunction, // of accessor
 	std::function<void(IntegralGetSetType)> setFunction, // of accessor
 	Bounds bounds,
 	Asserter& myasserter,
