@@ -1,0 +1,54 @@
+#pragma once
+#include "pch.h"
+#include "main.h"
+#include "Monster.h"
+#include "Common.h"
+
+std::array<uint8_t, 31>* mm6::GameClassKinds::startingSkills = nullptr;
+uint32_t mm6::GameClassKinds::startingSkills_size = 0;
+
+uint8_t* mm6::GameClasses::HPFactor = nullptr;
+uint32_t mm6::GameClasses::HPFactor_size = 0;
+uint8_t* mm6::GameClasses::SPFactor = nullptr;
+uint32_t mm6::GameClasses::SPFactor_size = 0;
+uint8_t* mm6::GameClasses::SPStats = nullptr;
+uint32_t mm6::GameClasses::SPStats_size = 0;
+
+int32_t* mm6::DialogLogic::list = nullptr;
+uint32_t* mm6::DialogLogic::list_sizePtr = nullptr;
+
+std::array<uint8_t, 37>* mm7::GameClassKinds::startingSkills = nullptr;
+uint32_t mm7::GameClassKinds::startingSkills_size = 0;
+
+std::array<uint8_t, 37>* mm7::GameClasses::skills = nullptr;
+uint32_t mm7::GameClasses::skills_size = 0;
+uint8_t* mm7::GameClasses::HPFactor = nullptr;
+uint32_t mm7::GameClasses::HPFactor_size = 0;
+uint8_t* mm7::GameClasses::SPFactor = nullptr;
+uint32_t mm7::GameClasses::SPFactor_size = 0;
+uint8_t* mm7::GameClasses::SPStats = nullptr;
+uint32_t mm7::GameClasses::SPStats_size = 0;
+
+int32_t* mm7::DialogLogic::list = nullptr;
+uint32_t* mm7::DialogLogic::list_sizePtr = nullptr;
+
+std::array<uint8_t, 39>* mm8::GameClassKinds::startingSkills = nullptr;
+uint32_t mm8::GameClassKinds::startingSkills_size = 0;
+
+std::array<mm8::StartStat, 7>* mm8::GameClasses::startingStats = nullptr;
+uint32_t mm8::GameClasses::startingStats_size = 0;
+uint8_t* mm8::GameClasses::SPBase = nullptr;
+uint32_t mm8::GameClasses::SPBase_size = 0;
+uint8_t* mm8::GameClasses::SPStats = nullptr;
+uint32_t mm8::GameClasses::SPStats_size = 0;
+uint8_t* mm8::GameClasses::HPBase = nullptr;
+uint32_t mm8::GameClasses::HPBase_size = 0;
+std::array<uint8_t, 39>* mm8::GameClasses::skills = nullptr;
+uint32_t mm8::GameClasses::skills_size = 0;
+uint8_t* mm8::GameClasses::SPFactor = nullptr;
+uint32_t mm8::GameClasses::SPFactor_size = 0;
+uint8_t* mm8::GameClasses::HPFactor = nullptr;
+uint32_t mm8::GameClasses::HPFactor_size = 0;
+
+int32_t* mm8::DialogLogic::list = nullptr;
+uint32_t* mm8::DialogLogic::list_sizePtr = nullptr;

@@ -1,0 +1,223 @@
+#pragma once
+#include "pch.h"
+#include "main.h"
+#include "GameMisc.h"
+#include "GameParty.h"
+#include "TxtFileItems.h"
+#include "GameMap.h"
+#include "Bin.h"
+#include "Player.h"
+#include "Lod.h"
+#include "Common.h"
+#include "Monster.h"
+#include "GameDataStructs.h"
+#include "MapElements.h"
+#include "MapMisc.h"
+#include "MapModel.h"
+#include "Arcomage.h"
+#include "MergeSpecific.h"
+
+char** mm6::GameStructure::NPCTopic = nullptr;
+uint32_t mm6::GameStructure::NPCTopic_size = 0;
+char** mm6::GameStructure::classNames = nullptr;
+uint32_t mm6::GameStructure::classNames_size = 0;
+uint8_t* mm6::GameStructure::titleTrackOffset = nullptr;
+uint32_t mm6::GameStructure::titleTrackOffset_size = 0;
+mm6::MissileSetup* mm6::GameStructure::missileSetup = nullptr;
+uint32_t* mm6::GameStructure::missileSetup_sizePtr = nullptr;
+char** mm6::GameStructure::NPCText = nullptr;
+uint32_t mm6::GameStructure::NPCText_size = 0;
+mm6::TravelInfo* mm6::GameStructure::transportLocations = nullptr;
+uint32_t mm6::GameStructure::transportLocations_size = 0;
+std::array<int8_t, 3>* mm6::GameStructure::transportIndex = nullptr;
+uint32_t mm6::GameStructure::transportIndex_size = 0;
+char** mm6::GameStructure::questsTxt = nullptr;
+uint32_t mm6::GameStructure::questsTxt_size = 0;
+mm6::ItemsTxtItem* mm6::GameStructure::itemsTxt = nullptr;
+uint32_t* mm6::GameStructure::itemsTxt_sizePtr = nullptr;
+mm6::EventLine* mm6::GameStructure::globalEvtLines = nullptr;
+uint32_t* mm6::GameStructure::globalEvtLines_sizePtr = nullptr;
+mm6::PatchOptions* mm6::GameStructure::patchOptions = nullptr;
+int32_t* mm6::GameStructure::awardsSort = nullptr;
+uint32_t* mm6::GameStructure::awardsSort_sizePtr = nullptr;
+mm6::Events2DItem* mm6::GameStructure::houses = nullptr;
+uint32_t mm6::GameStructure::houses_size = 0;
+mm6::CustomLods* mm6::GameStructure::customLods = nullptr;
+mm6::MonstersTxtItem* mm6::GameStructure::monstersTxt = nullptr;
+uint32_t* mm6::GameStructure::monstersTxt_sizePtr = nullptr;
+int16_t* mm6::GameStructure::mapDoorSound = nullptr;
+uint32_t mm6::GameStructure::mapDoorSound_size = 0;
+mm6::FogChances* mm6::GameStructure::mapFogChances = nullptr;
+uint32_t mm6::GameStructure::mapFogChances_size = 0;
+mm6::MapStatsItem* mm6::GameStructure::mapStats = nullptr;
+uint32_t* mm6::GameStructure::mapStats_sizePtr = nullptr;
+char** mm6::GameStructure::autonoteTxt = nullptr;
+uint32_t mm6::GameStructure::autonoteTxt_size = 0;
+mm6::NPC* mm6::GameStructure::NPC = nullptr;
+uint32_t* mm6::GameStructure::NPC_sizePtr = nullptr;
+mm6::NPC* mm6::GameStructure::NPCDataTxt = nullptr;
+uint32_t mm6::GameStructure::NPCDataTxt_size = 0;
+mm6::NPCNewsItem* mm6::GameStructure::NPCNews = nullptr;
+uint32_t mm6::GameStructure::NPCNews_size = 0;
+std::array<mm6::Item, 12>* mm6::GameStructure::shopItems = nullptr;
+uint32_t mm6::GameStructure::shopItems_size = 0;
+std::array<mm6::Item, 12>* mm6::GameStructure::shopSpecialItems = nullptr;
+uint32_t mm6::GameStructure::shopSpecialItems_size = 0;
+std::array<std::array<mm6::Item, 12>, 1>* mm6::GameStructure::guildItems = nullptr;
+uint32_t mm6::GameStructure::guildItems_size = 0;
+int64_t* mm6::GameStructure::shopNextRefill = nullptr;
+uint32_t mm6::GameStructure::shopNextRefill_size = 0;
+mm6::HouseMovie* mm6::GameStructure::houseMovies = nullptr;
+uint32_t mm6::GameStructure::houseMovies_size = 0;
+char** mm6::GameStructure::transTxt = nullptr;
+uint32_t mm6::GameStructure::transTxt_size = 0;
+
+mm7::CustomLods* mm7::GameStructure::customLods = nullptr;
+std::array<mm7::Item, 12>* mm7::GameStructure::shopItems = nullptr;
+uint32_t mm7::GameStructure::shopItems_size = 0;
+std::array<mm7::Item, 12>* mm7::GameStructure::shopSpecialItems = nullptr;
+uint32_t mm7::GameStructure::shopSpecialItems_size = 0;
+std::array<std::array<mm7::Item, 12>, 1>* mm7::GameStructure::guildItems = nullptr;
+uint32_t mm7::GameStructure::guildItems_size = 0;
+int64_t* mm7::GameStructure::shopNextRefill = nullptr;
+uint32_t mm7::GameStructure::shopNextRefill_size = 0;
+int64_t* mm7::GameStructure::shopTheftExpireTime = nullptr;
+uint32_t mm7::GameStructure::shopTheftExpireTime_size = 0;
+mm7::HouseMovie* mm7::GameStructure::houseMovies = nullptr;
+uint32_t mm7::GameStructure::houseMovies_size = 0;
+uint8_t* mm7::GameStructure::titleTrackOffset = nullptr;
+uint32_t mm7::GameStructure::titleTrackOffset_size = 0;
+mm7::MissileSetup* mm7::GameStructure::missileSetup = nullptr;
+uint32_t* mm7::GameStructure::missileSetup_sizePtr = nullptr;
+int32_t* mm7::GameStructure::autonoteCategory = nullptr;
+uint32_t mm7::GameStructure::autonoteCategory_size = 0;
+mm7::NPC* mm7::GameStructure::NPC = nullptr;
+uint32_t* mm7::GameStructure::NPC_sizePtr = nullptr;
+int16_t* mm7::GameStructure::NPCGroup = nullptr;
+uint32_t mm7::GameStructure::NPCGroup_size = 0;
+mm7::MonsterKind* mm7::GameStructure::monsterKinds = nullptr;
+uint32_t* mm7::GameStructure::monsterKinds_sizePtr = nullptr;
+char** mm7::GameStructure::NPCText = nullptr;
+uint32_t mm7::GameStructure::NPCText_size = 0;
+mm7::TravelInfo* mm7::GameStructure::transportLocations = nullptr;
+uint32_t mm7::GameStructure::transportLocations_size = 0;
+std::array<int8_t, 4>* mm7::GameStructure::transportIndex = nullptr;
+uint32_t mm7::GameStructure::transportIndex_size = 0;
+char** mm7::GameStructure::questsTxt = nullptr;
+uint32_t mm7::GameStructure::questsTxt_size = 0;
+mm7::ItemsTxtItem* mm7::GameStructure::itemsTxt = nullptr;
+uint32_t* mm7::GameStructure::itemsTxt_sizePtr = nullptr;
+char** mm7::GameStructure::autonoteTxt = nullptr;
+uint32_t mm7::GameStructure::autonoteTxt_size = 0;
+mm7::NPC* mm7::GameStructure::NPCDataTxt = nullptr;
+uint32_t mm7::GameStructure::NPCDataTxt_size = 0;
+char** mm7::GameStructure::NPCTopic = nullptr;
+uint32_t mm7::GameStructure::NPCTopic_size = 0;
+mm7::MapStatsItem* mm7::GameStructure::mapStats = nullptr;
+uint32_t* mm7::GameStructure::mapStats_sizePtr = nullptr;
+mm7::EventLine* mm7::GameStructure::globalEvtLines = nullptr;
+uint32_t* mm7::GameStructure::globalEvtLines_sizePtr = nullptr;
+std::array<uint8_t, 89>* mm7::GameStructure::hostileTxt = nullptr;
+uint32_t mm7::GameStructure::hostileTxt_size = 0;
+int32_t* mm7::GameStructure::awardsSort = nullptr;
+uint32_t mm7::GameStructure::awardsSort_size = 0;
+char** mm7::GameStructure::NPCNews = nullptr;
+uint32_t mm7::GameStructure::NPCNews_size = 0;
+std::array<char*, 2>* mm7::GameStructure::NPCGreet = nullptr;
+uint32_t mm7::GameStructure::NPCGreet_size = 0;
+char** mm7::GameStructure::transTxt = nullptr;
+uint32_t mm7::GameStructure::transTxt_size = 0;
+mm7::Events2DItem* mm7::GameStructure::houses = nullptr;
+uint32_t mm7::GameStructure::houses_size = 0;
+char** mm7::GameStructure::placeMonTxt = nullptr;
+uint32_t* mm7::GameStructure::placeMonTxt_sizePtr = nullptr;
+mm7::MonstersTxtItem* mm7::GameStructure::monstersTxt = nullptr;
+uint32_t* mm7::GameStructure::monstersTxt_sizePtr = nullptr;
+char** mm7::GameStructure::classNames = nullptr;
+uint32_t mm7::GameStructure::classNames_size = 0;
+mm7::PatchOptions* mm7::GameStructure::patchOptions = nullptr;
+int16_t* mm7::GameStructure::mapDoorSound = nullptr;
+uint32_t mm7::GameStructure::mapDoorSound_size = 0;
+mm7::FogChances* mm7::GameStructure::mapFogChances = nullptr;
+uint32_t mm7::GameStructure::mapFogChances_size = 0;
+
+int16_t* mm8::GameStructure::NPCGroup = nullptr;
+uint32_t mm8::GameStructure::NPCGroup_size = 0;
+char** mm8::GameStructure::transTxt = nullptr;
+uint32_t mm8::GameStructure::transTxt_size = 0;
+mm8::MonsterKind* mm8::GameStructure::monsterKinds = nullptr;
+uint32_t* mm8::GameStructure::monsterKinds_sizePtr = nullptr;
+int64_t* mm8::GameStructure::shopTheftExpireTime = nullptr;
+uint32_t mm8::GameStructure::shopTheftExpireTime_size = 0;
+std::array<std::array<mm8::Item, 12>, 12>* mm8::GameStructure::guildItems = nullptr;
+uint32_t mm8::GameStructure::guildItems_size = 0;
+std::array<mm8::Item, 12>* mm8::GameStructure::shopSpecialItems = nullptr;
+uint32_t mm8::GameStructure::shopSpecialItems_size = 0;
+uint8_t* mm8::GameStructure::titleTrackOffset = nullptr;
+uint32_t mm8::GameStructure::titleTrackOffset_size = 0;
+char** mm8::GameStructure::placeMonTxt = nullptr;
+uint32_t* mm8::GameStructure::placeMonTxt_sizePtr = nullptr;
+mm8::HouseMovie* mm8::GameStructure::houseMovies = nullptr;
+uint32_t mm8::GameStructure::houseMovies_size = 0;
+mm8::CharacterPortrait* mm8::GameStructure::characterPortraits = nullptr;
+uint32_t mm8::GameStructure::characterPortraits_size = 0;
+mm8::NPC* mm8::GameStructure::NPC = nullptr;
+uint32_t mm8::GameStructure::NPC_size = 0;
+mm8::FogChances* mm8::GameStructure::mapFogChances = nullptr;
+uint32_t mm8::GameStructure::mapFogChances_size = 0;
+char** mm8::GameStructure::autonoteTxt = nullptr;
+uint32_t mm8::GameStructure::autonoteTxt_size = 0;
+mm8::MapStatsItem* mm8::GameStructure::mapStats = nullptr;
+uint32_t* mm8::GameStructure::mapStats_sizePtr = nullptr;
+mm8::ReagentSettings* mm8::GameStructure::reagentSettings = nullptr;
+uint32_t mm8::GameStructure::reagentSettings_size = 0;
+std::array<uint16_t, 70>* mm8::GameStructure::mixPotions = nullptr;
+uint32_t mm8::GameStructure::mixPotions_size = 0;
+int64_t* mm8::GameStructure::guildNextRefill2 = nullptr;
+uint32_t mm8::GameStructure::guildNextRefill2_size = 0;
+mm8::NPC* mm8::GameStructure::NPCDataTxt = nullptr;
+uint32_t mm8::GameStructure::NPCDataTxt_size = 0;
+mm8::HousesExtra* mm8::GameStructure::housesExtra = nullptr;
+uint32_t mm8::GameStructure::housesExtra_size = 0;
+mm8::CharacterDollType* mm8::GameStructure::characterDollTypes = nullptr;
+uint32_t mm8::GameStructure::characterDollTypes_size = 0;
+mm8::CustomLods* mm8::GameStructure::customLods = nullptr;
+mm8::EventLine* mm8::GameStructure::globalEvtLines = nullptr;
+uint32_t* mm8::GameStructure::globalEvtLines_sizePtr = nullptr;
+mm8::Events2DItem* mm8::GameStructure::houses = nullptr;
+uint32_t mm8::GameStructure::houses_size = 0;
+char** mm8::GameStructure::NPCNews = nullptr;
+uint32_t mm8::GameStructure::NPCNews_size = 0;
+std::array<mm8::Item, 12>* mm8::GameStructure::shopItems = nullptr;
+uint32_t mm8::GameStructure::shopItems_size = 0;
+std::array<uint8_t, 218>* mm8::GameStructure::hostileTxt = nullptr;
+uint32_t mm8::GameStructure::hostileTxt_size = 0;
+std::array<int8_t, 4>* mm8::GameStructure::transportIndex = nullptr;
+uint32_t mm8::GameStructure::transportIndex_size = 0;
+int64_t* mm8::GameStructure::shopNextRefill = nullptr;
+uint32_t mm8::GameStructure::shopNextRefill_size = 0;
+char** mm8::GameStructure::classNames = nullptr;
+uint32_t mm8::GameStructure::classNames_size = 0;
+int32_t* mm8::GameStructure::autonoteCategory = nullptr;
+uint32_t mm8::GameStructure::autonoteCategory_size = 0;
+int32_t* mm8::GameStructure::awardsSort = nullptr;
+uint32_t mm8::GameStructure::awardsSort_size = 0;
+char** mm8::GameStructure::questsTxt = nullptr;
+uint32_t mm8::GameStructure::questsTxt_size = 0;
+mm8::TravelInfo* mm8::GameStructure::transportLocations = nullptr;
+uint32_t mm8::GameStructure::transportLocations_size = 0;
+mm8::MissileSetup* mm8::GameStructure::missileSetup = nullptr;
+uint32_t* mm8::GameStructure::missileSetup_sizePtr = nullptr;
+char** mm8::GameStructure::NPCText = nullptr;
+uint32_t mm8::GameStructure::NPCText_size = 0;
+std::array<char*, 2>* mm8::GameStructure::NPCGreet = nullptr;
+uint32_t mm8::GameStructure::NPCGreet_size = 0;
+char** mm8::GameStructure::NPCTopic = nullptr;
+uint32_t mm8::GameStructure::NPCTopic_size = 0;
+int16_t* mm8::GameStructure::mapDoorSound = nullptr;
+uint32_t mm8::GameStructure::mapDoorSound_size = 0;
+mm8::ItemsTxtItem* mm8::GameStructure::itemsTxt = nullptr;
+uint32_t* mm8::GameStructure::itemsTxt_sizePtr = nullptr;
+mm8::PatchOptions* mm8::GameStructure::patchOptions = nullptr;
+mm8::MonstersTxtItem* mm8::GameStructure::monstersTxt = nullptr;
+uint32_t* mm8::GameStructure::monstersTxt_sizePtr = nullptr;

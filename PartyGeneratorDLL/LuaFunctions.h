@@ -11,3 +11,5 @@ extern "C"
 	void luaInit();
 	bool checkIsInGame();
 }
+
+void fillGameStaticPointersAndSizes();

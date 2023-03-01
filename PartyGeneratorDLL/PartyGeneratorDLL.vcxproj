@@ -27,13 +27,27 @@
     <ClInclude Include="DefaultPlayerPanel.h" />
     <ClInclude Include="EditorMainWindow.h" />
     <ClInclude Include="EditorPlayerWindow.h" />
-    <ClInclude Include="Game.h" />
     <ClInclude Include="GameData.h" />
     <ClInclude Include="GeneralPanel.h" />
     <ClInclude Include="GeneratorGuiBase.h" />
     <ClInclude Include="GuaranteedClassDialog.h" />
     <ClInclude Include="ClassGenerationData.h" />
-    <ClInclude Include="headers\structsTest.h" />
+    <ClInclude Include="headers\structs\Arcomage.h" />
+    <ClInclude Include="headers\structs\Bin.h" />
+    <ClInclude Include="headers\structs\Common.h" />
+    <ClInclude Include="headers\structs\GameDataStructs.h" />
+    <ClInclude Include="headers\structs\GameMap.h" />
+    <ClInclude Include="headers\structs\GameMisc.h" />
+    <ClInclude Include="headers\structs\GameParty.h" />
+    <ClInclude Include="headers\structs\GameStructure.h" />
+    <ClInclude Include="headers\structs\Lod.h" />
+    <ClInclude Include="headers\structs\MapElements.h" />
+    <ClInclude Include="headers\structs\MapMisc.h" />
+    <ClInclude Include="headers\structs\MapModel.h" />
+    <ClInclude Include="headers\structs\MergeSpecific.h" />
+    <ClInclude Include="headers\structs\Monster.h" />
+    <ClInclude Include="headers\structs\Player.h" />
+    <ClInclude Include="headers\structs\TxtFileItems.h" />
     <ClInclude Include="LuaFunctions.h" />
     <ClInclude Include="Map.h" />
     <ClInclude Include="PlayerClass.h" />
@@ -41,13 +55,11 @@
     <ClInclude Include="headers\Enum_const.h" />
     <ClInclude Include="headers\Generator.h" />
     <ClInclude Include="headers\globals.h" />
-    <ClInclude Include="headers\Item.h" />
     <ClInclude Include="headers\ItemGenerationData.h" />
     <ClInclude Include="headers\LowLevel.h" />
     <ClInclude Include="headers\main.h" />
     <ClInclude Include="headers\MainWindow.h" />
     <ClInclude Include="headers\pch.h" />
-    <ClInclude Include="headers\Player.h" />
     <ClInclude Include="headers\GeneratorDataBase.h" />
     <ClInclude Include="headers\PlayerData.h" />
     <ClInclude Include="headers\ResistanceData.h" />
@@ -92,7 +104,6 @@
     <ClCompile Include="sources\Enum_const.cpp" />
     <ClCompile Include="sources\Generator.cpp" />
     <ClCompile Include="sources\globals.cpp" />
-    <ClCompile Include="sources\Item.cpp" />
     <ClCompile Include="sources\ItemGenerationData.cpp" />
     <ClCompile Include="sources\LowLevel.cpp" />
     <ClCompile Include="sources\main.cpp" />
@@ -101,13 +112,14 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="sources\Player.cpp" />
     <ClCompile Include="sources\GeneratorDataBase.cpp" />
     <ClCompile Include="sources\PlayerData.cpp" />
     <ClCompile Include="sources\ResistanceData.cpp" />
     <ClCompile Include="sources\SkillsData.cpp" />
     <ClCompile Include="sources\SpellsData.cpp" />
     <ClCompile Include="sources\StatisticsData.cpp" />
+    <ClCompile Include="sources\structs\GameStructure.cpp" />
+    <ClCompile Include="sources\structs\Lod.cpp" />
     <ClCompile Include="SpecificClassChooserPanel.cpp" />
     <ClCompile Include="Tests.cpp" />
     <ClCompile Include="Utility.cpp" />
@@ -121,7 +133,6 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <None Include="ClassDiagram.cd" />
     <None Include="Lib.def" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
@@ -181,7 +192,7 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <TargetName>PartyGenerator</TargetName>
-    <IncludePath>headers;.;.\openresty-luajit\src</IncludePath>
+    <IncludePath>headers;headers\structs;.;.\openresty-luajit\src</IncludePath>
     <SourcePath>sources;C:\wxWidgets-3.2.1\src\common;C:\wxWidgets-3.2.1\src\msw;.</SourcePath>
     <EnableMicrosoftCodeAnalysis>true</EnableMicrosoftCodeAnalysis>
     <ExternalIncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);json</ExternalIncludePath>

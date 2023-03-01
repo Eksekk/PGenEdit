@@ -13,12 +13,6 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
-    <Filter Include="Pliki nagłówkowe\Structs">
-      <UniqueIdentifier>{822b7a63-7e48-4aa0-8557-4b51a4c4fac3}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Pliki źródłowe\Structs">
-      <UniqueIdentifier>{60909965-30a2-47a2-bf44-ce158c244a1f}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Pliki źródłowe\Generator">
       <UniqueIdentifier>{9078347f-8c1e-4fa9-a96b-5aafa31d8a87}</UniqueIdentifier>
     </Filter>
@@ -67,6 +61,27 @@
     <Filter Include="Pliki źródłowe\Shared GUI">
       <UniqueIdentifier>{e5f56afe-a50d-478e-92a3-e086c6f354ea}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Pliki nagłówkowe\GameStructs">
+      <UniqueIdentifier>{822b7a63-7e48-4aa0-8557-4b51a4c4fac3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Pliki nagłówkowe\GameStructs\f">
+      <UniqueIdentifier>{3833079a-07f6-4c9f-a550-31fc0c5bc1af}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Pliki źródłowe\GameStructs">
+      <UniqueIdentifier>{60909965-30a2-47a2-bf44-ce158c244a1f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Pliki nagłówkowe\GameStructs\Definitions">
+      <UniqueIdentifier>{c87073ff-7402-4b9b-952b-053e1b45bafb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Pliki nagłówkowe\GameStructs\Accessors">
+      <UniqueIdentifier>{14a85bf9-a9f1-4641-b464-da1cccee0c90}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Pliki źródłowe\GameStructs\Definitions">
+      <UniqueIdentifier>{a148d74c-5863-4b69-871b-3e98e9025dfb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Pliki źródłowe\GameStructs\Accessors">
+      <UniqueIdentifier>{ff504fc5-f4ac-4f4c-8699-a6794284a781}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="headers\globals.h">
@@ -81,14 +96,8 @@
     <ClInclude Include="headers\pch.h">
       <Filter>Pliki nagłówkowe</Filter>
     </ClInclude>
-    <ClInclude Include="headers\Item.h">
-      <Filter>Pliki nagłówkowe\Structs</Filter>
-    </ClInclude>
-    <ClInclude Include="headers\Player.h">
-      <Filter>Pliki nagłówkowe\Structs</Filter>
-    </ClInclude>
     <ClInclude Include="headers\Structs.h">
-      <Filter>Pliki nagłówkowe\Structs</Filter>
+      <Filter>Pliki nagłówkowe\GameStructs</Filter>
     </ClInclude>
     <ClInclude Include="PlayerClass.h">
       <Filter>Pliki nagłówkowe\GameData</Filter>
@@ -110,12 +119,6 @@
     </ClInclude>
     <ClInclude Include="Tests.h">
       <Filter>Pliki nagłówkowe</Filter>
-    </ClInclude>
-    <ClInclude Include="Game.h">
-      <Filter>Pliki nagłówkowe\Structs</Filter>
-    </ClInclude>
-    <ClInclude Include="PlayerStructAccessor.h">
-      <Filter>Pliki nagłówkowe\Structs</Filter>
     </ClInclude>
     <ClInclude Include="ClassSettingsTab.h">
       <Filter>Pliki nagłówkowe\Generator\GUI\Classes</Filter>
@@ -201,6 +204,57 @@
     <ClInclude Include="Map.h">
       <Filter>Pliki nagłówkowe</Filter>
     </ClInclude>
+    <ClInclude Include="headers\structs\Arcomage.h">
+      <Filter>Pliki nagłówkowe\GameStructs\Definitions</Filter>
+    </ClInclude>
+    <ClInclude Include="headers\structs\Bin.h">
+      <Filter>Pliki nagłówkowe\GameStructs\Definitions</Filter>
+    </ClInclude>
+    <ClInclude Include="headers\structs\Common.h">
+      <Filter>Pliki nagłówkowe\GameStructs\Definitions</Filter>
+    </ClInclude>
+    <ClInclude Include="headers\structs\GameDataStructs.h">
+      <Filter>Pliki nagłówkowe\GameStructs\Definitions</Filter>
+    </ClInclude>
+    <ClInclude Include="headers\structs\GameMap.h">
+      <Filter>Pliki nagłówkowe\GameStructs\Definitions</Filter>
+    </ClInclude>
+    <ClInclude Include="headers\structs\GameMisc.h">
+      <Filter>Pliki nagłówkowe\GameStructs\Definitions</Filter>
+    </ClInclude>
+    <ClInclude Include="headers\structs\GameParty.h">
+      <Filter>Pliki nagłówkowe\GameStructs\Definitions</Filter>
+    </ClInclude>
+    <ClInclude Include="headers\structs\GameStructure.h">
+      <Filter>Pliki nagłówkowe\GameStructs\Definitions</Filter>
+    </ClInclude>
+    <ClInclude Include="headers\structs\Lod.h">
+      <Filter>Pliki nagłówkowe\GameStructs\Definitions</Filter>
+    </ClInclude>
+    <ClInclude Include="headers\structs\MapElements.h">
+      <Filter>Pliki nagłówkowe\GameStructs\Definitions</Filter>
+    </ClInclude>
+    <ClInclude Include="headers\structs\MapMisc.h">
+      <Filter>Pliki nagłówkowe\GameStructs\Definitions</Filter>
+    </ClInclude>
+    <ClInclude Include="headers\structs\MapModel.h">
+      <Filter>Pliki nagłówkowe\GameStructs\Definitions</Filter>
+    </ClInclude>
+    <ClInclude Include="headers\structs\Monster.h">
+      <Filter>Pliki nagłówkowe\GameStructs\Definitions</Filter>
+    </ClInclude>
+    <ClInclude Include="headers\structs\TxtFileItems.h">
+      <Filter>Pliki nagłówkowe\GameStructs\Definitions</Filter>
+    </ClInclude>
+    <ClInclude Include="headers\structs\Player.h">
+      <Filter>Pliki nagłówkowe\GameStructs\Definitions</Filter>
+    </ClInclude>
+    <ClInclude Include="PlayerStructAccessor.h">
+      <Filter>Pliki nagłówkowe\GameStructs\Accessors</Filter>
+    </ClInclude>
+    <ClInclude Include="headers\structs\MergeSpecific.h">
+      <Filter>Pliki nagłówkowe\GameStructs\Definitions</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="sources\dllApi.cpp">
@@ -220,12 +274,6 @@
     </ClCompile>
     <ClCompile Include="sources\GeneratorDataBase.cpp">
       <Filter>Pliki źródłowe\Generator</Filter>
-    </ClCompile>
-    <ClCompile Include="sources\Item.cpp">
-      <Filter>Pliki źródłowe\Structs</Filter>
-    </ClCompile>
-    <ClCompile Include="sources\Player.cpp">
-      <Filter>Pliki źródłowe\Structs</Filter>
     </ClCompile>
     <ClCompile Include="sources\globals.cpp">
       <Filter>Pliki źródłowe</Filter>
@@ -268,9 +316,6 @@
     </ClCompile>
     <ClCompile Include="GeneratorGuiBase.cpp">
       <Filter>Pliki źródłowe\Generator\GUI</Filter>
-    </ClCompile>
-    <ClCompile Include="PlayerStructAccessor.cpp">
-      <Filter>Pliki źródłowe\Structs</Filter>
     </ClCompile>
     <ClCompile Include="ClassInfoPanel.cpp">
       <Filter>Pliki źródłowe\Generator\GUI\Classes</Filter>
@@ -328,6 +373,15 @@
     </ClCompile>
     <ClCompile Include="LuaFunctions.cpp">
       <Filter>Pliki źródłowe</Filter>
+    </ClCompile>
+    <ClCompile Include="PlayerStructAccessor.cpp">
+      <Filter>Pliki źródłowe\GameStructs\Accessors</Filter>
+    </ClCompile>
+    <ClCompile Include="sources\structs\GameStructure.cpp">
+      <Filter>Pliki źródłowe\GameStructs\Definitions</Filter>
+    </ClCompile>
+    <ClCompile Include="sources\structs\Lod.cpp">
+      <Filter>Pliki źródłowe\GameStructs\Definitions</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

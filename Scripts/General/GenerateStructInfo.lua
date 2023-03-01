@@ -61,14 +61,21 @@ local extra = -- extra fields in structs
 	}
 }
 local globalReplacements = {class = "clas", ["if"] = "if_", ["else"] = "else_"}
-local arraysToPointers =
+local convertToPointers = -- because updated during runtime etc.
 {
 	SpritesLod = {"SpritesSW"},
 	GameStructure = {"NPCDataTxt", "MonstersTxt", "CharacterPortraits", "TransportLocations", "NPCGroup", "NPCText", "TransTxt", "ShopTheftExpireTime",
 		"MapDoorSound", "GlobalEvtLines", "ItemsTxt", "NPC", "MixPotions", "ReagentSettings", "NPCNews", "MapFogChances",
 		"ShopItems", "GuildItems", "NPCTopic", "ShopSpecialItems", "AutonoteTxt", "MapStats", "Houses", "ClassNames", "HostileTxt",
 		"PlaceMonTxt", "AutonoteCategory", "QuestsTxt", "HousesExtra", "CharacterDollTypes", "HouseMovies", "NPCGreet", "TransportIndex",
-		"GuildNextRefill2", "ShopNextRefill"} -- from merge
+		"GuildNextRefill2", "ShopNextRefill", "ClassNames" -- from merge
+		, "PatchOptions" -- potentially relocated each run
+		, "CustomLods", "MonsterKinds", "TitleTrackOffset", "MissileSetup", "AwardsSort" -- MMExt
+	},
+	GameClasses = {"HPBase", "SPBase", "HPFactor", "SPFactor", "StartingStats", "Skills" -- Merge
+	, "SPStats"}, -- MMExt
+	GameClassKinds = {"StartingSkills"}, -- Merge
+	DialogLogic = {"List"} -- MMExt
 }
 local booleanHandlers = {
 	[getUpvalue(mem.structs.types.b1, "handler")] = 1,
@@ -110,11 +117,58 @@ local function getCustomFieldSizes(structName)
 	mem.structs.types.CustomType = oldMember
 	return fieldSizes
 end
-local function stripNamespace(str)
-	if str:sub(1, namespaceStr:len()) == namespaceStr then
-		str = str:sub(namespaceStr:len() + 1)
+local function stripNamespaces(str)
+	return str:gsub(".-::", "")
+end
+
+-- decided to keep all three games' structures in one file, because I would have to include files for all games anyway
+local structureByFile =
+{
+	MapModel = {"ModelVertex", "ModelFacet", "BSPNode", "MapModel"},
+
+	MapMisc = {"TilesetDef", "MapOutline", "MapOutlines", "OdmHeader", "BlvHeader", "SpawnPoint", "BaseLight", "MapNote"},
+
+	MapElements = {"FacetData", "MapLight", "MapRoom", "MapVertex", "MapFacet", "MapDoor", "MapSprite", "MapChest"},
+
+	Common = {"SpellBuff", "SpellEffect", "Item", "StartStat", "ObjectRef2", "FloatVector", "ObjectRef"},
+
+	Monster = {"MonsterSchedule", "MonsterAttackInfo", "MapMonster", "MonstersTxtItem", "MonsterKind"},
+
+	GameMap = {"MapExtra", "MapFacet", "MapExtra", "MapObject", "GameMap"},
+
+	Arcomage = {"ArcomageAction", "ArcomageActions", "ArcomageCard", "ArcomagePlayer", "Arcomage"},
+
+	Lod = {"LodRecord", "CustomLods", "LodFile", "Lod", "LodSprite", "LodSpriteD3D", "SpritesLod", "LodBitmap", "BitmapsLod", "LodSpriteLine"},
+
+	Bin = {"DecListItem", "OverlayItem", "TileItem", "ObjListItem", "DChestItem", "SoundsItem", "TFTItem", "MonListItem", "PFTItem", "IFTItem", "SFTItem", "SFT", "CurrentTileBin"},
+	
+	TxtFileItems = {"HistoryTxtItem", "StdItemsTxtItem", "SpcItemsTxtItem", "SpellsTxtItem", "MapStatsItem", "ItemsTxtItem", "NPCProfTxtItem", "Events2DItem", },
+
+	GameDataStructs = {"GameRaces", "GameClasses", "GameClassKinds", "DialogLogic", "Dlg", "GameScreen"},
+
+	GameMisc = {"SpellInfo", "TravelInfo", "FogChances", "ShopItemKind", "GeneralStoreItemKind", "HouseMovie", "Weather", "MoveToMap", "MissileSetup", "TownPortalTownInfo", "EventLine", "ProgressBar", "ActionItem", "PatchOptions", "GameMouse", "MouseStruct"},
+
+	Player = {"FaceAnimationInfo", "LloydBeaconSlot", "BaseBonus", "Player"},
+
+	GameParty = {"GameParty", "NPC", "Button", "NPCNewsItem"},
+
+	MergeSpecific = {"ArmorShopRule", "ShopRule", "WeaponShopRule", "ArcomageRule", "HouseRules", "HousesExtra", "CharacterDollType", "CharacterVoices", "CharacterPortrait", "PartyLight", "EquipCoordsCloak", "EquipCoordinates", "ArmorPicsCoords", "ReagentSettings"},
+
+	GameStructure = {"GameStructure"}
+}
+
+local globalExcludes =
+{
+	Player = {"Attrs"} -- attrs is from merge
+}
+local function getStructFile(name)
+	for k, v in pairs(structureByFile) do
+		if table.find(v, name) then
+			return k
+		end
 	end
-	return str
+	print(string.format("No file specified for name %q", name))
+	return "unknown"
 end
 
 -- helper functions
@@ -146,7 +200,8 @@ all possible attributes:
 - [added in processStruct] ptrValue - pointer with set value
 - [added in getGroup] padStart
 ]]
-local function getMemberData(structName, memberName, member, offsets, members, class, rofields, customFieldSizes, inArray)
+local getMemberData
+function getMemberData(structName, memberName, member, offsets, members, class, rofields, customFieldSizes, inArray)
 	rofields = rofields or {}
 	member = member or members[memberName]
 	local data = {name = memberName or "", offset = offsets[memberName or ""] or 0}
@@ -159,7 +214,7 @@ local function getMemberData(structName, memberName, member, offsets, members, c
 	end
 	local protFunc = getU(member, "f0")
 	if protFunc then
-		addComment("Requires unprotect before change")
+		addComment("requires unprotect before change")
 		member = protFunc
 	end
 	local up = debug.upvalues(member)
@@ -184,6 +239,9 @@ local function getMemberData(structName, memberName, member, offsets, members, c
 		data.offset = offset
 		data.dataType = types.union
 	elseif up.count then -- array
+		-- if Merge and table.find({"HPBase", "SPBase", "HPFactor", "SPFactor", "SPStats"}, memberName) then
+		-- 	data.offset = getU(getmetatable(Game.Classes[memberName]).__index, "o")
+		-- end
 		data.array = true
 		data.innerType = getMemberData(structName, memberName, arrayHandler, offsets, members, class, rofields, customFieldSizes, true)
 		if data.innerType.replaceWith then
@@ -220,9 +278,9 @@ local function getMemberData(structName, memberName, member, offsets, members, c
 		end
 		data.dataType = data.ptr and types.parray or types.array
 		-- change array to pointer
-		if arraysToPointers[structName] and table.find(arraysToPointers[structName], data.name) then
-			tget(luaData, structName, arraysToPointers[structName]).arrayName = data.name
-			setBaseTypeField(data, "arrayToPointer", true) -- setting this to explicitly signal to processStruct that it needs to convert length field into pointer
+		if convertToPointers[structName] and table.find(convertToPointers[structName], data.name) then
+			tget(luaData, structName, data.name).ptrName = data.name
+			setBaseTypeField(data, "convertToPointer", true) -- setting this to explicitly signal to processStruct that it needs to convert length field into pointer
 			--setBaseTypeField(data, "padding", (getBaseTypeField(data, "padding") or 0) + getBaseTypeField(data, "size") - 4)
 		end
 	elseif stringLen then -- string (fixed size, not pointer)
@@ -324,7 +382,6 @@ local function getMemberData(structName, memberName, member, offsets, members, c
 		data.size = isPtr and 4 or structs[sname]["?size"]
 		data.dataType = isPtr and types.pstruct or types.struct
 	else
-		--print(string.format("Warning: unknown type structs.%s.%s encountered!", structName, memberName))
 		data.array = true
 		data.innerType = {size = 1, typeName = commonTypeNamesToCpp.u1, name = memberName}
 		data.count = customFieldSizes[memberName] or error("Unknown custom type name: " .. memberName, 2)
@@ -337,6 +394,10 @@ local function getMemberData(structName, memberName, member, offsets, members, c
 		data.low = 0
 		data.size = data.count
 		addComment("Unknown type")
+	end
+	if convertToPointers[structName] and table.find(convertToPointers[structName], data.name) then
+		tget(luaData, structName, data.name).ptrName = data.name
+		data.convertToPointer = true
 	end
 	return data
 end
@@ -361,7 +422,6 @@ vmethod = function: 0x02e19fe0\
 
 function getArrayPointerString(arrays, last, addPointer) -- for testing: https://cdecl.org/
 	local stdArray = "std::array<%s, %d>"
-	--if last.bit then debug.Message(dump(arrays), dump(last)) end
 	local type, name = last.typeName .. (last.ptr and "*" or "") .. (last.constPtr and "const" or ""), last.name
 	for i = #arrays, 1, -1 do
 		local arr = arrays[i]
@@ -372,8 +432,9 @@ function getArrayPointerString(arrays, last, addPointer) -- for testing: https:/
 			-- std::array<std::array<uint8_t, 128>*, 128> heightMap;
 		end
 	end
-	return type .. (addPointer and "* " or " ") .. name
+	return type .. (addPointer and "*" or "") .. " " .. name
 end
+
 local function toCamelCase(str)
 	local twoUpper = str:len() >= 2 and str:sub(1, 2):upper() == str:sub(1, 2)
 	str = twoUpper and str or (str:sub(1, 1):lower() .. (str:len() >= 2 and str:sub(2) or ""))
@@ -381,7 +442,7 @@ local function toCamelCase(str)
 	return str
 end
 
-local function getArraysCommentsAndBaseType(data)
+local function getArraysCommentsAndBaseData(data)
 	-- collect array info and get to base type
 	local arrays, comments = {}, {}
 	while data.array do
@@ -399,7 +460,7 @@ local function processSingle(data, indentLevel, structName, namespaceStr, debugL
 	local dataCopy = data
 	
 	local s = indentOuter
-	local arrays, comments, data = getArraysCommentsAndBaseType(data)
+	local arrays, comments, data = getArraysCommentsAndBaseData(data)
 	if #arrays == 0 then arrays = nil end
 	
 	data.name = tostring(data.name)
@@ -490,7 +551,6 @@ local processGroup
 function processGroup(group, indentLevel, structName, namespaceStr, debugLines)
 	-- messing around
 	--setmetatable(getfenv(1), {__index = function(t, k) if not xxx then print(k); return rawget(t, k) end end})
-	--if group[1].name == "QuestsTxt" then error"" end
 	indentLevel = indentLevel or 0
 	if #group == 1 then
 		local ret = processSingle(group[1], indentLevel, structName, namespaceStr, debugLines)
@@ -501,7 +561,6 @@ function processGroup(group, indentLevel, structName, namespaceStr, debugLines)
 	local code = {indentOuter .. "union", indentOuter .. "{"}
 	setmetatable(code, {__newindex = function(t, k, v) -- used in processSingle(), for convenience value can be table
 		if type(v) == "table" then
-			--print(k, "x", type(v[1]), dump(v))
 			multipleInsert(t, k, v)
 		else
 			rawset(t, k, v)
@@ -516,9 +575,7 @@ function processGroup(group, indentLevel, structName, namespaceStr, debugLines)
 	local wrap = {}
 	local offset = group[1].offset
 	local skipFirst = true -- first is at right offset, second needs adjustment (usually by 4)
-	--if group[1].union and group[1].name:lower():find("delayed") then setLocalsTableAndDump(1); error"" end
 	for i, member in ipairs(group) do
-		--if structName == "Player" then print(member.name) end
 		if member.size ~= maxS then
 			wrap[#wrap + 1] = member
 		else
@@ -542,10 +599,7 @@ function processGroup(group, indentLevel, structName, namespaceStr, debugLines)
 		end
 		offset = member.offset + member.size + ((member.innerType or {}).padding or 0)
 	end
-	--if member.name == "NPCText" then error(dump(wrap)) end
-	--[[if #wrap == 1 then -- one other size member can be inside union
-		code[#code + 1] = processSingle(wrap[1], indentLevel + 1)
-	else]]if #wrap > 0 then
+	if #wrap > 0 then
 		-- do struct wrap
 		table.sort(wrap, function(a, b) return a.offset < b.offset end)
 		code[#code + 1] = indentInner .. "struct"
@@ -572,7 +626,7 @@ function processGroup(group, indentLevel, structName, namespaceStr, debugLines)
 				so not only wasted space, but also subsequent bit positions will be wrong and union size may be wrong)
 				(thank god to my idea to put static_assert! I would not catch this that soon otherwise)
 				
-				I chose second approach because first conflicts with my decoupled functions structure (processGroup shouldn't care what type field has,
+				I chose second approach because first conflicts with my (attempted) decoupled functions structure (processGroup shouldn't care what type field has,
 				while to fix it it would have to change types of bit fields), while getMemberData shouldn't care about type outside bitfield
 				]]
 				local previousBit = (lastOffset % 1) * 8
@@ -608,13 +662,10 @@ function processGroup(group, indentLevel, structName, namespaceStr, debugLines)
 		code[#code + 1] = indentInner .. "};"
 	end
 	code[#code + 1] = indentOuter .. "};"
-	--if table.findIf(group, function(field) return field.name:lower():find("delayed") end) then setLocalsTableAndDump(1); error"" end
-	--table.foreach(group, function(field, key) if field.union then print("union", key, field.name, field.typeName) end end)
 	return code
 end
 
 local function findDependencies(args, data, structureDependencies)
-	debugTable(args)
 	local data2 = data
 	while data2 do
 		if data2.struct then
@@ -629,8 +680,10 @@ end
 function getGroup(fields, firstField, i)
 	local members = {firstField} -- for doing unions
 	debugTable(firstField)
+	
 	--if firstField.name == "QuestsTxt" then error"" end
 	local maxNextOffset = firstField.offset + firstField.size
+
 	for j = i + 1, #fields do
 		if fields[j].offset >= maxNextOffset then
 			return members, j, maxNextOffset
@@ -660,7 +713,6 @@ args = table with:
 function returns table with definition lines, array of names of structures it depends on (they also need to be defined),
 	calculated size (most useful for mmext unions) and "processedStructs" table (if you were too lazy to pass your own)
 ]]
-lastM = {}
 local processStruct
 function processStruct(args)
 	args.processedStructs = args.processedStructs or {}
@@ -668,7 +720,8 @@ function processStruct(args)
 	args.offset = args.offset or 0
 	local offsets, members = args.offsets or structs.o[args.name], args.members or structs.m[args.name]
 	local class, rofields = args.class or structs.class(args.name), args.rofields or {}
-	if not next(members) then -- forward declaration only, idk if 0 size struct is possible in C++
+	local size = not args.union and structs[args.name]["?size"] or 0
+	if not next(members) or (not args.union and size == 0) then -- forward declaration only, idk if 0 size struct is possible in C++
 		local data = {code = {string.format("%sstruct %s; // 0-size struct, declaration only", string.rep(INDENT_CHARS, args.indentLevel), args.name)}, dependencies = {}, size = 0}
 		args.processedStructs[args.name] = data
 		table.insert(tget(args, "structOrder"), 1, args.name)
@@ -688,17 +741,14 @@ function processStruct(args)
 	end
 	local indentOuter, indentInner = string.rep(INDENT_CHARS, args.indentLevel), string.rep(INDENT_CHARS, args.indentLevel + 1)
 	local customFieldSizes = not args.union and getCustomFieldSizes(args.name) or {}
-	local staticPtrCode, staticArrayToPointerCode = {}, {}
-	local size = not args.union and structs[args.name]["?size"] or 0
+	local staticPtrDeclarationCode, staticConvertToPointerDeclarationCode, staticDefinitionCode = {}, {}, {}
 	for mname, f in pairs(members) do
-		table.insert(lastM, mname)
 		if (type(args.includeMembers) == "table" and not table.find(args.includeMembers, mname)) or (type(mname) == "string" and mname:len() == 0) then -- last check is for dummy names
 			goto continue
-		elseif type(args.excludeMembers) == "table" and table.find(args.excludeMembers, mname) then
+		elseif type(args.excludeMembers) == "table" and table.find(args.excludeMembers, mname) or globalExcludes[args.name] and table.find(globalExcludes[args.name], mname) then
 			goto continue
 		end
 		local data = getMemberData(args.name, mname, f, offsets, members, class, rofields, customFieldSizes, false)
-		--if args.name == "GameStructure" then print(data.name, data.size:tohex()) end
 		if data then
 			if args.union and tonumber(data.name) then
 				-- array with some fields rearranged, so it can't be indexed with const.* in all cases
@@ -706,15 +756,21 @@ function processStruct(args)
 				data.name = "_" .. tostring(data.name)
 			end
 			-- add pointers for structs which don't really reside at 0 address, TODO: take into account limits removal relocation
-			if args.name == "GameStructure" and data.struct and data.offset == 0  then
-				--print(dump(data))
-				table.insert(staticPtrCode, string.format("%sstatic inline %s%s* const %s = 0;", indentInner,
-					args.prependNamespace and namespaceStr or "", data.typeName, toCamelCase(data.name)))
+			if data.struct and data.offset == 0  then
+				table.insert(staticPtrDeclarationCode,
+					string.format("%sstatic inline %s%s* const %s = 0;",
+					indentInner,
+					args.prependNamespace and namespaceStr or "",
+					data.typeName,
+					toCamelCase(data.name))
+				)
 				findDependencies(args, data, structureDependencies)
 				goto continue
-			elseif data.array and data.innerType.arrayToPointer then
+			elseif data.struct and data.size == 0 then
+				goto continue
+			elseif (data.array and data.innerType.convertToPointer) or data.convertToPointer then
 				findDependencies(args, data, structureDependencies)
-				local arrays, comments, baseData = getArraysCommentsAndBaseType(data)
+				local arrays, comments, baseData = getArraysCommentsAndBaseData(data)
 				local arraysOrig = M.deepcopyMM(arrays)
 				if #arrays > 0 then
 					table.remove(arrays, 1)
@@ -723,17 +779,38 @@ function processStruct(args)
 				baseData.typeName = (baseData.struct and args.prependNamespace and namespaceStr or "") .. baseData.typeName
 				baseData.name = toCamelCase(baseData.name)
 				local resultTypeAndName = getArrayPointerString(arrays, baseData, true)
-				baseData.typeName, baseData.name = old1, old2
-				table.insert(staticArrayToPointerCode, string.format("%sstatic %s; // %s", indentInner, resultTypeAndName,
-					"array converted to pointer to not break with limits removal scripts"))
-				if arraysOrig[1] and arraysOrig[1].lenP then
-					table.insert(staticArrayToPointerCode, string.format("%sstatic %s* %s; // %s", indentInner,
-					commonTypeNamesToCpp["u" .. arraysOrig[1].lenA], toCamelCase(mname .. "_size"),
-					"pointer to size, set during initialization by getting data from lua"))
+				table.insert(staticConvertToPointerDeclarationCode,
+					string.format("%sstatic %s; // %s",
+					indentInner,
+					resultTypeAndName,
+					"converted to pointer to not break with limits removal scripts")
+				)
+				baseData.name = (args.prependNamespace and namespaceStr or "") .. args.name .. "::" .. baseData.name
+				resultTypeAndName = getArrayPointerString(arrays, baseData, true)
+				table.insert(staticDefinitionCode, string.format("%s = nullptr;", resultTypeAndName))
+				if arraysOrig[1] then
+					-- size field pointer, getting one (but not pointer) even if original array doesn't have it
+					local typeNameWithPtr = arraysOrig[1].lenA and (commonTypeNamesToCpp["u" .. arraysOrig[1].lenA] .. "*") or commonTypeNamesToCpp.u4
+					local fieldName = toCamelCase(mname .. "_size") .. (arraysOrig[1].lenA and "Ptr" or "")
+					table.insert(staticConvertToPointerDeclarationCode,
+						string.format("%sstatic %s %s; // %s",
+						indentInner,
+						typeNameWithPtr,
+						fieldName,
+						(arraysOrig[1].lenA and "pointer to size" or "size field") .. ", set during initialization by getting data from lua")
+					)
+					table.insert(staticDefinitionCode,
+						string.format("%s %s = %s;",
+						-- prepend namespace here should always be implicitly true because wrapping in header stuff requires it, but whatever
+						typeNameWithPtr,
+						(args.prependNamespace and namespaceStr or "") .. args.name .. "::" .. fieldName,
+						arraysOrig[1].lenA and "nullptr" or "0"
+						)
+					)
+
 					tget(luaData, args.name, baseData.name).sizePtrName = toCamelCase(mname .. "_size")
-				else
-					print(dump(arraysOrig))
 				end
+				baseData.typeName, baseData.name = old1, old2
 			elseif data.union then
 				local depends
 				data.code, depends, data.size = processStruct{name = data.name:sub(1, 1):lower() .. data.name:sub(2), offsets = data.offsets, members = data.fields, rofields = data.rofields,
@@ -741,7 +818,6 @@ function processStruct(args)
 					processDependencies = args.processDependencies, structOrder = args.structOrder, shouldProcessDependencyFunc = args.shouldProcessDependencyFunc}
 					-- unions have 0 indent level and this breaks normal structs processed as dependencies
 					-- this whole indent system should be probably redone anyways
-				--print(dump(data))
 				-- doesn't work with non-integer key tables
 				--multipleInsert(fields, #fields + 1, data)
 				table.insert(fields, data)
@@ -764,7 +840,7 @@ function processStruct(args)
 				end
 				data2 = data2.innerType
 			end
-			if not getBaseTypeField(data, "static") and not (data.array and data.innerType.arrayToPointer) then
+			if not getBaseTypeField(data, "static") and not ((data.array and data.innerType.convertToPointer) or data.convertToPointer) then
 				size = math.max(size, math.ceil(data.offset + (data.size or 0)))
 			end
 		end
@@ -778,22 +854,18 @@ function processStruct(args)
 	end)
 	local cppAssert = "%sstatic_assert(sizeof(%s) == 0x%X, \"Invalid \\\"%s\\\" structure size\");"
 	local code = {}
-	setmetatable(code, {__newindex = function(t, k, v)
-		--if type(v) == "table" then print(k, args.name, dump(debug.getinfo(3))); setLocalsTableAndDump(3) end
-		rawset(t, k, v)
-	end})
 	if not args.union then-- insert later, because size not known yet
 		code[#code + 1] = string.format("%sstruct %s // size: 0x%X", indentOuter, args.name, size)
 	end
 	code[#code + 1] = indentOuter .. "{"
-	if #staticPtrCode > 0 then
-		table.insert(staticPtrCode, "")
+	if #staticPtrDeclarationCode > 0 then
+		table.insert(staticPtrDeclarationCode, "")
 	end
-	multipleInsert(code, #code + 1, staticPtrCode)
-	if #staticArrayToPointerCode > 0 then
-		table.insert(staticArrayToPointerCode, "")
+	multipleInsert(code, #code + 1, staticPtrDeclarationCode)
+	if #staticConvertToPointerDeclarationCode > 0 then
+		table.insert(staticConvertToPointerDeclarationCode, "")
 	end
-	multipleInsert(code, #code + 1, staticArrayToPointerCode)
+	multipleInsert(code, #code + 1, staticConvertToPointerDeclarationCode)
 	local currentOffset = -1
 	local prevOffset = args.offset or 0 -- for skipping bytes
 	local i = 1
@@ -805,6 +877,7 @@ function processStruct(args)
 		if not getBaseTypeField(currentField, "static") then
 			currentOffset = currentField.offset
 			local skip = currentOffset - prevOffset
+			skip = skip > 0 and math.floor(skip) or 0 -- bits
 			if skip > 0 then
 				code[#code + 1] = indentInner .. skipBytesText:format(skip)
 			end
@@ -812,10 +885,7 @@ function processStruct(args)
 		local members
 		members, i, maxNextOffset = getGroup(fields, currentField, i)
 		local group = processGroup(members, args.indentLevel + 1, not args.union and args.name, not args.union and args.prependNamespace and namespaceStr or "", debugLines)
-		--if table.findIf(group, function(t) return type(t) == "table" end) then setLocalsTable(1); error"" end
-		-- GROUP[1] IS TABLE
 		multipleInsert(code, #code + 1, group)
-		--if currentField.name:lower() == "stats" then print("x" .. dump(table.slice(code, -50))) end
 		prevOffset = maxNextOffset
 	end
 	size = args.union and math.ceil(maxNextOffset - args.offset) or size -- ceil is for bits
@@ -839,7 +909,6 @@ function processStruct(args)
 		if args.processDependencies then
 			local addDepNames = {}
 			for i, name in ipairs(structureDependencies) do
-				--print(name)
 				if not args.processedStructs[name] and (not args.shouldProcessDependencyFunc or args.shouldProcessDependencyFunc(name)) then
 					local depCode, depends, size = processStruct{name = name, indentLevel = args.indentLevel, prependNamespace = args.prependNamespace,
 						processedStructs = args.processedStructs, processDependencies = args.processDependencies, structOrder = args.structOrder,
@@ -851,7 +920,7 @@ function processStruct(args)
 			mergeArraysShallowCopy(structureDependencies, addDepNames, true)
 		end
 		if not args.processedStructs[args.name] then -- unions are inline
-			args.processedStructs[args.name] = {code = code, dependencies = structureDependencies, size = size}
+			args.processedStructs[args.name] = {code = code, dependencies = structureDependencies, size = size, staticDefinitionCode = staticDefinitionCode}
 		end
 		-- unions are not considered structs in many aspects
 		-- structure needs to be after all of its dependencies
@@ -865,58 +934,149 @@ function processStruct(args)
 	end
 	return code, structureDependencies, size, args.processedStructs
 end
-
-function printStruct(name, includeMembers, excludeMembers, indentLevel, wrapInHeaderStuff)
+function printStruct(name, includeMembers, excludeMembers, indentLevel, isLast) -- isLast if it's last of 3 games processed
+	luaData = {}
 	local processed = {}
 	indentLevel = wrapInHeaderStuff and 1 or indentLevel or 1 -- always 1 indentation level if wrapping
 	local args = {name = name, includeMembers = includeMembers, indentLevel = indentLevel, processDependencies = true,
-		prependNamespace = true, processedStructs = processed, excludeMembers = excludeMembers, structOrder = {},
-		shouldProcessDependencyFunc = function(str) return not table.find({"Player", "BaseBonus", "Item", "SpellBuff"}, str) end}
+		prependNamespace = true, processedStructs = processed, excludeMembers = excludeMembers, structOrder = {}}
 	local t, dep = processStruct(args)
-	--print(table.concat(t, "\n") .. "\n\nDependencies: " .. table.concat(dep, "\t"))
+	local old = args.name
+	args.name = "Button" -- npc dialog item
+	do local x = structs.Button end -- generate data (__index)
+	t, dep = processStruct(args)
+	args.name = old
 	_G.t, _G.dep, _G.processed, _G.args = t, dep, processed, args
-	local code = {}
-	--print(dump(args.structOrder))
+	local path = "C:\\Users\\Eksekk\\code.bin"
+	local oldCode
+	local ok, fileContent = pcall(io.load, path)
+	if ok then
+		ok, oldCode = pcall(internal.unpersist, fileContent)
+	end
+	local code = ok and oldCode or {}
+	-- for i, name in ipairs(args.structOrder) do
+	-- 	structureByFile[name] = {name} -- hack to help with doxygen
+	-- end
+	local usedFiles = {}
 	for i, name in ipairs(args.structOrder) do
 		local struct = processed[name]
-		setmetatable(struct.code, nil)
-		--local k, v = table.findIf(code, function(el) return type(el) == "table" end)
-		--assert(not k)
-		--assert(not table.findIf(code, function(str) return type(str) ~= "string" end))
-		--assert(not table.findIf(struct.code, function(str) return type(str) ~= "string" end))
-		--table.foreach(struct.code, function(str) if type(str) ~= "string" then print(name, dump(str)) end end)
-		-- delayedFaceAnimation is bad
-		code = table.join(code, struct.code)
-		code[#code + 1] = "" -- newline
+		setmetatable(struct.code, nil) -- just in case
+		local fileName = getStructFile(name)
+		code[fileName] = code[fileName] or {header = {}, source = {}, includes = {}}
+		local currentCode = code[fileName]
+		if not table.find(usedFiles, fileName) then
+			multipleInsert(currentCode.header, #currentCode.header + 1, {
+				"namespace mm" .. Game.Version,
+				"{"
+			})
+			table.insert(usedFiles, fileName)
+		end
+		currentCode.header = table.join(currentCode.header, struct.code)
+		multipleInsert(currentCode.header, #currentCode.header + 1, {
+			"",
+			"",
+			""
+		})
+		if struct.staticDefinitionCode and #struct.staticDefinitionCode > 0 then
+			currentCode.source = table.join(currentCode.source, struct.staticDefinitionCode)
+			table.insert(currentCode.source, "")
+		end
+		for i, v in ipairs(struct.dependencies) do
+			local depFileName = getStructFile(v)
+			if not table.find(currentCode.includes, depFileName) and depFileName ~= fileName then
+				table.insert(currentCode.includes, depFileName)
+			end
+		end
+	end
+	for fname, _ in pairs(structureByFile) do
+		if code[fname] then
+			local header = code[fname].header
+			for i = 1, 3 do
+				table.remove(header, #header)
+			end
+		end
 	end
 	--code = table.join(code, processed[name].code)
 	--io.save("structs.h", table.concat(code, "\n"))
-	if wrapInHeaderStuff then
-		multipleInsert(code, 1, {
-			"#pragma once",
-			"#include \"pch.h\"",
-			"#include \"main.h\"",
-			"",
-			"#pragma pack(push, 1)",
-			"",
-			"namespace mm" .. Game.Version,
-			"{"
-		})
-
-		multipleInsert(code, #code + 1, {
-			"}",
-			"#pragma pack(pop)"
+	for i, fileName in ipairs(usedFiles) do
+		local currentCode = code[fileName]
+		multipleInsert(currentCode.header, #currentCode.header + 1, {
+			"}"
 		})
 	end
-	io.save("C:\\Users\\Eksekk\\source\\repos\\PartyGenerator\\PartyGeneratorDLL\\headers\\structsTest.h", table.concat(code, "\n"))
+	if not isLast then
+		io.save(path, internal.persist(code))
+	else
+		os.remove("C:\\Users\\Eksekk\\source\\repos\\PartyGenerator\\PartyGeneratorDLL\\headers\\structs")
+		os.remove("C:\\Users\\Eksekk\\source\\repos\\PartyGenerator\\PartyGeneratorDLL\\sources\\structs")
+		os.remove("C:\\Users\\Eksekk\\code.bin")
+		for fileName in pairs(code) do
+			local currentCode = code[fileName]
+			local includeCode = {}
+			for i, v in ipairs(currentCode.includes) do
+				table.insert(includeCode, string.format("#include \"%s.h\"", v))
+			end
+			local prefix = {
+				"#pragma once",
+				"#include \"pch.h\"",
+				"#include \"main.h\"",
+			}
+			-- multipleInsert(prefix, #prefix + 1, includeCode) -- all header includes are in pch.h
+			multipleInsert(prefix, #prefix + 1, {
+				"",
+				"#pragma pack(push, 1)",
+				"",
+			})
+			multipleInsert(currentCode.header, 1, prefix)
+			multipleInsert(currentCode.header, #currentCode.header + 1, {
+				"",
+				"#pragma pack(pop)"
+			})
+			local headerFileName = string.format("C:\\Users\\Eksekk\\source\\repos\\PartyGenerator\\PartyGeneratorDLL\\headers\\structs\\%s.h", fileName)
+			local sourceFileName = string.format("C:\\Users\\Eksekk\\source\\repos\\PartyGenerator\\PartyGeneratorDLL\\sources\\structs\\%s.cpp", fileName)
+			local luaDataFileName = "C:\\Users\\Eksekk\\source\\repos\\PartyGenerator\\luaData.cpp"
+			io.save(headerFileName, table.concat(currentCode.header, "\n"))
+			if #currentCode.source > 0 then
+				local prefix = {
+					"#pragma once",
+					"#include \"pch.h\"",
+					"#include \"main.h\"",
+				}
+				multipleInsert(prefix, #prefix + 1, includeCode)
+				table.insert(prefix, "")
+				multipleInsert(currentCode.source, 1, prefix)
+				io.save(sourceFileName, table.concat(currentCode.source, "\n"))
+			end
+			-- ptrName
+			--tget(luaData, args.name, baseData.name).sizePtrName
+			local content = {}
+			for sname, fields in pairs(luaData) do
+				for fname, field in pairs(fields) do
+					local s = ""
+					if field.ptrName then
+						s = s .. string.format(", pointer name: %q", stripNamespaces(field.ptrName))
+					end
+					if field.sizePtrName then
+						s = s .. string.format(", size field/pointer name: %q", stripNamespaces(field.sizePtrName))
+					end
+					table.insert(content, string.format("// struct %q, field name %q%s", stripNamespaces(sname), stripNamespaces(fname), s))
+				end
+			end
+			io.save(luaDataFileName, table.concat(content, "\n"))
+		end
+	end
 end
 
 function pr(str)
-	reload();printStruct(str, nil, str == "Player" and {"Attrs"} or nil, nil, true) -- attrs is from merge
+	reload();printStruct(str, nil, nil, nil, true)
 end
 
 function pr2(str)
 	printStruct("GameStructure", nil, nil, nil, true)
+end
+
+function pr3(isLast)
+	printStruct("GameStructure", nil, nil, nil, isLast)
 end
 
 -- fuck msvc

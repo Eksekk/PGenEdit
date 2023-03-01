@@ -45,4 +45,24 @@ extern "C"
 #include <lauxlib.h>
 }
 
+// game structs
+// include order is important
+#include "Common.h"
+#include "GameMisc.h"
+#include "Monster.h"
+#include "GameDataStructs.h"
+#include "Player.h"
+#include "GameParty.h"
+#include "MapElements.h"
+#include "MapModel.h"
+#include "MapMisc.h"
+#include "TxtFileItems.h"
+#include "Lod.h"
+#include "GameMap.h"
+#include "Bin.h"
+#include "Arcomage.h"
+#include "MergeSpecific.h"
+#include "GameStructure.h"
+#include "Structs.h"
+
 #endif //PCH_H

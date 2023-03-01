@@ -32,7 +32,7 @@ end
 
 local FORMAT_MESSAGE_FROM_SYSTEM = 0x00001000
 function M.loadDll()
-	if Game.Version ~= 7 then return end
+	if offsets.MMVersion ~= 7 then return end
 	if not M.dll then
 		M.dll = mem.LoadDll("PartyGenerator.dll")
 		if not M.dll then
@@ -519,7 +519,7 @@ function table.foreach(t, func)
 	end
 end
 
-function table.filter(t, func)
+function table.filterFunc(t, func) -- filter is taken by merge
 	local out = {}
 	for k, v in pairs(t) do
 		if func(v, k) then
@@ -543,7 +543,7 @@ function table.slice(tbl, first, last)
 	end
 	last = math.min(last, n)
 	if first < tableFirstIndex or first > last then
-		error(string.format("bad index values [%d, %d] (table size: %d)", orig1, orig2, n))
+		error(string.format("bad index values [%d, %d] (table size: %d)", orig1, orig2, n), 2)
 	end
 	local t = {}
 	for i = first, last do
@@ -556,7 +556,7 @@ function mergeArraysShallowCopy(t1, t2, inplace) -- handles duplicate keys
 	local tt = inplace and t1 or table.copy(t1)
 	for i, v in ipairs(t2) do
 		if not table.find(tt, v) then
-			tt[#tt] = v
+			tt[#tt + 1] = v
 		end
 	end
 	return tt
