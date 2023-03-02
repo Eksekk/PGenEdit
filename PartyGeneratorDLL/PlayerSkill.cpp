@@ -108,6 +108,12 @@ int joinSkill(SkillValue skill)
 	return std::max(0, sv.level * (sv.level + 1) / 2 - 1);
 }
 
+int MAX_SKILL_LEVEL = 0;
+void setMaxSkillLevel()
+{
+	MAX_SKILL_LEVEL = (1 << SKILL_BITS) - 1;
+}
+
 int PlayerSkill::getFullTrainCostForMastery(Mastery m)
 {
 	int cost = 0;

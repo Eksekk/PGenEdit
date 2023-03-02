@@ -64,9 +64,6 @@
     <Filter Include="Pliki nagłówkowe\GameStructs">
       <UniqueIdentifier>{822b7a63-7e48-4aa0-8557-4b51a4c4fac3}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Pliki nagłówkowe\GameStructs\f">
-      <UniqueIdentifier>{3833079a-07f6-4c9f-a550-31fc0c5bc1af}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Pliki źródłowe\GameStructs">
       <UniqueIdentifier>{60909965-30a2-47a2-bf44-ce158c244a1f}</UniqueIdentifier>
     </Filter>
@@ -255,6 +252,15 @@
     <ClInclude Include="headers\structs\MergeSpecific.h">
       <Filter>Pliki nagłówkowe\GameStructs\Definitions</Filter>
     </ClInclude>
+    <ClInclude Include="PartyStructAccessor.h">
+      <Filter>Pliki nagłówkowe\GameStructs\Accessors</Filter>
+    </ClInclude>
+    <ClInclude Include="EditorSkillsPanel.h">
+      <Filter>Pliki nagłówkowe\Editor\GUI</Filter>
+    </ClInclude>
+    <ClInclude Include="EditorSkillValueChooser.h">
+      <Filter>Pliki nagłówkowe\Editor\GUI</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="sources\dllApi.cpp">
@@ -382,6 +388,15 @@
     </ClCompile>
     <ClCompile Include="sources\structs\Lod.cpp">
       <Filter>Pliki źródłowe\GameStructs\Definitions</Filter>
+    </ClCompile>
+    <ClCompile Include="PartyStructAccessor.cpp">
+      <Filter>Pliki źródłowe\GameStructs\Accessors</Filter>
+    </ClCompile>
+    <ClCompile Include="EditorSkillsPanel.cpp">
+      <Filter>Pliki źródłowe\Editor\GUI</Filter>
+    </ClCompile>
+    <ClCompile Include="EditorSkillValueChooser.cpp">
+      <Filter>Pliki źródłowe\Editor\GUI</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

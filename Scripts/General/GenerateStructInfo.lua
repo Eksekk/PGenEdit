@@ -134,7 +134,7 @@ local structureByFile =
 
 	Monster = {"MonsterSchedule", "MonsterAttackInfo", "MapMonster", "MonstersTxtItem", "MonsterKind"},
 
-	GameMap = {"MapExtra", "MapFacet", "MapExtra", "MapObject", "GameMap"},
+	GameMap = {"MapExtra", "MapObject", "GameMap"},
 
 	Arcomage = {"ArcomageAction", "ArcomageActions", "ArcomageCard", "ArcomagePlayer", "Arcomage"},
 
@@ -200,6 +200,7 @@ all possible attributes:
 - [added in processStruct] ptrValue - pointer with set value
 - [added in getGroup] padStart
 ]]
+local EditPChar_newindex, EditConstPChar_newindex = getmetatable(mem.EditPChar).__newindex, getmetatable(mem.EditConstPChar).__newindex
 local getMemberData
 function getMemberData(structName, memberName, member, offsets, members, class, rofields, customFieldSizes, inArray)
 	rofields = rofields or {}
@@ -209,7 +210,7 @@ function getMemberData(structName, memberName, member, offsets, members, class, 
 		data.comments = data.comments or {}
 		table.insert(data.comments, s)
 	end
-	if type(memberName) == "number" then
+	if type(memberName) == "number" then -- unions
 		data.name = "_" .. memberName
 	end
 	local protFunc = getU(member, "f0")
@@ -222,7 +223,6 @@ function getMemberData(structName, memberName, member, offsets, members, class, 
 	local boolsize = booleanHandlers[member] -- boolean
 	local memArr = up.arr -- mem arrays etc.
 	local sname = (type(arrayHandler) == "table" and arrayHandler or {})[internal.structs_name_t] -- structure
-	local EditPChar_newindex, EditConstPChar_newindex = getmetatable(mem.EditPChar).__newindex, getmetatable(mem.EditConstPChar).__newindex
 	local bitValue = up.b
 	local isAutoValueBit = up.bitHandlers and true or false -- bit without specifying value (contiguous), used in arrays
 	local stringLen = up.len
@@ -766,7 +766,7 @@ function processStruct(args)
 				)
 				findDependencies(args, data, structureDependencies)
 				goto continue
-			elseif data.struct and data.size == 0 then
+			elseif data.struct and data.size == 0 then -- Merge, PartyLight
 				goto continue
 			elseif (data.array and data.innerType.convertToPointer) or data.convertToPointer then
 				findDependencies(args, data, structureDependencies)

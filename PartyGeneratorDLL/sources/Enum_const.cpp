@@ -14,7 +14,7 @@ bool IS_MERGE = false;
 
 int CURRENT_PARTY_SIZE = 0;
 
-Mastery MAX_MASTERY = Mastery::GM; // 3 in mm6, 4 in mm7+
+Mastery MAX_MASTERY = Mastery::MASTERY_GM; // 3 in mm6, 4 in mm7+
 SkillCombineMode SKILL_COMBINE_MODE = BIT_PER_MASTERY;
 int SKILL_BITS = 6;
 std::array<int, 5> MASTERY_BITS = {-1, -1, 6, 7, 8};

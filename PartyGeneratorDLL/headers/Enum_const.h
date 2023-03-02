@@ -17,12 +17,12 @@ enum SkillCombineMode
 
 enum Mastery
 {
-	NONE = 0,
-	NOVICE = 1,
-	EXPERT = 2,
-	MASTER = 3,
-	GM = 4,
-	GRAND_MASTER = 4,
+	MASTERY_NONE = 0,
+	MASTERY_NOVICE = 1,
+	MASTERY_EXPERT = 2,
+	MASTERY_MASTER = 3,
+	MASTERY_GM = 4,
+	MASTERY_GRAND_MASTER = 4,
 };
 
 extern Mastery MAX_MASTERY; // 3 in mm6, 4 in mm7+

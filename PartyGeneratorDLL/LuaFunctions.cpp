@@ -106,6 +106,8 @@ void fillGameStaticPointersAndSizes()
 	lua_getglobal(Lua, "getU");
 	lua_getglobal(Lua, "Game");
 
+	// TODOOOOOOOOOOOOOOO
+
 	lua_getfield(Lua, -1, "ItemsTxt");
 	lua_getfield(Lua, -1, "?ptr");
 	game->itemsTxt = (mm7::ItemsTxtItem*)lua_tointeger(Lua, -1);

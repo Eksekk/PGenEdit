@@ -19,6 +19,9 @@ SkillValue splitSkill(int skill);
 int joinSkill(SkillValue skill);
 wxString& operator<<(wxString& str, const SkillValue& val);
 
+extern int MAX_SKILL_LEVEL;
+void setMaxSkillLevel();
+
 class PlayerSkill;
 struct PlayerSkillValue
 {

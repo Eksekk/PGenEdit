@@ -27,6 +27,8 @@
     <ClInclude Include="DefaultPlayerPanel.h" />
     <ClInclude Include="EditorMainWindow.h" />
     <ClInclude Include="EditorPlayerWindow.h" />
+    <ClInclude Include="EditorSkillsPanel.h" />
+    <ClInclude Include="EditorSkillValueChooser.h" />
     <ClInclude Include="GameData.h" />
     <ClInclude Include="GeneralPanel.h" />
     <ClInclude Include="GeneratorGuiBase.h" />
@@ -50,6 +52,7 @@
     <ClInclude Include="headers\structs\TxtFileItems.h" />
     <ClInclude Include="LuaFunctions.h" />
     <ClInclude Include="Map.h" />
+    <ClInclude Include="PartyStructAccessor.h" />
     <ClInclude Include="PlayerClass.h" />
     <ClInclude Include="headers\GuiApplication.h" />
     <ClInclude Include="headers\Enum_const.h" />
@@ -87,11 +90,14 @@
     <ClCompile Include="DefaultPlayerPanel.cpp" />
     <ClCompile Include="EditorMainWindow.cpp" />
     <ClCompile Include="EditorPlayerWindow.cpp" />
+    <ClCompile Include="EditorSkillsPanel.cpp" />
+    <ClCompile Include="EditorSkillValueChooser.cpp" />
     <ClCompile Include="GameData.cpp" />
     <ClCompile Include="GeneralPanel.cpp" />
     <ClCompile Include="GeneratorGuiBase.cpp" />
     <ClCompile Include="GuaranteedClassDialog.cpp" />
     <ClCompile Include="LuaFunctions.cpp" />
+    <ClCompile Include="PartyStructAccessor.cpp" />
     <ClCompile Include="PlayerClass.cpp" />
     <ClCompile Include="PlayerSpell.cpp" />
     <ClCompile Include="PlayerStructAccessor.cpp" />

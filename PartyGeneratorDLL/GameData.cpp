@@ -263,7 +263,7 @@ bool GameData::processSkillDataJson(const char* str)
                 auto vec = skillEntry["trainCost"].get<std::vector<int>>();
                 for (int i = 0; i < vec.size(); ++i)
                 {
-                    int index = NOVICE + i;
+                    int index = MASTERY_NOVICE + i;
                     sk.trainCost.at(index) = vec[i];
                 }
                 if (vec.size() != MAX_MASTERY)

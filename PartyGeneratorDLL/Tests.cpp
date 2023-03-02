@@ -553,7 +553,7 @@ std::vector<wxString> Tests::testPlayerStructAccessor()
 	{
 		std::mt19937 gen(id); // seed with id to get consistent values
 		std::uniform_int_distribution mDist(0, (int)MAX_MASTERY), sDist(0, (1 << SKILL_BITS) - 1);
-		assert(mDist.b() >= MASTER && sDist.b() >= 63);
+		assert(mDist.b() >= MASTERY_MASTER && sDist.b() >= 63);
 		return SkillValue{ sDist(gen), mDist(gen) };
 	};
 	auto testSpecifiedSkillsByIndex = [&randomSkillValue, &myasserter, &skillsMap, &skillsVector, pl](const std::vector<int>& skillIdsToChange) -> void

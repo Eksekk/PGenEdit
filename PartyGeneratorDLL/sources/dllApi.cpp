@@ -20,6 +20,7 @@
 #include "LuaFunctions.h"
 
 extern bool inMM;
+extern void setMaxSkillLevel();
 
 std::vector<void*> getPlayerPointersMm8()
 {
@@ -143,6 +144,8 @@ extern "C"
                 {
                     IS_ELEMENTAL_MOD = true;
                 }
+                setMaxSkillLevel();
+
                 // two versions of comctl32.dll are loaded (old first) and when wxwidgets dll tries to get module handle,
                 // it gets the old one
                 // SOLUTION:
