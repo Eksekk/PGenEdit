@@ -99,6 +99,19 @@ bool GameData::processClassDataJson(const char* str)
             {
                 wxLogWarning("Class entry of id %d doesn't contain player type affinity field", (int)classEntry["id"]);
             }
+            if (classEntry.contains("masteries"))
+            {
+                const auto& vec = classEntry["masteries"].get<std::vector<int>>();
+                for (int i = 0; i < vec.size(); ++i)
+                {
+                    // can't have assert that skill exists because skills might not be processed yet
+                    cls.maximumSkillMasteries[i] = static_cast<Mastery>(vec[i]);
+                }
+            }
+            else
+            {
+                wxLogWarning("Class entry of id %d doesn't contain masteries field", (int)classEntry["id"]);
+            }
             entries[id] = std::move(cls);
         }
 
@@ -147,24 +160,6 @@ bool GameData::processClassDataJson(const char* str)
                 wxLogWarning("Class entry of id %d doesn't contain base class field", (int)classEntry["id"]);
             }
         }
-
-        for (auto& pdata : generator->playerData)
-        {
-            pdata->classes.createSettings();
-        }
-
-        generator->defaultPlayerData.classes.createSettings();
-        assert((wxGetApp().mainWindow->tabs->GetPageCount() == MAX_PLAYERS + MainWindow::FIRST_PLAYER_PAGE) && wxString::Format("Invalid notebook tab count %d, expected %d", wxGetApp().mainWindow->tabs->GetPageCount(), MAX_PLAYERS + MainWindow::FIRST_PLAYER_PAGE).ToStdString().c_str());
-        for (int i = MainWindow::FIRST_PLAYER_PAGE; i < wxGetApp().mainWindow->tabs->GetPageCount(); ++i)
-        {
-            auto page = static_cast<PlayerPanel*>(wxGetApp().mainWindow->tabs->GetPage(i));
-            auto tab = page->classSettingsTab;
-            tab->classWindow->createPanels(page->linkedGenerationData->classes.defaultSettings, page->linkedGenerationData->classes.settings);
-            ++i;
-        }
-        auto page = static_cast<DefaultPlayerPanel*>(wxGetApp().mainWindow->tabs->GetPage(MainWindow::DEFAULT_PLAYER_PAGE));
-        auto tab = page->classSettingsTab;
-        tab->classWindow->createPanels(page->linkedGenerationData->classes.defaultSettings, page->linkedGenerationData->classes.settings);
     }
     catch (const nlohmann::json::exception& ex)
     {
@@ -307,7 +302,7 @@ void GameData::reparse(const char* data[DATA_TYPE_COUNT])
 
 extern "C" bool checkIsInGame();
 void updatePartySizeAndPlayerPtrs(); // defined in dllApi.cpp
-void GameData::updateIsInGame(wxTimerEvent& event)
+void GameData::updateIsInGameAndPartySize()
 {
 	inGame = checkIsInGame();
 	if (inGame && MMVER == 8)

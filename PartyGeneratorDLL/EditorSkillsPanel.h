@@ -4,7 +4,8 @@
 #include <wx/statline.h>
 #include <wx/spinctrl.h>
 #include "EditorSkillValueChooser.h"
-class PlayerSkill;
+#include "PlayerStructAccessor.h"
+
 class EditorSkillsPanel : public wxScrolledWindow
 {
 private:
@@ -34,6 +35,7 @@ private:
 
 	void affectCheckboxHelper(bool on, SkillCategory cat);
 
+	void onScrollStart(wxScrollWinEvent& event);
 	PlayerStructAccessor::SkillOptions options;
 
 	void onSkillValueChange(wxCommandEvent& event);
@@ -42,8 +44,11 @@ private:
 	std::unordered_map<EditorSkillValueChooser*, PlayerSkill*> skillToWidgetMap;
 	std::unordered_map<int, EditorSkillValueChooser*> widgetToWidgetIdMap;
 
-	int playerIndex;
+	const int playerIndex;
 	void updateFromPlayerSkills();
+
+	void updateSkillBonuses();
+	void skillConstraintErrorMsgBox(bool multiple);
 protected:
 
 public:
@@ -85,8 +90,9 @@ public:
 
 	wxBoxSizer* mainSizer;
 
-	EditorSkillsPanel(wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize(774, 750), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString);
+	EditorSkillsPanel(wxWindow* parent, int playerIndex);
 
+	void onScrollRelease(wxScrollWinEvent& event);
 	~EditorSkillsPanel();
 
 };

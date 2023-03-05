@@ -32,7 +32,7 @@ EditorMainWindow::EditorMainWindow(wxWindow* parent, wxWindowID id, const wxStri
 		playerButtons[i]->Bind(wxEVT_BUTTON, &EditorMainWindow::onPlayerButtonClick, this);
 		playerButtonIds[i] = playerButtons[i]->GetId();
 
-		playerWindows[i] = new EditorPlayerWindow(this, i);
+		playerWindows[i] = new EditorPlayerWindow(/*this*/nullptr, i);
 	}
 
 	updateTimer = new wxTimer(this);

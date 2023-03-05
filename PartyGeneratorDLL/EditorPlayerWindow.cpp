@@ -2,11 +2,13 @@
 #include "EditorPlayerWindow.h"
 #include <wx/notebook.h>
 #include "PlayerStructAccessor.h"
+#include "EditorSkillsPanel.h"
 
 EditorPlayerWindow::EditorPlayerWindow(wxWindow* parent, int playerIndex) : wxFrame(parent, wxID_ANY, "Edit " + playerAccessor->getNameOrDefault(playerIndex),
-	wxDefaultPosition, wxSize(770, 670), (wxDEFAULT_FRAME_STYLE | wxTAB_TRAVERSAL) & ~wxRESIZE_BORDER), playerIndex(playerIndex)
+	wxDefaultPosition, wxSize(770, 670), wxDEFAULT_FRAME_STYLE | wxTAB_TRAVERSAL), playerIndex(playerIndex)
 {
 	this->SetSizeHints(wxDefaultSize, wxDefaultSize);
+	this->SetMinSize(wxSize(600, 800));
 	this->SetBackgroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW));
 
 	updateTimer = new wxTimer(this);
@@ -27,7 +29,7 @@ EditorPlayerWindow::EditorPlayerWindow(wxWindow* parent, int playerIndex) : wxFr
 	tabs->AddPage(propertiesPanel, _("Properties"), false);
 	statisticsPanel = new wxPanel(tabs, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
 	tabs->AddPage(statisticsPanel, _("Statistics"), true);
-	skillsPanel = new wxPanel(tabs, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
+	skillsPanel = new EditorSkillsPanel(tabs, playerIndex);
 	tabs->AddPage(skillsPanel, _("Skills"), false);
 	spellsPanel = new wxPanel(tabs, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
 	tabs->AddPage(spellsPanel, _("Spells"), false);

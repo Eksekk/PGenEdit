@@ -16,6 +16,9 @@ extern void* game;
 extern void** players;
 extern bool inGame;
 extern wxTimer* mainUpdateTimer;
+void runUpdateTimerCallbacks(wxTimerEvent&);
+void addUpdateTimerCallback(std::function<void(void)> callback);
+extern std::vector<std::function<void(void)>> callbackList;
 
 // functions from lua
 typedef bool (*isTwoHanded_ptr)(void*, int); // player ptr, item id

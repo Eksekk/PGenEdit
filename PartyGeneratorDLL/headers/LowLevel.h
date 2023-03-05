@@ -55,7 +55,7 @@ void removeHooks();
 void removeHook(uint32_t addr);
 
 template<typename ReturnType, typename Address, typename... Args>
-ReturnType callMemoryAddress(Address address, int registerParamsNum, Args&&... args)
+ReturnType callMemoryAddress(Address address, int registerParamsNum, Args... args) // NO rvalue reference, because it passes arguments by address
 {
 	wxASSERT_MSG(registerParamsNum >= -1 && registerParamsNum <= 2, "Invalid number of register parameters");
 	void* ptr;

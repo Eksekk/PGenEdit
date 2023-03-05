@@ -48,7 +48,7 @@ bool GuiApplication::OnInit()
     }
     //wxMessageBox("OnInit()");
     //MSGBOX("OnInit()");
-    mainWindow = new MainWindow(nullptr);
+    //mainWindow = new MainWindow(nullptr);
     editorMainWindow = new EditorMainWindow(nullptr);
     controlPanel = new ControlPanel(nullptr);
     return true;

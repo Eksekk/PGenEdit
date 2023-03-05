@@ -121,6 +121,7 @@ bool ClassGenerationSettings::operator!=(const ClassGenerationSettings& other) c
 ClassGenerationData::ClassGenerationData(int index, PlayerData& playerData) : index(index), playerData(playerData)
 {
 	setDefaults();
+	createSettings();
 }
 
 bool ClassGenerationData::readFromJson(const Json& json)

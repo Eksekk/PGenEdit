@@ -10,6 +10,7 @@ protected:
 	wxButton* showPartyGeneratorWindowButton;
 	wxButton* showGameStateEditorWindowButton;
 	wxButton* runTestsButton;
+	wxButton* flushLogsButton;
 
 public:
 
@@ -22,6 +23,7 @@ public:
 	void onGameStateEditorButtonClick(wxCommandEvent& event);
 	void onRunTestsClick(wxCommandEvent& event);
 
+	void onFlushLogsClick(wxCommandEvent& event);
 	friend class Tests; // to allow ProcessEvent()
 };
 

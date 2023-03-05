@@ -23,9 +23,6 @@ public:
 
 	virtual int getFine() = 0;
 	virtual void setFine(int value) = 0;
-
-	virtual int getFine() = 0;
-	virtual void setFine(int value) = 0;
 };
 
 template<typename Game>
@@ -50,3 +47,7 @@ class TemplatedPartyStructAccessor : public PartyStructAccessor
 	virtual int getFine() override;
 	virtual void setFine(int value) override;
 };
+
+using PartyStructAccessor_6 = TemplatedPartyStructAccessor<mm6::Game>;
+using PartyStructAccessor_7 = TemplatedPartyStructAccessor<mm7::Game>;
+using PartyStructAccessor_8 = TemplatedPartyStructAccessor<mm8::Game>;

@@ -4,6 +4,8 @@
 #include <wx/spinctrl.h>
 #include "PlayerSkill.h"
 
+wxDECLARE_EVENT(SKILL_VALUE_CHANGE, wxCommandEvent);
+
 class EditorSkillValueChooser : public wxPanel
 {
 	static const std::unordered_map<int, Mastery> masteryToIdMap;
@@ -12,6 +14,7 @@ class EditorSkillValueChooser : public wxPanel
 public:
 	wxStaticText* skillNameLabel;
 	wxSpinCtrl* skillLevel;
+	wxStaticText* skillLevelBonusLabel;
 	wxChoice* skillMastery;
 
 	EditorSkillValueChooser(wxWindow* parent, const wxString& labelText);
@@ -23,5 +26,7 @@ public:
 	void setValue(int value);
 	void setLevel(int level);
 	void setMastery(Mastery mastery);
+	void updateSkillBonus(int value);
+	void onValueChange(wxCommandEvent& event);
 };
 

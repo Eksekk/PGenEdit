@@ -22,7 +22,7 @@ public:
 	static bool allDataReceived; // from lua, like class info
 	static void postProcess();
 	static void reparse(const char* data[DATA_TYPE_COUNT]);
-	static void updateIsInGame(wxTimerEvent& event);
+	static void updateIsInGameAndPartySize();
 
 	// TODO functions to parse data from lua and to parse game structures
 

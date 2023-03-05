@@ -63,7 +63,7 @@ SkillValue splitSkill(int skill)
 	int lev = skill & mask;
 	if (SKILL_COMBINE_MODE == BIT_PER_MASTERY)
 	{
-		for (int i = MAX_MASTERY; i > NOVICE; --i)
+		for (int i = MAX_MASTERY; i > MASTERY_NOVICE; --i)
 		{
 			if (skill & (1 << MASTERY_BITS[i]))
 			{
@@ -91,7 +91,7 @@ int joinSkill(SkillValue skill)
 	int result = skill.level;
 	if (SKILL_COMBINE_MODE == BIT_PER_MASTERY)
 	{
-		return result | (skill.mastery > NOVICE ? (1 << MASTERY_BITS[skill.mastery]) : 0);
+		return result | (skill.mastery > MASTERY_NOVICE ? (1 << MASTERY_BITS[skill.mastery]) : 0);
 	}
 	else if (SKILL_COMBINE_MODE == PACKED)
 	{

@@ -30,6 +30,10 @@ ControlPanel::ControlPanel(wxWindow* parent, wxWindowID id, const wxString& titl
 
 	mainSizer->Add(0, 50, 0, 0, 5); // spacer
 
+	flushLogsButton = new wxButton(mainPanel, wxID_ANY, _("Flush logs"), wxDefaultPosition, wxSize(150, 40), 0);
+	mainSizer->Add(flushLogsButton, 0, wxALL | wxALIGN_CENTER_HORIZONTAL, 5);
+	flushLogsButton->Bind(wxEVT_BUTTON, &ControlPanel::onFlushLogsClick, this);
+
 	runTestsButton = new wxButton(mainPanel, wxID_ANY, _("Run tests"), wxDefaultPosition, wxSize(150, 40), 0);
 	mainSizer->Add(runTestsButton, 0, wxALL | wxALIGN_CENTER_HORIZONTAL, 5);
 	runTestsButton->Bind(wxEVT_BUTTON, &ControlPanel::onRunTestsClick, this);
@@ -76,4 +80,9 @@ void ControlPanel::onRunTestsClick(wxCommandEvent& event)
 	{
 		runTests();
 	}
+}
+
+void ControlPanel::onFlushLogsClick(wxCommandEvent& event)
+{
+	wxLog::FlushActive();
 }

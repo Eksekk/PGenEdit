@@ -4,13 +4,13 @@
 #include "PlayerSkill.h"
 #include "Enum_const.h"
 #include "ItemGenerationData.h"
-#include "wx/mstream.h"
+
 class PlayerItem // holds generic item data, one entry per each item id
 {
 public:
 	int number;
 	std::string name;
-	PlayerSkill skill;
+	PlayerSkill* skill;
 	ItemType type;
 	double power; // relative
 	int cost; // how much should this reduce amount/quality of remaining items to generate

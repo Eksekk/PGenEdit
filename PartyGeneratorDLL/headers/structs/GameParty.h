@@ -694,6 +694,7 @@ namespace mm8
 		SKIP(11);
 		union
 		{
+			// FIXME
 			std::array<uint8_t, 216> QBits; // MMExt: 1..1734, here 0..1733 | array of abits (real index = 7 - usual)
 			struct
 			{

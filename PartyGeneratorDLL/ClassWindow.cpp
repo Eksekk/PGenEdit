@@ -44,6 +44,8 @@ ClassWindow::ClassWindow(wxWindow* parent, const wxSize& size, long style) : wxF
 	closeButtonBottom->Bind(wxEVT_BUTTON, &ClassWindow::onCloseButtonClick, this);
 	this->Bind(wxEVT_CLOSE_WINDOW, &ClassWindow::OnCloseWindow, this);
 
+	createPanels(parentTab->linkedClassSettings->defaultSettings, parentTab->linkedClassSettings->settings);
+
 	this->Centre(wxBOTH);
 	mainPanel->Layout();
 	mainSizer->Fit(mainPanel);

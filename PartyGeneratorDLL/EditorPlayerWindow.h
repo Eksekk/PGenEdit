@@ -2,6 +2,7 @@
 #include "pch.h"
 #include "main.h"
 class wxNotebook;
+class EditorSkillsPanel;
 class EditorPlayerWindow : public wxFrame
 {
 private:
@@ -12,7 +13,7 @@ protected:
 	wxPanel* appearancePanel;
 	wxPanel* propertiesPanel;
 	wxPanel* statisticsPanel;
-	wxPanel* skillsPanel;
+	EditorSkillsPanel* skillsPanel;
 	wxPanel* spellsPanel;
 	wxPanel* itemsPanel;
 	wxPanel* conditionsAndBuffsPanel;

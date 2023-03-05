@@ -1,7 +1,6 @@
 #include "pch.h"
 #include "main.h"
 #include "Generator.h"
-#include <cstdlib>
 #include "LowLevel.h"
 #include "MainWindow.h"
 #include "GuiApplication.h"
@@ -10,7 +9,6 @@
 #include "PlayerData.h"
 #include "PlayerPanel.h"
 #include "ClassWindow.h"
-#include "GameData.h"
 #include "Tests.h"
 #include "Enum_const.h"
 #include "PlayerStructAccessor.h"
@@ -18,6 +16,7 @@
 #include "EditorMainWindow.h"
 #include "ControlPanel.h"
 #include "LuaFunctions.h"
+#include "PartyStructAccessor.h"
 
 extern bool inMM;
 extern void setMaxSkillLevel();
@@ -93,51 +92,27 @@ extern "C"
                     case 0xEC:
                         MMVER = 6;
                         MAX_PLAYERS = 4;
-                        MAX_MASTERY = Mastery::MASTER;
+                        MAX_MASTERY = Mastery::MASTERY_MASTER;
                         setFieldSizes_6();
-						makeEnums(); // BEFORE _initMaps()
-						PlayerStructAccessor_6::_initMaps();
-						generator = new Generator(); // BEFORE setPlayerPointers()
-						// new scope so compiler doesn't complain
-						{
-							void* ptrs[]{ (void*)0x908F34, (void*)0x90A550, (void*)0x90BB6C, (void*)0x90D188 };
-							setPlayerPointers(ptrs);
-						}
-                        playerAccessor = new PlayerStructAccessor_6;
+						makeEnums();
                         break;
                     case 0x45:
                         MMVER = 7;
                         MAX_PLAYERS = 4;
 						setFieldSizes_7();
                         makeEnums();
-                        generator = new Generator();
-						PlayerStructAccessor_7::_initMaps();
-						{
-							void* ptrs[]{ (void*)0xACD804, (void*)0xACF340, (void*)0xAD0E7C, (void*)0xAD29B8 };
-							setPlayerPointers(ptrs);
-						}
-                        playerAccessor = new PlayerStructAccessor_7;
                         break;
                     case 0x53:
                         MMVER = 8;
                         MAX_PLAYERS = 5;
                         setFieldSizes_8();
                         makeEnums();
-                        generator = new Generator();
-                        PlayerStructAccessor_8::_initMaps();
-                        playerAccessor = new PlayerStructAccessor_8;
                         break;
                     default:
                         MessageBoxA(0, "This is not a supported Might and Magic game", "MMExtension Error", MB_ICONERROR);
                         ExitProcess(0);
                     }
                     inMM = true;
-                }
-                else // for testing
-                {
-                    MMVER = 7;
-                    MAX_PLAYERS = 4;
-                    generator = new Generator();
                 }
 
                 if (MMVER == 7 && GetModuleHandleA("elemental.dll"))
@@ -146,27 +121,11 @@ extern "C"
                 }
                 setMaxSkillLevel();
 
-                // two versions of comctl32.dll are loaded (old first) and when wxwidgets dll tries to get module handle,
-                // it gets the old one
-                // SOLUTION:
-                // 1. make mm7.exe.manifest file with comctl32.dll 6.0 version requested
-                // 2. touch mm7.exe (update modification date)
-                
-                // unwanted effect: mmeditor's buttons etc. are also changed
-
-
                 // TODO: test for Merge (run lua script?)
                 break;
             }
 
         case DLL_PROCESS_DETACH:
-            delete mainUpdateTimer;
-            delete generator;
-            delete playerAccessor;
-			if (players)
-			{
-				delete[] players; // deletes only stored player pointer array, not actual player structs
-			}
             break;
         case DLL_THREAD_ATTACH:
             // attach to thread
@@ -178,34 +137,6 @@ extern "C"
         }
         return TRUE; // successful
     }
-
-    /*
-        IMPORTANT !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        don't directly call wxWidgets methods here, always queue events to be processed by
-        main application class. Otherwise, Bad Things(TM) might occur
-
-        ------------------------------------------------------------------------------------
-
-        PROBLEM WITH THREADING
-        problem statement: we are clicking button (and calling generate function) from our dll's thread,
-        which may cause race condition with base game or even mmextension (modifying player data)
-        possible solutions:
-        1) suspend all other threads, generate and resume them - easy, but inelegant and may not work correctly - 
-           what if other thread was about to write into one of player struct's fields?
-        2) call SetThreadContext() (and get the context in dllmain), generate and set old context - almost exactly like 1)
-        3) expose a flag that user clicked generate button, hook game event loop and check it, and if it's set call generation
-           function in main thread (also causing dll thread to wait for completion etc.) - possible slight performance penalty
-           and low-level problems, also might have to have access to wxWidgets data (ideally not, but stuff like this happens) and it could cause problems
-        4) force user to use hotkey combination to generate instead of button (can call generate function directly) - like 3), but simpler and much worse UX
-        5) same as above, but write hook only when user wants to generate and restore standard code afterwards - no performance penalty,
-           but more complex, otherwise same as 3)
-        6) call PauseGame, generate and call ResumeGame (and add logic for checking if it wasn't already paused etc.) -
-           should deal with base game, but mmextension (and for example elemental mod) might still theoretically interfere
-        7) do away with wxWidgets thread and somehow integrate it into game main thread's event loop - I think it's best solution,
-           but don't know yet how to do that - MAKING PROGRESS
-           
-           DONE
-    */
 
     __declspec(naked) void setPartyCountMm6()
     {
@@ -237,6 +168,34 @@ extern "C"
     
     DLL_EXPORT void __stdcall init()
     {
+        if (MMVER == 6)
+        {
+            PlayerStructAccessor_6::_initMaps();
+            // new scope so compiler doesn't complain
+            {
+                void* ptrs[]{ (void*)0x908F34, (void*)0x90A550, (void*)0x90BB6C, (void*)0x90D188 };
+                setPlayerPointers(ptrs);
+            }
+            playerAccessor = new PlayerStructAccessor_6;
+            partyAccessor = new PartyStructAccessor_6;
+        }
+        else if (MMVER == 7)
+        {
+            PlayerStructAccessor_7::_initMaps();
+            {
+                void* ptrs[]{ (void*)0xACD804, (void*)0xACF340, (void*)0xAD0E7C, (void*)0xAD29B8 };
+                setPlayerPointers(ptrs);
+            }
+            playerAccessor = new PlayerStructAccessor_7;
+            partyAccessor = new PartyStructAccessor_7;
+        }
+        else if (MMVER == 8)
+        {
+			PlayerStructAccessor_8::_initMaps();
+			playerAccessor = new PlayerStructAccessor_8;
+            partyAccessor = new PartyStructAccessor_8;
+		}
+		generator = new Generator();
         //run_wx_gui_from_dll();
         // wxWidgets init
         HINSTANCE hinstExe = GetModuleHandleA(nullptr); // HMODULE is convertible to HINSTANCE
@@ -248,13 +207,14 @@ extern "C"
             // flush logs (saw it in some wxwidgets source file)
             //delete wxLog::SetActiveTarget(NULL);
         }
-        app = &wxGetApp();
-        app->CallOnInit();
+		app = &wxGetApp();
+		app->CallOnInit(); // create gui
 
         // need to create after wxwidgets is initialized
 		mainUpdateTimer = new wxTimer;
-		mainUpdateTimer->Bind(wxEVT_TIMER, &GameData::updateIsInGame);
-		mainUpdateTimer->Start(150, wxTIMER_CONTINUOUS);
+        mainUpdateTimer->Bind(wxEVT_TIMER, runUpdateTimerCallbacks);
+		addUpdateTimerCallback(GameData::updateIsInGameAndPartySize);
+		mainUpdateTimer->Start(350, wxTIMER_CONTINUOUS);
 
         if (inMM && MMVER == 6)
         {
@@ -321,8 +281,14 @@ extern "C"
 
     DLL_EXPORT void __stdcall unloadCleanup()
     {
-        //delete generator;
-        //wx_dll_cleanup();
+		delete mainUpdateTimer;
+		delete generator;
+		delete playerAccessor;
+        delete partyAccessor;
+		if (players)
+		{
+			delete[] players; // deletes only stored player pointer array, not actual player structs
+		}
         removeHooks();
         wxLog::FlushActive();
         wxEntryCleanup();
@@ -333,23 +299,7 @@ extern "C"
         // allow setting lua formula on some fields (like resistance points amount or level)
         // environment from mmextension with our table containing current generation/player state
         // (serialize to json from c++ and deserialize in lua into table)
-
-        // horrible hack, but should work:
-        /*
-        for k, v in pairs(debug.getregistry()) do
-            if type(k) == "userdata" and getU(v, "HookData") then
-                M.dll.setLuaState(
-                    mem.u4[
-                        tonumber(
-                            tostring(k):match("x([%dA-Fa-f]+)")
-                            , 16
-                        )
-                    ]
-                )
-                break
-            end
-        end
-        */
+        
         bool init = Lua == nullptr; // only once
         Lua = (lua_State*)ptr;
         if (init)
@@ -382,7 +332,6 @@ extern "C"
         {
             players = new void* [MAX_PLAYERS];
         }
-        // TODO: mm8 compatibility (player pointers and player names and even player count can change at runtime!)
         for (int i = 0; i < MAX_PLAYERS; ++i)
         {
             players[i] = ptrs[i];

@@ -1,6 +1,8 @@
 #include "pch.h"
 #include "PartyStructAccessor.h"
 
+PartyStructAccessor* partyAccessor = nullptr;
+
 template<typename Game>
 int TemplatedPartyStructAccessor<Game>::getGold()
 {
@@ -64,13 +66,23 @@ void TemplatedPartyStructAccessor<Game>::subtractFood(int value)
 template<typename Game>
 int TemplatedPartyStructAccessor<Game>::getFine()
 {
-	return party->fine;
+	if constexpr (SAME(Game, mm6::Game))
+	{
+		return 0;
+	}
+	else
+	{
+		return party->fine;
+	}
 }
 
 template<typename Game>
 void TemplatedPartyStructAccessor<Game>::setFine(int value)
 {
-	party->fine = value;
+	if constexpr (!SAME(Game, mm6::Game))
+	{
+		party->fine = value;
+	}
 }
 
 template class TemplatedPartyStructAccessor<mm6::Game>;
