@@ -11,6 +11,7 @@ GuiApplication::GuiApplication()
     mainWindow = nullptr;
     editorMainWindow = nullptr;
     controlPanel = nullptr;
+    idleEventTimer = nullptr;
     // Keep the wx "main" thread running even without windows. This greatly
     // simplifies threads handling, because we don't have to correctly
     // implement wx-thread restarting.
@@ -54,7 +55,20 @@ bool GuiApplication::OnInit()
     window->SetHWND(gameAccessor->getWindowHandle()); // required for showModal() ???
     editorMainWindow = new EditorMainWindow(window);
     controlPanel = new ControlPanel(window);
+
+    // GENERATE IDLE EVENTS
+    // (they aren't generated automatically due to no event loop,
+    // and are needed to safely delete windows (any other way to delete resulted in a crash))
+    idleEventTimer = new wxTimer(this);
+    Bind(wxEVT_TIMER, [this](wxTimerEvent&) {this->ProcessIdle(); });
+    idleEventTimer->Start(1000, wxTIMER_CONTINUOUS);
     return true;
+}
+
+int GuiApplication::OnExit()
+{
+    delete idleEventTimer;
+    return 0;
 }
 
 // we can't have WinMain() in a DLL and want to start the app ourselves

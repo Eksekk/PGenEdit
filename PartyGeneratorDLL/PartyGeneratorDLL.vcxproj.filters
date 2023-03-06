@@ -198,9 +198,6 @@
     <ClInclude Include="LuaFunctions.h">
       <Filter>Pliki nagłówkowe</Filter>
     </ClInclude>
-    <ClInclude Include="Map.h">
-      <Filter>Pliki nagłówkowe</Filter>
-    </ClInclude>
     <ClInclude Include="headers\structs\Arcomage.h">
       <Filter>Pliki nagłówkowe\GameStructs\Definitions</Filter>
     </ClInclude>

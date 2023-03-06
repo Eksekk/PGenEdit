@@ -13,10 +13,11 @@ public:
     EditorMainWindow* editorMainWindow;
     ControlPanel* controlPanel;
     using wxApp::DeletePendingObjects; // protected -> public
+    wxTimer* idleEventTimer;
 
     GuiApplication();
-    virtual bool OnInit();
-
+    virtual bool OnInit() override;
+    virtual int OnExit() override;
 /*
 private:
 	void OnShowWindow(wxThreadEvent& event);

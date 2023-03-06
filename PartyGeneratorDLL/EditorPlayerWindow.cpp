@@ -75,6 +75,7 @@ void EditorPlayerWindow::onCloseWindow(wxCloseEvent& event)
 	// (lack of "event loop", top level window destruction is done in idle events)
 	
 	// onWakeUpIdle() crashes process (no event loop!)
-	wxGetApp().ProcessPendingEvents();
-	wxGetApp().DeletePendingObjects();
+	//wxGetApp().ProcessPendingEvents();
+	//wxGetApp().DeletePendingObjects();
+	//CallAfter([] {wxGetApp().DeletePendingObjects(); });
 }

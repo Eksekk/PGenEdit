@@ -240,7 +240,6 @@ EditorSkillsPanel::~EditorSkillsPanel()
 
 void EditorSkillsPanel::createSkillPointsOptionsPanel()
 {
-	// BIND EVENT HANDLERS
 	skillPointsAndOptionsHeader = new wxStaticText(this, wxID_ANY, _("Skill points && options"), wxDefaultPosition, wxDefaultSize, 0); // && is ampersand escape
 	skillPointsAndOptionsHeader->Wrap(-1);
 	skillPointsAndOptionsHeader->SetFont(wxFont(12, wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL, false, wxEmptyString));

@@ -28,7 +28,7 @@ public:
 	EditorPlayerWindow(wxWindow* parent, int playerIndex);
 
 	void onUpdateTimer(wxTimerEvent& event);
-	~EditorPlayerWindow();
+	virtual ~EditorPlayerWindow();
 
 	void onCloseWindow(wxCloseEvent& event);
 private:

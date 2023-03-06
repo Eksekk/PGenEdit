@@ -52,7 +52,6 @@
     <ClInclude Include="headers\structs\Player.h" />
     <ClInclude Include="headers\structs\TxtFileItems.h" />
     <ClInclude Include="LuaFunctions.h" />
-    <ClInclude Include="Map.h" />
     <ClInclude Include="PartyStructAccessor.h" />
     <ClInclude Include="PlayerClass.h" />
     <ClInclude Include="headers\GuiApplication.h" />
