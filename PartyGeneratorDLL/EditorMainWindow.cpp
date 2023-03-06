@@ -32,7 +32,7 @@ EditorMainWindow::EditorMainWindow(wxWindow* parent, wxWindowID id, const wxStri
 		playerButtons[i]->Bind(wxEVT_BUTTON, &EditorMainWindow::onPlayerButtonClick, this);
 		playerButtonIds[i] = playerButtons[i]->GetId();
 
-		playerWindows[i] = new EditorPlayerWindow(/*this*/nullptr, i);
+		//playerWindows[i] = new EditorPlayerWindow(/*this*/nullptr, i);
 	}
 
 	updateTimer = new wxTimer(this);
@@ -163,6 +163,10 @@ void EditorMainWindow::onPlayerButtonClick(wxCommandEvent& event)
 	{
 		if (event.GetId() == playerButtonIds[i])
 		{
+			if (!playerWindows[i])
+			{
+				playerWindows[i] = new EditorPlayerWindow(this, i);
+			}
 			playerWindows[i]->Show();
 			return;
 		}
@@ -173,13 +177,11 @@ void EditorMainWindow::onPlayerButtonClick(wxCommandEvent& event)
 void EditorMainWindow::update(wxTimerEvent& event)
 {
 	auto names = playerAccessor->getPlayerNames();
-	Freeze();
 	for (int i = 0; i < MAX_PLAYERS; ++i)
 	{
 		playerButtons[i]->SetLabel(names[i]);
 		playerButtons[i]->Enable(i < CURRENT_PARTY_SIZE);
 	}
-	Thaw();
 }
 
 void EditorMainWindow::onCloseWindow(wxCloseEvent& event)

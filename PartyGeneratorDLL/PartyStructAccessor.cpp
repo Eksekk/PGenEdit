@@ -3,6 +3,8 @@
 
 PartyStructAccessor* partyAccessor = nullptr;
 
+PartyStructAccessor::~PartyStructAccessor() {}
+
 template<typename Game>
 int TemplatedPartyStructAccessor<Game>::getGold()
 {

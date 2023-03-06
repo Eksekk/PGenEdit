@@ -23,6 +23,8 @@ public:
 
 	virtual int getFine() = 0;
 	virtual void setFine(int value) = 0;
+
+	virtual ~PartyStructAccessor();
 };
 
 template<typename Game>

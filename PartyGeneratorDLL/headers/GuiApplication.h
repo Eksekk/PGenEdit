@@ -12,6 +12,7 @@ public:
     MainWindow* mainWindow;
     EditorMainWindow* editorMainWindow;
     ControlPanel* controlPanel;
+    using wxApp::DeletePendingObjects; // protected -> public
 
     GuiApplication();
     virtual bool OnInit();

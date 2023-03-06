@@ -3,6 +3,7 @@
 #include "main.h"
 class wxNotebook;
 class EditorSkillsPanel;
+class EditorMainWindow;
 class EditorPlayerWindow : public wxFrame
 {
 private:
@@ -18,6 +19,8 @@ protected:
 	wxPanel* itemsPanel;
 	wxPanel* conditionsAndBuffsPanel;
 	wxPanel* awardsPanel;
+
+	EditorMainWindow* mainWindow;
 
 public:
 	const int playerIndex;

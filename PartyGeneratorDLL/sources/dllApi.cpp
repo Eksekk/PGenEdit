@@ -17,6 +17,7 @@
 #include "ControlPanel.h"
 #include "LuaFunctions.h"
 #include "PartyStructAccessor.h"
+#include "GameStructAccessor.h"
 
 extern bool inMM;
 extern void setMaxSkillLevel();
@@ -178,6 +179,7 @@ extern "C"
             }
             playerAccessor = new PlayerStructAccessor_6;
             partyAccessor = new PartyStructAccessor_6;
+            gameAccessor = new GameStructAccessor_6;
         }
         else if (MMVER == 7)
         {
@@ -188,12 +190,14 @@ extern "C"
             }
             playerAccessor = new PlayerStructAccessor_7;
             partyAccessor = new PartyStructAccessor_7;
+            gameAccessor = new GameStructAccessor_7;
         }
         else if (MMVER == 8)
         {
 			PlayerStructAccessor_8::_initMaps();
 			playerAccessor = new PlayerStructAccessor_8;
             partyAccessor = new PartyStructAccessor_8;
+            gameAccessor = new GameStructAccessor_8;
 		}
 		generator = new Generator();
         //run_wx_gui_from_dll();
@@ -285,6 +289,7 @@ extern "C"
 		delete generator;
 		delete playerAccessor;
         delete partyAccessor;
+        delete gameAccessor;
 		if (players)
 		{
 			delete[] players; // deletes only stored player pointer array, not actual player structs

@@ -261,6 +261,9 @@
     <ClInclude Include="EditorSkillValueChooser.h">
       <Filter>Pliki nagłówkowe\Editor\GUI</Filter>
     </ClInclude>
+    <ClInclude Include="GameStructAccessor.h">
+      <Filter>Pliki nagłówkowe\GameStructs\Accessors</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="sources\dllApi.cpp">
@@ -397,6 +400,9 @@
     </ClCompile>
     <ClCompile Include="EditorSkillValueChooser.cpp">
       <Filter>Pliki źródłowe\Editor\GUI</Filter>
+    </ClCompile>
+    <ClCompile Include="GameStructAccessor.cpp">
+      <Filter>Pliki źródłowe\GameStructs\Accessors</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

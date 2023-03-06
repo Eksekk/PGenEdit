@@ -27,13 +27,13 @@ EditorSkillsPanel::EditorSkillsPanel(wxWindow* parent, int playerIndex) : wxScro
 	m_staticline28 = new wxStaticLine(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL);
 	mainSizer->Add(m_staticline28, 0, wxEXPAND | wxALL, 5);
 
-	addUpdateTimerCallback([this] {
+	/*addUpdateTimerCallback([this] {
 		if (this->IsShown())
 		{
 			this->updateSkillBonuses();
 			this->updateFromPlayerSkills();
 		}
-	});
+	});*/
 
 	createActionsPanel();
 

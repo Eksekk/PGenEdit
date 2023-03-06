@@ -4,6 +4,7 @@
 #include "MainWindow.h"
 #include "EditorMainWindow.h"
 #include "ControlPanel.h"
+#include "GameStructAccessor.h"
 
 GuiApplication::GuiApplication()
 {
@@ -49,8 +50,10 @@ bool GuiApplication::OnInit()
     //wxMessageBox("OnInit()");
     //MSGBOX("OnInit()");
     //mainWindow = new MainWindow(nullptr);
-    editorMainWindow = new EditorMainWindow(nullptr);
-    controlPanel = new ControlPanel(nullptr);
+    wxWindow* window = new wxWindow();
+    window->SetHWND(gameAccessor->getWindowHandle()); // required for showModal() ???
+    editorMainWindow = new EditorMainWindow(window);
+    controlPanel = new ControlPanel(window);
     return true;
 }
 

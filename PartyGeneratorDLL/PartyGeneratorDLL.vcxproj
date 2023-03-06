@@ -30,6 +30,7 @@
     <ClInclude Include="EditorSkillsPanel.h" />
     <ClInclude Include="EditorSkillValueChooser.h" />
     <ClInclude Include="GameData.h" />
+    <ClInclude Include="GameStructAccessor.h" />
     <ClInclude Include="GeneralPanel.h" />
     <ClInclude Include="GeneratorGuiBase.h" />
     <ClInclude Include="GuaranteedClassDialog.h" />
@@ -93,6 +94,7 @@
     <ClCompile Include="EditorSkillsPanel.cpp" />
     <ClCompile Include="EditorSkillValueChooser.cpp" />
     <ClCompile Include="GameData.cpp" />
+    <ClCompile Include="GameStructAccessor.cpp" />
     <ClCompile Include="GeneralPanel.cpp" />
     <ClCompile Include="GeneratorGuiBase.cpp" />
     <ClCompile Include="GuaranteedClassDialog.cpp" />

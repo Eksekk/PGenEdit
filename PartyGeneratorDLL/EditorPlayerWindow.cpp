@@ -3,17 +3,21 @@
 #include <wx/notebook.h>
 #include "PlayerStructAccessor.h"
 #include "EditorSkillsPanel.h"
+#include "EditorMainWindow.h"
+#include "GuiApplication.h"
 
 EditorPlayerWindow::EditorPlayerWindow(wxWindow* parent, int playerIndex) : wxFrame(parent, wxID_ANY, "Edit " + playerAccessor->getNameOrDefault(playerIndex),
 	wxDefaultPosition, wxSize(770, 670), wxDEFAULT_FRAME_STYLE | wxTAB_TRAVERSAL), playerIndex(playerIndex)
 {
+	mainWindow = dynamic_cast<EditorMainWindow*>(parent);
+	wxASSERT(mainWindow);
 	this->SetSizeHints(wxDefaultSize, wxDefaultSize);
 	this->SetMinSize(wxSize(600, 800));
 	this->SetBackgroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW));
 
 	updateTimer = new wxTimer(this);
 	Bind(wxEVT_TIMER, &EditorPlayerWindow::onUpdateTimer, this);
-	updateTimer->Start(250, wxTIMER_CONTINUOUS);
+	updateTimer->Start(350, wxTIMER_CONTINUOUS);
 
 	mainPanel = new wxPanel(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
 	mainSizer = new wxBoxSizer(wxVERTICAL);
@@ -65,11 +69,12 @@ EditorPlayerWindow::~EditorPlayerWindow()
 
 void EditorPlayerWindow::onCloseWindow(wxCloseEvent& event)
 {
-	if (event.CanVeto())
-	{
-		event.Veto();
-		Show(false);
-		return;
-	}
-	Destroy();
+	mainWindow->playerWindows[playerIndex] = nullptr;
+	wxASSERT(Destroy());
+	//wxGetApp().ProcessIdle(); // important because otherwise window won't ever be destroyed
+	// (lack of "event loop", top level window destruction is done in idle events)
+	
+	// onWakeUpIdle() crashes process (no event loop!)
+	wxGetApp().ProcessPendingEvents();
+	wxGetApp().DeletePendingObjects();
 }
