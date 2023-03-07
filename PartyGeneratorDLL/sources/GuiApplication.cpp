@@ -26,7 +26,6 @@ GuiApplication::GuiApplication()
     // thread will sleep waiting for a new event. We could safe some memory
     // by shutting the thread down when it's no longer needed, though.
 	SetExitOnFrameDelete(false);
-	wxToolTip::Enable(true);
 }
 
 /*
@@ -50,9 +49,11 @@ bool GuiApplication::OnInit()
     }
     //wxMessageBox("OnInit()");
     //MSGBOX("OnInit()");
-    //mainWindow = new MainWindow(nullptr);
+	//mainWindow = new MainWindow(nullptr);
+	wxToolTip::Enable(true);
     wxWindow* window = new wxWindow();
     window->SetHWND(gameAccessor->getWindowHandle()); // required for showModal() ???
+    SetTopWindow(window);
     editorMainWindow = new EditorMainWindow(window);
     controlPanel = new ControlPanel(window);
 
@@ -71,5 +72,4 @@ int GuiApplication::OnExit()
     return 0;
 }
 
-// we can't have WinMain() in a DLL and want to start the app ourselves
 wxIMPLEMENT_APP_NO_MAIN(GuiApplication);

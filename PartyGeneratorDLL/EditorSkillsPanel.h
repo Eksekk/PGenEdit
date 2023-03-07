@@ -32,6 +32,7 @@ private:
 	void onGodModeButton(wxCommandEvent& event);
 	void onSetAllSkillsButton(wxCommandEvent& event);
 	void onOnlyAlreadyLearnedCheck(wxCommandEvent& event);
+	void onShowUnobtainableSkillsCheck(wxCommandEvent& event);
 
 	void affectCheckboxHelper(bool on, SkillCategory cat);
 
@@ -45,7 +46,6 @@ private:
 	std::unordered_map<int, EditorSkillValueChooser*> widgetToWidgetIdMap;
 
 	const int playerIndex;
-	void updateFromPlayerSkills();
 
 	void updateSkillBonuses();
 	void skillConstraintErrorMsgBox(bool multiple);
@@ -88,11 +88,16 @@ public:
 	wxStaticLine* m_staticline31;
 	wxCheckBox* onlyAlreadyLearnedCheckbox;
 
+	wxCheckBox* showUnobtainableSkillsCheckbox;
+
 	wxBoxSizer* mainSizer;
+	//std::function<void(void)> updateCallback;
 
 	EditorSkillsPanel(wxWindow* parent, int playerIndex);
 
 	void onScrollRelease(wxScrollWinEvent& event);
 	~EditorSkillsPanel();
 
+	bool AcceptsFocus() const override;
+	void updateFromPlayerData();
 };

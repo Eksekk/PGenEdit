@@ -12,7 +12,7 @@ for codeName, skillId in pairs(const.Skills) do
 	end
 	if skillId <= 7 then
 		data[skillId].category = "weapon"
-	elseif skillId <= 11 then
+	elseif skillId <= 11 or skillId == 30 then
 		data[skillId].category = "armor"
 	elseif skillId <= (Game.Version == 8 and 23 or 20) then
 		data[skillId].category = "magic"

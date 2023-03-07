@@ -201,3 +201,41 @@ void showDeducedType(T&&) {
 
 	deduced_type<T>::show;
 }
+
+wxString rep(const wxString& str, int n = 1);
+
+template<typename T>
+wxString my_to_string(const T& t)
+{
+	return wxString().operator<<(t); // sorry for clever code, couldn't help myself!
+	// we are calling operator<< (which inserts argument into string) on temporary string,
+	// taking advantage that it returns modified string (intended to allow chaining,
+	// like str << "x" << "y" << 5)
+}
+
+class Profiler
+{
+	std::chrono::time_point<std::chrono::steady_clock> profilingStart;
+	std::chrono::time_point<std::chrono::steady_clock> profilingEnd;
+	std::string action;
+
+	std::chrono::time_point<std::chrono::steady_clock> aggregateStart;
+	std::chrono::time_point<std::chrono::steady_clock> aggregateEnd;
+	std::chrono::nanoseconds aggregateTime;
+	std::chrono::nanoseconds aggregateMaxDuration;
+	int aggregateMaxDurationIndex;
+	std::string aggregateAction;
+	int aggregateCount;
+public:
+	bool profilingNow;
+	void start(const std::string& action);
+	void end();
+	wxString getDurationStr();
+	void startAggregate(const std::string& action);
+	void endAggregate();
+	void startAggregatePart();
+	void endAggregatePart();
+	wxString getAggregateDurationStr();
+
+	Profiler();
+};

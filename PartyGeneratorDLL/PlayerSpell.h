@@ -16,5 +16,7 @@ public:
 	PlayerSkill* schoolSkill;
 	Mastery minimumMasteryToLearn;
 	std::vector<SpellType> types;
+
+	PlayerSpell();
 };
 

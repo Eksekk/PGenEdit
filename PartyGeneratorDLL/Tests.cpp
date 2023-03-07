@@ -14,18 +14,6 @@
 
 extern Generator* generator;
 
-Asserter::Asserter(std::vector<wxString>& errors, bool& failed) : errors(errors), failed(failed) {}
-
-wxString rep(const wxString& str, int n)
-{
-	wxString ret = str;
-	for (int i = 0; i < n - 1; ++i)
-	{
-		ret << str;
-	}
-	return ret;
-}
-
 std::vector<wxString> Tests::testAlignmentRadioBox()
 {
 	// need to pass nullptr!!! otherwise children of frame will be created as top level windows

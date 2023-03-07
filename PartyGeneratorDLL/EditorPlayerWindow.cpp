@@ -5,10 +5,13 @@
 #include "EditorSkillsPanel.h"
 #include "EditorMainWindow.h"
 #include "GuiApplication.h"
+#include <wx/evtloop.h>
 
 EditorPlayerWindow::EditorPlayerWindow(wxWindow* parent, int playerIndex) : wxFrame(parent, wxID_ANY, "Edit " + playerAccessor->getNameOrDefault(playerIndex),
 	wxDefaultPosition, wxSize(770, 670), wxDEFAULT_FRAME_STYLE | wxTAB_TRAVERSAL), playerIndex(playerIndex)
 {
+	windowDisabler = nullptr;
+	loop = nullptr;
 	mainWindow = dynamic_cast<EditorMainWindow*>(parent);
 	wxASSERT(mainWindow);
 	this->SetSizeHints(wxDefaultSize, wxDefaultSize);
@@ -32,9 +35,9 @@ EditorPlayerWindow::EditorPlayerWindow(wxWindow* parent, int playerIndex) : wxFr
 	propertiesPanel = new wxPanel(tabs, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
 	tabs->AddPage(propertiesPanel, _("Properties"), false);
 	statisticsPanel = new wxPanel(tabs, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
-	tabs->AddPage(statisticsPanel, _("Statistics"), true);
+	tabs->AddPage(statisticsPanel, _("Statistics"), false);
 	skillsPanel = new EditorSkillsPanel(tabs, playerIndex);
-	tabs->AddPage(skillsPanel, _("Skills"), false);
+	tabs->AddPage(skillsPanel, _("Skills"), true);
 	spellsPanel = new wxPanel(tabs, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
 	tabs->AddPage(spellsPanel, _("Spells"), false);
 	itemsPanel = new wxPanel(tabs, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
@@ -54,6 +57,22 @@ EditorPlayerWindow::EditorPlayerWindow(wxWindow* parent, int playerIndex) : wxFr
 	this->Centre(wxBOTH);
 
 	Bind(wxEVT_CLOSE_WINDOW, &EditorPlayerWindow::onCloseWindow, this);
+	Bind(wxEVT_ACTIVATE, &EditorPlayerWindow::onActivate, this);
+}
+
+void EditorPlayerWindow::showModal()
+{
+	Show();
+	if (!windowDisabler)
+	{
+		windowDisabler = new wxWindowDisabler(this);
+	}
+	if (!loop)
+	{
+		loop = new wxEventLoop();
+	}
+	wxEventLoop::SetActive(loop);
+	loop->Run();
 }
 
 // TODO: three windows have update timer now. Do one timer with multiple Bind()s?
@@ -69,6 +88,15 @@ EditorPlayerWindow::~EditorPlayerWindow()
 
 void EditorPlayerWindow::onCloseWindow(wxCloseEvent& event)
 {
+	if (loop)
+	{
+		loop->Exit();
+		wxEventLoop::SetActive(nullptr);
+		delete windowDisabler;
+		delete loop;
+		loop = nullptr;
+		windowDisabler = nullptr;
+	}
 	mainWindow->playerWindows[playerIndex] = nullptr;
 	wxASSERT(Destroy());
 	//wxGetApp().ProcessIdle(); // important because otherwise window won't ever be destroyed
@@ -78,4 +106,18 @@ void EditorPlayerWindow::onCloseWindow(wxCloseEvent& event)
 	//wxGetApp().ProcessPendingEvents();
 	//wxGetApp().DeletePendingObjects();
 	//CallAfter([] {wxGetApp().DeletePendingObjects(); });
+}
+
+bool EditorPlayerWindow::AcceptsFocus() const
+{
+	return true;
+}
+
+void EditorPlayerWindow::onActivate(wxActivateEvent& event)
+{
+	event.Skip();
+	if (event.GetActive())
+	{
+		skillsPanel->updateFromPlayerData();
+	}
 }

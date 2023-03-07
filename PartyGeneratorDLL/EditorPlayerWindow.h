@@ -21,16 +21,21 @@ protected:
 	wxPanel* awardsPanel;
 
 	EditorMainWindow* mainWindow;
+	wxWindowDisabler* windowDisabler;
+	wxEventLoop* loop;
 
 public:
 	const int playerIndex;
 
 	EditorPlayerWindow(wxWindow* parent, int playerIndex);
 
+	void showModal();
 	void onUpdateTimer(wxTimerEvent& event);
 	virtual ~EditorPlayerWindow();
 
 	void onCloseWindow(wxCloseEvent& event);
+	bool AcceptsFocus() const override;
+	void onActivate(wxActivateEvent& event);
 private:
 	wxBoxSizer* mainSizer;
 	wxTimer* updateTimer;

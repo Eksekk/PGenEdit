@@ -5,7 +5,7 @@
 
 extern int MAX_SKILL_LEVEL;
 
-const std::unordered_map<int, Mastery> EditorSkillValueChooser::masteryToIdMap{ {0,  MASTERY_NONE}, {1, MASTERY_NOVICE},
+const std::unordered_map<int, Mastery> EditorSkillValueChooser::masteryToIdMap{ {0, MASTERY_NONE}, {1, MASTERY_NOVICE},
     {2, MASTERY_EXPERT}, {3, MASTERY_MASTER}, {4, MASTERY_GM } };
 
 const std::unordered_map<Mastery, int> EditorSkillValueChooser::idToMasteryMap = invertMap(EditorSkillValueChooser::masteryToIdMap);
@@ -20,13 +20,13 @@ EditorSkillValueChooser::EditorSkillValueChooser(wxWindow* parent, const wxStrin
     mainSizer->SetFlexibleDirection(wxBOTH);
     SetSizer(mainSizer);
     skillNameLabel = new wxStaticText(this, wxID_ANY, labelText);
-    mainSizer->Add(skillNameLabel, wxSizerFlags().CenterVertical().Border(wxALL, 5)); // stretch to line up all instances of this class in skills panel
+    mainSizer->Add(skillNameLabel, wxSizerFlags().CenterVertical()); // stretch to line up all instances of this class in skills panel
     // PROPORTION DOESN'T WORK IN FLEX SIZER
     // AddGrowableCol() works
     mainSizer->AddGrowableCol(0, 1);
     skillLevel = new wxSpinCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 0, MAX_SKILL_LEVEL, 0);
     skillLevel->Bind(wxEVT_SPINCTRL, &EditorSkillValueChooser::onValueChange, this);
-    mainSizer->Add(skillLevel, wxSizerFlags().Border(wxALL, 5));
+    mainSizer->Add(skillLevel);
     if (MMVER > 6)
     {
 		skillLevelBonusLabel = new wxStaticText(this, wxID_ANY, "0");
@@ -37,11 +37,10 @@ EditorSkillValueChooser::EditorSkillValueChooser(wxWindow* parent, const wxStrin
     {
         skillLevelBonusLabel = nullptr;
     }
-    skillMastery = new wxChoice(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxArrayString(static_cast<int>(MAX_MASTERY) + 1, masteryNames.data()));
+    skillMastery = new wxChoice(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, static_cast<int>(MAX_MASTERY) + 1, masteryNames.data());
 
 	skillMastery->Bind(wxEVT_CHOICE, &EditorSkillValueChooser::onValueChange, this);
-    mainSizer->Add(skillMastery, wxSizerFlags().Border(wxALL, 5));
-    Layout();
+    mainSizer->Add(skillMastery);
 }
 
 SkillValue EditorSkillValueChooser::getValue()

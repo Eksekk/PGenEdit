@@ -5,61 +5,9 @@
 #include "Generator.h"
 #include "Utility.h"
 #include "GameData.h"
-
-#define myassert(cond, ...) myasserter(__FUNCTION__, __FILE__, __LINE__, (cond), "Assertion failed! (" #cond ")" __VA_OPT__(,) __VA_ARGS__)
+#include "Asserter.h"
 
 extern Generator* generator;
-
-struct Asserter
-{
-	std::vector<wxString>& errors;
-	bool& failed;
-	template<typename... Args>
-	bool operator()(const char* func, const char* file, int line, bool cond, const wxString& errorMsg, Args&&... args);
-
-	Asserter(std::vector<wxString>& errors, bool& failed);
-
-	Asserter() = delete;
-	Asserter(const Asserter&) = delete;
-	Asserter(Asserter&&) = delete;
-	Asserter& operator=(const Asserter&) = delete;
-};
-
-wxString rep(const wxString& str, int n = 1);
-
-template<typename T>
-wxString my_to_string(const T& t)
-{
-	return wxString().operator<<(t); // sorry for clever code, couldn't help myself!
-	// we are calling operator<< (which inserts argument into string) on temporary string,
-	// taking advantage that it returns modified string (intended to allow chaining,
-	// like str << "x" << "y" << 5)
-}
-
-template<typename... Args>
-bool Asserter::operator()(const char* func, const char* file, int line, bool cond, const wxString& rawErrorMsg, Args&&... args)
-{
-	if (!cond)
-	{
-		std::string file2 = file;
-		size_t index = file2.rfind('/');
-		if (index != std::string::npos)
-		{
-			file2 = file2.substr(index + 1);
-		}
-		static const wxString errorFormat("%s(%s:%d) %s");
-		wxString errorMsg = rawErrorMsg;
-		if constexpr (sizeof...(args) > 0)
-		{
-			errorMsg << ("\nExtra data:" + rep("\n%s", sizeof...(args)));
-			errorMsg = wxString::Format(errorMsg, my_to_string(std::forward<Args>(args))...);
-		}
-		errors.push_back(wxString::Format(errorFormat, func, file2, line, errorMsg));
-		failed = true;
-		return false;
-	}
-	return true;
-}
 
 class Tests
 {

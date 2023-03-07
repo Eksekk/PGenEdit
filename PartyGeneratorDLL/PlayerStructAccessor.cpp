@@ -91,7 +91,8 @@ TemplatedPlayerStructAccessor<Player>::getSkillMaxMasteries(const std::vector<Pl
 		{
 			for (const auto clsPtr : tree)
 			{
-				ret[skillPtr] = std::max(ret.at(skillPtr), clsPtr->maximumSkillMasteries.at(skillPtr->id));
+				ret[skillPtr] = std::max(ret[skillPtr], clsPtr->maximumSkillMasteries.at(skillPtr->id)); // IMPORTANT: "std::max(ret[skillPtr]", not "std::max(ret.at(skillPtr)"
+				// key doesn't exist yet
 			}
 		}
 		return ret;

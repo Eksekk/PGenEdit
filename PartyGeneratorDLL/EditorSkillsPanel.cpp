@@ -27,28 +27,35 @@ EditorSkillsPanel::EditorSkillsPanel(wxWindow* parent, int playerIndex) : wxScro
 	m_staticline28 = new wxStaticLine(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL);
 	mainSizer->Add(m_staticline28, 0, wxEXPAND | wxALL, 5);
 
-	/*addUpdateTimerCallback([this] {
+	/*updateCallback = [this] {
 		if (this->IsShown())
 		{
 			this->updateSkillBonuses();
 			this->updateFromPlayerSkills();
 		}
-	});*/
+	};*/
 
 	createActionsPanel();
+
+	// DOESN'T WORK ON WXNOTEBOOK / WXPANEL
+// 	Bind(wxEVT_SET_FOCUS, &EditorSkillsPanel::onSetFocus, this);
+// 	Bind(wxEVT_ACTIVATE, &EditorSkillsPanel::onActivate, this);
 
 	this->SetSizer(mainSizer);
 	this->Layout();
 }
 
-void EditorSkillsPanel::updateFromPlayerSkills()
+void EditorSkillsPanel::updateFromPlayerData()
 {
+	updateSkillBonuses();
 	std::vector<PlayerSkillValue> skills = playerAccessor->forPlayer(playerIndex)->getSkills();
 	for (const auto& psv : skills)
 	{
 		widgetToSkillMap.at(psv.skill)->setValue(psv.value);
 	}
 	goldDisplayText->SetLabel(wxString::Format("%d", partyAccessor->getGold()));
+	spentSkillPointsValue->SetValue(wxString::Format("%d", playerAccessor->getSpentSkillPoints()));
+	availableSkillPointsAmount->SetValue(wxString::Format("%d", playerAccessor->getSkillPoints()));
 }
 
 void EditorSkillsPanel::updateSkillBonuses()
@@ -146,6 +153,7 @@ void EditorSkillsPanel::onRespectClassConstraintsPromotionRadio(wxCommandEvent& 
 void EditorSkillsPanel::onApplyClassConstraintsButton(wxCommandEvent& event)
 {
 	playerAccessor->forPlayer(playerIndex)->applyClassConstraints(options);
+	updateFromPlayerData();
 }
 
 void EditorSkillsPanel::onAffectWeaponsCheck(wxCommandEvent& event)
@@ -184,6 +192,7 @@ void EditorSkillsPanel::onGodModeButton(wxCommandEvent& event)
 	{
 		skillConstraintErrorMsgBox(true);
 	}
+	updateFromPlayerData();
 }
 
 void EditorSkillsPanel::onSetAllSkillsButton(wxCommandEvent& event)
@@ -203,11 +212,24 @@ void EditorSkillsPanel::onSetAllSkillsButton(wxCommandEvent& event)
 	{
 		skillConstraintErrorMsgBox(true);
 	}
+	updateFromPlayerData();
 }
 
 void EditorSkillsPanel::onOnlyAlreadyLearnedCheck(wxCommandEvent& event)
 {
 	
+}
+
+void EditorSkillsPanel::onShowUnobtainableSkillsCheck(wxCommandEvent& event)
+{
+	for (auto& [id, skill] : GameData::skills)
+	{
+		if (skill.doNotGenerate)
+		{
+			auto* chooser = widgetToSkillMap.at(&skill);
+			chooser->Show(event.IsChecked());
+		}
+	}
 }
 
 void EditorSkillsPanel::affectCheckboxHelper(bool on, SkillCategory cat)
@@ -236,6 +258,11 @@ void EditorSkillsPanel::onScrollRelease(wxScrollWinEvent& event)
 
 EditorSkillsPanel::~EditorSkillsPanel()
 {
+}
+
+bool EditorSkillsPanel::AcceptsFocus() const
+{
+	return true;
 }
 
 void EditorSkillsPanel::createSkillPointsOptionsPanel()
@@ -348,6 +375,10 @@ void EditorSkillsPanel::createSkillsPanel()
 
 
 	mainSizer->Add(0, 25, 0, 0, 5);
+	showUnobtainableSkillsCheckbox = new wxCheckBox(this, wxID_ANY, "Show unobtainable skills");
+	showUnobtainableSkillsCheckbox->SetToolTip("They are useless, unless a mod changes them");
+	showUnobtainableSkillsCheckbox->Bind(wxEVT_CHECKBOX, &EditorSkillsPanel::onShowUnobtainableSkillsCheck, this);
+	mainSizer->Add(showUnobtainableSkillsCheckbox, wxSizerFlags().Border(wxALL, 5));
 
 	wxGridBagSizer* skillsSizer;
 	skillsSizer = new wxGridBagSizer(5, 5);
@@ -385,8 +416,11 @@ void EditorSkillsPanel::createSkillsPanel()
 
 	// FILL WITH SKILLS
 	wxASSERT(GameData::skills.size() > 10);
+	Profiler profiler;
+	profiler.startAggregate("Creating skill value choosers");
 	for (auto& [id, skill] : GameData::skills)
 	{
+		profiler.startAggregatePart();
 		EditorSkillValueChooser* chooser = new EditorSkillValueChooser(this, skill.name);
 		widgetToSkillMap[&skill] = chooser;
 		int id = chooser->GetId();
@@ -396,23 +430,29 @@ void EditorSkillsPanel::createSkillsPanel()
 		switch (skill.category)
 		{
 		case SKILLCAT_WEAPON:
-			weaponSkillsFgSizer->Add(chooser, wxSizerFlags().Proportion(1).Expand().Border(wxALL, 5).CenterVertical());
+			weaponSkillsFgSizer->Add(chooser, wxSizerFlags().CenterVertical().Expand()); // Expand is important
 			break;
 		case SKILLCAT_ARMOR:
-			armorSkillsFgSizer->Add(chooser, wxSizerFlags().Proportion(1).Expand().Border(wxALL, 5).CenterVertical());
+			armorSkillsFgSizer->Add(chooser, wxSizerFlags().CenterVertical().Expand());
 			break;
 		case SKILLCAT_MAGIC:
-			magicSkillsFgSizer->Add(chooser, wxSizerFlags().Proportion(1).Expand().Border(wxALL, 5).CenterVertical());
+			magicSkillsFgSizer->Add(chooser, wxSizerFlags().CenterVertical().Expand());
 			break;
 		case SKILLCAT_MISC:
-			miscSkillsFgSizer->Add(chooser, wxSizerFlags().Proportion(1).Expand().Border(wxALL, 5).CenterVertical());
+			miscSkillsFgSizer->Add(chooser, wxSizerFlags().CenterVertical().Expand());
 			break;
 		default:
 			wxLogError("Unknown skill category %d (skill %d, name %s)", (int)skill.category, skill.id, skill.name);
 		}
+		if (skill.doNotGenerate)
+		{
+			chooser->Hide();
+		}
+		profiler.endAggregatePart();
 	}
+	profiler.endAggregate();
+	wxLogMessage(profiler.getAggregateDurationStr());
 	skillToWidgetMap = invertMap(widgetToSkillMap);
-
 	mainSizer->Add(skillsSizer, 1, 0, 5);
 }
 

@@ -20,6 +20,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AlignmentRadioBox.h" />
+    <ClInclude Include="Asserter.h" />
     <ClInclude Include="ClassInfoPanel.h" />
     <ClInclude Include="ClassSettingsTab.h" />
     <ClInclude Include="ClassWindow.h" />
@@ -70,6 +71,7 @@
     <ClInclude Include="headers\SpellsData.h" />
     <ClInclude Include="headers\StatisticsData.h" />
     <ClInclude Include="headers\Structs.h" />
+    <ClInclude Include="PlayerResistance.h" />
     <ClInclude Include="PlayerSpell.h" />
     <ClInclude Include="PlayerStructAccessor.h" />
     <ClInclude Include="PlayerItem.h" />
@@ -82,6 +84,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="AlignmentRadioBox.cpp" />
+    <ClCompile Include="Asserter.cpp" />
     <ClCompile Include="ClassGenerationData.cpp" />
     <ClCompile Include="ClassInfoPanel.cpp" />
     <ClCompile Include="ClassSettingsTab.cpp" />
@@ -100,6 +103,7 @@
     <ClCompile Include="LuaFunctions.cpp" />
     <ClCompile Include="PartyStructAccessor.cpp" />
     <ClCompile Include="PlayerClass.cpp" />
+    <ClCompile Include="PlayerResistance.cpp" />
     <ClCompile Include="PlayerSpell.cpp" />
     <ClCompile Include="PlayerStructAccessor.cpp" />
     <ClCompile Include="PlayerItem.cpp" />

@@ -79,14 +79,14 @@
     <Filter Include="Pliki źródłowe\GameStructs\Accessors">
       <UniqueIdentifier>{ff504fc5-f4ac-4f4c-8699-a6794284a781}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Pliki nagłówkowe\Misc">
+      <UniqueIdentifier>{538f71e3-9301-421a-960e-98cf1d46dd49}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Pliki źródłowe\Misc">
+      <UniqueIdentifier>{7764d713-8c84-4d6c-906f-78c6b8d818f4}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="headers\globals.h">
-      <Filter>Pliki nagłówkowe</Filter>
-    </ClInclude>
-    <ClInclude Include="headers\LowLevel.h">
-      <Filter>Pliki nagłówkowe</Filter>
-    </ClInclude>
     <ClInclude Include="headers\main.h">
       <Filter>Pliki nagłówkowe</Filter>
     </ClInclude>
@@ -98,9 +98,6 @@
     </ClInclude>
     <ClInclude Include="PlayerClass.h">
       <Filter>Pliki nagłówkowe\GameData</Filter>
-    </ClInclude>
-    <ClInclude Include="Utility.h">
-      <Filter>Pliki nagłówkowe</Filter>
     </ClInclude>
     <ClInclude Include="PlayerSkill.h">
       <Filter>Pliki nagłówkowe\GameData</Filter>
@@ -195,9 +192,6 @@
     <ClInclude Include="ControlPanel.h">
       <Filter>Pliki nagłówkowe\Shared GUI</Filter>
     </ClInclude>
-    <ClInclude Include="LuaFunctions.h">
-      <Filter>Pliki nagłówkowe</Filter>
-    </ClInclude>
     <ClInclude Include="headers\structs\Arcomage.h">
       <Filter>Pliki nagłówkowe\GameStructs\Definitions</Filter>
     </ClInclude>
@@ -261,14 +255,26 @@
     <ClInclude Include="GameStructAccessor.h">
       <Filter>Pliki nagłówkowe\GameStructs\Accessors</Filter>
     </ClInclude>
+    <ClInclude Include="headers\LowLevel.h">
+      <Filter>Pliki nagłówkowe\Misc</Filter>
+    </ClInclude>
+    <ClInclude Include="LuaFunctions.h">
+      <Filter>Pliki nagłówkowe\Misc</Filter>
+    </ClInclude>
+    <ClInclude Include="headers\globals.h">
+      <Filter>Pliki nagłówkowe\Misc</Filter>
+    </ClInclude>
+    <ClInclude Include="PlayerResistance.h">
+      <Filter>Pliki nagłówkowe\GameData</Filter>
+    </ClInclude>
+    <ClInclude Include="Utility.h">
+      <Filter>Pliki nagłówkowe\Misc</Filter>
+    </ClInclude>
+    <ClInclude Include="Asserter.h">
+      <Filter>Pliki nagłówkowe\Misc</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="sources\dllApi.cpp">
-      <Filter>Pliki źródłowe</Filter>
-    </ClCompile>
-    <ClCompile Include="sources\LowLevel.cpp">
-      <Filter>Pliki źródłowe</Filter>
-    </ClCompile>
     <ClCompile Include="sources\main.cpp">
       <Filter>Pliki źródłowe</Filter>
     </ClCompile>
@@ -281,9 +287,6 @@
     <ClCompile Include="sources\GeneratorDataBase.cpp">
       <Filter>Pliki źródłowe\Generator</Filter>
     </ClCompile>
-    <ClCompile Include="sources\globals.cpp">
-      <Filter>Pliki źródłowe</Filter>
-    </ClCompile>
     <ClCompile Include="sources\Generator.cpp">
       <Filter>Pliki źródłowe\Generator</Filter>
     </ClCompile>
@@ -292,9 +295,6 @@
     </ClCompile>
     <ClCompile Include="sources\Enum_const.cpp">
       <Filter>Pliki źródłowe\GameData</Filter>
-    </ClCompile>
-    <ClCompile Include="Utility.cpp">
-      <Filter>Pliki źródłowe</Filter>
     </ClCompile>
     <ClCompile Include="PlayerSkill.cpp">
       <Filter>Pliki źródłowe\GameData</Filter>
@@ -377,9 +377,6 @@
     <ClCompile Include="ControlPanel.cpp">
       <Filter>Pliki źródłowe\Shared GUI</Filter>
     </ClCompile>
-    <ClCompile Include="LuaFunctions.cpp">
-      <Filter>Pliki źródłowe</Filter>
-    </ClCompile>
     <ClCompile Include="PlayerStructAccessor.cpp">
       <Filter>Pliki źródłowe\GameStructs\Accessors</Filter>
     </ClCompile>
@@ -400,6 +397,27 @@
     </ClCompile>
     <ClCompile Include="GameStructAccessor.cpp">
       <Filter>Pliki źródłowe\GameStructs\Accessors</Filter>
+    </ClCompile>
+    <ClCompile Include="sources\dllApi.cpp">
+      <Filter>Pliki źródłowe\Misc</Filter>
+    </ClCompile>
+    <ClCompile Include="sources\globals.cpp">
+      <Filter>Pliki źródłowe\Misc</Filter>
+    </ClCompile>
+    <ClCompile Include="sources\LowLevel.cpp">
+      <Filter>Pliki źródłowe\Misc</Filter>
+    </ClCompile>
+    <ClCompile Include="LuaFunctions.cpp">
+      <Filter>Pliki źródłowe\Misc</Filter>
+    </ClCompile>
+    <ClCompile Include="Utility.cpp">
+      <Filter>Pliki źródłowe\Misc</Filter>
+    </ClCompile>
+    <ClCompile Include="PlayerResistance.cpp">
+      <Filter>Pliki źródłowe\GameData</Filter>
+    </ClCompile>
+    <ClCompile Include="Asserter.cpp">
+      <Filter>Pliki źródłowe\Misc</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

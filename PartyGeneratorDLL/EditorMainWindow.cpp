@@ -165,7 +165,12 @@ void EditorMainWindow::onPlayerButtonClick(wxCommandEvent& event)
 		{
 			if (!playerWindows[i])
 			{
+				Profiler profiler;
+				profiler.start("Creating player window");
 				playerWindows[i] = new EditorPlayerWindow(this, i);
+				profiler.end();
+				wxLogMessage(profiler.getDurationStr());
+				wxLog::FlushActive();
 			}
 			playerWindows[i]->Show();
 			return;
