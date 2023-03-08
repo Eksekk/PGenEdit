@@ -27,11 +27,23 @@ EditorSkillValueChooser::EditorSkillValueChooser(wxWindow* parent, const wxStrin
     skillLevel = new wxSpinCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 0, MAX_SKILL_LEVEL, 0);
     skillLevel->Bind(wxEVT_SPINCTRL, &EditorSkillValueChooser::onValueChange, this);
     mainSizer->Add(skillLevel);
+    static wxSize skillLevelMinSize{ 45, -1 };
+    skillLevel->SetMinSize(skillLevelMinSize);
     if (MMVER > 6)
     {
 		skillLevelBonusLabel = new wxStaticText(this, wxID_ANY, "0");
 		skillLevelBonusLabel->SetToolTip("Skill bonus, like from magic rings or followers");
 		mainSizer->Add(skillLevelBonusLabel, wxSizerFlags().CenterVertical().Border(wxALL, 5));
+        static wxSize textExtent;
+        static bool set = false;
+        if (!set) // text width calculation might be expensive, caching just in case
+        {
+            // and I'm just in case deferring calculation until first chooser creation, because wx won't be initialized yet
+            // and text width is much more complex operation than setting two-member struct (skillLevelMinSize)
+            textExtent = wxWindow::GetTextExtent("000");
+            set = true;
+        }
+        skillLevelBonusLabel->SetSize(textExtent); // align evenly, even if some bonuses are 0 and some +15
     }
     else
     {

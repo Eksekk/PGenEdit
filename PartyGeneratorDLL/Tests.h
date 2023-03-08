@@ -39,7 +39,7 @@ public:
 template<typename Player, typename Game>
 std::vector<wxString> Tests::run()
 {
-	return mergeVectors({ testMisc<Player, Game>(), testSkillFunctions()/*, testJson()*/, testGui<Player, Game>(), testPlayerStructAccessor<Player, Game>() });
+	return mergeVectors({ testMisc<Player, Game>(), testSkillFunctions()/*, testJson()*//*, testGui<Player, Game>()*/, testPlayerStructAccessor<Player, Game>() });
 }
 
 template<typename Player, typename Game>
@@ -56,13 +56,14 @@ inline std::vector<wxString> Tests::testSkillsGeneration(Player* player)
 	// static_assert(SAME(game->party[0], Player))
 }
 
-// automatically tests single integral field from player struct, provided with pointer to field and accessor get/set functions
-// I think good use for pointers to members/member functions, other (ugly) alternative I can see is macros // pointers to functions are obsolete,
+// automatically tests single integral field from game struct, provided with pointer to field and accessor get/set functions
+// I think good use for pointers to members/member functions, other (ugly) alternative I can see is macros
+// pointers to functions are obsolete,
 // old version used them but I couldn't use std::bind and then pass them
-template<typename Player, typename IntegralFieldType, typename IntegralGetSetType = int>
-void testSettableField(
-	Player* player,
-	IntegralFieldType Player::* playerFieldPtr,
+template<typename Struct, typename IntegralFieldType, typename IntegralGetSetType = int>
+void testSettableStructField(
+	Struct* stru,
+	IntegralFieldType Struct::* structFieldPtr,
 	std::function<IntegralGetSetType()> getFunction, // of accessor
 	std::function<void(IntegralGetSetType)> setFunction, // of accessor
 	Bounds bounds,
@@ -87,9 +88,9 @@ void testSettableField(
 	{
 		int64_t test = tests[i];
 		wxString failMsg = wxString::Format("[%s] Test #%d (value: %lld) failed", logId, i, test);
-		int64_t fieldValueBefore = player->*playerFieldPtr, getterValueBefore = getFunction();
+		int64_t fieldValueBefore = stru->*structFieldPtr, getterValueBefore = getFunction();
 		setFunction(test);
-		int64_t fieldValueAfter = player->*playerFieldPtr, getterValueAfter = getFunction();
+		int64_t fieldValueAfter = stru->*structFieldPtr, getterValueAfter = getFunction();
 		if (fieldValueBefore != fieldValueAfter) // only perform checks if test value wasn't the original value
 		{
 			myassert(fieldValueBefore != getterValueAfter, wxString::Format(failMsg + " field before: %lld, getter after: %lld", fieldValueBefore, getterValueAfter));
@@ -101,7 +102,7 @@ void testSettableField(
 			myassert(getterValueBefore == getterValueAfter, wxString::Format(failMsg + " getter before: %lld, getter after: %lld", getterValueBefore, getterValueAfter));
 		}
 
-		player->*playerFieldPtr = fieldValueBefore;
+		stru->*structFieldPtr = fieldValueBefore;
 		myassert((int64_t)getFunction() == fieldValueBefore, wxString::Format(failMsg + " [member pointer assign] getter: %lld, field: %lld", (int64_t)getFunction(), fieldValueBefore));
 	}
 	

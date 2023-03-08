@@ -2,6 +2,7 @@
 #include "main.h"
 #include "PlayerStructAccessor.h"
 #include "LowLevel.h"
+#include "PartyStructAccessor.h"
 
 const bool MALE = true, FEMALE = false; // TODO: check
 const int PLAYER_ACTIVE = 6, PLAYER_RANDOM = 7;
@@ -85,7 +86,7 @@ TemplatedPlayerStructAccessor<Player>::getSkillMaxMasteries(const std::vector<Pl
 	}
 	else //CLASS_CONSTRAINT_ANY_PROMOTION_CLASS
 	{
-		PlayerClass::TreeOptions opt(false, true, false); // !lower, higher, !equal
+		PlayerClass::TreeOptions opt(false, true, false); // !lower, higher, !equal 
 		auto tree = getClassPtr()->getClassTree(opt);
 		for (const auto skillPtr : skills)
 		{
@@ -281,16 +282,7 @@ int64_t TemplatedPlayerStructAccessor<Player>::getExperience()
 template<typename Player>
 bool TemplatedPlayerStructAccessor<Player>::setSkill(int skillId, SkillValue value, const SkillOptions& options /*= SkillOptions()*/)
 {
-	int sp = getSkillPoints();
-	if (!trySubtractSkillpoints(value, getSkill(skillId), options.affectSkillpoints, options.allowNegativeSkillpoints, sp))
-	{
-		return false;
-	}
-	Player* pl = getPlayers()[getPlayerIndex()];
-	value = value.mastery == MASTERY_NONE ? SkillValue{ 0, 0 } : value; // if player sets mastery to none, unlearn skill
-	pl->skills.at(skillId) = joinSkill(value);
-	setSkillPoints(sp);
-	return true;
+	return setSkill(&GameData::skills.at(skillId), value, options);
 }
 
 template<typename Player>
@@ -301,15 +293,23 @@ bool TemplatedPlayerStructAccessor<Player>::setSkill(PlayerSkill* skill, SkillVa
 	{
 		return true;
 	}
+
+	value.mastery = std::min(value.mastery, (int)getSkillMaxMastery(skill, options));
 	int sp = getSkillPoints();
 	if (!trySubtractSkillpoints(value, getSkill(skill), options.affectSkillpoints, options.allowNegativeSkillpoints, sp))
 	{
 		return false;
 	}
+	int gold = partyAccessor->getGold();
+	if (!trySubtractGold(skill, value, getSkill(skill), options.affectGold, options.allowNegativeGold, gold))
+	{
+		return false;
+	}
 	Player* pl = getPlayers()[getPlayerIndex()];
-	value = value.mastery == MASTERY_NONE ? SkillValue{ 0, 0 } : value;
+	value = value.mastery == MASTERY_NONE ? SkillValue{ 0, 0 } : value; // if user sets mastery to none, unlearn skill
 	pl->skills.at(skill->id) = joinSkill(value);
 	setSkillPoints(sp);
+	partyAccessor->setGold(gold);
 	return true;
 }
 
@@ -318,15 +318,21 @@ bool TemplatedPlayerStructAccessor<Player>::setSkills(const std::vector<PlayerSk
 {
 	Player* pl = getPlayers()[getPlayerIndex()];
 	int sp = getSkillPoints();
+	int gold = partyAccessor->getGold();
 	bool ret = true;
 	for (auto& [skillPtr, skillValue] : values)
 	{
 		SkillValue setWhat = skillValue.mastery == MASTERY_NONE ? SkillValue{ 0, 0 } : skillValue;
+		setWhat.mastery = std::min(setWhat.mastery, (int)getSkillMaxMastery(skillPtr, options));
 		if (existsInVector(options.batchSetAffectWhichSkillCategories, skillPtr->category))
 		{
-			ret = trySubtractSkillpoints(setWhat, getSkill(skillPtr), options.affectSkillpoints, options.allowNegativeSkillpoints, sp);
+			int oldGold = gold, oldSp = sp;
+			ret = trySubtractSkillpoints(setWhat, getSkill(skillPtr), options.affectSkillpoints, options.allowNegativeSkillpoints, sp)
+				&& trySubtractGold(skillPtr, setWhat, getSkill(skillPtr), options.affectGold, options.allowNegativeGold, gold);
 			if (!ret)
 			{
+				sp = oldSp;
+				gold = oldGold;
 				break;
 			}
 			pl->skills.at(skillPtr->id) = joinSkill(setWhat);
@@ -334,6 +340,7 @@ bool TemplatedPlayerStructAccessor<Player>::setSkills(const std::vector<PlayerSk
 
 	}
 	setSkillPoints(sp);
+	partyAccessor->setGold(gold);
 	return ret;
 }
 
@@ -348,6 +355,21 @@ bool TemplatedPlayerStructAccessor<Player>::trySubtractSkillpoints(SkillValue ne
 			return false;
 		}
 		sp -= cost;
+	}
+	return true;
+}
+
+template<typename Player>
+bool TemplatedPlayerStructAccessor<Player>::trySubtractGold(PlayerSkill* skill, SkillValue newSkillValue, SkillValue oldSkillValue, bool affectGold, bool allowNegativeGold, int& gold)
+{
+	if (affectGold)
+	{
+		int cost = skill->trainCost.at(newSkillValue.mastery) - skill->trainCost.at(oldSkillValue.mastery);
+		if (cost > gold && !allowNegativeGold)
+		{
+			return false;
+		}
+		gold -= cost;
 	}
 	return true;
 }

@@ -56,6 +56,7 @@ void EditorSkillsPanel::updateFromPlayerData()
 	goldDisplayText->SetLabel(wxString::Format("%d", partyAccessor->getGold()));
 	spentSkillPointsValue->SetValue(wxString::Format("%d", playerAccessor->getSpentSkillPoints()));
 	availableSkillPointsAmount->SetValue(wxString::Format("%d", playerAccessor->getSkillPoints()));
+	Layout();
 }
 
 void EditorSkillsPanel::updateSkillBonuses()
@@ -83,14 +84,33 @@ void EditorSkillsPanel::onSkillValueChange(wxCommandEvent& event)
 	PlayerSkill* skill = skillToWidgetMap.at(chooser);
 	SkillValue oldValue = playerAccessor->forPlayer(playerIndex)->getSkill(skill);
 	SkillValue newValue = chooser->getValue();
-	if (oldValue.isZero() && (newValue.level >= 1 || newValue.mastery > MASTERY_NONE))
+	if (oldValue.isZero() && !newValue.isZero())
 	{
 		newValue.level = std::max(newValue.level, 1);
 		newValue.mastery = std::max(newValue.mastery, (int)MASTERY_NOVICE);
+		chooser->setValue(newValue);
+	}
+	else if (!oldValue.isZero() && newValue.isZero())
+	{
+		newValue = SkillValue{ 0, 0 };
+		chooser->setValue(newValue);
 	}
 	if (!playerAccessor->setSkill(skill, newValue, options))
 	{
 		skillConstraintErrorMsgBox(false);
+	}
+	else
+	{
+		Layout();
+		if (options.affectSkillpoints)
+		{
+			onSkillPointsChange(event);
+		}
+		if (options.affectGold)
+		{
+			goldDisplayText->SetValue(wxString::Format("%d", partyAccessor->getGold()));
+		}
+		spentSkillPointsValue->SetValue(wxString::Format("%d", playerAccessor->getSpentSkillPoints()));
 	}
 }
 
@@ -230,6 +250,7 @@ void EditorSkillsPanel::onShowUnobtainableSkillsCheck(wxCommandEvent& event)
 			chooser->Show(event.IsChecked());
 		}
 	}
+	Layout();
 }
 
 void EditorSkillsPanel::affectCheckboxHelper(bool on, SkillCategory cat)

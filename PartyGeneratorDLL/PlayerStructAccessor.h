@@ -254,6 +254,8 @@ private:
 	// returns false if skill points requirements cannot be met, otherwise subtracts cost and returns true (need to set skillpoints manually at the end!)
 	bool trySubtractSkillpoints(SkillValue newSkillValue, SkillValue oldSkillValue, bool affectSkillpoints, bool allowNegativeSkillpoints, int& sp);
 
+	// like before, but for gold
+	bool trySubtractGold(PlayerSkill* skill, SkillValue newSkillValue, SkillValue oldSkillValue, bool affectGold, bool allowNegativeGold, int& gold);
 public:
 
 	// this function and two below return true if all skills could be set (due to affectSkillpoints parameter)

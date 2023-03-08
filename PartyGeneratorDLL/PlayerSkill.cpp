@@ -22,7 +22,7 @@ bool SkillValue::operator==(const SkillValue& other) const
 {
 	// treat novice (1) and none (0) as equal
 	bool masteriesEqual = (!mastery && other.mastery == 1) || (mastery == 1 && !other.mastery) || mastery == other.mastery;
-	return (level == other.level && masteriesEqual) && (isZero() == other.isZero());
+	return (isZero() && other.isZero()) || ((level == other.level && masteriesEqual) && (isZero() == other.isZero()));
 }
 bool SkillValue::operator!=(const SkillValue& other) const
 {
@@ -31,7 +31,7 @@ bool SkillValue::operator!=(const SkillValue& other) const
 
 bool SkillValue::isZero() const
 {
-	return level == 0;
+	return level == 0 || mastery == MASTERY_NONE;
 }
 
 std::string SkillValue::toString() const

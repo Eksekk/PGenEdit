@@ -86,4 +86,9 @@ data[0] = nil
 -- postprocess (assuming c++ json reader starts array at 0, not 1):
 -- data[] index in lua = data[] index in c++
 -- data[].masteries[] index in lua = data[].masteries index in c++
+
+pgen = pgen or {}
+pgen.vanillaClassData = data
+-- DERIVATIVE MODS (elemental, rev4 etc.) MODIFY VANILLA DATA FROM ABOVE - MINIMIZED DUPLICATION
+
 return data

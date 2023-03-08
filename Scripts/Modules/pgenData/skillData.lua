@@ -10,7 +10,7 @@ for codeName, skillId in pairs(const.Skills) do
 	for className, classId in pairs(const.Class) do
 		data[skillId].maxMasteryByClass[classId] = Game.Classes.Skills[classId][skillId]
 	end
-	if skillId <= 7 then
+	if skillId <= 7 or skillId == const.Skills.Unarmed then
 		data[skillId].category = "weapon"
 	elseif skillId <= 11 or skillId == 30 then
 		data[skillId].category = "armor"
@@ -146,5 +146,9 @@ for i = #data, 0, -1 do
 	data[i + 1] = data[i]
 end
 data[0] = nil
+
+pgen = pgen or {}
+pgen.vanillaSkillData = data
+-- DERIVATIVE MODS (elemental, rev4 etc.) MODIFY VANILLA DATA FROM ABOVE - MINIMIZED DUPLICATION
 
 return data

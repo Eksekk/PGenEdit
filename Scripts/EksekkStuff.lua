@@ -51,7 +51,7 @@ function M.loadDll()
 		M.dll.init()
 		runEventLoopOnce = function() M.dll.runEventLoopOnce() end
 		events.Tick = runEventLoopOnce
-		--M.dll.runTests()
+		M.dll.runTests()
 		rawset(M.dll, "runLua", M.dll.runLuaScriptFromDLL)
 	end
 end
@@ -586,6 +586,12 @@ getU = getUpvalue
 getUbyV = getUpvalueByValue
 dumpU = dumpUpvalues
 MT = debug.getmetatable or getmetatable
+
+function printSortedConst(c)
+	for v, k in sortpairs(table.invert(c)) do
+		print(k, v)
+	end
+end
 
 function M.reloadApi()
 	dofile "C:\\Users\\Eksekk\\source\\repos\\PartyGenerator\\Scripts\\General\\PartyGeneratorApi.lua"

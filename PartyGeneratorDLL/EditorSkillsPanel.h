@@ -52,7 +52,6 @@ private:
 protected:
 
 public:
-	wxStaticText* skillPointsAndOptionsHeader;
 	wxStaticText* availableSkillPointsLabel;
 	wxSpinCtrl* availableSkillPointsAmount;
 	wxStaticText* spentSkillPointsLabel;

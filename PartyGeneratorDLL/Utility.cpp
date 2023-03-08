@@ -155,7 +155,7 @@ wxString Profiler::getAggregateDurationStr()
 	return wxString::Format(formatStr,
 		aggregateCount, aggregateAction, secondsTotal, millisTotal,
 		secondsAverage, millisAverage,
-		aggregateMaxDurationIndex, secondsHighest, millisTotal);
+		aggregateMaxDurationIndex, secondsHighest, millisHighest);
 }
 
 Profiler::Profiler() : aggregateCount(0), aggregateTime{0}, aggregateMaxDuration{0}, aggregateMaxDurationIndex(0), profilingNow(false)

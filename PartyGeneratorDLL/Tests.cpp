@@ -11,6 +11,7 @@
 #include "MainWindow.h"
 #include "EditorMainWindow.h"
 #include "EditorPlayerWindow.h"
+#include "PartyStructAccessor.h"
 
 extern Generator* generator;
 
@@ -368,7 +369,7 @@ std::vector<wxString> Tests::testPlayerStructAccessor()
 		// std::decay_t<> strips all "decorations" from a type such as const, volatile, pointer, reference, array etc., making it suitable for comparisons
 		using IntegerType = std::decay_t<decltype(pl->*baseField)>;
 		static_assert(std::is_integral_v<IntegerType> && sizeof(IntegerType) <= 4, "Field type must be integer <= 4 bytes");
-		testSettableField<Player, IntegerType>(pl, baseField, boundBaseGet, boundBaseSet, boundsByType<IntegerType>, myasserter, logId);
+		testSettableStructField<Player, IntegerType>(pl, baseField, boundBaseGet, boundBaseSet, boundsByType<IntegerType>, myasserter, logId);
 	};
 	auto testStatBonus = [pl, &myasserter](int statId, auto Player::* bonusField, const wxString& logId) -> void
 	{
@@ -377,7 +378,7 @@ std::vector<wxString> Tests::testPlayerStructAccessor()
 
 		using IntegerType = std::decay_t<decltype(pl->*bonusField)>;
 		static_assert(std::is_integral_v<IntegerType> && sizeof(IntegerType) <= 4, "Field type must be integer <= 4 bytes");
-		testSettableField<Player, IntegerType>(pl, bonusField, boundBonusGet, boundBonusSet, boundsByType<IntegerType>, myasserter, logId);
+		testSettableStructField<Player, IntegerType>(pl, bonusField, boundBonusGet, boundBonusSet, boundsByType<IntegerType>, myasserter, logId);
 	};
 
 	auto testStatBaseBonus = [pl, &myasserter, &testStatBase, &testStatBonus](int statId, auto Player::* baseField, auto Player::* bonusField, const wxString& logId)
@@ -389,7 +390,7 @@ std::vector<wxString> Tests::testPlayerStructAccessor()
 	// NOT WORKING
 	// auto bindGetBase = [](auto placeholderStatId) { return std::bind(&PlayerStructAccessor::getStatBase, playerAccessor, placeholderStatId); };
 	// auto bindSetBase = [](auto placeholderStatId) { return std::bind(std::mem_fn(&PlayerStructAccessor::setStatBase), playerAccessor, placeholderStatId); };
-	// std::function<void(int statId, int16_t Player::* field, const wxString& logId)> testPrimaryStatBase = std::bind(testSettableField<Player, int16_t>, pl, _2, bindGetBase(_1), bindSetBase(_1), getBounds(-2), myasserter, _3);
+	// std::function<void(int statId, int16_t Player::* field, const wxString& logId)> testPrimaryStatBase = std::bind(testSettableStructField<Player, int16_t>, pl, _2, bindGetBase(_1), bindSetBase(_1), getBounds(-2), myasserter, _3);
 
 
 	// PRIMARY
@@ -443,7 +444,7 @@ std::vector<wxString> Tests::testPlayerStructAccessor()
 	testStatBase(STAT_HIT_POINTS, &Player::hitPoints, "Hit points base");
 	testStatBase(STAT_SPELL_POINTS, &Player::spellPoints, "Spell points base");
 
-	testSettableField(pl, &Player::skillPoints, std::function<int(void)> { std::bind(&PlayerStructAccessor::getSkillPoints, playerAccessor) },
+	testSettableStructField(pl, &Player::skillPoints, std::function<int(void)> { std::bind(&PlayerStructAccessor::getSkillPoints, playerAccessor) },
 		std::function<void(int)>{ std::bind(&PlayerStructAccessor::setSkillPoints, playerAccessor, _1) },
 		boundsByType<int32_t>, myasserter, "Skill points");
 
@@ -652,10 +653,94 @@ std::vector<wxString> Tests::testPlayerStructAccessor()
 		});
 	myassert(playerAccessor->getSkillPoints() == SP + 5 - 20 - 2);
 	// TODO: more tests, preferably some automated automated testing (use lambdas to perform one test and then supply multiple of them)
+	
+	auto testSkillFunctions = [pl, &myasserter](int testId, const std::vector<PlayerSkillValue>& setWhat, int gold, int skillpoints, const PlayerStructAccessor::SkillOptions& options) -> void
+	{
+		playerAccessor->setSkillPoints(skillpoints);
+		partyAccessor->setGold(gold);
+		for (const auto& [skillPtr, value] : setWhat)
+		{
+			SkillValue oldVal = playerAccessor->getSkill(skillPtr);
+			int prevGold = partyAccessor->getGold();
+			int prevSkillpoints = playerAccessor->getSkillPoints();
+			int expectedGoldChange = skillPtr->getFullTrainCostForMastery((Mastery)value.mastery) - skillPtr->getFullTrainCostForMastery(playerAccessor->getSkill(skillPtr).mastery);
+			int expectedSkillpointsChange = skillpointsSpentForSkill(value) - skillpointsSpentForSkill(playerAccessor->getSkill(skillPtr));
+			bool success = playerAccessor->setSkill(skillPtr, value);
+			bool shouldFail = false;
+			std::vector<wxString> failReasons;
+			if (options.affectGold && !options.allowNegativeGold && prevGold < expectedGoldChange)
+			{
+				failReasons.push_back(
+					wxString::Format(
+						"Test #%d should fail, because gold is affected, negative not allowed, and "
+						"current gold (%d) was less than required gold (%d) for skill %s",
+						testId, prevGold, expectedGoldChange, skillPtr->name
+					)
+				);
+				shouldFail = true;
+			}
+			if (options.affectSkillpoints && !options.allowNegativeSkillpoints && prevSkillpoints < expectedSkillpointsChange)
+			{
+				failReasons.push_back(
+					wxString::Format(
+						"Test #%d should fail, because skillpoints are affected, negative not allowed, and "
+						"current skillpoints (%d) were less than required skillpoints (%d) for skill %s (level: %s)",
+						testId, prevSkillpoints, expectedSkillpointsChange, skillPtr->name, value.toString()
+					)
+				);
+				shouldFail = true;
+			}
+			Mastery masteryConstrainedByClass = MAX_MASTERY;
+			if (options.classConstraint == PlayerStructAccessor::CLASS_CONSTRAINT_NONE)
+			{
+				masteryConstrainedByClass = MAX_MASTERY;
+			}
+			else if (options.classConstraint == PlayerStructAccessor::CLASS_CONSTRAINT_CURRENT_CLASS)
+			{
+				masteryConstrainedByClass = playerAccessor->getClassPtr()->maximumSkillMasteries.at(skillPtr->id);
+			}
+			else
+			{
+				PlayerClass::TreeOptions opt(false, true, false);
+				auto tree = GameData::classes.at(pl->clas).getClassTree(opt);
+				masteryConstrainedByClass = (*(
+					std::ranges::max_element(tree, [skillPtr](PlayerClass* const clas1, PlayerClass* const clas2) -> bool
+						{
+							return clas1->maximumSkillMasteries.at(skillPtr->id) < clas2->maximumSkillMasteries.at(skillPtr->id);
+						})
+					))->maximumSkillMasteries.at(skillPtr->id);
+			}
+			/*static const std::string constraintNames[] = {"none", "current class", "any promotion class"};
+			if (value.mastery > (int)masteryConstrainedByClass && playerAccessor->getSkill(skillPtr).mastery > masteryConstrainedByClass)
+			{
+				failReasons.push_back(
+					wxString::Format(
+						"Test #%d should fail, because class constraint (\"%s\") is not satisfied - "
+						"maximum mastery is %d, new mastery is %d",
+						testId, constraintNames[(int)options.classConstraint], (int)masteryConstrainedByClass, playerAccessor->getSkill(skillPtr).mastery
+					)
+				);
+				shouldFail = true;
+			}*/
+
+			myassert(
+				(!shouldFail && success) || (shouldFail && !success),
+				wxString::Format("%s (%s), skill %d (%s), values: old %s, new %s",
+					success ? "Succeeded" : "Failed",
+					shouldFail ? "should fail" : "should succeed",
+					skillPtr->id,
+					skillPtr->name,
+					oldVal.toString(),
+					value.toString()),
+				concatWxStrings(failReasons) + "\n\n"
+			);
+		}
+	};
 
 	// bits 0-3 - booleans
 	// bits 4-7 - affect what
 	// bits 8-9 - class constraint
+	int maxOptionsAsNumber = 0b10'1111'1111;
 	auto getOptionsFromNumber = [](int n) -> PlayerStructAccessor::SkillOptions
 	{
 		PlayerStructAccessor::SkillOptions opt;
@@ -673,65 +758,41 @@ std::vector<wxString> Tests::testPlayerStructAccessor()
 		opt.classConstraint = static_cast<PlayerStructAccessor::ClassConstraint>((n & 0b11'0000'0000) >> 8);
 		return opt;
 	};
-	
-	int gameGold = 500000;
-	auto testSkillFunctions = [pl, &myasserter, &gameGold](int testId, const std::unordered_map<PlayerSkill*, SkillValue>& setWhat, int gold, int skillpoints, const PlayerStructAccessor::SkillOptions& options) -> void
+
+	auto doTestSkillFunctions = [pl, &testSkillFunctions, &getOptionsFromNumber, maxOptionsAsNumber](std::initializer_list<std::array<int, 3>> values)
 	{
-		playerAccessor->setSkillPoints(skillpoints);
-		for (const auto& [skillPtr, value] : setWhat)
+		std::vector<PlayerSkillValue> psvs;
+		for (auto& data : values)
 		{
-			int prevGold = gameGold;
-			int prevSkillpoints = playerAccessor->getSkillPoints();
-			int expectedGoldChange = skillPtr->getFullTrainCostForMastery((Mastery)value.mastery) - skillPtr->getFullTrainCostForMastery(playerAccessor->getSkill(skillPtr).mastery);
-			int expectedSkillpointsChange = skillpointsSpentForSkill(value) - skillpointsSpentForSkill(playerAccessor->getSkill(skillPtr));
-			bool success = playerAccessor->setSkill(skillPtr, value);
-			std::vector<wxString> failReasons;
-			if (options.affectGold && !options.allowNegativeGold && prevGold < expectedGoldChange)
-			{
-				failReasons.push_back(
-					wxString::Format(
-						"Test #%d should fail (partially), because gold is affected, negative not allowed, and "
-						"current gold (%d) was less than required gold (%d) for skill %s",
-						testId, prevGold, expectedGoldChange, skillPtr->name
-					)
-				);
-			}
-			if (options.affectSkillpoints && !options.allowNegativeSkillpoints && prevSkillpoints < expectedSkillpointsChange)
-			{
-				failReasons.push_back(
-					wxString::Format(
-						"Test #%d should fail (partially), because skillpoints are affected, negative not allowed, and "
-						"current skillpoints (%d) were less than required skillpoints (%d) for skill %s (level: %s)",
-						testId, prevSkillpoints, expectedSkillpointsChange, skillPtr->name, value.toString()
-					)
-				);
-			}
-			Mastery masteryConstrainedByClass = MAX_MASTERY;
-			if (options.classConstraint == PlayerStructAccessor::CLASS_CONSTRAINT_NONE)
-			{
-				masteryConstrainedByClass = MAX_MASTERY;
-			}
-			else if (options.classConstraint == PlayerStructAccessor::CLASS_CONSTRAINT_CURRENT_CLASS)
-			{
-				masteryConstrainedByClass = playerAccessor->getClassPtr()->maximumSkillMasteries.at(skillPtr->id);
-			}
-			else
-			{
-				// nothing, idk if repeating code from accessor is a good idea
-			}
-			static const std::string constraintNames[] = {"none", "current class", "any promotion class"};
-			if (value.mastery > (int)masteryConstrainedByClass && playerAccessor->getSkill(skillPtr).mastery > masteryConstrainedByClass)
-			{
-				failReasons.push_back(
-					wxString::Format(
-						"Test #%d should fail (partially), because class constraint (\"%s\") is not satisfied - "
-						"maximum mastery is %d, new mastery is %d",
-						testId, constraintNames[(int)options.classConstraint], (int)masteryConstrainedByClass, playerAccessor->getSkill(skillPtr).mastery
-					)
-				);
-			}
+			PlayerSkillValue psv;
+			psv.skill = &GameData::skills.at(data[0]);
+			psv.value = SkillValue{ data[1], data[2] };
+			psvs.push_back(psv);
+		}
+
+		int id = 0;
+
+		int optionsNum = 0;
+		while (optionsNum <= maxOptionsAsNumber)
+		{
+			PlayerStructAccessor::SkillOptions opt = getOptionsFromNumber(optionsNum);
+			testSkillFunctions(id++, psvs, 2000, 50, opt);
+			testSkillFunctions(id++, psvs, 5436, 12, opt);
+			testSkillFunctions(id++, psvs, 1744, 1243, opt);
+			testSkillFunctions(id++, psvs, 0, 0, opt);
+			testSkillFunctions(id++, psvs, 2434325, 34245, opt);
+			testSkillFunctions(id++, psvs, 11111, 111, opt);
+			testSkillFunctions(id++, psvs, 15143, 164, PlayerStructAccessor::SkillOptions()); // use default options
+			optionsNum += 7; // should hit most bit values
 		}
 	};
+
+	doTestSkillFunctions({ {2, 15, MASTERY_EXPERT}, {12, 4, MASTERY_GM}, {3, 1, MASTERY_NOVICE}, {22, 50, MASTERY_MASTER}, {31, 17, MASTERY_EXPERT} });
+	doTestSkillFunctions({ {5, 2, MASTERY_EXPERT}, {13, 2, MASTERY_GM}, {3, 8, MASTERY_GM}, {22, 15, MASTERY_MASTER} });
+	doTestSkillFunctions({ {6, 4, MASTERY_NOVICE}, {14, 5, MASTERY_GM}, {3, 3, MASTERY_NOVICE}, {35, 9, MASTERY_MASTER} });
+	doTestSkillFunctions({ {1, 3, MASTERY_EXPERT} });
+	doTestSkillFunctions({ {15, 60, MASTERY_GM} });
+	doTestSkillFunctions({ {13, 10, MASTERY_GM}, {8, 15, MASTERY_EXPERT}, {3, 21, MASTERY_NOVICE} });
 
 	players[0] = oldPlayerZero;
 	delete pl;
@@ -745,8 +806,8 @@ template std::vector<wxString> Tests::testPlayerStructAccessor<mm8::Player, mm8:
 
 #pragma warning(push)
 #pragma warning(disable: 6001)
-#pragma warning(disable: 4700)// definitely initialized in dllApi.cpp, and if not I'll just get a segfault and fix it
-// (I test with low level debugger on at all time, so should be easy
+#pragma warning(disable: 4700) // definitely initialized in dllApi.cpp, and if not I'll just get a segfault and fix it
+// (I test with low level debugger on at all time, so should be easy)
 template<typename Player, typename Game>
 std::vector<wxString> Tests::testMisc()
 {
