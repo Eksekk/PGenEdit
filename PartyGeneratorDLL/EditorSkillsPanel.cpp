@@ -13,6 +13,8 @@ EditorSkillsPanel::EditorSkillsPanel(wxWindow* parent, int playerIndex) : wxScro
 {
 	SetScrollRate(10, 10);
 
+	//SetBackgroundColour(wxSystemSettings::GetColour(wxSystemColour::wxSYS_COLOUR_MENU));
+
 	mainSizer = new wxBoxSizer(wxVERTICAL);
 
 	createSkillPointsOptionsPanel();
@@ -442,36 +444,54 @@ void EditorSkillsPanel::createSkillsPanel()
 	showUnobtainableSkillsCheckbox->Bind(wxEVT_CHECKBOX, &EditorSkillsPanel::onShowUnobtainableSkillsCheck, this);
 	mainSizer->Add(showUnobtainableSkillsCheckbox, wxSizerFlags().Border(wxALL, 5));
 
-	skillsSizer = new wxGridBagSizer(5, 5);
-	skillsSizer->SetFlexibleDirection(wxBOTH);
-	skillsSizer->SetNonFlexibleGrowMode(wxFLEX_GROWMODE_SPECIFIED);
+	wxBoxSizer* skillsSizerHorizontal = new wxBoxSizer(wxHORIZONTAL);
 
-#define CREATESIZER(name) wxFlexGridSizer* name; \
-	name = new wxFlexGridSizer(1, 5, 0); \
-	name->SetFlexibleDirection(wxBOTH); \
-	name->SetNonFlexibleGrowMode(wxFLEX_GROWMODE_SPECIFIED); \
-	name->AddGrowableCol(0, 1)
-
-	CREATESIZER(weaponSkillsFgSizer);
-	skillsSizer->Add(weaponSkillsFgSizer, wxGBPosition(0, 0), wxGBSpan(1, 1), wxEXPAND | wxALL, 5);
+	wxBoxSizer* leftSkillsSizer = new wxBoxSizer(wxVERTICAL);
+	wxBoxSizer* rightSkillsSizer = new wxBoxSizer(wxVERTICAL);
 
 	m_staticline121 = new wxStaticLine(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_VERTICAL);
-	skillsSizer->Add(m_staticline121, wxGBPosition(0, 1), wxGBSpan(3, 1), wxEXPAND | wxALL, 5);
+	skillsSizerHorizontal->Add(leftSkillsSizer, wxSizerFlags(1).Expand());
+	skillsSizerHorizontal->Add(m_staticline121, wxSizerFlags().Expand());
+	skillsSizerHorizontal->Add(rightSkillsSizer, wxSizerFlags(1).Expand());
 
-	CREATESIZER(armorSkillsFgSizer);
-	skillsSizer->Add(armorSkillsFgSizer, wxGBPosition(0, 2), wxGBSpan(1, 1), wxEXPAND | wxALL, 5);
+	const wxSizerFlags skillSizerFlags = wxSizerFlags().Expand().Border(wxALL, 5);
+
+	static wxColour skillCategoriesLabelColour(135, 132, 73);
+	static wxFont skillCategoriesLabelFont(12, wxFONTFAMILY_DEFAULT, wxFONTSTYLE_ITALIC, wxFONTWEIGHT_BOLD);
+	static wxSizerFlags skillCategoriesLabelFlags = wxSizerFlags().Border(wxBOTTOM, 5);
+
+	wxBoxSizer* weaponSkillsSizer = new wxBoxSizer(wxVERTICAL);
+	leftSkillsSizer->Add(weaponSkillsSizer, skillSizerFlags);
+	wxStaticText* weaponSkillsSizerLabel = new wxStaticText(this, wxID_ANY, _("Weapons"));
+	weaponSkillsSizerLabel->SetOwnFont(skillCategoriesLabelFont);
+	weaponSkillsSizerLabel->SetOwnForegroundColour(skillCategoriesLabelColour);
+	weaponSkillsSizer->Add(weaponSkillsSizerLabel, skillCategoriesLabelFlags);
+
+	wxBoxSizer* armorSkillsSizer = new wxBoxSizer(wxVERTICAL);
+	rightSkillsSizer->Add(armorSkillsSizer, skillSizerFlags);
+	wxStaticText* armorSkillsSizerLabel = new wxStaticText(this, wxID_ANY, _("Armor"));
+	armorSkillsSizerLabel->SetOwnFont(skillCategoriesLabelFont);
+	armorSkillsSizerLabel->SetOwnForegroundColour(skillCategoriesLabelColour);
+	armorSkillsSizer->Add(armorSkillsSizerLabel, skillCategoriesLabelFlags);
 
 	m_staticline151 = new wxStaticLine(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL);
-	skillsSizer->Add(m_staticline151, wxGBPosition(1, 0), wxGBSpan(1, 1), wxEXPAND | wxTOP | wxBOTTOM | wxLEFT, 5);
+	leftSkillsSizer->Add(m_staticline151, wxSizerFlags().Expand().Border(wxALL & (~wxRIGHT), 5));
 	m_staticline16 = new wxStaticLine(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL);
-	skillsSizer->Add(m_staticline16, wxGBPosition(1, 2), wxGBSpan(1, 1), wxEXPAND | wxTOP | wxBOTTOM | wxRIGHT, 5);
+	rightSkillsSizer->Add(m_staticline16, wxSizerFlags().Expand().Border(wxALL & (~wxLEFT), 5));
 
-	CREATESIZER(magicSkillsFgSizer);
-	skillsSizer->Add(magicSkillsFgSizer, wxGBPosition(2, 0), wxGBSpan(1, 1), wxEXPAND | wxALL, 5);
+	wxBoxSizer* magicSkillsSizer = new wxBoxSizer(wxVERTICAL);
+	leftSkillsSizer->Add(magicSkillsSizer, skillSizerFlags);
+	wxStaticText* magicSkillsSizerLabel = new wxStaticText(this, wxID_ANY, _("Magic"));
+	magicSkillsSizerLabel->SetOwnFont(skillCategoriesLabelFont);
+	magicSkillsSizerLabel->SetOwnForegroundColour(skillCategoriesLabelColour);
+	magicSkillsSizer->Add(magicSkillsSizerLabel, skillCategoriesLabelFlags);
 
-	CREATESIZER(miscSkillsFgSizer);
-	skillsSizer->Add(miscSkillsFgSizer, wxGBPosition(2, 2), wxGBSpan(1, 1), wxEXPAND | wxALL, 5);
-#undef CREATESIZER
+	wxBoxSizer* miscSkillsSizer = new wxBoxSizer(wxVERTICAL);
+	rightSkillsSizer->Add(miscSkillsSizer, skillSizerFlags);
+	wxStaticText* miscSkillsSizerLabel = new wxStaticText(this, wxID_ANY, _("Misc"));
+	miscSkillsSizerLabel->SetOwnFont(skillCategoriesLabelFont);
+	miscSkillsSizerLabel->SetOwnForegroundColour(skillCategoriesLabelColour);
+	miscSkillsSizer->Add(miscSkillsSizerLabel, skillCategoriesLabelFlags);
 
 	// FILL WITH SKILLS
 	wxASSERT(GameData::skills.size() > 10);
@@ -503,6 +523,7 @@ void EditorSkillsPanel::createSkillsPanel()
 		++i;
 	}
 
+	const wxSizerFlags chooserFlags = wxSizerFlags().Expand(); // Expand is important; no border here - set in chooser in inner panel
 	for (PlayerSkill* skillPtr : skillsInOrder)
 	{
 		profiler.startAggregatePart();
@@ -516,16 +537,16 @@ void EditorSkillsPanel::createSkillsPanel()
 		switch (skillPtr->category)
 		{
 		case SKILLCAT_WEAPON:
-			weaponSkillsFgSizer->Add(chooser, wxSizerFlags().CenterVertical().Expand()); // Expand is important
+			weaponSkillsSizer->Add(chooser, chooserFlags);
 			break;
 		case SKILLCAT_ARMOR:
-			armorSkillsFgSizer->Add(chooser, wxSizerFlags().CenterVertical().Expand());
+			armorSkillsSizer->Add(chooser, chooserFlags);
 			break;
 		case SKILLCAT_MAGIC:
-			magicSkillsFgSizer->Add(chooser, wxSizerFlags().CenterVertical().Expand());
+			magicSkillsSizer->Add(chooser, chooserFlags);
 			break;
 		case SKILLCAT_MISC:
-			miscSkillsFgSizer->Add(chooser, wxSizerFlags().CenterVertical().Expand());
+			miscSkillsSizer->Add(chooser, chooserFlags);
 			break;
 		default:
 			wxLogError("Unknown skill category %d (skill %d, name %s)", (int)skillPtr->category, skillPtr->id, skillPtr->name);
@@ -538,13 +559,15 @@ void EditorSkillsPanel::createSkillsPanel()
 	}
 
 	// colors
-	static const wxColour COLOR_FIRST{ 225, 217, 227 }, COLOR_SECOND{ 189, 174, 193 };
-	const wxFlexGridSizer* const sizers[4] = { weaponSkillsFgSizer, armorSkillsFgSizer, magicSkillsFgSizer, miscSkillsFgSizer };
+	static const wxColour COLOR_FIRST{ 240, 238, 192 }, COLOR_SECOND{ 214, 212, 169 };
+	const wxBoxSizer* const sizers[4] = { weaponSkillsSizer, armorSkillsSizer, magicSkillsSizer, miscSkillsSizer };
 	for (auto sizer : sizers)
 	{
 		bool diffColor = false;
-		for (const wxSizerItem* const item : sizer->GetChildren())
+		auto children = sizer->GetChildren();
+		for (int i = 1; i < children.size(); ++i) // i = 1 -- skip label
 		{
+			const wxSizerItem* const item = children[i];
 			EditorSkillValueChooser* const chooser = static_cast<EditorSkillValueChooser*>(item->GetWindow());
 			if (!diffColor)
 			{
@@ -562,7 +585,7 @@ void EditorSkillsPanel::createSkillsPanel()
 	Thaw();
 	wxLogMessage(profiler.getAggregateDurationStr());
 	skillToWidgetMap = invertMap(widgetToSkillMap);
-	mainSizer->Add(skillsSizer, 1, 0, 5);
+	mainSizer->Add(skillsSizerHorizontal, 1, 0, 5);
 }
 
 void EditorSkillsPanel::createActionsPanel()

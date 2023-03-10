@@ -15,6 +15,8 @@
 
 extern Generator* generator;
 
+bool Tests::testingNow = false;
+
 std::vector<wxString> Tests::testAlignmentRadioBox()
 {
 	// need to pass nullptr!!! otherwise children of frame will be created as top level windows
@@ -627,6 +629,8 @@ std::vector<wxString> Tests::testPlayerStructAccessor()
 		[[nodiscard]] virtual std::unordered_map<PlayerSkill*, Mastery> getSkillMaxMasteries(const std::vector<PlayerSkill*>& skills, const SkillOptions& options = SkillOptions()) = 0;*/
 	PlayerStructAccessor::SkillOptions opt;
 	opt.affectSkillpoints = true;
+	playerAccessor->setSkillPoints(0);
+	memset(pl->skills.data(), 0, pl->skills.size() * sizeof(std::decay_t<decltype(pl->skills[0])>));
 	myassert(!playerAccessor->setSkill(3, { 4, 2 }, opt));
 	myassert(!playerAccessor->setSkill(5, { 20, 3 }, opt));
 	myassert(playerAccessor->setSkill(5, { 1, 1 }, opt));
@@ -638,9 +642,9 @@ std::vector<wxString> Tests::testPlayerStructAccessor()
 	myassert(playerAccessor->getSkillPoints() == -14);
 	myassert(playerAccessor->setSkill(10, { 3, 4 }, opt));
 	myassert((playerAccessor->getSkill(10) == SkillValue{ 3, 4 }));
-	myassert(playerAccessor->getSkillPoints() == -9);
+	myassert(playerAccessor->getSkillPoints() == -5);
 	myassert(playerAccessor->setSkill(12, { 2, 4 }, opt));
-	myassert(playerAccessor->getSkillPoints() == -11);
+	myassert(playerAccessor->getSkillPoints() == -7);
 	myassert((playerAccessor->getSkill(12) == SkillValue{ 2, 4 }));
 	auto& sk = GameData::skills;
 	std::vector<PlayerSkillValue> skillsToSet{ { &sk.at(10), {1, 1} }, { &sk.at(20), {6, 2} }, {&sk.at(2), {2, 3} } };

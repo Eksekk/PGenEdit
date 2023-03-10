@@ -12,6 +12,7 @@
 #include "DefaultPlayerPanel.h"
 #include "ClassWindow.h"
 #include "MainWindow.h"
+#include "Tests.h"
 
 std::unordered_map<int, PlayerClass> GameData::classes;
 std::unordered_map<int, PlayerSkill> GameData::skills;
@@ -304,6 +305,7 @@ extern "C" bool checkIsInGame();
 void updatePartySizeAndPlayerPtrs(); // defined in dllApi.cpp
 void GameData::updateIsInGameAndPartySize()
 {
+    if (Tests::testingNow) return; // don't overwrite party size with 0 if we're not in game and testing now
 	inGame = checkIsInGame();
 	if (inGame && MMVER == 8)
 	{

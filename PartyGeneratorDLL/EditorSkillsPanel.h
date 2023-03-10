@@ -92,7 +92,6 @@ public:
 	wxCheckBox* showUnobtainableSkillsCheckbox;
 
 	wxBoxSizer* mainSizer;
-	wxGridBagSizer* skillsSizer;
 	//std::function<void(void)> updateCallback;
 
 	EditorSkillsPanel(wxWindow* parent, int playerIndex);

@@ -4,7 +4,6 @@
 #include "PlayerStructAccessor.h"
 #include "Generator.h"
 #include "Utility.h"
-#include "GameData.h"
 #include "Asserter.h"
 
 extern Generator* generator;
@@ -13,6 +12,7 @@ class Tests
 {
 public:
 	static Generator::State storedState;
+	static bool testingNow; // to make game data not zero out party size when showing log message (modal, has own event loop)
 
 	static std::vector<wxString> testSkillFunctions(); // join skill / split skill
 
@@ -39,7 +39,10 @@ public:
 template<typename Player, typename Game>
 std::vector<wxString> Tests::run()
 {
-	return mergeVectors({ testMisc<Player, Game>(), testSkillFunctions()/*, testJson()*//*, testGui<Player, Game>()*/, testPlayerStructAccessor<Player, Game>() });
+	testingNow = true;
+	auto ret = mergeVectors({ testMisc<Player, Game>(), testSkillFunctions()/*, testJson()*//*, testGui<Player, Game>()*/, testPlayerStructAccessor<Player, Game>() });
+	testingNow = false;
+	return ret;
 }
 
 template<typename Player, typename Game>
