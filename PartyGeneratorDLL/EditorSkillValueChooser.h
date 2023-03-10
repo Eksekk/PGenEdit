@@ -28,5 +28,7 @@ public:
 	void setMastery(Mastery mastery);
 	void updateSkillBonus(int value);
 	void onValueChange(wxCommandEvent& event);
+	void setRowColor(const wxColour& colour);
+	void onShow(wxShowEvent& event);
 };
 

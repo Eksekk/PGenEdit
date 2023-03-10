@@ -50,7 +50,6 @@ bool GuiApplication::OnInit()
     //wxMessageBox("OnInit()");
     //MSGBOX("OnInit()");
 	//mainWindow = new MainWindow(nullptr);
-	wxToolTip::Enable(true);
     wxWindow* window = new wxWindow();
     window->SetHWND(gameAccessor->getWindowHandle()); // required for showModal() ???
     SetTopWindow(window);
@@ -63,6 +62,7 @@ bool GuiApplication::OnInit()
     idleEventTimer = new wxTimer(this);
     Bind(wxEVT_TIMER, [this](wxTimerEvent&) {this->ProcessIdle(); });
     idleEventTimer->Start(1000, wxTIMER_CONTINUOUS);
+	wxToolTip::Enable(true);
     return true;
 }
 

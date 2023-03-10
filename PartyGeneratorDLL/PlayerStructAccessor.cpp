@@ -295,6 +295,10 @@ bool TemplatedPlayerStructAccessor<Player>::setSkill(PlayerSkill* skill, SkillVa
 	}
 
 	value.mastery = std::min(value.mastery, (int)getSkillMaxMastery(skill, options));
+	if (value.mastery == 0)
+	{
+		value.level = 0;
+	}
 	int sp = getSkillPoints();
 	if (!trySubtractSkillpoints(value, getSkill(skill), options.affectSkillpoints, options.allowNegativeSkillpoints, sp))
 	{
@@ -324,6 +328,10 @@ bool TemplatedPlayerStructAccessor<Player>::setSkills(const std::vector<PlayerSk
 	{
 		SkillValue setWhat = skillValue.mastery == MASTERY_NONE ? SkillValue{ 0, 0 } : skillValue;
 		setWhat.mastery = std::min(setWhat.mastery, (int)getSkillMaxMastery(skillPtr, options));
+		if (setWhat.mastery == 0)
+		{
+			setWhat.level = 0;
+		}
 		if (existsInVector(options.batchSetAffectWhichSkillCategories, skillPtr->category))
 		{
 			int oldGold = gold, oldSp = sp;

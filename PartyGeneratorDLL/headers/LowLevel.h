@@ -59,7 +59,7 @@ ReturnType callMemoryAddress(Address address, int registerParamsNum, Args... arg
 {
 	wxASSERT_MSG(registerParamsNum >= -1 && registerParamsNum <= 2, "Invalid number of register parameters");
 	void* ptr;
-	if (std::is_pointer_v<Address>)
+	if constexpr (std::is_pointer_v<Address>)
 	{
 		ptr = (void*)address;
 	}

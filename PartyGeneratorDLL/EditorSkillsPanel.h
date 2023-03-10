@@ -6,6 +6,7 @@
 #include "EditorSkillValueChooser.h"
 #include "PlayerStructAccessor.h"
 
+class wxGridBagSizer;
 class EditorSkillsPanel : public wxScrolledWindow
 {
 private:
@@ -52,6 +53,7 @@ private:
 protected:
 
 public:
+	wxStaticText* skillPointsAndOptionsHeader;
 	wxStaticText* availableSkillPointsLabel;
 	wxSpinCtrl* availableSkillPointsAmount;
 	wxStaticText* spentSkillPointsLabel;
@@ -90,6 +92,7 @@ public:
 	wxCheckBox* showUnobtainableSkillsCheckbox;
 
 	wxBoxSizer* mainSizer;
+	wxGridBagSizer* skillsSizer;
 	//std::function<void(void)> updateCallback;
 
 	EditorSkillsPanel(wxWindow* parent, int playerIndex);

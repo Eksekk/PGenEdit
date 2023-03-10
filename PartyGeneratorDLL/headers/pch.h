@@ -11,6 +11,8 @@
 
 // need to include wx before <cstring>, otherwise there'll be a ton of warnings
 // For compilers that support precompilation, includes "wx.h".
+
+#define wxUSE_TOOLTIPS 1 // required or tooltips simply don't show up
 #include <wx/wxprec.h>
 
 #ifndef WX_PRECOMP

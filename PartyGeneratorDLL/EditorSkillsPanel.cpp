@@ -84,16 +84,14 @@ void EditorSkillsPanel::onSkillValueChange(wxCommandEvent& event)
 	PlayerSkill* skill = skillToWidgetMap.at(chooser);
 	SkillValue oldValue = playerAccessor->forPlayer(playerIndex)->getSkill(skill);
 	SkillValue newValue = chooser->getValue();
-	if (oldValue.isZero() && !newValue.isZero())
+	if (oldValue.isZero() && (newValue.level > 0 || newValue.mastery > 0))
 	{
 		newValue.level = std::max(newValue.level, 1);
 		newValue.mastery = std::max(newValue.mastery, (int)MASTERY_NOVICE);
-		chooser->setValue(newValue);
 	}
-	else if (!oldValue.isZero() && newValue.isZero())
+	else if (newValue.isZero() && (oldValue.level > 0 || oldValue.mastery > 0))
 	{
 		newValue = SkillValue{ 0, 0 };
-		chooser->setValue(newValue);
 	}
 	if (!playerAccessor->setSkill(skill, newValue, options))
 	{
@@ -101,6 +99,9 @@ void EditorSkillsPanel::onSkillValueChange(wxCommandEvent& event)
 	}
 	else
 	{
+		newValue = playerAccessor->getSkill(skill); // might have been reduced by class constraint
+		chooser->setValue(newValue);
+		chooser->updateSkillBonus(playerAccessor->getSkillBonus(skill));
 		Layout();
 		if (options.affectSkillpoints)
 		{
@@ -251,6 +252,9 @@ void EditorSkillsPanel::onShowUnobtainableSkillsCheck(wxCommandEvent& event)
 		}
 	}
 	Layout();
+	// somehow Layout() got broken, idk if by adding colors to choosers or (more probable) adding inner panel,
+	// so need to send size event to have correct layout
+	SendSizeEvent();
 }
 
 void EditorSkillsPanel::affectCheckboxHelper(bool on, SkillCategory cat)
@@ -293,6 +297,7 @@ void EditorSkillsPanel::createSkillPointsOptionsPanel()
 	skillPointsAndOptionsHeader->SetFont(wxFont(12, wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL, false, wxEmptyString));
 
 	mainSizer->Add(skillPointsAndOptionsHeader, 0, wxALL | wxALIGN_CENTER_HORIZONTAL, 5);
+	mainSizer->AddSpacer(30);
 
 	wxBoxSizer* skillPointsSizer;
 	skillPointsSizer = new wxBoxSizer(wxHORIZONTAL);
@@ -304,9 +309,6 @@ void EditorSkillsPanel::createSkillPointsOptionsPanel()
 	availableSkillPointsAmount = new wxSpinCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 0, 9999999, 0);
 	skillPointsSizer->Add(availableSkillPointsAmount, 0, wxALL, 5);
 	availableSkillPointsAmount->Bind(wxEVT_SPINCTRL, &EditorSkillsPanel::onSkillPointsChange, this);
-
-
-	mainSizer->Add(skillPointsSizer, 0, wxEXPAND, 5);
 
 	wxBoxSizer* spentSkillPointsSizer;
 	spentSkillPointsSizer = new wxBoxSizer(wxHORIZONTAL);
@@ -322,8 +324,11 @@ void EditorSkillsPanel::createSkillPointsOptionsPanel()
 
 	spentSkillPointsSizer->Add(spentSkillPointsValue, 0, wxALL, 5);
 
+	skillPointsSizer->AddSpacer(30);
 
-	mainSizer->Add(spentSkillPointsSizer, 0, wxEXPAND, 5);
+	skillPointsSizer->Add(spentSkillPointsSizer, 0, wxEXPAND, 5);
+
+	mainSizer->Add(skillPointsSizer, 0, wxEXPAND, 5);
 
 	wxBoxSizer* optionsSizer;
 	optionsSizer = new wxBoxSizer(wxVERTICAL);
@@ -382,6 +387,42 @@ void EditorSkillsPanel::createSkillPointsOptionsPanel()
 
 	optionsSizer->Add(optionsGoldSizer, 1, wxEXPAND, 5);
 
+	wxBoxSizer* classConstraintsSizer;
+	classConstraintsSizer = new wxBoxSizer(wxHORIZONTAL);
+
+	wxStaticBoxSizer* classConstraintsInnerSizer;
+	classConstraintsInnerSizer = new wxStaticBoxSizer(new wxStaticBox(this, wxID_ANY, _("Respect class constraints?")), wxHORIZONTAL);
+
+	classConstraintsNone = new wxRadioButton(classConstraintsInnerSizer->GetStaticBox(), wxID_ANY, _("No"), wxDefaultPosition, wxDefaultSize, wxRB_GROUP);
+	classConstraintsNone->SetValue(true);
+	classConstraintsInnerSizer->Add(classConstraintsNone, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+	classConstraintsNone->Bind(wxEVT_RADIOBUTTON, &EditorSkillsPanel::onRespectClassConstraintsNoRadio, this);
+
+	classConstraintsCurrentClass = new wxRadioButton(classConstraintsInnerSizer->GetStaticBox(), wxID_ANY, _("Of current class"), wxDefaultPosition, wxDefaultSize, 0);
+	classConstraintsInnerSizer->Add(classConstraintsCurrentClass, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+	classConstraintsCurrentClass->Bind(wxEVT_RADIOBUTTON, &EditorSkillsPanel::onRespectClassConstraintsCurrentRadio, this);
+
+	classConstraintsPromotionClass = new wxRadioButton(classConstraintsInnerSizer->GetStaticBox(), wxID_ANY, _("Of any promotion class"), wxDefaultPosition, wxDefaultSize, 0);
+	classConstraintsPromotionClass->SetToolTip(_("The one which has highest mastery possible"));
+	classConstraintsPromotionClass->Bind(wxEVT_RADIOBUTTON, &EditorSkillsPanel::onRespectClassConstraintsPromotionRadio, this);
+
+	classConstraintsInnerSizer->Add(classConstraintsPromotionClass, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+
+	applyClassConstraintsButton = new wxButton(classConstraintsInnerSizer->GetStaticBox(), wxID_ANY, _("Apply right now"), wxDefaultPosition, wxDefaultSize, 0);
+	applyClassConstraintsButton->SetToolTip(_("Only applies class constraints and takes into account gold and skillpoint settings. No other action is done"));
+	applyClassConstraintsButton->Bind(wxEVT_BUTTON, &EditorSkillsPanel::onApplyClassConstraintsButton, this);
+
+	classConstraintsInnerSizer->Add(applyClassConstraintsButton, 0, wxALL, 5);
+
+
+	classConstraintsSizer->Add(classConstraintsInnerSizer, 0, wxALL, 5);
+
+	respectClassConstraintsTooltip = new wxStaticBitmap(this, wxID_ANY, wxArtProvider::GetBitmap(wxART_INFORMATION, wxART_BUTTON), wxDefaultPosition, wxDefaultSize, 0);
+	respectClassConstraintsTooltip->SetToolTip(_("Skills will be learned at maximum level class supports. This means any use will reduce affected skill to compatible level! Skills class can't learn will be unlearned."));
+
+	classConstraintsSizer->Add(respectClassConstraintsTooltip, 0, wxALIGN_CENTER_VERTICAL | wxALL, 5);
+
+	optionsSizer->Add(classConstraintsSizer, 0, wxEXPAND, 5);
 
 	mainSizer->Add(optionsSizer, 0, wxEXPAND, 5);
 }
@@ -401,7 +442,6 @@ void EditorSkillsPanel::createSkillsPanel()
 	showUnobtainableSkillsCheckbox->Bind(wxEVT_CHECKBOX, &EditorSkillsPanel::onShowUnobtainableSkillsCheck, this);
 	mainSizer->Add(showUnobtainableSkillsCheckbox, wxSizerFlags().Border(wxALL, 5));
 
-	wxGridBagSizer* skillsSizer;
 	skillsSizer = new wxGridBagSizer(5, 5);
 	skillsSizer->SetFlexibleDirection(wxBOTH);
 	skillsSizer->SetNonFlexibleGrowMode(wxFLEX_GROWMODE_SPECIFIED);
@@ -413,13 +453,13 @@ void EditorSkillsPanel::createSkillsPanel()
 	name->AddGrowableCol(0, 1)
 
 	CREATESIZER(weaponSkillsFgSizer);
-	skillsSizer->Add(weaponSkillsFgSizer, wxGBPosition(0, 0), wxGBSpan(1, 1), wxEXPAND, 5);
+	skillsSizer->Add(weaponSkillsFgSizer, wxGBPosition(0, 0), wxGBSpan(1, 1), wxEXPAND | wxALL, 5);
 
 	m_staticline121 = new wxStaticLine(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_VERTICAL);
 	skillsSizer->Add(m_staticline121, wxGBPosition(0, 1), wxGBSpan(3, 1), wxEXPAND | wxALL, 5);
 
 	CREATESIZER(armorSkillsFgSizer);
-	skillsSizer->Add(armorSkillsFgSizer, wxGBPosition(0, 2), wxGBSpan(1, 1), wxEXPAND, 5);
+	skillsSizer->Add(armorSkillsFgSizer, wxGBPosition(0, 2), wxGBSpan(1, 1), wxEXPAND | wxALL, 5);
 
 	m_staticline151 = new wxStaticLine(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL);
 	skillsSizer->Add(m_staticline151, wxGBPosition(1, 0), wxGBSpan(1, 1), wxEXPAND | wxTOP | wxBOTTOM | wxLEFT, 5);
@@ -427,28 +467,53 @@ void EditorSkillsPanel::createSkillsPanel()
 	skillsSizer->Add(m_staticline16, wxGBPosition(1, 2), wxGBSpan(1, 1), wxEXPAND | wxTOP | wxBOTTOM | wxRIGHT, 5);
 
 	CREATESIZER(magicSkillsFgSizer);
-	skillsSizer->Add(magicSkillsFgSizer, wxGBPosition(2, 0), wxGBSpan(1, 1), wxEXPAND, 5);
+	skillsSizer->Add(magicSkillsFgSizer, wxGBPosition(2, 0), wxGBSpan(1, 1), wxEXPAND | wxALL, 5);
 
 	CREATESIZER(miscSkillsFgSizer);
-	skillsSizer->Add(miscSkillsFgSizer, wxGBPosition(2, 2), wxGBSpan(1, 1), wxEXPAND, 5);
+	skillsSizer->Add(miscSkillsFgSizer, wxGBPosition(2, 2), wxGBSpan(1, 1), wxEXPAND | wxALL, 5);
 #undef CREATESIZER
-
-	// fix skills layout
 
 	// FILL WITH SKILLS
 	wxASSERT(GameData::skills.size() > 10);
+// 	widgetToSkillMap.reserve(GameData::skills.size()); // INCREASES LOAD TIME ???
+// 	widgetToWidgetIdMap.reserve(GameData::skills.size());
+	Freeze();
 	Profiler profiler;
 	profiler.startAggregate("Creating skill value choosers");
+	// unobtainable skills are at the end to not cause problems with every-row-is-other-color system
+	std::vector<PlayerSkill*> skillsInOrder;
+	skillsInOrder.resize(GameData::skills.size());
+	std::vector<PlayerSkill*> doNotGenerateSkills;
+	int i = 0;
 	for (auto& [id, skill] : GameData::skills)
 	{
+		if (skill.doNotGenerate)
+		{
+			doNotGenerateSkills.push_back(&skill);
+		}
+		else
+		{
+			skillsInOrder[i++] = &skill;
+		}
+	}
+	const int firstNewIndex = i;
+	while (i < skillsInOrder.size())
+	{
+		skillsInOrder[i] = doNotGenerateSkills[i - firstNewIndex];
+		++i;
+	}
+
+	for (PlayerSkill* skillPtr : skillsInOrder)
+	{
 		profiler.startAggregatePart();
-		EditorSkillValueChooser* chooser = new EditorSkillValueChooser(this, skill.name);
-		widgetToSkillMap[&skill] = chooser;
+		EditorSkillValueChooser* chooser = new EditorSkillValueChooser(this, skillPtr->name);
+		widgetToSkillMap[skillPtr] = chooser;
 		int id = chooser->GetId();
 		widgetToWidgetIdMap[id] = chooser;
 		chooser->setValue(SkillValue{ 0, 0 });
 		chooser->Bind(SKILL_VALUE_CHANGE, &EditorSkillsPanel::onSkillValueChange, this);
-		switch (skill.category)
+
+		switch (skillPtr->category)
 		{
 		case SKILLCAT_WEAPON:
 			weaponSkillsFgSizer->Add(chooser, wxSizerFlags().CenterVertical().Expand()); // Expand is important
@@ -463,15 +528,38 @@ void EditorSkillsPanel::createSkillsPanel()
 			miscSkillsFgSizer->Add(chooser, wxSizerFlags().CenterVertical().Expand());
 			break;
 		default:
-			wxLogError("Unknown skill category %d (skill %d, name %s)", (int)skill.category, skill.id, skill.name);
+			wxLogError("Unknown skill category %d (skill %d, name %s)", (int)skillPtr->category, skillPtr->id, skillPtr->name);
 		}
-		if (skill.doNotGenerate)
+		if (skillPtr->doNotGenerate)
 		{
 			chooser->Hide();
 		}
 		profiler.endAggregatePart();
 	}
+
+	// colors
+	static const wxColour COLOR_FIRST{ 225, 217, 227 }, COLOR_SECOND{ 189, 174, 193 };
+	const wxFlexGridSizer* const sizers[4] = { weaponSkillsFgSizer, armorSkillsFgSizer, magicSkillsFgSizer, miscSkillsFgSizer };
+	for (auto sizer : sizers)
+	{
+		bool diffColor = false;
+		for (const wxSizerItem* const item : sizer->GetChildren())
+		{
+			EditorSkillValueChooser* const chooser = static_cast<EditorSkillValueChooser*>(item->GetWindow());
+			if (!diffColor)
+			{
+				diffColor = true;
+				chooser->setRowColor(COLOR_FIRST);
+			}
+			else
+			{
+				diffColor = false;
+				chooser->setRowColor(COLOR_SECOND);
+			}
+		}
+	}
 	profiler.endAggregate();
+	Thaw();
 	wxLogMessage(profiler.getAggregateDurationStr());
 	skillToWidgetMap = invertMap(widgetToSkillMap);
 	mainSizer->Add(skillsSizer, 1, 0, 5);
@@ -482,46 +570,7 @@ void EditorSkillsPanel::createActionsPanel()
 	actionsLabel = new wxStaticText(this, wxID_ANY, _("Actions:"), wxDefaultPosition, wxDefaultSize, 0);
 	actionsLabel->Wrap(-1);
 	actionsLabel->SetFont(wxFont(12, wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL, false, wxEmptyString));
-
 	mainSizer->Add(actionsLabel, 0, wxALL | wxALIGN_CENTER_HORIZONTAL, 5);
-
-	wxBoxSizer* checkboxesSizer;
-	checkboxesSizer = new wxBoxSizer(wxHORIZONTAL);
-
-	wxStaticBoxSizer* classConstraintsSizer;
-	classConstraintsSizer = new wxStaticBoxSizer(new wxStaticBox(this, wxID_ANY, _("Respect class constraints?")), wxHORIZONTAL);
-
-	classConstraintsNone = new wxRadioButton(classConstraintsSizer->GetStaticBox(), wxID_ANY, _("No"), wxDefaultPosition, wxDefaultSize, wxRB_GROUP);
-	classConstraintsNone->SetValue(true);
-	classConstraintsSizer->Add(classConstraintsNone, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
-	classConstraintsNone->Bind(wxEVT_RADIOBUTTON, &EditorSkillsPanel::onRespectClassConstraintsNoRadio, this);
-
-	classConstraintsCurrentClass = new wxRadioButton(classConstraintsSizer->GetStaticBox(), wxID_ANY, _("Of current class"), wxDefaultPosition, wxDefaultSize, 0);
-	classConstraintsSizer->Add(classConstraintsCurrentClass, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
-	classConstraintsCurrentClass->Bind(wxEVT_RADIOBUTTON, &EditorSkillsPanel::onRespectClassConstraintsCurrentRadio, this);
-
-	classConstraintsPromotionClass = new wxRadioButton(classConstraintsSizer->GetStaticBox(), wxID_ANY, _("Of any promotion class"), wxDefaultPosition, wxDefaultSize, 0);
-	classConstraintsPromotionClass->SetToolTip(_("The one which has highest mastery possible"));
-	classConstraintsPromotionClass->Bind(wxEVT_RADIOBUTTON, &EditorSkillsPanel::onRespectClassConstraintsPromotionRadio, this);
-
-	classConstraintsSizer->Add(classConstraintsPromotionClass, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
-
-	applyClassConstraintsButton = new wxButton(classConstraintsSizer->GetStaticBox(), wxID_ANY, _("Apply right now"), wxDefaultPosition, wxDefaultSize, 0);
-	applyClassConstraintsButton->SetToolTip(_("Only applies class constraints and takes into account gold and skillpoint settings. No other action is done"));
-	applyClassConstraintsButton->Bind(wxEVT_BUTTON, &EditorSkillsPanel::onApplyClassConstraintsButton, this);
-
-	classConstraintsSizer->Add(applyClassConstraintsButton, 0, wxALL, 5);
-
-
-	checkboxesSizer->Add(classConstraintsSizer, 0, 0, 5);
-
-	respectClassConstraintsTooltip = new wxStaticBitmap(this, wxID_ANY, wxArtProvider::GetBitmap(wxART_INFORMATION, wxART_BUTTON), wxDefaultPosition, wxDefaultSize, 0);
-	respectClassConstraintsTooltip->SetToolTip(_("Skills will be learned at maximum level class supports. This means any use will reduce affected skill to compatible level! Skills class can't learn will be unlearned."));
-
-	checkboxesSizer->Add(respectClassConstraintsTooltip, 0, wxALIGN_CENTER_VERTICAL | wxALL, 5);
-
-
-	mainSizer->Add(checkboxesSizer, 0, wxEXPAND, 5);
 
 	wxStaticBoxSizer* affectSizer;
 	affectSizer = new wxStaticBoxSizer(new wxStaticBox(this, wxID_ANY, _("Affect which skill categories?")), wxHORIZONTAL);
@@ -547,7 +596,7 @@ void EditorSkillsPanel::createActionsPanel()
 	affectMiscCheckbox->Bind(wxEVT_CHECKBOX, &EditorSkillsPanel::onAffectMiscCheck, this);
 
 
-	mainSizer->Add(affectSizer, 0, 0, 5);
+	mainSizer->Add(affectSizer, 0, wxALL, 5);
 
 	wxStaticBoxSizer* learnSizer;
 	learnSizer = new wxStaticBoxSizer(new wxStaticBox(this, wxID_ANY, _("Learn")), wxHORIZONTAL);
@@ -569,15 +618,15 @@ void EditorSkillsPanel::createActionsPanel()
 	setAllSkillsToLevelSpinCtrl = new wxSpinCtrl(learnSizer->GetStaticBox(), wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 0, MAX_SKILL_LEVEL, 1);
 	learnAllSkillsAtSizer->Add(setAllSkillsToLevelSpinCtrl, 0, wxALL, 5);
 
-	wxString setAllSkillsToMasteryChoiceChoices[] = { _("None"), _("Novice"), _("Expert"), _("Master"), _("GM") };
-	int setAllSkillsToMasteryChoiceNChoices = sizeof(setAllSkillsToMasteryChoiceChoices) / sizeof(wxString);
+	static const wxString setAllSkillsToMasteryChoiceChoices[] = { _("None"), _("Novice"), _("Expert"), _("Master"), _("GM") };
+	int setAllSkillsToMasteryChoiceNChoices = MAX_MASTERY + 1; // work both with mm6 and mm7-8
 	setAllSkillsToMasteryChoice = new wxChoice(learnSizer->GetStaticBox(), wxID_ANY, wxDefaultPosition, wxDefaultSize, setAllSkillsToMasteryChoiceNChoices, setAllSkillsToMasteryChoiceChoices, 0);
 	setAllSkillsToMasteryChoice->SetSelection(1);
 	learnAllSkillsAtSizer->Add(setAllSkillsToMasteryChoice, 0, wxALL, 5);
 
 	learnButtonsSizer->Add(learnAllSkillsAtSizer, 0, wxEXPAND, 5);
 
-	learnSizer->Add(learnButtonsSizer, 0, 0, 5);
+	learnSizer->Add(learnButtonsSizer, 0, wxALL, 5);
 
 	m_staticline31 = new wxStaticLine(learnSizer->GetStaticBox(), wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_VERTICAL);
 	learnSizer->Add(m_staticline31, 0, wxEXPAND, 5);
@@ -591,5 +640,5 @@ void EditorSkillsPanel::createActionsPanel()
 
 	learnSizer->Add(learnSettingsSizer, 1, wxEXPAND, 5);
 
-	mainSizer->Add(learnSizer, 0, 0, 5);
+	mainSizer->Add(learnSizer, 0, wxALL, 5);
 }

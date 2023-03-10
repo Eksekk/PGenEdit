@@ -16,34 +16,37 @@ wxDEFINE_EVENT(SKILL_VALUE_CHANGE, wxCommandEvent);
 
 EditorSkillValueChooser::EditorSkillValueChooser(wxWindow* parent, const wxString& labelText) : wxPanel(parent)
 {
-    wxFlexGridSizer* mainSizer = new wxFlexGridSizer(MMVER == 6 ? 3 : 4, 0, 5);
-    mainSizer->SetFlexibleDirection(wxBOTH);
-    SetSizer(mainSizer);
+    wxBoxSizer* mainSizer = new wxBoxSizer(wxHORIZONTAL);
+	SetSizer(mainSizer);
+	wxFlexGridSizer* innerSizer = new wxFlexGridSizer(MMVER == 6 ? 3 : 4, 0, 5); // to allow sizer "border" to have color
+    // NOTE my first attempt used panel inside current panel and didn't work (after showing layout wasn't recalculated), adding sizer works
+	mainSizer->Add(innerSizer, wxSizerFlags(1).Expand().Border(wxALL, 5));
+    innerSizer->SetFlexibleDirection(wxBOTH);
     skillNameLabel = new wxStaticText(this, wxID_ANY, labelText);
-    mainSizer->Add(skillNameLabel, wxSizerFlags().CenterVertical()); // stretch to line up all instances of this class in skills panel
+    innerSizer->Add(skillNameLabel, wxSizerFlags().CenterVertical()); // stretch to line up all instances of this class in skills panel
     // PROPORTION DOESN'T WORK IN FLEX SIZER
     // AddGrowableCol() works
-    mainSizer->AddGrowableCol(0, 1);
+    innerSizer->AddGrowableCol(0, 1);
     skillLevel = new wxSpinCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 0, MAX_SKILL_LEVEL, 0);
     skillLevel->Bind(wxEVT_SPINCTRL, &EditorSkillValueChooser::onValueChange, this);
-    mainSizer->Add(skillLevel);
+    innerSizer->Add(skillLevel);
     static wxSize skillLevelMinSize{ 45, -1 };
     skillLevel->SetMinSize(skillLevelMinSize);
     if (MMVER > 6)
     {
-		skillLevelBonusLabel = new wxStaticText(this, wxID_ANY, "0");
+		skillLevelBonusLabel = new wxStaticText(this, wxID_ANY, "0", wxDefaultPosition, wxDefaultSize, wxST_NO_AUTORESIZE | wxALIGN_CENTER_HORIZONTAL);
 		skillLevelBonusLabel->SetToolTip("Skill bonus, like from magic rings or followers");
-		mainSizer->Add(skillLevelBonusLabel, wxSizerFlags().CenterVertical().Border(wxALL, 5));
+		innerSizer->Add(skillLevelBonusLabel, wxSizerFlags().CenterVertical().Border(wxALL, 5));
         static wxSize textExtent;
         static bool set = false;
         if (!set) // text width calculation might be expensive, caching just in case
         {
             // and I'm just in case deferring calculation until first chooser creation, because wx won't be initialized yet
             // and text width is much more complex operation than setting two-member struct (skillLevelMinSize)
-            textExtent = wxWindow::GetTextExtent("000");
+            textExtent = wxWindow::GetTextExtent("0000");
             set = true;
         }
-        skillLevelBonusLabel->SetSize(textExtent); // align evenly, even if some bonuses are 0 and some +15
+        skillLevelBonusLabel->SetMinSize(textExtent); // align evenly, even if some bonuses are 0 and some +15
     }
     else
     {
@@ -52,7 +55,9 @@ EditorSkillValueChooser::EditorSkillValueChooser(wxWindow* parent, const wxStrin
     skillMastery = new wxChoice(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, static_cast<int>(MAX_MASTERY) + 1, masteryNames.data());
 
 	skillMastery->Bind(wxEVT_CHOICE, &EditorSkillValueChooser::onValueChange, this);
-    mainSizer->Add(skillMastery);
+    innerSizer->Add(skillMastery);
+
+    Bind(wxEVT_SHOW, &EditorSkillValueChooser::onShow, this);
 }
 
 SkillValue EditorSkillValueChooser::getValue()
@@ -93,20 +98,26 @@ void EditorSkillValueChooser::setMastery(Mastery mastery)
 
 void EditorSkillValueChooser::updateSkillBonus(int value)
 {
-    skillLevelBonusLabel->SetLabel(wxString::Format("%d", value));
-    if (value > 0)
-    {
-        skillLevelBonusLabel->SetForegroundColour(*wxGREEN);
-        skillLevelBonusLabel->SetLabel("+" + skillLevelBonusLabel->GetLabel());
-    }
-    else if (value < 0)
-    {
-        skillLevelBonusLabel->SetForegroundColour(*wxRED);
-    }
-    else
-    {
-        skillLevelBonusLabel->SetForegroundColour(*wxBLACK);
-    }
+    static const wxFont FONT_NORMAL, FONT_BOLD(-1, wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD);
+    // FIRST SET COLOR, THEN LABEL, OTHERWISE COLOR MIGHT NOT BE CHANGED
+	if (value > 0)
+	{
+		skillLevelBonusLabel->SetForegroundColour(*wxGREEN);
+		skillLevelBonusLabel->SetLabel(wxString::Format("+%d", value));
+		skillLevelBonusLabel->SetOwnFont(FONT_BOLD);
+	}
+	else if (value < 0)
+	{
+		skillLevelBonusLabel->SetForegroundColour(*wxRED);
+		skillLevelBonusLabel->SetLabel(wxString::Format("%d", value));
+		skillLevelBonusLabel->SetOwnFont(FONT_BOLD);
+	}
+	else
+	{
+		skillLevelBonusLabel->SetForegroundColour(*wxBLACK);
+		skillLevelBonusLabel->SetLabel(wxString::Format("%d", value));
+		skillLevelBonusLabel->SetOwnFont(FONT_NORMAL);
+	}
 }
 
 void EditorSkillValueChooser::onValueChange(wxCommandEvent& event)
@@ -115,4 +126,17 @@ void EditorSkillValueChooser::onValueChange(wxCommandEvent& event)
     wxCommandEvent event2(SKILL_VALUE_CHANGE, GetId());
     event2.SetEventObject(this); // IMPORTANT !!!, event object is not set automatically
     ProcessWindowEvent(event2);
+}
+
+void EditorSkillValueChooser::setRowColor(const wxColour& colour)
+{
+    SetBackgroundColour(colour);
+}
+
+void EditorSkillValueChooser::onShow(wxShowEvent& event)
+{
+    if (!event.IsShown()) return;
+    this->Layout();
+    Layout();
+    GetSizer()->Layout();
 }
