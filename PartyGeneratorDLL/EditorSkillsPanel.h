@@ -50,6 +50,8 @@ private:
 
 	void updateSkillBonuses();
 	void skillConstraintErrorMsgBox(bool multiple);
+	wxStaticLine* armorMagicLine;
+	wxStaticLine* magicMiscLine;
 protected:
 
 public:
@@ -69,7 +71,7 @@ public:
 	wxStaticLine* m_staticline29;
 	wxStaticText* skillValuesLabel;
 	wxStaticLine* m_staticline151;
-	wxStaticLine* m_staticline121;
+	wxStaticLine* weaponsArmorLine;
 	wxStaticLine* m_staticline16;
 	wxStaticLine* m_staticline28;
 	wxStaticText* actionsLabel;

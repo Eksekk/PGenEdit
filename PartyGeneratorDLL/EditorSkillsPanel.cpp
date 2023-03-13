@@ -24,8 +24,6 @@ EditorSkillsPanel::EditorSkillsPanel(wxWindow* parent, int playerIndex) : wxScro
 
 	createSkillsPanel();
 
-	mainSizer->Add(0, 25, 0, 0, 5);
-
 	m_staticline28 = new wxStaticLine(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL);
 	mainSizer->Add(m_staticline28, 0, wxEXPAND | wxALL, 5);
 
@@ -438,7 +436,7 @@ void EditorSkillsPanel::createSkillsPanel()
 	mainSizer->Add(skillValuesLabel, 0, wxALL | wxALIGN_CENTER_HORIZONTAL, 5);
 
 
-	mainSizer->Add(0, 25, 0, 0, 5);
+	mainSizer->Add(0, 10, 0, 0, 5);
 	showUnobtainableSkillsCheckbox = new wxCheckBox(this, wxID_ANY, "Show unobtainable skills");
 	showUnobtainableSkillsCheckbox->SetToolTip("They are useless, unless a mod changes them");
 	showUnobtainableSkillsCheckbox->Bind(wxEVT_CHECKBOX, &EditorSkillsPanel::onShowUnobtainableSkillsCheck, this);
@@ -446,13 +444,10 @@ void EditorSkillsPanel::createSkillsPanel()
 
 	wxBoxSizer* skillsSizerHorizontal = new wxBoxSizer(wxHORIZONTAL);
 
-	wxBoxSizer* leftSkillsSizer = new wxBoxSizer(wxVERTICAL);
-	wxBoxSizer* rightSkillsSizer = new wxBoxSizer(wxVERTICAL);
-
-	m_staticline121 = new wxStaticLine(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_VERTICAL);
-	skillsSizerHorizontal->Add(leftSkillsSizer, wxSizerFlags(1).Expand());
-	skillsSizerHorizontal->Add(m_staticline121, wxSizerFlags().Expand());
-	skillsSizerHorizontal->Add(rightSkillsSizer, wxSizerFlags(1).Expand());
+	weaponsArmorLine = new wxStaticLine(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_VERTICAL);
+	armorMagicLine = new wxStaticLine(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_VERTICAL);
+	magicMiscLine = new wxStaticLine(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_VERTICAL);
+	// -----------> skillsSizerHorizontal->Add(weaponsArmorLine, wxSizerFlags().Expand());
 
 	const wxSizerFlags skillSizerFlags = wxSizerFlags().Expand().Border(wxALL, 5);
 
@@ -461,37 +456,44 @@ void EditorSkillsPanel::createSkillsPanel()
 	static wxSizerFlags skillCategoriesLabelFlags = wxSizerFlags().Border(wxBOTTOM, 5);
 
 	wxBoxSizer* weaponSkillsSizer = new wxBoxSizer(wxVERTICAL);
-	leftSkillsSizer->Add(weaponSkillsSizer, skillSizerFlags);
 	wxStaticText* weaponSkillsSizerLabel = new wxStaticText(this, wxID_ANY, _("Weapons"));
 	weaponSkillsSizerLabel->SetOwnFont(skillCategoriesLabelFont);
 	weaponSkillsSizerLabel->SetOwnForegroundColour(skillCategoriesLabelColour);
 	weaponSkillsSizer->Add(weaponSkillsSizerLabel, skillCategoriesLabelFlags);
 
+	skillsSizerHorizontal->Add(weaponSkillsSizer, skillSizerFlags);
+	skillsSizerHorizontal->Add(weaponsArmorLine, wxSizerFlags().Expand());
+
 	wxBoxSizer* armorSkillsSizer = new wxBoxSizer(wxVERTICAL);
-	rightSkillsSizer->Add(armorSkillsSizer, skillSizerFlags);
 	wxStaticText* armorSkillsSizerLabel = new wxStaticText(this, wxID_ANY, _("Armor"));
 	armorSkillsSizerLabel->SetOwnFont(skillCategoriesLabelFont);
 	armorSkillsSizerLabel->SetOwnForegroundColour(skillCategoriesLabelColour);
 	armorSkillsSizer->Add(armorSkillsSizerLabel, skillCategoriesLabelFlags);
 
-	m_staticline151 = new wxStaticLine(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL);
-	leftSkillsSizer->Add(m_staticline151, wxSizerFlags().Expand().Border(wxALL & (~wxRIGHT), 5));
-	m_staticline16 = new wxStaticLine(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL);
-	rightSkillsSizer->Add(m_staticline16, wxSizerFlags().Expand().Border(wxALL & (~wxLEFT), 5));
+	skillsSizerHorizontal->Add(armorSkillsSizer, skillSizerFlags);
+	skillsSizerHorizontal->Add(armorMagicLine, wxSizerFlags().Expand());
+
+// 	m_staticline151 = new wxStaticLine(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL);
+// 	leftSkillsSizer->Add(m_staticline151, wxSizerFlags().Expand().Border(wxALL & (~wxRIGHT), 5));
+// 	m_staticline16 = new wxStaticLine(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL);
+// 	rightSkillsSizer->Add(m_staticline16, wxSizerFlags().Expand().Border(wxALL & (~wxLEFT), 5));
 
 	wxBoxSizer* magicSkillsSizer = new wxBoxSizer(wxVERTICAL);
-	leftSkillsSizer->Add(magicSkillsSizer, skillSizerFlags);
 	wxStaticText* magicSkillsSizerLabel = new wxStaticText(this, wxID_ANY, _("Magic"));
 	magicSkillsSizerLabel->SetOwnFont(skillCategoriesLabelFont);
 	magicSkillsSizerLabel->SetOwnForegroundColour(skillCategoriesLabelColour);
 	magicSkillsSizer->Add(magicSkillsSizerLabel, skillCategoriesLabelFlags);
 
+	skillsSizerHorizontal->Add(magicSkillsSizer, skillSizerFlags);
+	skillsSizerHorizontal->Add(magicMiscLine, wxSizerFlags().Expand());
+
 	wxBoxSizer* miscSkillsSizer = new wxBoxSizer(wxVERTICAL);
-	rightSkillsSizer->Add(miscSkillsSizer, skillSizerFlags);
 	wxStaticText* miscSkillsSizerLabel = new wxStaticText(this, wxID_ANY, _("Misc"));
 	miscSkillsSizerLabel->SetOwnFont(skillCategoriesLabelFont);
 	miscSkillsSizerLabel->SetOwnForegroundColour(skillCategoriesLabelColour);
 	miscSkillsSizer->Add(miscSkillsSizerLabel, skillCategoriesLabelFlags);
+
+	skillsSizerHorizontal->Add(miscSkillsSizer, skillSizerFlags);
 
 	// FILL WITH SKILLS
 	wxASSERT(GameData::skills.size() > 10);
@@ -559,7 +561,7 @@ void EditorSkillsPanel::createSkillsPanel()
 	}
 
 	// colors
-	static const wxColour COLOR_FIRST{ 240, 238, 192 }, COLOR_SECOND{ 214, 212, 169 };
+	static const wxColour COLOR_FIRST{ 232, 231, 200 }, COLOR_SECOND{ 212, 211, 182 };
 	const wxBoxSizer* const sizers[4] = { weaponSkillsSizer, armorSkillsSizer, magicSkillsSizer, miscSkillsSizer };
 	for (auto sizer : sizers)
 	{
@@ -572,12 +574,12 @@ void EditorSkillsPanel::createSkillsPanel()
 			if (!diffColor)
 			{
 				diffColor = true;
-				chooser->setRowColor(COLOR_FIRST);
+				//chooser->setRowColor(COLOR_FIRST);
 			}
 			else
 			{
 				diffColor = false;
-				chooser->setRowColor(COLOR_SECOND);
+				//chooser->setRowColor(COLOR_SECOND);
 			}
 		}
 	}
@@ -586,6 +588,8 @@ void EditorSkillsPanel::createSkillsPanel()
 	wxLogMessage(profiler.getAggregateDurationStr());
 	skillToWidgetMap = invertMap(widgetToSkillMap);
 	mainSizer->Add(skillsSizerHorizontal, 1, 0, 5);
+
+	mainSizer->Add(0, 10, 0, 0, 5);
 }
 
 void EditorSkillsPanel::createActionsPanel()

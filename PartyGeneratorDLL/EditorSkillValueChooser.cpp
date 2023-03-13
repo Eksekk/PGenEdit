@@ -18,15 +18,11 @@ EditorSkillValueChooser::EditorSkillValueChooser(wxWindow* parent, const wxStrin
 {
     wxBoxSizer* mainSizer = new wxBoxSizer(wxHORIZONTAL);
 	SetSizer(mainSizer);
-	wxFlexGridSizer* innerSizer = new wxFlexGridSizer(MMVER == 6 ? 3 : 4, 0, 5); // to allow sizer "border" to have color
+	wxBoxSizer* innerSizer = new wxBoxSizer(wxHORIZONTAL); // to allow sizer "border" to have color
     // NOTE my first attempt used panel inside current panel and didn't work (after showing layout wasn't recalculated), adding sizer works
 	mainSizer->Add(innerSizer, wxSizerFlags(1).Expand().Border(wxALL, 5));
-    innerSizer->SetFlexibleDirection(wxBOTH);
     skillNameLabel = new wxStaticText(this, wxID_ANY, labelText);
-    innerSizer->Add(skillNameLabel, wxSizerFlags().CenterVertical()); // stretch to line up all instances of this class in skills panel
-    // PROPORTION DOESN'T WORK IN FLEX SIZER
-    // AddGrowableCol() works
-    innerSizer->AddGrowableCol(0, 1);
+    innerSizer->Add(skillNameLabel, wxSizerFlags(1).CenterVertical().Border(wxRIGHT, 5)); // stretch to line up all instances of this class in skills panel
     skillLevel = new wxSpinCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 0, MAX_SKILL_LEVEL, 0);
     skillLevel->Bind(wxEVT_SPINCTRL, &EditorSkillValueChooser::onValueChange, this);
     innerSizer->Add(skillLevel);
@@ -55,7 +51,7 @@ EditorSkillValueChooser::EditorSkillValueChooser(wxWindow* parent, const wxStrin
     skillMastery = new wxChoice(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, static_cast<int>(MAX_MASTERY) + 1, masteryNames.data());
 
 	skillMastery->Bind(wxEVT_CHOICE, &EditorSkillValueChooser::onValueChange, this);
-    innerSizer->Add(skillMastery);
+	innerSizer->Add(skillMastery);
 
     Bind(wxEVT_SHOW, &EditorSkillValueChooser::onShow, this);
 }

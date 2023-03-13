@@ -12,6 +12,7 @@ public:
 	std::string name, shortName, description;
 	std::array<int, 5> manaCostByMastery, damageAddByMastery;
 	std::array<double, 5> averageDamagePerSkillByMastery;
+	std::array<std::string, 5> rankDescriptions;
 	std::vector<int> damageTypes; // TODO: enum/map
 	PlayerSkill* schoolSkill;
 	Mastery minimumMasteryToLearn;

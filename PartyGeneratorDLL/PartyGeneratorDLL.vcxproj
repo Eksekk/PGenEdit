@@ -139,11 +139,6 @@
     <Text Include="Text.txt" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\GUI test\GUI test.vcxproj">
-      <Project>{d4372a78-05c2-4eb0-b852-7e08a97ec8d9}</Project>
-    </ProjectReference>
-  </ItemGroup>
-  <ItemGroup>
     <None Include="Lib.def" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
