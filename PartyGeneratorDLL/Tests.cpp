@@ -211,30 +211,31 @@ std::vector<wxString> Tests::testGui()
 	CURRENT_PARTY_SIZE = MAX_PLAYERS;
 
 	auto eWindow = wxGetApp().editorMainWindow;
-	for (int i = 0; i < MAX_PLAYERS; ++i)
-	{
-		eWindow->playerWindows[i]->Freeze();
-		myassert(eWindow->playerWindows[i]->playerIndex == i, i, eWindow->playerWindows[i]->playerIndex);
-		bool wasVisiblePreviously = eWindow->playerWindows[i]->IsShown();
-		eWindow->playerWindows[i]->Hide();
-		wxCommandEvent event(wxEVT_BUTTON, eWindow->playerButtonIds[i]);
-		event.SetEventObject(eWindow);
-		// THE ONLY WAY TO PROCESS EVENTS BOUND TO BUTTONS ETC AND HANDLED IN WINDOW
-		// frame's ProcessEvent() doesn't work when event from button is bound to frame
-		// and button's method is protected
-		eWindow->playerButtons[i]->HandleWindowEvent(event);
-		myassert(eWindow->playerWindows[i]->IsShown(), i);
-		eWindow->playerWindows[i]->Show(wasVisiblePreviously);
-		eWindow->playerWindows[i]->Thaw();
-	}
-
-	bool wasVisiblePreviously = eWindow->IsShown();
-	eWindow->Show();
-	wxCloseEvent event(wxEVT_CLOSE_WINDOW);
-	// here process event works, because event is directly bound to frame (calling its Bind() method, not button's), also we friended "Tests" class
-	eWindow->ProcessEvent(event);
-	myassert(!eWindow->IsShown());
-	eWindow->Show(wasVisiblePreviously);
+	// DISABLED BECAUSE BLINKING WINDOWS ARE ANNOYING
+// 	for (int i = 0; i < MAX_PLAYERS; ++i)
+// 	{
+// 		eWindow->playerWindows[i]->Freeze();
+// 		myassert(eWindow->playerWindows[i]->playerIndex == i, i, eWindow->playerWindows[i]->playerIndex);
+// 		bool wasVisiblePreviously = eWindow->playerWindows[i]->IsShown();
+// 		eWindow->playerWindows[i]->Hide();
+// 		wxCommandEvent event(wxEVT_BUTTON, eWindow->playerButtonIds[i]);
+// 		event.SetEventObject(eWindow);
+// 		// THE ONLY WAY TO PROCESS EVENTS BOUND TO BUTTONS ETC AND HANDLED IN WINDOW
+// 		// frame's ProcessEvent() doesn't work when event from button is bound to frame
+// 		// and button's method is protected
+// 		eWindow->playerButtons[i]->HandleWindowEvent(event);
+// 		myassert(eWindow->playerWindows[i]->IsShown(), i);
+// 		eWindow->playerWindows[i]->Show(wasVisiblePreviously);
+// 		eWindow->playerWindows[i]->Thaw();
+// 	}
+// 
+// 	bool wasVisiblePreviously = eWindow->IsShown();
+// 	eWindow->Show();
+// 	wxCloseEvent event(wxEVT_CLOSE_WINDOW);
+// 	// here process event works, because event is directly bound to frame (calling its Bind() method, not button's), also we friended "Tests" class
+// 	eWindow->ProcessEvent(event);
+// 	myassert(!eWindow->IsShown());
+// 	eWindow->Show(wasVisiblePreviously);
 
 	Player* player = new Player;
 	memset(player, 0, sizeof(Player));
@@ -257,9 +258,16 @@ std::vector<wxString> Tests::testGui()
 		}
 		myassert(i < CURRENT_PARTY_SIZE ? eWindow->playerButtons[i]->IsEnabled() : !eWindow->playerButtons[i]->IsEnabled(), i);
 	}
+
+	eWindow->ProcessEvent(event2);
+
+	auto playerWindow = eWindow->playerWindows[1];
+
+	playerWindow->HitTest(0, 0)
+
 	players[1] = oldPlayer;
 	CURRENT_PARTY_SIZE = oldCURRENT_PARTY_SIZE;
-	eWindow->ProcessEvent(event2);
+
 	delete player;
 
 	return mergeVectors({ errors, testAlignmentRadioBox() });

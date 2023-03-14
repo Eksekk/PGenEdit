@@ -25,7 +25,7 @@ template<typename Player>
 int TemplatedPlayerStructAccessor<Player>::getSkillBonus(int skillId)
 {
 	if (MMVER == 6) return 0;
-	SkillValue fullValue = splitSkill(callMemoryAddress<int>(mmv(0, 0x48F87A, 0x48EF4F), 1, getPlayers()[getPlayerIndex()], skillId));
+	SkillValue fullValue = splitSkill(callMemoryAddress<int>(mmv(0, 0x48F87A, 0x48EF4F), 1, getPlayerToAffect(), skillId));
 	SkillValue baseValue = getSkill(skillId);
 	return fullValue.level - baseValue.level;
 }
@@ -40,6 +40,19 @@ template<typename Player>
 Player** TemplatedPlayerStructAccessor<Player>::getPlayers()
 {
 	return (Player**)players;
+}
+
+template<typename Player>
+Player* TemplatedPlayerStructAccessor<Player>::getPlayerToAffect()
+{
+	if (playerOverride)
+	{
+		return reinterpret_cast<Player*>(playerOverride);
+	}
+	else
+	{
+		return getPlayers()[getPlayerIndex()];
+	}
 }
 
 template<typename Player>
@@ -160,28 +173,28 @@ TemplatedPlayerStructAccessor<Player>::getPlayerNames()
 template<typename Player>
 PlayerClass* TemplatedPlayerStructAccessor<Player>::getClassPtr()
 {
-	Player* pl = getPlayers()[getPlayerIndex()];
+	Player* pl = getPlayerToAffect();
 	return &(GameData::classes.at(pl->clas));
 }
 
 template<typename Player>
 int TemplatedPlayerStructAccessor<Player>::getClass()
 {
-	Player* pl = getPlayers()[getPlayerIndex()];
+	Player* pl = getPlayerToAffect();
 	return pl->clas;
 }
 
 template<typename Player>
 SkillValue TemplatedPlayerStructAccessor<Player>::getSkill(PlayerSkill* skill)
 {
-	Player* pl = getPlayers()[getPlayerIndex()];
+	Player* pl = getPlayerToAffect();
 	return splitSkill(pl->skills.at(skill->id));
 }
 
 template<typename Player>
 SkillValue TemplatedPlayerStructAccessor<Player>::getSkill(int skillId)
 {
-	Player* pl = getPlayers()[getPlayerIndex()];
+	Player* pl = getPlayerToAffect();
 	return splitSkill(pl->skills.at(skillId));
 }
 
@@ -189,7 +202,7 @@ template<typename Player>
 void TemplatedPlayerStructAccessor<Player>::setBiography(const std::string& biography)
 {
 	wxASSERT_MSG(MMVER == 8, "This function is for MM8 only");
-	Player* pl = getPlayers()[getPlayerIndex()];
+	Player* pl = getPlayerToAffect();
 	if constexpr (SAME(Player, mm8::Player))
 	{
 		size_t max = getBiographyMaxUsableLength();
@@ -208,7 +221,7 @@ void TemplatedPlayerStructAccessor<Player>::setBiography(const std::string& biog
 template<typename Player>
 void TemplatedPlayerStructAccessor<Player>::setName(const std::string& name)
 {
-	Player* pl = getPlayers()[getPlayerIndex()];
+	Player* pl = getPlayerToAffect();
 	size_t max = getNameMaxUsableLength();
 	std::string nameToSet = name;
 	if (name.size() > max)
@@ -225,7 +238,7 @@ template<typename Player>
 std::string TemplatedPlayerStructAccessor<Player>::getBiography()
 {
 	wxASSERT_MSG(MMVER == 8, "This function is for MM8 only");
-	Player* pl = getPlayers()[getPlayerIndex()];
+	Player* pl = getPlayerToAffect();
 	if constexpr (SAME(Player, mm8::Player))
 	{
 		return std::string(pl->biography.data());
@@ -239,7 +252,7 @@ std::string TemplatedPlayerStructAccessor<Player>::getBiography()
 template<typename Player>
 std::string TemplatedPlayerStructAccessor<Player>::getName()
 {
-	Player* pl = getPlayers()[getPlayerIndex()];
+	Player* pl = getPlayerToAffect();
 	return std::string(pl->name.data());
 }
 
@@ -263,7 +276,7 @@ int TemplatedPlayerStructAccessor<Player>::getLevel()
 template<typename Player>
 void TemplatedPlayerStructAccessor<Player>::setExperience(int64_t value, bool affectLevel /*= true*/)
 {
-	Player* pl = getPlayers()[getPlayerIndex()];
+	Player* pl = getPlayerToAffect();
 	int64_t old = pl->experience;
 	pl->experience = value;
 	if (affectLevel && value < old)
@@ -275,7 +288,7 @@ void TemplatedPlayerStructAccessor<Player>::setExperience(int64_t value, bool af
 template<typename Player>
 int64_t TemplatedPlayerStructAccessor<Player>::getExperience()
 {
-	Player* pl = getPlayers()[getPlayerIndex()];
+	Player* pl = getPlayerToAffect();
 	return pl->experience;
 }
 
@@ -309,7 +322,7 @@ bool TemplatedPlayerStructAccessor<Player>::setSkill(PlayerSkill* skill, SkillVa
 	{
 		return false;
 	}
-	Player* pl = getPlayers()[getPlayerIndex()];
+	Player* pl = getPlayerToAffect();
 	value = value.mastery == MASTERY_NONE ? SkillValue{ 0, 0 } : value; // if user sets mastery to none, unlearn skill
 	pl->skills.at(skill->id) = joinSkill(value);
 	setSkillPoints(sp);
@@ -320,7 +333,7 @@ bool TemplatedPlayerStructAccessor<Player>::setSkill(PlayerSkill* skill, SkillVa
 template<typename Player>
 bool TemplatedPlayerStructAccessor<Player>::setSkills(const std::vector<PlayerSkillValue>& values, const SkillOptions& options /*= SkillOptions()*/)
 {
-	Player* pl = getPlayers()[getPlayerIndex()];
+	Player* pl = getPlayerToAffect();
 	int sp = getSkillPoints();
 	int gold = partyAccessor->getGold();
 	bool ret = true;
@@ -386,7 +399,7 @@ template<typename Player>
 std::vector<PlayerSkillValue>
 TemplatedPlayerStructAccessor<Player>::getSkills()
 {
-	Player* pl = getPlayers()[getPlayerIndex()];
+	Player* pl = getPlayerToAffect();
 	std::vector<PlayerSkillValue> ret;
 	ret.reserve(GameData::skills.size());
 	for (int i = 0; i < pl->skills.size(); ++i)
@@ -428,20 +441,20 @@ void TemplatedPlayerStructAccessor<Player>::setSkillPoints(int value)
 {
 	// int is i4, but let's add check anyway
 	boundsCheck(value, -4);
-	getPlayers()[getPlayerIndex()]->skillPoints = value;
+	getPlayerToAffect()->skillPoints = value;
 }
 
 template<typename Player>
 int TemplatedPlayerStructAccessor<Player>::getSkillPoints()
 {
-	return getPlayers()[getPlayerIndex()]->skillPoints;
+	return getPlayerToAffect()->skillPoints;
 }
 
 template<typename Player>
 void TemplatedPlayerStructAccessor<Player>::setStatBase(int stat, int value)
 {
 	checkStatValidity(stat);
-	Player* pl = getPlayers()[getPlayerIndex()];
+	Player* pl = getPlayerToAffect();
 	if (existsInVector(STATS_PRIMARY, stat) || existsInVector(STATS_RESISTANCES, stat) || stat == STAT_LEVEL)
 	{
 		boundsCheck(value, boundsByType<int16_t>);
@@ -463,7 +476,7 @@ template<typename Player>
 int TemplatedPlayerStructAccessor<Player>::getStatBonus(int stat)
 {
 	checkStatValidity(stat);
-	Player* pl = getPlayers()[getPlayerIndex()];
+	Player* pl = getPlayerToAffect();
 	if constexpr (!SAME(Player, mm8::Player))
 	{
 		if (existsInVector(STATS_MM67_BONUSES, stat))
@@ -495,7 +508,7 @@ template<typename Player>
 void TemplatedPlayerStructAccessor<Player>::setStatBonus(int stat, int value)
 {
 	checkStatValidity(stat);
-	Player* pl = getPlayers()[getPlayerIndex()];
+	Player* pl = getPlayerToAffect();
 	if constexpr (!SAME(Player, mm8::Player))
 	{
 		if (existsInVector(STATS_MM67_BONUSES, stat))
@@ -614,7 +627,7 @@ template<typename Player>
 int TemplatedPlayerStructAccessor<Player>::getStatBase(int stat)
 {
 	checkStatValidity(stat);
-	Player* pl = getPlayers()[getPlayerIndex()];
+	Player* pl = getPlayerToAffect();
 	// TODO why these getBaseAccuracy() etc. methods exist?
 	if (existsInVector(STATS_PRIMARY, stat) || existsInVector(STATS_RESISTANCES, stat) || stat == STAT_LEVEL)
 	{
@@ -726,6 +739,43 @@ int PlayerStructAccessor::getPlayerIndex()
 	{
 		wxASSERT_MSG(playerIndex < CURRENT_PARTY_SIZE, wxString::Format("Invalid player index %d", playerIndex));
 		return std::clamp(playerIndex, 0, CURRENT_PARTY_SIZE - 1);
+	}
+}
+
+void PlayerStructAccessor::setPlayerOverride(void* ptr)
+{
+	playerOverride = ptr;
+}
+
+void PlayerStructAccessor::clearPlayerOverride()
+{
+	playerOverride = nullptr;
+}
+
+PlayerStructAccessor::PlayerStructAccessor() : playerOverride(nullptr), playerIndex(0)
+{
+
+}
+
+void PlayerStructAccessor::unrandomizeRandomPlayer()
+{
+	static std::mt19937 gen(std::random_device{}());
+	static std::array<std::uniform_int_distribution<int>, 5> dists{ std::uniform_int_distribution<int>(0, 0), std::uniform_int_distribution<int>(0, 1),
+		std::uniform_int_distribution<int>(0, 2), std::uniform_int_distribution<int>(0, 3), std::uniform_int_distribution<int>(0, 4) };
+	if (playerIndex == PLAYER_RANDOM)
+	{
+		if (CURRENT_PARTY_SIZE < 0 || CURRENT_PARTY_SIZE > 5)
+		{
+			wxLogError("Invalid current party size (%d)", CURRENT_PARTY_SIZE);
+		}
+		else
+		{
+			playerIndex = dists[std::max(0, CURRENT_PARTY_SIZE - 1)](gen);
+		}
+	}
+	else
+	{
+		wxLogWarning("Random player index expected, but current index is %d", playerIndex);
 	}
 }
 

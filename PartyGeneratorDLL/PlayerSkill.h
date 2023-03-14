@@ -31,7 +31,7 @@ struct PlayerSkillValue
 
 enum SkillType
 {
-	SKILL_GENERIC = 0, // see above
+	SKILL_GENERIC = 0,
 	SKILL_MELEE,
 	SKILL_RANGED,
 	SKILL_DEFENSIVE,

@@ -33,7 +33,16 @@ class PlayerStructAccessor
 protected:
 	int playerIndex = 0;
 	int getPlayerIndex();
+	void* playerOverride; // mainly for testing - if it's not null, will always be used instead of index
 public:
+	void setPlayerOverride(void* ptr);
+	void clearPlayerOverride();
+
+	PlayerStructAccessor();
+
+	// because indexes are used until they are changed, passing PLAYER_RANDOM to forPlayer() will make every call use random player
+	// this function simply randomizes player index if it's PLAYER_RANDOM, so each call will affect random, but same player (across each call)
+	void unrandomizeRandomPlayer();
 	// NOT WORKING - accesses next "instance" of accessor instead of setting player
 	/*PlayerStructAccessor& operator[](int index);
 	PlayerStructAccessor& operator[](void* player);*/
@@ -210,9 +219,8 @@ public:
 template<typename Player>
 class TemplatedPlayerStructAccessor : public PlayerStructAccessor
 {
-	virtual ~TemplatedPlayerStructAccessor() noexcept;
-
 	Player** getPlayers();
+	Player* getPlayerToAffect();
 
 	template<typename FieldType>
 	struct BaseOrBonusFieldPointer
@@ -226,8 +234,11 @@ class TemplatedPlayerStructAccessor : public PlayerStructAccessor
 	template<typename FieldType>
 	static std::unordered_map<int, FieldType Player::*> singleTypeFieldToStatMap; // either base or bonus, this includes hp/sp because "base" is 4 byte, while bonus 1
 
-	// C++ limitation, no static initializers for template classes (almost sure)
 public:
+	TemplatedPlayerStructAccessor();
+	virtual ~TemplatedPlayerStructAccessor() noexcept;
+
+	// C++ limitation, no static initializers for template classes (almost sure)
 	static void _initMaps();;
 
 	int getStatBase(int stat) override;
@@ -304,6 +315,12 @@ public:
 
 	virtual int getSkillBonus(int skillId) override;
 };
+
+template<typename Player>
+TemplatedPlayerStructAccessor<Player>::TemplatedPlayerStructAccessor() : PlayerStructAccessor()
+{
+
+}
 
 using PlayerStructAccessor_6 = TemplatedPlayerStructAccessor<mm6::Player>;
 using PlayerStructAccessor_7 = TemplatedPlayerStructAccessor<mm7::Player>;
