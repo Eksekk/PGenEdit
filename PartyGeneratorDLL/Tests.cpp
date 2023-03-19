@@ -263,8 +263,6 @@ std::vector<wxString> Tests::testGui()
 
 	auto playerWindow = eWindow->playerWindows[1];
 
-	playerWindow->HitTest(0, 0)
-
 	players[1] = oldPlayer;
 	CURRENT_PARTY_SIZE = oldCURRENT_PARTY_SIZE;
 

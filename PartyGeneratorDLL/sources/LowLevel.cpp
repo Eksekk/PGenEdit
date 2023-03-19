@@ -5,17 +5,116 @@
 #include <cstring>
 #include "wx/debug.h"
 
-std::unordered_map<uint32_t, std::vector<uint8_t> > hookRestoreList;
-
-void storeBytes(uint32_t addr, uint32_t size)
+void HookElement::enable(bool enable)
 {
-	hookRestoreList[addr] = std::vector<uint8_t>((uint8_t*)addr, (uint8_t*)(addr + size));
+	if (enable && !active)
+	{
+		active = true;
+		switch (type)
+		{
+
+		case HOOK_ELEM_TYPE_PATCH_DATA:
+		{
+			patchBytes(address, reinterpret_cast<void*>(target), dataSize, &restoreData);
+		}
+		break;
+		case HOOK_ELEM_TYPE_CALL_RAW:
+		{
+			hookCallRaw(address, reinterpret_cast<void*>(target), &restoreData, hookSize);
+		}
+		break;
+		case HOOK_ELEM_TYPE_CALL:
+		{
+			wxFAIL_MSG("Not implemented yet");
+		}
+		break;
+		case HOOK_ELEM_TYPE_JUMP:
+		{
+			hookJumpRaw(address, reinterpret_cast<void*>(target), &restoreData, hookSize);
+		}
+		break;
+		default:
+		{
+			wxFAIL_MSG(wxString::Format("Unknown hook type %d", (int)type));
+		}
+
+		}
+	}
+	else if (!enable && active)
+	{
+		active = false;
+		patchBytes(address, restoreData.data(), restoreData.size(), nullptr);
+	}
 }
 
-void hookCall(uint32_t addr, void* func, uint32_t size)
+void HookElement::disable()
+{
+	enable(false);
+}
+
+void HookElement::toggle()
+{
+	enable(!active);
+}
+
+inline bool HookElement::isActive() const
+{
+	return active;
+}
+
+HookElement::HookElement() : active(false), type(HOOK_ELEM_TYPE_CALL_RAW), address(0), target(0)
+{
+}
+
+void Hook::enable(bool enable)
+{
+	for (auto& elem : elements)
+	{
+		elem.enable(enable);
+	}
+}
+
+void Hook::disable()
+{
+	enable(false);
+}
+
+void Hook::toggle()
+{
+	enable(!active);
+}
+
+inline bool Hook::isActive() const
+{
+	return active;
+}
+
+bool Hook::isFullyActive() const
+{
+	bool yes = active;
+	for (const auto& elem : elements)
+	{
+		yes = !elem.isActive() ? false : yes;
+	}
+	return yes;
+}
+
+Hook::Hook() : active(false)
+{
+}
+
+void storeBytes(std::vector<uint8_t>* storeAt, uint32_t addr, uint32_t size)
+{
+	if (storeAt)
+	{
+		*storeAt = std::vector<uint8_t>((uint8_t*)addr, (uint8_t*)(addr + size));
+	}
+}
+
+void hookCallRaw(uint32_t addr, void* func, std::vector<uint8_t>* storeAt, uint32_t size)
 {
 	assert(size >= 5);
-	storeBytes(addr, size);
+	storeBytes(storeAt, addr, size);
 	DWORD tmp;
 	VirtualProtect((void*)addr, size, PAGE_EXECUTE_READWRITE, &tmp);
 	byte(addr) = 0xE8; // call rel32
@@ -27,10 +126,10 @@ void hookCall(uint32_t addr, void* func, uint32_t size)
 	VirtualProtect((void*)addr, size, tmp, &tmp);
 }
 
-void hookJump(uint32_t addr, void* func, uint32_t size)
+void hookJumpRaw(uint32_t addr, void* func, std::vector<uint8_t>* storeAt, uint32_t size)
 {
 	assert(size >= 5);
-	storeBytes(addr, size);
+	storeBytes(storeAt, addr, size);
 	DWORD tmp;
 	VirtualProtect((void*)addr, size, PAGE_EXECUTE_READWRITE, &tmp);
 	byte(addr) = 0xE9; // jmp rel32
@@ -42,57 +141,45 @@ void hookJump(uint32_t addr, void* func, uint32_t size)
 	VirtualProtect((void*)addr, size, tmp, &tmp);
 }
 
-void patchByte(uint32_t addr, uint8_t val, bool store = false)
+void patchByte(uint32_t addr, uint8_t val, std::vector<uint8_t>* storeAt)
 {
-	if (store)
-	{
-		storeBytes(addr, 1);
-	}
+	storeBytes(storeAt, addr, 1);
 	DWORD tmp;
 	VirtualProtect((void*)addr, 1, PAGE_EXECUTE_READWRITE, &tmp);
 	byte(addr) = val;
 	VirtualProtect((void*)addr, 1, tmp, &tmp);
 }
 
-void patchWord(uint32_t addr, uint16_t val, bool store = false)
+void patchWord(uint32_t addr, uint16_t val, std::vector<uint8_t>* storeAt)
 {
-	if (store)
-	{
-		storeBytes(addr, 2);
-	}
+	storeBytes(storeAt, addr, 2);
 	DWORD tmp;
 	VirtualProtect((void*)addr, 2, PAGE_EXECUTE_READWRITE, &tmp);
 	word(addr) = val;
 	VirtualProtect((void*)addr, 2, tmp, &tmp);
 }
 
-void patchDword(uint32_t addr, uint32_t val, bool store = false)
+void patchDword(uint32_t addr, uint32_t val, std::vector<uint8_t>* storeAt)
 {
-	if (store)
-	{
-		storeBytes(addr, 4);
-	}
+	storeBytes(storeAt, addr, 4);
 	DWORD tmp;
 	VirtualProtect((void*)addr, 4, PAGE_EXECUTE_READWRITE, &tmp);
 	dword(addr) = val;
 	VirtualProtect((void*)addr, 4, tmp, &tmp);
 }
 
-void patchQword(uint32_t addr, uint64_t val, bool store = false)
+void patchQword(uint32_t addr, uint64_t val, std::vector<uint8_t>* storeAt)
 {
-	if (store)
-	{
-		storeBytes(addr, 8);
-	}
+	storeBytes(storeAt, addr, 8);
 	DWORD tmp;
 	VirtualProtect((void*)addr, 8, PAGE_EXECUTE_READWRITE, &tmp);
 	qword(addr) = val;
 	VirtualProtect((void*)addr, 8, tmp, &tmp);
 }
 
-void eraseCode(uint32_t addr, uint32_t size)
+void eraseCode(uint32_t addr, uint32_t size, std::vector<uint8_t>* storeAt)
 {
-	storeBytes(addr, size);
+	storeBytes(storeAt, addr, size);
 	DWORD tmp;
 	VirtualProtect((void*)addr, size, PAGE_EXECUTE_READWRITE, &tmp);
 	memset((void*)addr, 0x90, size);
@@ -104,12 +191,9 @@ void eraseCode(uint32_t addr, uint32_t size)
 	VirtualProtect((void*)addr, size, tmp, &tmp);
 }
 
-void patchBytes(uint32_t addr, void* bytes, uint32_t size, bool store = true)
+void patchBytes(uint32_t addr, void* bytes, uint32_t size, std::vector<uint8_t>* storeAt)
 {
-	if (store)
-	{
-		storeBytes(addr, size);
-	}
+	storeBytes(storeAt, addr, size);
 	DWORD tmp;
 	VirtualProtect((void*)addr, size, PAGE_EXECUTE_READWRITE, &tmp);
 	memcpy((void*)addr, bytes, size);
@@ -118,22 +202,10 @@ void patchBytes(uint32_t addr, void* bytes, uint32_t size, bool store = true)
 
 void removeHooks()
 {
-	for (auto& [address, data] : hookRestoreList)
+	for (auto& [id, hook]: hooks)
 	{
-		patchBytes(address, data.data(), data.size(), false);
+		hook.disable();
 	}
-	hookRestoreList.clear();
-}
-
-void removeHook(uint32_t addr)
-{
-	if (!hookRestoreList.contains(addr))
-	{
-		wxLogFatalError("Attempt to remove nonexisting hook at %X", addr);
-	}
-	auto& data = hookRestoreList[addr];
-	patchBytes(addr, data.data(), data.size(), false);
-	hookRestoreList.erase(addr);
 }
 
 std::unordered_map<uint32_t, HookFunc> hookFuncMap;

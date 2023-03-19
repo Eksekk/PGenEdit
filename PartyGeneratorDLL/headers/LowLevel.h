@@ -8,6 +8,47 @@
 // - integration with lua
 // 
 
+enum HookElementType
+{
+	HOOK_ELEM_TYPE_CALL_RAW, // simple call hook
+	HOOK_ELEM_TYPE_CALL, // mmext-like call hook
+	HOOK_ELEM_TYPE_JUMP,
+	HOOK_ELEM_TYPE_PATCH_DATA
+};
+
+class HookElement
+{
+	bool active;
+public:
+	HookElementType type;
+	uint32_t address;
+	uint32_t target;
+	uint32_t hookSize;
+	uint32_t dataSize;
+	std::vector<uint8_t> restoreData;
+
+	void enable(bool enable = true);
+	void disable();
+	void toggle();
+	inline bool isActive() const;
+	HookElement();
+};
+
+class Hook
+{
+	bool active;
+public:
+	std::vector<HookElement> elements;
+	void enable(bool enable = true);
+	void disable();
+	void toggle();
+	inline bool isActive() const;
+	bool isFullyActive() const; // every element is active
+	Hook();
+};
+
+extern std::unordered_map<int, Hook> hooks;
+
 struct HookData;
 
 extern std::unordered_map<uint32_t, std::vector<uint8_t> > hookRestoreList;
@@ -16,7 +57,7 @@ extern std::unordered_map<uint32_t, HookFunc> hookFuncMap;
 
 void __fastcall dispatchHook(uint32_t esp);
 
-void storeBytes(uint32_t addr, uint32_t size);
+void storeBytes(std::vector<uint8_t>* storeAt, uint32_t addr, uint32_t size);
 
 // credits to Tomsod for his elemental mod sources (and of course to Grayface), they made it much easier
 // for me to understand such low level stuff
@@ -36,23 +77,22 @@ void storeBytes(uint32_t addr, uint32_t size);
 
 // sets a call/jump hook (5-byte instruction) at given address transferring
 // control into given func, hook size can be given or omitted (5 assumed)
-void hookCall(uint32_t addr, void* func, uint32_t size = 5);
-void hookJump(uint32_t addr, void* func, uint32_t size = 5);
+void hookCallRaw(uint32_t addr, void* func, std::vector<uint8_t>* storeAt, uint32_t size = 5);
+void hookJumpRaw(uint32_t addr, void* func, std::vector<uint8_t>* storeAt, uint32_t size = 5);
 
 // data patching functions which unprotect before/protect after (essential for patching code etc.)
-void patchByte(uint32_t addr, uint8_t val, bool store);
-void patchWord(uint32_t addr, uint16_t val, bool store);
-void patchDword(uint32_t addr, uint32_t val, bool store);
-void patchQword(uint32_t addr, uint64_t val, bool store);
+void patchByte(uint32_t addr, uint8_t val, std::vector<uint8_t>* storeAt);
+void patchWord(uint32_t addr, uint16_t val, std::vector<uint8_t>* storeAt);
+void patchDword(uint32_t addr, uint32_t val, std::vector<uint8_t>* storeAt);
+void patchQword(uint32_t addr, uint64_t val, std::vector<uint8_t>* storeAt);
 
 // erases code (NOPs), writing jump forward if number of bytes erased is high enough
-void eraseCode(uint32_t addr, uint32_t size);
+void eraseCode(uint32_t addr, uint32_t size, std::vector<uint8_t>* storeAt);
 
 // patches sequence of bytes (unprotect/protect)
-void patchBytes(uint32_t addr, void* bytes, uint32_t size, bool store);
+void patchBytes(uint32_t addr, void* bytes, uint32_t size, std::vector<uint8_t>* storeAt);
 
 void removeHooks();
-void removeHook(uint32_t addr);
 
 template<typename ReturnType, typename Address, typename... Args>
 ReturnType callMemoryAddress(Address address, int registerParamsNum, Args... args) // NO rvalue reference, because it passes arguments by address

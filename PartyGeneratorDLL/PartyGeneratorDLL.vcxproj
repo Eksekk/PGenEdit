@@ -52,6 +52,7 @@
     <ClInclude Include="headers\structs\Monster.h" />
     <ClInclude Include="headers\structs\Player.h" />
     <ClInclude Include="headers\structs\TxtFileItems.h" />
+    <ClInclude Include="Hooks.h" />
     <ClInclude Include="LuaFunctions.h" />
     <ClInclude Include="PartyStructAccessor.h" />
     <ClInclude Include="PlayerClass.h" />
@@ -100,6 +101,7 @@
     <ClCompile Include="GeneralPanel.cpp" />
     <ClCompile Include="GeneratorGuiBase.cpp" />
     <ClCompile Include="GuaranteedClassDialog.cpp" />
+    <ClCompile Include="Hooks.cpp" />
     <ClCompile Include="LuaFunctions.cpp" />
     <ClCompile Include="PartyStructAccessor.cpp" />
     <ClCompile Include="PlayerClass.cpp" />

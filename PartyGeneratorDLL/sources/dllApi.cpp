@@ -138,34 +138,6 @@ extern "C"
         }
         return TRUE; // successful
     }
-
-    __declspec(naked) void setPartyCountMm6()
-    {
-        _asm
-        {
-            // replaced code
-            or ecx, 0xFFFFFFFF
-            xor eax, eax
-            // our code
-            mov dword ptr [CURRENT_PARTY_SIZE], 4
-            mov edx, 0x458BDB
-            jmp edx
-        }
-    }
-
-    __declspec(naked) void setPartyCountMm7()
-    {
-        _asm
-        {
-            // replaced code
-            push esi
-            lea eax, dword ptr [ebp - 0x10C]
-            // our code
-            mov dword ptr [CURRENT_PARTY_SIZE], 4
-            mov ecx, 0x460755
-            jmp ecx
-        }
-    }
     
     DLL_EXPORT void __stdcall init()
     {
@@ -219,15 +191,6 @@ extern "C"
         mainUpdateTimer->Bind(wxEVT_TIMER, runUpdateTimerCallbacks);
 		addUpdateTimerCallback(GameData::updateIsInGameAndPartySize);
 		mainUpdateTimer->Start(350, wxTIMER_CONTINUOUS);
-
-        if (inMM && MMVER == 6)
-        {
-            hookJump(0x458BD6, setPartyCountMm6);
-        }
-        else if (inMM && MMVER == 7)
-        {
-			hookJump(0x46074E, setPartyCountMm7, 7);
-        }
         
         //MSGBOX((std::string("app: ") + std::to_string((int)app)).c_str());
         //MSGBOX((std::string("window: ") + std::to_string((int)app->mainWindow)).c_str());

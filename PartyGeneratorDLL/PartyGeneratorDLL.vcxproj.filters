@@ -273,6 +273,9 @@
     <ClInclude Include="Asserter.h">
       <Filter>Pliki nagłówkowe\Misc</Filter>
     </ClInclude>
+    <ClInclude Include="Hooks.h">
+      <Filter>Pliki nagłówkowe\Misc</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="sources\main.cpp">
@@ -417,6 +420,9 @@
       <Filter>Pliki źródłowe\GameData</Filter>
     </ClCompile>
     <ClCompile Include="Asserter.cpp">
+      <Filter>Pliki źródłowe\Misc</Filter>
+    </ClCompile>
+    <ClCompile Include="Hooks.cpp">
       <Filter>Pliki źródłowe\Misc</Filter>
     </ClCompile>
   </ItemGroup>

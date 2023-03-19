@@ -609,4 +609,23 @@ function debugTable(tbl) -- makes table print its contents in stacktrace instead
 	setmetatable(tbl, mt)
 end
 
+--[[
+	MAW resurrection tests:
+	> Party[3].Eradicated = -500000
+	> Party[3].Eradicated = -50000000
+	> Party[3].Eradicated = -50000000; Party[3].Dead = Game.Time
+	> Party[3].Eradicated = Game.Time; Party[3].Dead = -9999999999
+	> Party[3].Dead = -99999999
+	> Party[3].Dead = -99999999
+	> Party[3].Dead = -99999999; Party[3].Eradicated = 0
+]]
+
+-- MM6
+-- 00417FD5
+function keybindStruct(define)
+	define[0x20].u4("action").u4("actionParam")
+	[0x2C].u4("prevPtr").u4("nextPtr")
+	[0x50].u1("virtualKeyCode")
+end
+
 return M
