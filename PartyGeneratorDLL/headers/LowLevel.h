@@ -34,6 +34,18 @@ public:
 	HookElement();
 };
 
+class HookElementBuilder
+{
+	HookElement elem;
+public:
+	HookElementBuilder& type(HookElementType type);
+	HookElementBuilder& address(uint32_t address);
+	HookElementBuilder& target(uint32_t target);
+	HookElementBuilder& size(uint32_t size);
+	HookElementBuilder& dataSize(uint32_t dataSize);
+	HookElement build();
+};
+
 class Hook
 {
 	bool active;
@@ -44,7 +56,12 @@ public:
 	void toggle();
 	inline bool isActive() const;
 	bool isFullyActive() const; // every element is active
-	Hook();
+
+	Hook(std::initializer_list<HookElement> elements);
+
+	Hook() = delete;
+	Hook(const Hook&) = delete;
+	Hook& operator=(const Hook&) = delete;
 };
 
 extern std::unordered_map<int, Hook> hooks;

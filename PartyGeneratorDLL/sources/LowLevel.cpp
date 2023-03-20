@@ -44,6 +44,7 @@ void HookElement::enable(bool enable)
 	{
 		active = false;
 		patchBytes(address, restoreData.data(), restoreData.size(), nullptr);
+		restoreData.clear();
 	}
 }
 
@@ -62,7 +63,7 @@ inline bool HookElement::isActive() const
 	return active;
 }
 
-HookElement::HookElement() : active(false), type(HOOK_ELEM_TYPE_CALL_RAW), address(0), target(0)
+HookElement::HookElement() : active(false), type(HOOK_ELEM_TYPE_CALL_RAW), address(0), target(0), hookSize(5), dataSize(5)
 {
 }
 
@@ -99,8 +100,9 @@ bool Hook::isFullyActive() const
 	return yes;
 }
 
-Hook::Hook() : active(false)
+Hook::Hook(std::initializer_list<HookElement> elements) : elements(elements), active(false)
 {
+	
 }
 
 void storeBytes(std::vector<uint8_t>* storeAt, uint32_t addr, uint32_t size)
@@ -273,4 +275,47 @@ void __declspec(naked) myHookProc()
 		mov esp, [esp]
 		ret
 	}
+}
+
+HookElementBuilder& HookElementBuilder::type(HookElementType type)
+{
+	elem.type = type;
+	return *this;
+}
+
+HookElementBuilder& HookElementBuilder::address(uint32_t address)
+{
+	elem.address = address;
+	return *this;
+}
+
+HookElementBuilder& HookElementBuilder::target(uint32_t target)
+{
+	elem.target = target;
+	return *this;
+}
+
+HookElementBuilder& HookElementBuilder::size(uint32_t size)
+{
+	elem.hookSize = size;
+	return *this;
+}
+
+HookElementBuilder& HookElementBuilder::dataSize(uint32_t dataSize)
+{
+	elem.dataSize = dataSize;
+	return *this;
+}
+
+HookElement HookElementBuilder::build()
+{
+	if (address == 0)
+	{
+		wxFAIL_MSG("Hook address not set");
+	}
+	if (target == 0)
+	{
+		wxFAIL_MSG("Target not set");
+	}
+	return elem;
 }

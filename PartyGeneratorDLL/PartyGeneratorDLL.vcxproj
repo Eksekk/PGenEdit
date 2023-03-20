@@ -30,6 +30,7 @@
     <ClInclude Include="EditorPlayerWindow.h" />
     <ClInclude Include="EditorSkillsPanel.h" />
     <ClInclude Include="EditorSkillValueChooser.h" />
+    <ClInclude Include="EditorStatisticsPanel.h" />
     <ClInclude Include="GameData.h" />
     <ClInclude Include="GameStructAccessor.h" />
     <ClInclude Include="GeneralPanel.h" />
@@ -96,6 +97,7 @@
     <ClCompile Include="EditorPlayerWindow.cpp" />
     <ClCompile Include="EditorSkillsPanel.cpp" />
     <ClCompile Include="EditorSkillValueChooser.cpp" />
+    <ClCompile Include="EditorStatisticsPanel.cpp" />
     <ClCompile Include="GameData.cpp" />
     <ClCompile Include="GameStructAccessor.cpp" />
     <ClCompile Include="GeneralPanel.cpp" />

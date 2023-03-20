@@ -23,7 +23,7 @@ public:
 template<typename... Args>
 bool Asserter::operator()(const char* func, const char* file, int line, const wxString& rawErrorMsg, Args&&... args)
 {
-	// condition checking done in macro - avoiding unnecessary string constructions?
+	// condition checking done in macro - avoiding unnecessary string constructions
 	std::string file2 = file;
 	size_t index = file2.rfind('/');
 	if (index != std::string::npos)

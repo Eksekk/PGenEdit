@@ -12,6 +12,7 @@ extern wxTimer* mainUpdateTimer;
 EditorSkillsPanel::EditorSkillsPanel(wxWindow* parent, int playerIndex) : wxScrolledWindow(parent), playerIndex(playerIndex)
 {
 	SetScrollRate(10, 10);
+	SetSize(1024, 768);
 
 	//SetBackgroundColour(wxSystemSettings::GetColour(wxSystemColour::wxSYS_COLOUR_MENU));
 
@@ -438,9 +439,9 @@ void EditorSkillsPanel::createSkillsPanel()
 
 	mainSizer->Add(0, 10, 0, 0, 5);
 	showUnobtainableSkillsCheckbox = new wxCheckBox(this, wxID_ANY, "Show unobtainable skills");
-	showUnobtainableSkillsCheckbox->SetToolTip("They are useless, unless a mod changes them");
 	showUnobtainableSkillsCheckbox->Bind(wxEVT_CHECKBOX, &EditorSkillsPanel::onShowUnobtainableSkillsCheck, this);
 	mainSizer->Add(showUnobtainableSkillsCheckbox, wxSizerFlags().Border(wxALL, 5));
+	showUnobtainableSkillsCheckbox->SetToolTip("They are useless, unless a mod changes them");
 
 	wxBoxSizer* skillsSizerHorizontal = new wxBoxSizer(wxHORIZONTAL);
 

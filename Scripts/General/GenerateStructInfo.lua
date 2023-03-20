@@ -159,7 +159,8 @@ local structureByFile =
 
 local globalExcludes =
 {
-	Player = {"Attrs"} -- attrs is from merge
+	Player = {"Attrs"}, -- attrs is from merge.
+	GameStructure = {"Dialogs"}, -- mmext
 }
 local function getStructFile(name)
 	for k, v in pairs(structureByFile) do
@@ -977,9 +978,9 @@ function printStruct(name, includeMembers, excludeMembers, indentLevel, saveToGe
 	t, dep = processStruct(args)
 	args.name = old
 	_G.t, _G.dep, _G.processed, _G.args = t, dep, processed, args
-	local path = "C:\\Users\\Eksekk\\code.bin"
+	local pathToLoad = "C:\\Users\\Eksekk\\code.bin"
 	local oldCode
-	local ok, fileContent = pcall(io.load, path)
+	local ok, fileContent = pcall(io.load, pathToLoad)
 	if ok then
 		ok, oldCode = pcall(internal.unpersist, fileContent)
 	end
@@ -1035,13 +1036,17 @@ function printStruct(name, includeMembers, excludeMembers, indentLevel, saveToGe
 		})
 	end
 	if not isLast then
-		io.save(path, internal.persist(code))
+		io.save(pathToLoad, internal.persist(code))
 	else
 		if saveToGeneratorDirectory then
 			os.remove("C:\\Users\\Eksekk\\source\\repos\\PartyGenerator\\PartyGeneratorDLL\\headers\\structs")
 			os.remove("C:\\Users\\Eksekk\\source\\repos\\PartyGenerator\\PartyGeneratorDLL\\sources\\structs")
 		else
-			os.remove("C:\\Users\\Eksekk\\structOffsets")
+			for p in path.find("C:\\Users\\Eksekk\\structOffsets\\*") do
+				if not mem.dll.shlwapi.PathIsDirectoryA(p) then
+					os.remove(p)
+				end
+			end
 		end
 		os.remove("C:\\Users\\Eksekk\\code.bin")
 		for fileName in pairs(code) do

@@ -276,6 +276,9 @@
     <ClInclude Include="Hooks.h">
       <Filter>Pliki nagłówkowe\Misc</Filter>
     </ClInclude>
+    <ClInclude Include="EditorStatisticsPanel.h">
+      <Filter>Pliki nagłówkowe</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="sources\main.cpp">
@@ -424,6 +427,9 @@
     </ClCompile>
     <ClCompile Include="Hooks.cpp">
       <Filter>Pliki źródłowe\Misc</Filter>
+    </ClCompile>
+    <ClCompile Include="EditorStatisticsPanel.cpp">
+      <Filter>Pliki źródłowe</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
