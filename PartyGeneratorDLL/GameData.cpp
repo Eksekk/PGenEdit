@@ -2,12 +2,10 @@
 #include "main.h"
 #include "GameData.h"
 #include "Utility.h"
-#include "Generator.h"
 #include "globals.h"
 #include "GuiApplication.h"
 #include "PlayerData.h"
 #include "PlayerPanel.h"
-#include "wx/notebook.h"
 #include "ClassSettingsTab.h"
 #include "DefaultPlayerPanel.h"
 #include "ClassWindow.h"
@@ -16,6 +14,7 @@
 
 std::unordered_map<int, PlayerClass> GameData::classes;
 std::unordered_map<int, PlayerSkill> GameData::skills;
+std::map<int, PlayerPrimaryStat> GameData::primaryStats;
 Json GameData::classDataJson;
 Json GameData::skillDataJson;
 
@@ -23,7 +22,7 @@ bool GameData::allDataReceived = false;
 void GameData::postProcess()
 {
     // TODO: fill out once I add parsing for other things
-    if (!classes.empty() && !skills.empty())
+    if (!classes.empty() && !skills.empty() && !primaryStats.empty())
     {
         allDataReceived = true;
     }
@@ -294,6 +293,29 @@ bool GameData::processSkillDataJson(const char* str)
     }
     postProcess();
     return true;
+}
+
+bool GameData::processMiscDataJson(const char* str)
+{
+	Json json;
+	if (inMM)
+	{
+		json = json.parse(str);
+	}
+	else
+	{
+		std::fstream file(str, std::ios::in);
+		json = json.parse(file);
+		file.close();
+	}
+	miscDataJson = json;
+
+    auto stats = json["primaryStats"].get<std::unordered_map<std::string, Json>>();
+    for (const auto& [id, data] : stats)
+    {
+        GameData::primaryStats.emplace(std::stoi(id), PlayerPrimaryStat(std::stoi(id), data["name"], data["blackPotionId"]));
+    }
+    postProcess();
 }
 
 void GameData::reparse(const char* data[DATA_TYPE_COUNT])

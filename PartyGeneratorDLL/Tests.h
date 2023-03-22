@@ -5,6 +5,7 @@
 #include "Generator.h"
 #include "Utility.h"
 #include "Asserter.h"
+#include "GUI_tests.h"
 
 extern Generator* generator;
 
@@ -15,8 +16,6 @@ public:
 	static bool testingNow; // to make game data not zero out party size when showing log message (modal, has own event loop)
 
 	static std::vector<wxString> testSkillFunctions(); // join skill / split skill
-
-	static std::vector<wxString> testAlignmentRadioBox();
 	template<typename Player, typename Game>
 	static std::vector<wxString> testClassGeneration(Player* player);
 
@@ -24,8 +23,6 @@ public:
 	static std::vector<wxString> testSkillsGeneration(Player* player);
 
 	static std::vector<wxString> testJson();
-	template<typename Player, typename Game>
-	static std::vector<wxString> testGui();
 	template<typename Player, typename Game>
 	static std::vector<wxString> testPlayerStructAccessor();
 
@@ -40,7 +37,7 @@ template<typename Player, typename Game>
 std::vector<wxString> Tests::run()
 {
 	testingNow = true;
-	auto ret = mergeVectors({ testMisc<Player, Game>(), testSkillFunctions()/*, testJson()*//*, testGui<Player, Game>()*/, testPlayerStructAccessor<Player, Game>() });
+	auto ret = mergeVectors({ testMisc<Player, Game>(), testSkillFunctions()/*, testJson()*/, GUI_tests::testGui<Player, Game>(), testPlayerStructAccessor<Player, Game>() });
 	testingNow = false;
 	return ret;
 }

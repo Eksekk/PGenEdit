@@ -39,8 +39,9 @@ function M.loadDll()
 			local err = mem.dll.kernel32.GetLastError()
 			local buffer = mem.allocMM(500)
             mem.dll.kernel32.FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM, 0, err, 0, buffer, 500, 0);
-			error(string.format("Couldn't load party generator dll! Error %d (message: \"%s\")", err, mem.string(buffer)))
+			local str = mem.string(buffer)
 			mem.freeMM(buffer)
+			error(string.format("Couldn't load party generator dll! Error %d (message: \"%s\")", err, str))
 			return
 		end
 		d = M.dll
@@ -105,6 +106,13 @@ function M.Sk()
 	ok, M.skillData = pcall(require, "pgenData\\skillData");
 	package.loaded["pgenData\\skillData"] = nil
 	return M.skillData
+end
+
+function M.miscData()
+	local ok
+	ok, M.miscData = pcall(require, "pgenData\\miscData");
+	package.loaded["pgenData\\miscData"] = nil
+	return M.miscData
 end
 
 M.playerTypes = {caster = "caster", melee = "melee", ranged = "ranged", defensive = "defensive", utility = "utility"}

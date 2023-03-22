@@ -6,6 +6,10 @@
 class wxSpinCtrl;
 class wxSpinCtrlDouble;
 class wxStaticLine;
+class PlayerPrimaryStat;
+class PrimaryStatWidget;
+class PlayerClass;
+class AlignmentRadioBox;
 
 class EditorStatisticsPanel : public wxScrolledWindow
 {
@@ -14,6 +18,7 @@ private:
 	void createStatisticsAdjuster();
 	void createActionsPanel();
 protected:
+	// stat-like data
 	wxStaticText* hpLabel;
 	wxSpinCtrl* hpValue;
 	wxStaticText* hpSlash;
@@ -22,46 +27,42 @@ protected:
 	wxStaticText* spLabel;
 	wxSpinCtrl* spValue;
 	wxStaticText* spSlash;
-	wxTextCtrl* fullSpText1;
-	wxCheckBox* infiniteHpCheckbox1;
+	wxTextCtrl* fullSpText;
+	wxCheckBox* infiniteSpCheckbox;
 	wxStaticText* baseClassLabel;
 	wxChoice* baseClassChoice;
 	wxRadioBox* tierRadioBox;
-	wxRadioBox* alignmentRadioBox;
+	AlignmentRadioBox* alignmentRadioBox;
 	wxStaticText* recoveryDelayMultiplierLabel;
 	wxSpinCtrlDouble* recoveryDelayMultiplierValue;
 	wxButton* recoverFullyButton;
 	wxCheckBox* reduceBuffSpellRecoveryCheckbox;
 	wxCheckBox* outOfCombatCheckbox;
-	wxStaticLine* m_staticline39;
+
+	void onCurrentHpChange(wxCommandEvent& event);
+	void onInfiniteHpCheck(wxCommandEvent& event);
+	void onCurrentSpChange(wxCommandEvent& event);
+	void onInfiniteSpCheck(wxCommandEvent& event);
+
+	void onClassChoiceChange(wxCommandEvent& event);
+	void onClassTierRadio(wxCommandEvent& event);
+	void onClassAlignmentRadio(wxCommandEvent& event);
+
+	void onRecoveryDelayMultiplierChange(wxCommandEvent& event);
+	void onRecoverFullyPress(wxCommandEvent& event);
+	void onReduceBuffSpellRecoveryCheck(wxCommandEvent& event);
+	void onReduceBuffRecoveryOutOfCombatCheck(wxCommandEvent& event);
+
+	wxStaticLine* immediateStatisticsStaticLine;
+
+	// stat adjusters
 	wxStaticText* adjustStatisticsLabel;
 	wxStaticText* primaryLabel;
 	wxStaticText* statisticsBaseLabel;
 	wxStaticText* statisticsBonusLabel;
 	wxStaticText* m_staticText108;
 	wxStaticText* m_staticText114;
-	wxStaticText* mightLabel;
-	wxSpinCtrl* mightBase;
-	wxSpinCtrl* mightBonus;
 	wxStaticText* m_staticText115;
-	wxStaticText* personalityLabel;
-	wxSpinCtrl* personalityBase;
-	wxSpinCtrl* personalityBonus;
-	wxStaticText* intellectLabel;
-	wxSpinCtrl* intellectBase;
-	wxSpinCtrl* intellectBonus;
-	wxStaticText* enduranceLabel;
-	wxSpinCtrl* enduranceBase;
-	wxSpinCtrl* enduranceBonus;
-	wxStaticText* speedLabel;
-	wxSpinCtrl* speedBase;
-	wxSpinCtrl* speedBonus;
-	wxStaticText* accuracyLabel;
-	wxSpinCtrl* accuracyBase;
-	wxSpinCtrl* accuracyBonus;
-	wxStaticText* luckLabel;
-	wxSpinCtrl* luckBase;
-	wxSpinCtrl* luckBonus;
 	wxStaticLine* m_staticline201;
 	wxStaticText* otherLabel;
 	wxStaticText* extraAcLabel;
@@ -81,12 +82,6 @@ protected:
 	wxStaticText* resistancesLabel;
 	wxStaticText* resistancesBaseLabel;
 	wxStaticText* resistancesBonusLabel;
-	wxStaticText* fireLabel;
-	wxSpinCtrl* fireBase;
-	wxSpinCtrl* fireBonus;
-	wxStaticText* airLabel;
-	wxSpinCtrl* airBase;
-	wxSpinCtrl* airBonus;
 	wxStaticLine* m_staticline211;
 	wxCollapsiblePane* extraStatsPane;
 	wxStaticText* extraMaxHpLabel;
@@ -101,7 +96,10 @@ protected:
 	wxSpinCtrl* extraRangedAttackValue;
 	wxStaticText* extraRangedDamageLabel;
 	wxSpinCtrl* extraRangedDamageValue;
-	wxStaticLine* m_staticline33;
+
+	wxStaticLine* statisticsActionsStaticLine;
+
+	// actions
 	wxStaticText* actionsLabel;
 	wxCheckBox* scaleWithLevelCheckbox;
 	wxCheckBox* scaleWithRaceClassCheckbox;
@@ -114,10 +112,21 @@ protected:
 	wxButton* setToRelativePowerButton;
 	wxSlider* setToRelativePowerSlider;
 
+	wxBoxSizer* mainSizer;
+
+	std::unordered_map<int, std::unique_ptr<PrimaryStatWidget>> widgetToStatMap;
+
+	std::unordered_map<int, PlayerClass*> classToChoiceIndexMap;
+
+	void updateFromPlayerData();
+
+	void saveData();
+	void loadData();
 public:
 
 	EditorStatisticsPanel(wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize(723, 817), long style = wxTAB_TRAVERSAL | wxHSCROLL | wxVSCROLL, const wxString& name = wxEmptyString);
 
+	void updateFromPlayerData();
 	~EditorStatisticsPanel();
 
 };

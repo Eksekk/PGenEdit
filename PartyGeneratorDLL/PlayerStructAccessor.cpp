@@ -7,6 +7,8 @@
 const bool MALE = true, FEMALE = false; // TODO: check
 const int PLAYER_ACTIVE = 6, PLAYER_RANDOM = 7;
 
+PlayerStructAccessor* playerAccessor = nullptr;
+
 template<typename Player>
 template<typename FieldType>
 std::unordered_map<int, typename TemplatedPlayerStructAccessor<Player>::template BaseOrBonusFieldPointer<FieldType>> TemplatedPlayerStructAccessor<Player>::baseBonusFieldToStatMap;
@@ -542,8 +544,6 @@ void TemplatedPlayerStructAccessor<Player>::setStatBonus(int stat, int value)
 	}
 	wxASSERT_MSG(false, wxString::Format("Invalid stat %d", stat));
 }
-
-PlayerStructAccessor* playerAccessor = nullptr;
 //PlayerStructAccessor::FieldSizes PlayerStructAccessor::FIELD_SIZES;
 int PlayerStructAccessor::FieldSizes::biography = 0; // 0/0/256, set in dllApi.cpp
 int PlayerStructAccessor::FieldSizes::skill = -2; // 1/-2/-2
@@ -563,6 +563,44 @@ void setFieldSizes_8()
 	PlayerStructAccessor::FieldSizes::name = 31;
 }
 
+
+template<typename Player>
+bool TemplatedPlayerStructAccessor<Player>::isBlackPotionUsed(int statId)
+{
+	wxASSERT_MSG(existsInVector(PRIMARY_STATS, statId), wxString::Format("Invalid stat %d", statId));
+	int minId = 5000000;
+	for (const auto& [id, stat] : GameData::primaryStats)
+	{
+		minId = std::min(minId, stat.blackPotionId);
+	}
+	return getPlayerToAffect()->usedBlackPotions.at(GameData::primaryStats.at(statId).blackPotionId - minId) != 0;
+}
+
+template<typename Player>
+void TemplatedPlayerStructAccessor<Player>::setBlackPotionUsed(int statId, bool used)
+{
+	wxASSERT_MSG(existsInVector(PRIMARY_STATS, statId), wxString::Format("Invalid stat %d", statId));
+	int minId = 5000000;
+	for (const auto& [id, stat] : GameData::primaryStats)
+	{
+		minId = std::min(minId, stat.blackPotionId);
+	}
+	getPlayerToAffect()->usedBlackPotions.at(GameData::primaryStats.at(statId).blackPotionId - minId) = used;
+}
+
+template<typename Player>
+int TemplatedPlayerStructAccessor<Player>::getConditionEffectOnStat(int statId)
+{
+	wxASSERT_MSG(existsInVector(PRIMARY_STATS, statId), wxString::Format("Invalid stat %d", statId));
+	wxFAIL;
+	return 100;
+}
+
+template<typename Player>
+TemplatedPlayerStructAccessor<Player>::TemplatedPlayerStructAccessor() : PlayerStructAccessor()
+{
+
+}
 
 template<typename Player>
 void TemplatedPlayerStructAccessor<Player>::_initMaps()

@@ -277,7 +277,13 @@
       <Filter>Pliki nagłówkowe\Misc</Filter>
     </ClInclude>
     <ClInclude Include="EditorStatisticsPanel.h">
-      <Filter>Pliki nagłówkowe</Filter>
+      <Filter>Pliki nagłówkowe\Editor\GUI</Filter>
+    </ClInclude>
+    <ClInclude Include="PlayerPrimaryStat.h">
+      <Filter>Pliki nagłówkowe\GameData</Filter>
+    </ClInclude>
+    <ClInclude Include="PrimaryStatWidget.h">
+      <Filter>Pliki nagłówkowe\Editor\GUI</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -429,7 +435,13 @@
       <Filter>Pliki źródłowe\Misc</Filter>
     </ClCompile>
     <ClCompile Include="EditorStatisticsPanel.cpp">
-      <Filter>Pliki źródłowe</Filter>
+      <Filter>Pliki źródłowe\Editor\GUI</Filter>
+    </ClCompile>
+    <ClCompile Include="PlayerPrimaryStat.cpp">
+      <Filter>Pliki źródłowe\GameData</Filter>
+    </ClCompile>
+    <ClCompile Include="PrimaryStatWidget.cpp">
+      <Filter>Pliki źródłowe\Editor\GUI</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

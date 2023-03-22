@@ -2,12 +2,7 @@
 #include "pch.h"
 #include "main.h"
 #include "Enum_const.h"
-#include "Generator.h"
-#include "Player.h"
-#include "Utility.h"
-#include "PlayerSkill.h"
-#include "GameData.h"
-#include "LowLevel.h"
+#include "Utility.h" // BaseBonus
 
 extern const bool MALE, FEMALE;
 
@@ -35,8 +30,8 @@ protected:
 	int getPlayerIndex();
 	void* playerOverride; // mainly for testing - if it's not null, will always be used instead of index
 public:
-	void setPlayerOverride(void* ptr);
-	void clearPlayerOverride();
+	inline void setPlayerOverride(void* ptr);
+	inline void clearPlayerOverride();
 
 	PlayerStructAccessor();
 
@@ -58,15 +53,15 @@ public:
 	virtual void setStatBonus(int stat, int value) = 0;
 
 	virtual void setStatBaseBonus(int stat, const BaseBonus& value);
-	virtual BaseBonus getStatBaseBonus(int stat);
+	[[nodiscard]] virtual BaseBonus getStatBaseBonus(int stat);
 
 	[[nodiscard]] virtual int getSkillPoints() = 0;
 	virtual void setSkillPoints(int value) = 0;
 	[[nodiscard]] virtual int getSpentSkillPoints() = 0;
 	[[nodiscard]] virtual int getSpentSkillPointsForGivenSkills(const std::vector<PlayerSkillValue>& skillsAndValues);
 
-	virtual int64_t getExperience() = 0;
-	virtual int64_t getMinimumExperienceForLevel(int level);
+	[[nodiscard]] virtual int64_t getExperience() = 0;
+	[[nodiscard]] virtual int64_t getMinimumExperienceForLevel(int level);
 	/// affectLevel = true reduces level to maximum possible if value is reduced
 	virtual void setExperience(int64_t value, bool affectLevel = true) = 0;
 
@@ -80,8 +75,8 @@ public:
 	[[nodiscard]] virtual std::string getName() = 0;
 	[[nodiscard]] virtual int getNameMaxUsableLength() = 0;
 
-	virtual std::string getBiography() = 0;
-	virtual int getBiographyMaxUsableLength() = 0;
+	[[nodiscard]] virtual std::string getBiography() = 0;
+	[[nodiscard]] virtual int getBiographyMaxUsableLength() = 0;
 
 	virtual void setName(const std::string& name) = 0;
 	virtual void setBiography(const std::string& biography) = 0;
@@ -127,6 +122,11 @@ public:
 
 	[[nodiscard]] virtual int getSkillBonus(PlayerSkill* skill) = 0;
 	[[nodiscard]] virtual int getSkillBonus(int skillId) = 0;
+
+	[[nodiscard]] virtual bool isBlackPotionUsed(int statId) = 0;
+	[[nodiscard]] virtual void setBlackPotionUsed(int statId, bool used) = 0;
+
+	[[nodiscard]] virtual int getConditionEffectOnStat(int statId) = 0;
 	// LATER
 	// virtual void setClass(PlayerClass* clas, bool affectSkills = false, bool affectSpells = false, bool removeInvalidEquippedItems = false,
 	//     bool affectAwards = false, bool tryToKeepTierAndAlignment = false) = 0;
@@ -314,13 +314,14 @@ public:
 	virtual int getSkillBonus(PlayerSkill* skill) override;
 
 	virtual int getSkillBonus(int skillId) override;
+
+	bool isBlackPotionUsed(int statId) override;
+
+	void setBlackPotionUsed(int statId, bool used) override;
+
+	// Inherited via PlayerStructAccessor
+	virtual int getConditionEffectOnStat(int statId) override;
 };
-
-template<typename Player>
-TemplatedPlayerStructAccessor<Player>::TemplatedPlayerStructAccessor() : PlayerStructAccessor()
-{
-
-}
 
 using PlayerStructAccessor_6 = TemplatedPlayerStructAccessor<mm6::Player>;
 using PlayerStructAccessor_7 = TemplatedPlayerStructAccessor<mm7::Player>;

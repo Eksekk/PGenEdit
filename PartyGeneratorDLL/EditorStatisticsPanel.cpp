@@ -4,25 +4,45 @@
 #include <wx/spinctrl.h>
 #include <wx/gbsizer.h>
 #include <wx/artprov.h>
+#include "PlayerPrimaryStat.h"
+#include "Utility.h"
+#include "GameData.h"
+#include "AlignmentRadioBox.h"
 
-void EditorStatisticsPanel::createImmediateStatSettings()
-{
-}
-
-void EditorStatisticsPanel::createStatisticsAdjuster()
-{
-}
-
-void EditorStatisticsPanel::createActionsPanel()
-{
-}
+wxDEFINE_EVENT(PRIMARY_STAT_BASE, wxCommandEvent);
+wxDEFINE_EVENT(PRIMARY_STAT_BONUS, wxCommandEvent);
+wxDEFINE_EVENT(PRIMARY_STAT_BLACK_POTION, wxCommandEvent);
 
 EditorStatisticsPanel::EditorStatisticsPanel(wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style, const wxString& name) : wxScrolledWindow(parent, id, pos, size, style, name)
 {
 	this->SetScrollRate(5, 5);
-	wxBoxSizer* mainSizer;
 	mainSizer = new wxBoxSizer(wxVERTICAL);
 
+	createImmediateStatSettings();
+
+	immediateStatisticsStaticLine = new wxStaticLine(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL);
+	mainSizer->Add(immediateStatisticsStaticLine, 0, wxEXPAND | wxALL, 5);
+
+	createStatisticsAdjuster();
+
+	statisticsActionsStaticLine = new wxStaticLine(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL);
+	mainSizer->Add(statisticsActionsStaticLine, 0, wxEXPAND | wxALL, 5);
+
+	createActionsPanel();
+
+	mainSizer->Fit(this);
+	this->SetSizer(mainSizer);
+	this->Layout();
+}
+
+void EditorStatisticsPanel::updateFromPlayerData()
+{
+
+	wxFAIL;
+}
+
+void EditorStatisticsPanel::createImmediateStatSettings()
+{
 	wxFlexGridSizer* hpSpSizer;
 	hpSpSizer = new wxFlexGridSizer(2, 0, 0, 0);
 	hpSpSizer->SetFlexibleDirection(wxBOTH);
@@ -32,7 +52,8 @@ EditorStatisticsPanel::EditorStatisticsPanel(wxWindow* parent, wxWindowID id, co
 	hpLabel->Wrap(-1);
 	hpSpSizer->Add(hpLabel, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
-	hpValue = new wxSpinCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER_HORIZONTAL | wxSP_ARROW_KEYS, -99999, 99999, 0);
+	auto [hpSpMin, hpSpMax] = boundsByType<int32_t>;
+	hpValue = new wxSpinCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER_HORIZONTAL | wxSP_ARROW_KEYS, hpSpMin, hpSpMax, 0);
 	hpSpSizer->Add(hpValue, 0, wxALL, 5);
 
 	hpSlash = new wxStaticText(this, wxID_ANY, _("/"), wxDefaultPosition, wxDefaultSize, 0);
@@ -67,7 +88,7 @@ EditorStatisticsPanel::EditorStatisticsPanel(wxWindow* parent, wxWindowID id, co
 	spLabel->Wrap(-1);
 	hpSpSizer->Add(spLabel, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
-	spValue = new wxSpinCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER_HORIZONTAL | wxSP_ARROW_KEYS, -99999, 99999, 0);
+	spValue = new wxSpinCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER_HORIZONTAL | wxSP_ARROW_KEYS, hpSpMin, hpSpMax, 0);
 	hpSpSizer->Add(spValue, 0, wxALL, 5);
 
 	spSlash = new wxStaticText(this, wxID_ANY, _("/"), wxDefaultPosition, wxDefaultSize, 0);
@@ -76,27 +97,27 @@ EditorStatisticsPanel::EditorStatisticsPanel(wxWindow* parent, wxWindowID id, co
 
 	hpSpSizer->Add(spSlash, 0, wxALIGN_CENTER_VERTICAL, 5);
 
-	fullSpText1 = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0);
+	fullSpText = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0);
 #ifdef __WXGTK__
-	if (!fullSpText1->HasFlag(wxTE_MULTILINE))
+	if (!fullSpText->HasFlag(wxTE_MULTILINE))
 	{
-		fullSpText1->SetMaxLength(6);
+		fullSpText->SetMaxLength(6);
 	}
 #else
-	fullSpText1->SetMaxLength(6);
+	fullSpText->SetMaxLength(6);
 #endif
-	fullSpText1->Enable(false);
-	fullSpText1->SetMaxSize(wxSize(70, -1));
+	fullSpText->Enable(false);
+	fullSpText->SetMaxSize(wxSize(70, -1));
 
-	hpSpSizer->Add(fullSpText1, 0, wxALL, 5);
+	hpSpSizer->Add(fullSpText, 0, wxALL, 5);
 
 
 	hpSpSizer->Add(20, 0, 0, 0, 5);
 
-	infiniteHpCheckbox1 = new wxCheckBox(this, wxID_ANY, _("Infinite"), wxDefaultPosition, wxDefaultSize, 0);
-	infiniteHpCheckbox1->SetToolTip(_("Heavy enough attacks can still kill you"));
+	infiniteSpCheckbox = new wxCheckBox(this, wxID_ANY, _("Infinite"), wxDefaultPosition, wxDefaultSize, 0);
+	infiniteSpCheckbox->SetToolTip(_("Heavy enough attacks can still kill you"));
 
-	hpSpSizer->Add(infiniteHpCheckbox1, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+	hpSpSizer->Add(infiniteSpCheckbox, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
 
 	mainSizer->Add(hpSpSizer, 0, 0, 5);
@@ -116,26 +137,31 @@ EditorStatisticsPanel::EditorStatisticsPanel(wxWindow* parent, wxWindowID id, co
 	baseClassLabel->Wrap(-1);
 	innerClassSizer->Add(baseClassLabel, wxGBPosition(0, 0), wxGBSpan(1, 1), wxALL | wxALIGN_CENTER_HORIZONTAL, 5);
 
-	wxArrayString baseClassChoiceChoices;
-	baseClassChoice = new wxChoice(classSizer->GetStaticBox(), wxID_ANY, wxDefaultPosition, wxDefaultSize, baseClassChoiceChoices, 0);
+	wxArrayString classChoices;
+	int i = 0;
+	for (auto& [id, clas] : GameData::classes)
+	{
+		if (clas.tier == 0)
+		{
+			classToChoiceIndexMap[i++] = &clas;
+			classChoices.Add(clas.name);
+		}
+	}
+	baseClassChoice = new wxChoice(classSizer->GetStaticBox(), wxID_ANY, wxDefaultPosition, wxDefaultSize, classChoices, 0);
 	baseClassChoice->SetSelection(0);
 	innerClassSizer->Add(baseClassChoice, wxGBPosition(1, 0), wxGBSpan(1, 1), wxALL, 5);
 
 	wxString tierRadioBoxChoices[] = { _("0"), _("1"), _("2") };
 	int tierRadioBoxNChoices = sizeof(tierRadioBoxChoices) / sizeof(wxString);
 	tierRadioBox = new wxRadioBox(classSizer->GetStaticBox(), wxID_ANY, _("Tier"), wxDefaultPosition, wxDefaultSize, tierRadioBoxNChoices, tierRadioBoxChoices, 1, wxRA_SPECIFY_ROWS);
-	tierRadioBox->SetSelection(1);
+	tierRadioBox->SetSelection(0);
 	innerClassSizer->Add(tierRadioBox, wxGBPosition(0, 1), wxGBSpan(2, 1), wxALL, 5);
 
-	wxString alignmentRadioBoxChoices[] = { _("Neutral"), _("Light"), _("Dark") };
-	int alignmentRadioBoxNChoices = sizeof(alignmentRadioBoxChoices) / sizeof(wxString);
-	alignmentRadioBox = new wxRadioBox(classSizer->GetStaticBox(), wxID_ANY, _("Alignment"), wxDefaultPosition, wxDefaultSize, alignmentRadioBoxNChoices, alignmentRadioBoxChoices, 1, wxRA_SPECIFY_ROWS);
+	alignmentRadioBox = new AlignmentRadioBox(this, "Alignment", false);
 	alignmentRadioBox->SetSelection(0);
 	innerClassSizer->Add(alignmentRadioBox, wxGBPosition(0, 2), wxGBSpan(2, 1), wxALL, 5);
 
-
 	classSizer->Add(innerClassSizer, 1, wxEXPAND, 5);
-
 
 	statLikeDataSizer->Add(classSizer, 0, wxALL, 5);
 
@@ -182,10 +208,10 @@ EditorStatisticsPanel::EditorStatisticsPanel(wxWindow* parent, wxWindowID id, co
 
 
 	mainSizer->Add(statLikeDataSizer, 1, wxEXPAND, 5);
+}
 
-	m_staticline39 = new wxStaticLine(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL);
-	mainSizer->Add(m_staticline39, 0, wxEXPAND | wxALL, 5);
-
+void EditorStatisticsPanel::createStatisticsAdjuster()
+{
 	adjustStatisticsLabel = new wxStaticText(this, wxID_ANY, _("Adjust statistics"), wxDefaultPosition, wxDefaultSize, 0);
 	adjustStatisticsLabel->Wrap(-1);
 	adjustStatisticsLabel->SetFont(wxFont(12, wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL, false, wxEmptyString));
@@ -545,10 +571,10 @@ EditorStatisticsPanel::EditorStatisticsPanel(wxWindow* parent, wxWindowID id, co
 
 
 	mainSizer->Add(statisticsAdjusterSizer, 0, wxEXPAND, 5);
+}
 
-	m_staticline33 = new wxStaticLine(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL);
-	mainSizer->Add(m_staticline33, 0, wxEXPAND | wxALL, 5);
-
+void EditorStatisticsPanel::createActionsPanel()
+{
 	actionsLabel = new wxStaticText(this, wxID_ANY, _("Actions"), wxDefaultPosition, wxDefaultSize, 0);
 	actionsLabel->Wrap(-1);
 	actionsLabel->SetFont(wxFont(12, wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL, false, wxEmptyString));
@@ -602,16 +628,6 @@ EditorStatisticsPanel::EditorStatisticsPanel(wxWindow* parent, wxWindowID id, co
 
 
 	mainSizer->Add(setToRelativePowerSizer, 0, wxEXPAND, 5);
-
-
-	this->SetSizer(mainSizer);
-	this->Layout();
-	mainSizer->Fit(this);
-	mainSizer->Add(this, 1, wxEXPAND | wxALL, 5);
-
-
-	this->SetSizer(mainSizer);
-	this->Layout();
 }
 
 EditorStatisticsPanel::~EditorStatisticsPanel()
