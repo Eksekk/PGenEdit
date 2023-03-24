@@ -157,6 +157,19 @@ void EditorMainWindow::setupMenusAndStatusBar()
 	statusBar = this->CreateStatusBar(1, wxSTB_ELLIPSIZE_END, wxID_ANY);
 }
 
+void EditorMainWindow::createPlayerWindow(int index)
+{
+	wxASSERT(index < MAX_PLAYERS);
+	playerWindows[index] = new EditorPlayerWindow(this, index);
+}
+
+void EditorMainWindow::destroyPlayerWindow(int index)
+{
+	wxASSERT(playerWindows[index]);
+	playerWindows[index]->Destroy();
+	playerWindows[index] = nullptr;
+}
+
 void EditorMainWindow::onPlayerButtonClick(wxCommandEvent& event)
 {
 	for (int i = 0; i < CURRENT_PARTY_SIZE; ++i)

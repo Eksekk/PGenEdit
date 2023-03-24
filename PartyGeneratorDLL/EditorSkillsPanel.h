@@ -103,4 +103,6 @@ public:
 
 	bool AcceptsFocus() const override;
 	void updateFromPlayerData();
+
+	friend class GUI_tests;
 };

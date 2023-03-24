@@ -284,7 +284,12 @@ extern "C"
     DLL_EXPORT void __stdcall setSkillData(const char* jsonStr)
     {
         GameData::processSkillDataJson(jsonStr);
-    }
+	}
+
+	DLL_EXPORT void __stdcall setMiscData(const char* jsonStr)
+	{
+		GameData::processMiscDataJson(jsonStr);
+	}
 
     DLL_EXPORT bool __stdcall setCallbacks(const char* jsonStr)
     {

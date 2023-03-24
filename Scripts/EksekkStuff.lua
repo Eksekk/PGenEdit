@@ -49,6 +49,7 @@ function M.loadDll()
 		M.dll.setLuaState(getLuaState())
 		M.dll.setClassData(json.encode(M.C())) -- SET DATA BEFORE INIT
 		M.dll.setSkillData(json.encode(M.Sk()))
+		M.dll.setMiscData(json.encode(M.getMiscData()))
 		M.dll.init()
 		runEventLoopOnce = function() M.dll.runEventLoopOnce() end
 		events.Tick = runEventLoopOnce
@@ -108,7 +109,7 @@ function M.Sk()
 	return M.skillData
 end
 
-function M.miscData()
+function M.getMiscData()
 	local ok
 	ok, M.miscData = pcall(require, "pgenData\\miscData");
 	package.loaded["pgenData\\miscData"] = nil

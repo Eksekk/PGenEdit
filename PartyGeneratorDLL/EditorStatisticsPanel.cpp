@@ -4,16 +4,18 @@
 #include <wx/spinctrl.h>
 #include <wx/gbsizer.h>
 #include <wx/artprov.h>
-#include "PlayerPrimaryStat.h"
 #include "Utility.h"
 #include "GameData.h"
 #include "AlignmentRadioBox.h"
+#include "PrimaryStatWidget.h"
 
 wxDEFINE_EVENT(PRIMARY_STAT_BASE, wxCommandEvent);
 wxDEFINE_EVENT(PRIMARY_STAT_BONUS, wxCommandEvent);
 wxDEFINE_EVENT(PRIMARY_STAT_BLACK_POTION, wxCommandEvent);
 
-EditorStatisticsPanel::EditorStatisticsPanel(wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style, const wxString& name) : wxScrolledWindow(parent, id, pos, size, style, name)
+//, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize(723, 817),
+//	long style = wxTAB_TRAVERSAL | wxHSCROLL | wxVSCROLL, const wxString& name = wxEmptyString)
+EditorStatisticsPanel::EditorStatisticsPanel(wxWindow* parent, int playerIndex) : playerIndex(playerIndex), wxScrolledWindow(parent)
 {
 	this->SetScrollRate(5, 5);
 	mainSizer = new wxBoxSizer(wxVERTICAL);
@@ -35,10 +37,37 @@ EditorStatisticsPanel::EditorStatisticsPanel(wxWindow* parent, wxWindowID id, co
 	this->Layout();
 }
 
+void EditorStatisticsPanel::onMinimumStatisticsPress(wxCommandEvent& event)
+{
+}
+
+void EditorStatisticsPanel::onMaximumStatisticsPress(wxCommandEvent& event)
+{
+}
+
+void EditorStatisticsPanel::onRelativePowerStatisticsPress(wxCommandEvent& event)
+{
+}
+
 void EditorStatisticsPanel::updateFromPlayerData()
 {
+	for (auto& [statId, widget] : widgetToStatMap)
+	{
+		widget->updateFromPlayerData();
+	}
+	wxFAIL; // TODO
+}
 
-	wxFAIL;
+void EditorStatisticsPanel::saveData()
+{
+}
+
+void EditorStatisticsPanel::loadData()
+{
+}
+
+void EditorStatisticsPanel::onActivateWindow(wxActivateEvent& event)
+{
 }
 
 void EditorStatisticsPanel::createImmediateStatSettings()
@@ -63,14 +92,7 @@ void EditorStatisticsPanel::createImmediateStatSettings()
 	hpSpSizer->Add(hpSlash, 0, wxALIGN_CENTER_VERTICAL, 5);
 
 	fullHpText = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0);
-#ifdef __WXGTK__
-	if (!fullHpText->HasFlag(wxTE_MULTILINE))
-	{
-		fullHpText->SetMaxLength(6);
-	}
-#else
 	fullHpText->SetMaxLength(6);
-#endif
 	fullHpText->Enable(false);
 	fullHpText->SetMaxSize(wxSize(70, -1));
 
@@ -98,14 +120,7 @@ void EditorStatisticsPanel::createImmediateStatSettings()
 	hpSpSizer->Add(spSlash, 0, wxALIGN_CENTER_VERTICAL, 5);
 
 	fullSpText = new wxTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0);
-#ifdef __WXGTK__
-	if (!fullSpText->HasFlag(wxTE_MULTILINE))
-	{
-		fullSpText->SetMaxLength(6);
-	}
-#else
 	fullSpText->SetMaxLength(6);
-#endif
 	fullSpText->Enable(false);
 	fullSpText->SetMaxSize(wxSize(70, -1));
 
@@ -224,221 +239,114 @@ void EditorStatisticsPanel::createStatisticsAdjuster()
 	wxBoxSizer* statisticsAdjusterSizer;
 	statisticsAdjusterSizer = new wxBoxSizer(wxHORIZONTAL);
 
-	wxGridBagSizer* statisticsSizer;
-	statisticsSizer = new wxGridBagSizer(0, 0);
-	statisticsSizer->SetFlexibleDirection(wxBOTH);
-	statisticsSizer->SetNonFlexibleGrowMode(wxFLEX_GROWMODE_SPECIFIED);
+	wxGridBagSizer* primaryOtherStatisticsSizer;
+	primaryOtherStatisticsSizer = new wxGridBagSizer(0, 0);
+	primaryOtherStatisticsSizer->SetFlexibleDirection(wxBOTH);
+	primaryOtherStatisticsSizer->SetNonFlexibleGrowMode(wxFLEX_GROWMODE_SPECIFIED);
 
 	primaryLabel = new wxStaticText(this, wxID_ANY, _("Primary"), wxDefaultPosition, wxDefaultSize, 0);
 	primaryLabel->Wrap(-1);
 	primaryLabel->SetFont(wxFont(wxNORMAL_FONT->GetPointSize(), wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxEmptyString));
 
-	statisticsSizer->Add(primaryLabel, wxGBPosition(0, 0), wxGBSpan(1, 3), wxALIGN_CENTER_HORIZONTAL | wxALL, 5);
+	primaryOtherStatisticsSizer->Add(primaryLabel, wxGBPosition(0, 0), wxGBSpan(1, 3), wxALIGN_CENTER_HORIZONTAL | wxALL, 5);
 
 	statisticsBaseLabel = new wxStaticText(this, wxID_ANY, _("Base"), wxDefaultPosition, wxDefaultSize, 0);
 	statisticsBaseLabel->Wrap(-1);
-	statisticsSizer->Add(statisticsBaseLabel, wxGBPosition(1, 1), wxGBSpan(1, 1), wxALL | wxALIGN_CENTER_HORIZONTAL, 5);
+	primaryOtherStatisticsSizer->Add(statisticsBaseLabel, wxGBPosition(1, 1), wxGBSpan(1, 1), wxALL | wxALIGN_CENTER_HORIZONTAL, 5);
 
 	statisticsBonusLabel = new wxStaticText(this, wxID_ANY, _("Bonus"), wxDefaultPosition, wxDefaultSize, 0);
 	statisticsBonusLabel->Wrap(-1);
-	statisticsSizer->Add(statisticsBonusLabel, wxGBPosition(1, 2), wxGBSpan(1, 1), wxALL | wxALIGN_CENTER_HORIZONTAL, 5);
+	primaryOtherStatisticsSizer->Add(statisticsBonusLabel, wxGBPosition(1, 2), wxGBSpan(1, 1), wxALL | wxALIGN_CENTER_HORIZONTAL, 5);
 
 	m_staticText108 = new wxStaticText(this, wxID_ANY, _("Black potion used"), wxDefaultPosition, wxDefaultSize, 0);
 	m_staticText108->Wrap(-1);
-	statisticsSizer->Add(m_staticText108, wxGBPosition(1, 4), wxGBSpan(1, 1), wxALL, 5);
+	primaryOtherStatisticsSizer->Add(m_staticText108, wxGBPosition(1, 4), wxGBSpan(1, 1), wxALL, 5);
 
 	m_staticText114 = new wxStaticText(this, wxID_ANY, _("Condition effect"), wxDefaultPosition, wxDefaultSize, 0);
 	m_staticText114->Wrap(-1);
-	statisticsSizer->Add(m_staticText114, wxGBPosition(1, 3), wxGBSpan(1, 1), wxALL, 5);
+	primaryOtherStatisticsSizer->Add(m_staticText114, wxGBPosition(1, 3), wxGBSpan(1, 1), wxALL, 5);
 
-	mightLabel = new wxStaticText(this, wxID_ANY, _("Might"), wxDefaultPosition, wxDefaultSize, 0);
-	mightLabel->Wrap(-1);
-	mightLabel->SetBackgroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_MENU));
+	int row = 2;
+	for (auto& [id, stat] : GameData::primaryStats)
+	{
+		widgetToStatMap.emplace(id, std::make_unique<PrimaryStatWidget>(this, primaryOtherStatisticsSizer, row++, &stat, playerIndex));
+	}
 
-	statisticsSizer->Add(mightLabel, wxGBPosition(2, 0), wxGBSpan(1, 1), wxALL | wxALIGN_CENTER_VERTICAL | wxEXPAND, 5);
-
-	mightBase = new wxSpinCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, -32767, 32767, 0);
-	mightBase->SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT));
-
-	statisticsSizer->Add(mightBase, wxGBPosition(2, 1), wxGBSpan(1, 1), wxALL | wxALIGN_CENTER_HORIZONTAL, 5);
-
-	mightBonus = new wxSpinCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, -32767, 32767, 0);
-	mightBonus->SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT));
-	mightBonus->SetBackgroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW));
-
-	statisticsSizer->Add(mightBonus, wxGBPosition(2, 2), wxGBSpan(1, 1), wxALL | wxALIGN_CENTER_HORIZONTAL, 5);
-
-	m_staticText115 = new wxStaticText(this, wxID_ANY, _("-30%"), wxDefaultPosition, wxDefaultSize, 0);
-	m_staticText115->Wrap(-1);
-	m_staticText115->SetForegroundColour(wxColour(236, 0, 0));
-
-	statisticsSizer->Add(m_staticText115, wxGBPosition(2, 3), wxGBSpan(1, 1), wxALL | wxALIGN_CENTER_HORIZONTAL, 5);
-
-	personalityLabel = new wxStaticText(this, wxID_ANY, _("Personality"), wxDefaultPosition, wxDefaultSize, 0);
-	personalityLabel->Wrap(-1);
-	statisticsSizer->Add(personalityLabel, wxGBPosition(3, 0), wxGBSpan(1, 1), wxALL, 5);
-
-	personalityBase = new wxSpinCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, -32767, 32767, 0);
-	personalityBase->SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT));
-
-	statisticsSizer->Add(personalityBase, wxGBPosition(3, 1), wxGBSpan(1, 1), wxALL, 5);
-
-	personalityBonus = new wxSpinCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, -32767, 32767, 0);
-	personalityBonus->SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT));
-	personalityBonus->SetBackgroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW));
-
-	statisticsSizer->Add(personalityBonus, wxGBPosition(3, 2), wxGBSpan(1, 1), wxALL, 5);
-
-	intellectLabel = new wxStaticText(this, wxID_ANY, _("Intellect"), wxDefaultPosition, wxDefaultSize, 0);
-	intellectLabel->Wrap(-1);
-	statisticsSizer->Add(intellectLabel, wxGBPosition(4, 0), wxGBSpan(1, 1), wxALL, 5);
-
-	intellectBase = new wxSpinCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, -32767, 32767, 0);
-	intellectBase->SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT));
-
-	statisticsSizer->Add(intellectBase, wxGBPosition(4, 1), wxGBSpan(1, 1), wxALL, 5);
-
-	intellectBonus = new wxSpinCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, -32767, 32767, 0);
-	intellectBonus->SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT));
-	intellectBonus->SetBackgroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW));
-
-	statisticsSizer->Add(intellectBonus, wxGBPosition(4, 2), wxGBSpan(1, 1), wxALL, 5);
-
-	enduranceLabel = new wxStaticText(this, wxID_ANY, _("Endurance"), wxDefaultPosition, wxDefaultSize, 0);
-	enduranceLabel->Wrap(-1);
-	statisticsSizer->Add(enduranceLabel, wxGBPosition(5, 0), wxGBSpan(1, 1), wxALL, 5);
-
-	enduranceBase = new wxSpinCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, -32767, 32767, 0);
-	enduranceBase->SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT));
-
-	statisticsSizer->Add(enduranceBase, wxGBPosition(5, 1), wxGBSpan(1, 1), wxALL, 5);
-
-	enduranceBonus = new wxSpinCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, -32767, 32767, 0);
-	enduranceBonus->SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT));
-	enduranceBonus->SetBackgroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW));
-
-	statisticsSizer->Add(enduranceBonus, wxGBPosition(5, 2), wxGBSpan(1, 1), wxALL, 5);
-
-	speedLabel = new wxStaticText(this, wxID_ANY, _("Speed"), wxDefaultPosition, wxDefaultSize, 0);
-	speedLabel->Wrap(-1);
-	statisticsSizer->Add(speedLabel, wxGBPosition(6, 0), wxGBSpan(1, 1), wxALL, 5);
-
-	speedBase = new wxSpinCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, -32767, 32767, 0);
-	speedBase->SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT));
-
-	statisticsSizer->Add(speedBase, wxGBPosition(6, 1), wxGBSpan(1, 1), wxALL, 5);
-
-	speedBonus = new wxSpinCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, -32767, 32767, 0);
-	speedBonus->SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT));
-	speedBonus->SetBackgroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW));
-
-	statisticsSizer->Add(speedBonus, wxGBPosition(6, 2), wxGBSpan(1, 1), wxALL, 5);
-
-	accuracyLabel = new wxStaticText(this, wxID_ANY, _("Accuracy"), wxDefaultPosition, wxDefaultSize, 0);
-	accuracyLabel->Wrap(-1);
-	statisticsSizer->Add(accuracyLabel, wxGBPosition(7, 0), wxGBSpan(1, 1), wxALL, 5);
-
-	accuracyBase = new wxSpinCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, -32767, 32767, 0);
-	accuracyBase->SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT));
-
-	statisticsSizer->Add(accuracyBase, wxGBPosition(7, 1), wxGBSpan(1, 1), wxALL, 5);
-
-	accuracyBonus = new wxSpinCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, -32767, 32767, 0);
-	accuracyBonus->SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT));
-	accuracyBonus->SetBackgroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW));
-
-	statisticsSizer->Add(accuracyBonus, wxGBPosition(7, 2), wxGBSpan(1, 1), wxALL, 5);
-
-	luckLabel = new wxStaticText(this, wxID_ANY, _("Luck"), wxDefaultPosition, wxDefaultSize, 0);
-	luckLabel->Wrap(-1);
-	statisticsSizer->Add(luckLabel, wxGBPosition(8, 0), wxGBSpan(1, 1), wxALL, 5);
-
-	luckBase = new wxSpinCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, -32767, 32767, 0);
-	luckBase->SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT));
-
-	statisticsSizer->Add(luckBase, wxGBPosition(8, 1), wxGBSpan(1, 1), wxALL, 5);
-
-	luckBonus = new wxSpinCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, -32767, 32767, 0);
-	luckBonus->SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT));
-	luckBonus->SetBackgroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW));
-
-	statisticsSizer->Add(luckBonus, wxGBPosition(8, 2), wxGBSpan(1, 1), wxALL, 5);
-
-	m_staticline201 = new wxStaticLine(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL);
-	statisticsSizer->Add(m_staticline201, wxGBPosition(9, 0), wxGBSpan(1, 4), wxEXPAND | wxALL, 5);
+	primaryOtherStaticLine = new wxStaticLine(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL);
+	primaryOtherStatisticsSizer->Add(primaryOtherStaticLine, wxGBPosition(9, 0), wxGBSpan(1, 4), wxEXPAND | wxALL, 5);
 
 	otherLabel = new wxStaticText(this, wxID_ANY, _("Other"), wxDefaultPosition, wxDefaultSize, 0);
 	otherLabel->Wrap(-1);
 	otherLabel->SetFont(wxFont(wxNORMAL_FONT->GetPointSize(), wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxEmptyString));
 
-	statisticsSizer->Add(otherLabel, wxGBPosition(10, 0), wxGBSpan(1, 3), wxALIGN_CENTER_HORIZONTAL | wxALL, 5);
+	primaryOtherStatisticsSizer->Add(otherLabel, wxGBPosition(10, 0), wxGBSpan(1, 3), wxALIGN_CENTER_HORIZONTAL | wxALL, 5);
 
 	extraAcLabel = new wxStaticText(this, wxID_ANY, _("Extra AC"), wxDefaultPosition, wxDefaultSize, 0);
 	extraAcLabel->Wrap(-1);
 	extraAcLabel->SetToolTip(_("Doesn't include stoneskin"));
 
-	statisticsSizer->Add(extraAcLabel, wxGBPosition(11, 0), wxGBSpan(1, 1), wxALL, 5);
+	primaryOtherStatisticsSizer->Add(extraAcLabel, wxGBPosition(11, 0), wxGBSpan(1, 1), wxALL, 5);
 
 	extraAcValue = new wxSpinCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, -32767, 32767, 0);
 	extraAcValue->SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT));
 
-	statisticsSizer->Add(extraAcValue, wxGBPosition(11, 2), wxGBSpan(1, 1), wxALL, 5);
+	primaryOtherStatisticsSizer->Add(extraAcValue, wxGBPosition(11, 2), wxGBSpan(1, 1), wxALL, 5);
 
 	ageLabel = new wxStaticText(this, wxID_ANY, _("Age"), wxDefaultPosition, wxDefaultSize, 0);
 	ageLabel->Wrap(-1);
-	statisticsSizer->Add(ageLabel, wxGBPosition(13, 0), wxGBSpan(1, 1), wxALL | wxALIGN_CENTER_VERTICAL, 5);
+	primaryOtherStatisticsSizer->Add(ageLabel, wxGBPosition(13, 0), wxGBSpan(1, 1), wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
 	ageBase = new wxSpinCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, -32767, 32767, 0);
 	ageBase->SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT));
 
-	statisticsSizer->Add(ageBase, wxGBPosition(13, 1), wxGBSpan(1, 1), wxALL, 5);
+	primaryOtherStatisticsSizer->Add(ageBase, wxGBPosition(13, 1), wxGBSpan(1, 1), wxALL, 5);
 
 	ageBonus = new wxSpinCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, -32767, 32767, 0);
 	ageBonus->SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT));
 
-	statisticsSizer->Add(ageBonus, wxGBPosition(13, 2), wxGBSpan(1, 1), wxALL, 5);
+	primaryOtherStatisticsSizer->Add(ageBonus, wxGBPosition(13, 2), wxGBSpan(1, 1), wxALL, 5);
 
 	levelLabel = new wxStaticText(this, wxID_ANY, _("Level"), wxDefaultPosition, wxDefaultSize, 0);
 	levelLabel->Wrap(-1);
-	statisticsSizer->Add(levelLabel, wxGBPosition(14, 0), wxGBSpan(1, 1), wxALL | wxALIGN_CENTER_VERTICAL, 5);
+	primaryOtherStatisticsSizer->Add(levelLabel, wxGBPosition(14, 0), wxGBSpan(1, 1), wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
 	levelBase = new wxSpinCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, -32767, 32767, 0);
 	levelBase->SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT));
 
-	statisticsSizer->Add(levelBase, wxGBPosition(14, 1), wxGBSpan(1, 1), wxALL, 5);
+	primaryOtherStatisticsSizer->Add(levelBase, wxGBPosition(14, 1), wxGBSpan(1, 1), wxALL, 5);
 
 	levelBonus = new wxSpinCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, -32767, 32767, 0);
 	levelBonus->SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT));
 
-	statisticsSizer->Add(levelBonus, wxGBPosition(14, 2), wxGBSpan(1, 1), wxALL, 5);
+	primaryOtherStatisticsSizer->Add(levelBonus, wxGBPosition(14, 2), wxGBSpan(1, 1), wxALL, 5);
 
 	levelHelp = new wxStaticBitmap(this, wxID_ANY, wxArtProvider::GetBitmap(wxART_INFORMATION, wxART_BUTTON), wxDefaultPosition, wxDefaultSize, 0);
 	levelHelp->SetToolTip(_("Also changes experience - at least minimum required for base level"));
 
-	statisticsSizer->Add(levelHelp, wxGBPosition(14, 3), wxGBSpan(1, 1), wxALL | wxALIGN_CENTER_VERTICAL, 5);
+	primaryOtherStatisticsSizer->Add(levelHelp, wxGBPosition(14, 3), wxGBSpan(1, 1), wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
 	experienceLabel = new wxStaticText(this, wxID_ANY, _("Experience"), wxDefaultPosition, wxDefaultSize, 0);
 	experienceLabel->Wrap(-1);
-	statisticsSizer->Add(experienceLabel, wxGBPosition(15, 0), wxGBSpan(1, 1), wxALL | wxALIGN_CENTER_VERTICAL, 5);
+	primaryOtherStatisticsSizer->Add(experienceLabel, wxGBPosition(15, 0), wxGBSpan(1, 1), wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
 	experience = new wxSpinCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, -32767, 32767, 0);
 	experience->SetForegroundColour(wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT));
 
-	statisticsSizer->Add(experience, wxGBPosition(15, 1), wxGBSpan(1, 1), wxALL, 5);
+	primaryOtherStatisticsSizer->Add(experience, wxGBPosition(15, 1), wxGBSpan(1, 1), wxALL, 5);
 
 	experienceHelp = new wxStaticBitmap(this, wxID_ANY, wxArtProvider::GetBitmap(wxART_INFORMATION, wxART_BUTTON), wxDefaultPosition, wxDefaultSize, 0);
 	experienceHelp->SetToolTip(_("Enough to train to level %d"));
 
-	statisticsSizer->Add(experienceHelp, wxGBPosition(15, 3), wxGBSpan(1, 1), wxALL, 5);
+	primaryOtherStatisticsSizer->Add(experienceHelp, wxGBPosition(15, 3), wxGBSpan(1, 1), wxALL, 5);
 
 	m_checkBox87 = new wxCheckBox(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0);
-	statisticsSizer->Add(m_checkBox87, wxGBPosition(2, 4), wxGBSpan(1, 1), wxALL | wxALIGN_CENTER_HORIZONTAL, 5);
+	primaryOtherStatisticsSizer->Add(m_checkBox87, wxGBPosition(2, 4), wxGBSpan(1, 1), wxALL | wxALIGN_CENTER_HORIZONTAL, 5);
 
 
-	statisticsAdjusterSizer->Add(statisticsSizer, 0, 0, 5);
+	statisticsAdjusterSizer->Add(primaryOtherStatisticsSizer, 0, 0, 5);
 
-	m_staticline27 = new wxStaticLine(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_VERTICAL);
-	statisticsAdjusterSizer->Add(m_staticline27, 0, wxEXPAND | wxALL, 5);
+	statisticsAdjusterVerticalLine = new wxStaticLine(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_VERTICAL);
+	statisticsAdjusterSizer->Add(statisticsAdjusterVerticalLine, 0, wxEXPAND | wxALL, 5);
 
 	wxBoxSizer* extraStatsSizer;
 	extraStatsSizer = new wxBoxSizer(wxVERTICAL);
@@ -631,5 +539,81 @@ void EditorStatisticsPanel::createActionsPanel()
 }
 
 EditorStatisticsPanel::~EditorStatisticsPanel()
+{
+}
+
+void EditorStatisticsPanel::onCurrentHpChange(wxCommandEvent& event)
+{
+}
+
+void EditorStatisticsPanel::onInfiniteHpCheck(wxCommandEvent& event)
+{
+}
+
+void EditorStatisticsPanel::onCurrentSpChange(wxCommandEvent& event)
+{
+}
+
+void EditorStatisticsPanel::onInfiniteSpCheck(wxCommandEvent& event)
+{
+}
+
+void EditorStatisticsPanel::onClassChoiceChange(wxCommandEvent& event)
+{
+}
+
+void EditorStatisticsPanel::onClassTierRadio(wxCommandEvent& event)
+{
+}
+
+void EditorStatisticsPanel::onClassAlignmentRadio(wxCommandEvent& event)
+{
+}
+
+void EditorStatisticsPanel::onRecoveryDelayMultiplierChange(wxCommandEvent& event)
+{
+}
+
+void EditorStatisticsPanel::onRecoverFullyPress(wxCommandEvent& event)
+{
+}
+
+void EditorStatisticsPanel::onReduceBuffSpellRecoveryCheck(wxCommandEvent& event)
+{
+}
+
+void EditorStatisticsPanel::onReduceBuffRecoveryOutOfCombatCheck(wxCommandEvent& event)
+{
+}
+
+void EditorStatisticsPanel::onExtraAcValueChange(wxCommandEvent& event)
+{
+}
+
+void EditorStatisticsPanel::onAgeBaseValueChange(wxCommandEvent& event)
+{
+}
+
+void EditorStatisticsPanel::onAgeBonusValueChange(wxCommandEvent& event)
+{
+}
+
+void EditorStatisticsPanel::onLevelBaseValueChange(wxCommandEvent& event)
+{
+}
+
+void EditorStatisticsPanel::onLevelBonusValueChange(wxCommandEvent& event)
+{
+}
+
+void EditorStatisticsPanel::onResistanceBaseValueChange(wxCommandEvent& event)
+{
+}
+
+void EditorStatisticsPanel::onResistanceBonusValueChange(wxCommandEvent& event)
+{
+}
+
+void EditorStatisticsPanel::onMm67ExtraValueChange(wxCommandEvent& event)
 {
 }

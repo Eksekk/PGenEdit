@@ -43,4 +43,7 @@ void MSGBOX(const char* text);
 
 //using std::visit;
 
+// undo system "instant edit + undo/redo" and "edit only on confirm + undo/redo" are equivalent -
+// to implement second just rollback all edits in first if user didn't confirm
+
 #endif // __MAIN_H__

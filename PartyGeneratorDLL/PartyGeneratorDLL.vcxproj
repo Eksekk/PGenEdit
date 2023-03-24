@@ -21,6 +21,7 @@
   <ItemGroup>
     <ClInclude Include="AlignmentRadioBox.h" />
     <ClInclude Include="Asserter.h" />
+    <ClInclude Include="AutoBackup.h" />
     <ClInclude Include="ClassInfoPanel.h" />
     <ClInclude Include="ClassSettingsTab.h" />
     <ClInclude Include="ClassWindow.h" />
@@ -37,6 +38,7 @@
     <ClInclude Include="GeneratorGuiBase.h" />
     <ClInclude Include="GuaranteedClassDialog.h" />
     <ClInclude Include="ClassGenerationData.h" />
+    <ClInclude Include="GUI_tests.h" />
     <ClInclude Include="headers\structs\Arcomage.h" />
     <ClInclude Include="headers\structs\Bin.h" />
     <ClInclude Include="headers\structs\Common.h" />
@@ -89,6 +91,7 @@
   <ItemGroup>
     <ClCompile Include="AlignmentRadioBox.cpp" />
     <ClCompile Include="Asserter.cpp" />
+    <ClCompile Include="AutoBackup.cpp" />
     <ClCompile Include="ClassGenerationData.cpp" />
     <ClCompile Include="ClassInfoPanel.cpp" />
     <ClCompile Include="ClassSettingsTab.cpp" />
@@ -105,6 +108,7 @@
     <ClCompile Include="GeneralPanel.cpp" />
     <ClCompile Include="GeneratorGuiBase.cpp" />
     <ClCompile Include="GuaranteedClassDialog.cpp" />
+    <ClCompile Include="GUI_tests.cpp" />
     <ClCompile Include="Hooks.cpp" />
     <ClCompile Include="LuaFunctions.cpp" />
     <ClCompile Include="PartyStructAccessor.cpp" />

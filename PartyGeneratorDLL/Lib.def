@@ -1,5 +1,5 @@
 LIBRARY PARTYGENERATOR
-VERSION 0.1
+VERSION 0.2
 EXPORTS
 	init
 	unloadCleanup
@@ -10,6 +10,7 @@ EXPORTS
 	setLuaState
 	setClassData
 	setSkillData
+	setMiscData
 	setCallbacks
 	setPlayerPointers
 	runTests

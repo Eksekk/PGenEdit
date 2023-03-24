@@ -3,9 +3,12 @@
 #include "PlayerStructAccessor.h"
 #include "LowLevel.h"
 #include "PartyStructAccessor.h"
+#include "GameData.h"
+#include "Enum_const.h"
 
 const bool MALE = true, FEMALE = false; // TODO: check
 const int PLAYER_ACTIVE = 6, PLAYER_RANDOM = 7;
+extern const int INVALID_ID;
 
 PlayerStructAccessor* playerAccessor = nullptr;
 
@@ -567,7 +570,7 @@ void setFieldSizes_8()
 template<typename Player>
 bool TemplatedPlayerStructAccessor<Player>::isBlackPotionUsed(int statId)
 {
-	wxASSERT_MSG(existsInVector(PRIMARY_STATS, statId), wxString::Format("Invalid stat %d", statId));
+	wxASSERT_MSG(existsInVector(STATS_PRIMARY, statId), wxString::Format("Invalid stat %d", statId));
 	int minId = 5000000;
 	for (const auto& [id, stat] : GameData::primaryStats)
 	{
@@ -579,7 +582,7 @@ bool TemplatedPlayerStructAccessor<Player>::isBlackPotionUsed(int statId)
 template<typename Player>
 void TemplatedPlayerStructAccessor<Player>::setBlackPotionUsed(int statId, bool used)
 {
-	wxASSERT_MSG(existsInVector(PRIMARY_STATS, statId), wxString::Format("Invalid stat %d", statId));
+	wxASSERT_MSG(existsInVector(STATS_PRIMARY, statId), wxString::Format("Invalid stat %d", statId));
 	int minId = 5000000;
 	for (const auto& [id, stat] : GameData::primaryStats)
 	{
@@ -591,7 +594,7 @@ void TemplatedPlayerStructAccessor<Player>::setBlackPotionUsed(int statId, bool 
 template<typename Player>
 int TemplatedPlayerStructAccessor<Player>::getConditionEffectOnStat(int statId)
 {
-	wxASSERT_MSG(existsInVector(PRIMARY_STATS, statId), wxString::Format("Invalid stat %d", statId));
+	wxASSERT_MSG(existsInVector(STATS_PRIMARY, statId), wxString::Format("Invalid stat %d", statId));
 	wxFAIL;
 	return 100;
 }

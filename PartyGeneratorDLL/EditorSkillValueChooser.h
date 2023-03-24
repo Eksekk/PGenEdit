@@ -30,5 +30,8 @@ public:
 	void onValueChange(wxCommandEvent& event);
 	void setRowColor(const wxColour& colour);
 	void onShow(wxShowEvent& event);
+
+	friend class Tests;
+	friend class GUI_tests;
 };
 

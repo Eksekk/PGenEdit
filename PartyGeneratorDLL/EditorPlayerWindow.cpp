@@ -6,6 +6,7 @@
 #include "EditorMainWindow.h"
 #include "GuiApplication.h"
 #include <wx/evtloop.h>
+#include "EditorStatisticsPanel.h"
 
 EditorPlayerWindow::EditorPlayerWindow(wxWindow* parent, int playerIndex) : wxFrame(parent, wxID_ANY, "Edit " + playerAccessor->getNameOrDefault(playerIndex),
 	wxDefaultPosition, wxSize(770, 670), wxDEFAULT_FRAME_STYLE | wxTAB_TRAVERSAL), playerIndex(playerIndex)
@@ -32,9 +33,7 @@ EditorPlayerWindow::EditorPlayerWindow(wxWindow* parent, int playerIndex) : wxFr
 	tabs->AssignImageList(tabsImages);
 	appearancePanel = new wxPanel(tabs, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
 	tabs->AddPage(appearancePanel, _("Appearance"), false);
-	propertiesPanel = new wxPanel(tabs, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
-	tabs->AddPage(propertiesPanel, _("Properties"), false);
-	statisticsPanel = new wxPanel(tabs, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
+	statisticsPanel = new EditorStatisticsPanel(tabs, playerIndex);
 	tabs->AddPage(statisticsPanel, _("Statistics"), false);
 	skillsPanel = new EditorSkillsPanel(tabs, playerIndex);
 	tabs->AddPage(skillsPanel, _("Skills"), true);
@@ -119,5 +118,6 @@ void EditorPlayerWindow::onActivate(wxActivateEvent& event)
 	if (event.GetActive())
 	{
 		skillsPanel->updateFromPlayerData();
+		statisticsPanel->updateFromPlayerData();
 	}
 }

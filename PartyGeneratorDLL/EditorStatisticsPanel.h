@@ -17,6 +17,7 @@ private:
 	void createImmediateStatSettings();
 	void createStatisticsAdjuster();
 	void createActionsPanel();
+	const int playerIndex;
 protected:
 	// stat-like data
 	wxStaticText* hpLabel;
@@ -56,6 +57,8 @@ protected:
 	wxStaticLine* immediateStatisticsStaticLine;
 
 	// stat adjusters
+	std::unordered_map<int, std::unique_ptr<PrimaryStatWidget>> widgetToStatMap;
+
 	wxStaticText* adjustStatisticsLabel;
 	wxStaticText* primaryLabel;
 	wxStaticText* statisticsBaseLabel;
@@ -63,7 +66,7 @@ protected:
 	wxStaticText* m_staticText108;
 	wxStaticText* m_staticText114;
 	wxStaticText* m_staticText115;
-	wxStaticLine* m_staticline201;
+	wxStaticLine* primaryOtherStaticLine;
 	wxStaticText* otherLabel;
 	wxStaticText* extraAcLabel;
 	wxSpinCtrl* extraAcValue;
@@ -78,7 +81,7 @@ protected:
 	wxSpinCtrl* experience;
 	wxStaticBitmap* experienceHelp;
 	wxCheckBox* m_checkBox87;
-	wxStaticLine* m_staticline27;
+	wxStaticLine* statisticsAdjusterVerticalLine;
 	wxStaticText* resistancesLabel;
 	wxStaticText* resistancesBaseLabel;
 	wxStaticText* resistancesBonusLabel;
@@ -99,6 +102,17 @@ protected:
 
 	wxStaticLine* statisticsActionsStaticLine;
 
+	void onExtraAcValueChange(wxCommandEvent& event);
+	void onAgeBaseValueChange(wxCommandEvent& event);
+	void onAgeBonusValueChange(wxCommandEvent& event);
+	void onLevelBaseValueChange(wxCommandEvent& event);
+	void onLevelBonusValueChange(wxCommandEvent& event);
+
+	void onResistanceBaseValueChange(wxCommandEvent& event);
+	void onResistanceBonusValueChange(wxCommandEvent& event);
+
+	void onMm67ExtraValueChange(wxCommandEvent& event);
+
 	// actions
 	wxStaticText* actionsLabel;
 	wxCheckBox* scaleWithLevelCheckbox;
@@ -112,9 +126,11 @@ protected:
 	wxButton* setToRelativePowerButton;
 	wxSlider* setToRelativePowerSlider;
 
-	wxBoxSizer* mainSizer;
+	void onMinimumStatisticsPress(wxCommandEvent& event);
+	void onMaximumStatisticsPress(wxCommandEvent& event);
+	void onRelativePowerStatisticsPress(wxCommandEvent& event);
 
-	std::unordered_map<int, std::unique_ptr<PrimaryStatWidget>> widgetToStatMap;
+	wxBoxSizer* mainSizer;
 
 	std::unordered_map<int, PlayerClass*> classToChoiceIndexMap;
 
@@ -122,9 +138,11 @@ protected:
 
 	void saveData();
 	void loadData();
+
+	void onActivateWindow(wxActivateEvent& event);
 public:
 
-	EditorStatisticsPanel(wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize(723, 817), long style = wxTAB_TRAVERSAL | wxHSCROLL | wxVSCROLL, const wxString& name = wxEmptyString);
+	EditorStatisticsPanel(wxWindow* parent, int playerIndex);
 
 	void updateFromPlayerData();
 	~EditorStatisticsPanel();

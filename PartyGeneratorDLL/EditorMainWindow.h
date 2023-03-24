@@ -41,10 +41,13 @@ public:
 
 	void setupMenusAndStatusBar();
 
+	void createPlayerWindow(int index);
+
+	void destroyPlayerWindow(int index);
 	void update(wxTimerEvent& event);
 	void onCloseWindow(wxCloseEvent& event);
 	~EditorMainWindow();
 
-	friend class Tests; // to allow ProcessEvent()
+	friend class GUI_tests;
 };
 

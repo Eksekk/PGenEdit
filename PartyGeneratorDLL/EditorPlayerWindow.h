@@ -12,7 +12,6 @@ protected:
 	wxPanel* mainPanel;
 	wxNotebook* tabs;
 	wxPanel* appearancePanel;
-	wxPanel* propertiesPanel;
 	wxPanel* statisticsPanel;
 	EditorSkillsPanel* skillsPanel;
 	wxPanel* spellsPanel;
@@ -25,6 +24,8 @@ protected:
 	wxEventLoop* loop;
 
 public:
+	static const int APPEARANCE_PANEL_INDEX = 0, STATISTICS_PANEL_INDEX = 1, SKILLS_PANEL_INDEX = 2, SPELLS_PANEL_INDEX = 3,
+		ITEMS_PANEL_INDEX = 4, CONDITIONS_BUFFS_PANEL_INDEX = 5, AWARDS_PANEL_INDEX = 6;
 	const int playerIndex;
 
 	EditorPlayerWindow(wxWindow* parent, int playerIndex);
@@ -36,6 +37,8 @@ public:
 	void onCloseWindow(wxCloseEvent& event);
 	bool AcceptsFocus() const override;
 	void onActivate(wxActivateEvent& event);
+
+	friend class GUI_tests;
 private:
 	wxBoxSizer* mainSizer;
 	wxTimer* updateTimer;
