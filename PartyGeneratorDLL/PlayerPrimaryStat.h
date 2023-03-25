@@ -9,7 +9,6 @@ public:
 	const std::string name;
 	const int blackPotionId;
 
-	int getConditionEffect(int cond) const;
 	PlayerPrimaryStat() = delete;
 	PlayerPrimaryStat(int id, std::string name, int blackPotionId);
 };

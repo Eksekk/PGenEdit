@@ -6,6 +6,10 @@
 #include <wx/spinctrl.h>
 #include "PlayerStructAccessor.h"
 
+wxDEFINE_EVENT(PRIMARY_STAT_BASE, wxCommandEvent);
+wxDEFINE_EVENT(PRIMARY_STAT_BONUS, wxCommandEvent);
+wxDEFINE_EVENT(PRIMARY_STAT_BLACK_POTION, wxCommandEvent);
+
 PrimaryStatWidget::PrimaryStatWidget(wxWindow* panel, wxGridBagSizer* sizer, int rowId, PlayerPrimaryStat* stat, int playerIndex)
 	: statId(stat->id), stat(stat), playerIndex(playerIndex), wxEvtHandler()
 {
@@ -18,7 +22,7 @@ PrimaryStatWidget::PrimaryStatWidget(wxWindow* panel, wxGridBagSizer* sizer, int
 	sizer->Add(bonus, wxGBPosition(rowId, 2), wxGBSpan(1, 1));
 	blackPotionCheckbox = new wxCheckBox(panel, wxID_ANY, "");
 	sizer->Add(blackPotionCheckbox, wxGBPosition(rowId, 3), wxGBSpan(1, 1));
-	conditionEffect = new wxStaticText(panel, wxID_ANY, "N / A");
+	conditionEffect = new wxStaticText(panel, wxID_ANY, "0");
 	sizer->Add(conditionEffect, wxGBPosition(rowId, 4), wxGBSpan(1, 1));
 
 	base->Bind(wxEVT_SPINCTRL, &PrimaryStatWidget::onBaseChange, this);
@@ -72,7 +76,7 @@ void PrimaryStatWidget::updateConditionEffect(int percentage)
 	else
 	{
 		conditionEffect->SetOwnForegroundColour(*wxBLACK);
-		text = "N / A";
+		text = "0";
 	}
 	conditionEffect->SetLabel(text);
 }

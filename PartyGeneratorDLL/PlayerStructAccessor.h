@@ -127,6 +127,7 @@ public:
 	[[nodiscard]] virtual void setBlackPotionUsed(int statId, bool used) = 0;
 
 	[[nodiscard]] virtual int getConditionEffectOnStat(int statId) = 0;
+	[[nodiscard]] virtual int getResistanceSpellEffect(int resId) = 0;
 	// LATER
 	// virtual void setClass(PlayerClass* clas, bool affectSkills = false, bool affectSpells = false, bool removeInvalidEquippedItems = false,
 	//     bool affectAwards = false, bool tryToKeepTierAndAlignment = false) = 0;
@@ -321,6 +322,8 @@ public:
 
 	// Inherited via PlayerStructAccessor
 	virtual int getConditionEffectOnStat(int statId) override;
+
+	int getResistanceSpellEffect(int resId) override;
 };
 
 using PlayerStructAccessor_6 = TemplatedPlayerStructAccessor<mm6::Player>;

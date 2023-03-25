@@ -104,7 +104,7 @@ TemplatedPlayerStructAccessor<Player>::getSkillMaxMasteries(const std::vector<Pl
 	}
 	else //CLASS_CONSTRAINT_ANY_PROMOTION_CLASS
 	{
-		PlayerClass::TreeOptions opt(false, true, false); // !lower, higher, !equal 
+		PlayerClass::TreeOptions opt(false, false, true); // !lower, !equal, higher
 		auto tree = getClassPtr()->getClassTree(opt);
 		for (const auto skillPtr : skills)
 		{
@@ -131,7 +131,7 @@ Mastery TemplatedPlayerStructAccessor<Player>::getSkillMaxMastery(PlayerSkill* s
 	}
 	else //CLASS_CONSTRAINT_ANY_PROMOTION_CLASS
 	{
-		PlayerClass::TreeOptions opt(false, true, false);
+		PlayerClass::TreeOptions opt(false, false, true);
 		auto tree = getClassPtr()->getClassTree(opt);
 		PlayerClass* max = *(
 			std::max_element(tree.begin(), tree.end(), [skill](PlayerClass* const cls1, PlayerClass* const cls2) -> bool
@@ -574,9 +574,9 @@ bool TemplatedPlayerStructAccessor<Player>::isBlackPotionUsed(int statId)
 	int minId = 5000000;
 	for (const auto& [id, stat] : GameData::primaryStats)
 	{
-		minId = std::min(minId, stat.blackPotionId);
+		minId = std::min(minId, stat->blackPotionId);
 	}
-	return getPlayerToAffect()->usedBlackPotions.at(GameData::primaryStats.at(statId).blackPotionId - minId) != 0;
+	return getPlayerToAffect()->usedBlackPotions.at(GameData::primaryStats.at(statId)->blackPotionId - minId) != 0;
 }
 
 template<typename Player>
@@ -586,9 +586,9 @@ void TemplatedPlayerStructAccessor<Player>::setBlackPotionUsed(int statId, bool 
 	int minId = 5000000;
 	for (const auto& [id, stat] : GameData::primaryStats)
 	{
-		minId = std::min(minId, stat.blackPotionId);
+		minId = std::min(minId, stat->blackPotionId);
 	}
-	getPlayerToAffect()->usedBlackPotions.at(GameData::primaryStats.at(statId).blackPotionId - minId) = used;
+	getPlayerToAffect()->usedBlackPotions.at(GameData::primaryStats.at(statId)->blackPotionId - minId) = used;
 }
 
 template<typename Player>
@@ -597,6 +597,14 @@ int TemplatedPlayerStructAccessor<Player>::getConditionEffectOnStat(int statId)
 	wxASSERT_MSG(existsInVector(STATS_PRIMARY, statId), wxString::Format("Invalid stat %d", statId));
 	wxFAIL;
 	return 100;
+}
+
+template<typename Player>
+int TemplatedPlayerStructAccessor<Player>::getResistanceSpellEffect(int resId)
+{
+	wxASSERT_MSG(existsInVector(STATS_RESISTANCES, resId), wxString::Format("Invalid resistance %d", resId));
+	wxFAIL;
+	return 0;
 }
 
 template<typename Player>

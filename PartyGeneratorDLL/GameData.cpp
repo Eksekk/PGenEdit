@@ -14,7 +14,8 @@
 
 std::unordered_map<int, PlayerClass> GameData::classes;
 std::unordered_map<int, PlayerSkill> GameData::skills;
-std::map<int, PlayerPrimaryStat> GameData::primaryStats;
+std::map<int, std::unique_ptr<PlayerPrimaryStat>> GameData::primaryStats;
+std::map<int, std::unique_ptr<PlayerResistance>> GameData::resistances;
 Json GameData::classDataJson;
 Json GameData::skillDataJson;
 
@@ -313,14 +314,39 @@ bool GameData::processMiscDataJson(const char* str)
     auto stats = json["primaryStats"].get<std::unordered_map<std::string, Json>>();
     for (const auto& [id, data] : stats)
     {
-        GameData::primaryStats.emplace(std::stoi(id), PlayerPrimaryStat(std::stoi(id), data["name"], data["blackPotionId"]));
+        GameData::primaryStats.emplace(std::stoi(id), std::make_unique<PlayerPrimaryStat>(std::stoi(id), data["name"], data["blackPotionId"]));
     }
-    postProcess();
-}
+    wxASSERT(GameData::primaryStats.size() == 7);
 
-void GameData::reparse(const char* data[DATA_TYPE_COUNT])
-{
-    throw std::runtime_error("Not supported");
+    auto resists = json["resistances"].get<std::unordered_map<std::string, Json>>();
+    for (const auto& [id, data] : resists)
+    {
+        int useId = INVALID_ID;
+        if (data.contains("builtinSpecial"))
+        {
+            wxString str = (std::string)data["builtinSpecial"];
+            if (str.CmpNoCase("light"))
+            {
+                useId = STAT_LIGHT_RESISTANCE;
+            }
+            else if (str.CmpNoCase("dark"))
+            {
+                useId = STAT_DARK_RESISTANCE;
+            }
+            else
+            {
+                wxFAIL_MSG(wxString::Format("Unknown builtinSpecial: %s", str));
+            }
+        }
+        else
+        {
+            useId = std::stoi(id);
+        }
+        // TODO: resistance spells
+        GameData::resistances.emplace(useId, std::make_unique<PlayerResistance>(useId, data["name"], data["exclusive"], nullptr, nullptr));
+    }
+    wxASSERT(GameData::resistances.size() >= (MMVER == 6 ? 5 : 9));
+    postProcess();
 }
 
 extern "C" bool checkIsInGame();

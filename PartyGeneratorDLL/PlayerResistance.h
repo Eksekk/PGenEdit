@@ -6,12 +6,12 @@ class PlayerSpell;
 class PlayerResistance
 {
 public:
-	int id;
-	std::string name;
-	bool exclusive; // cannot be acquired ingame without cheating
-	PlayerSpell* resistanceSpell;
-	PlayerSpell* groupResistanceSpell; // day of protection
+	const int id;
+	const std::string name;
+	const bool exclusive; // cannot be acquired ingame without cheating
+	PlayerSpell* const resistanceSpell;
+	PlayerSpell* const groupResistanceSpell; // day of protection
 
-	PlayerResistance();
+	PlayerResistance() = delete;
+	PlayerResistance(int id, const std::string& name, bool exclusive, PlayerSpell* resistanceSpell, PlayerSpell* groupResistanceSpell);
 };
-

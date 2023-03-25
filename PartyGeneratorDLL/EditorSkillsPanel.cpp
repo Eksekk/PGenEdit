@@ -293,7 +293,7 @@ bool EditorSkillsPanel::AcceptsFocus() const
 
 void EditorSkillsPanel::createSkillPointsOptionsPanel()
 {
-	skillPointsAndOptionsHeader = new wxStaticText(this, wxID_ANY, _("Skill points && options"), wxDefaultPosition, wxDefaultSize, 0); // && is ampersand escape
+	skillPointsAndOptionsHeader = new wxStaticText(this, wxID_ANY, _("Skill points && options")); // && is ampersand escape
 	skillPointsAndOptionsHeader->Wrap(-1);
 	skillPointsAndOptionsHeader->SetFont(wxFont(12, wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL, false, wxEmptyString));
 
@@ -303,7 +303,7 @@ void EditorSkillsPanel::createSkillPointsOptionsPanel()
 	wxBoxSizer* skillPointsSizer;
 	skillPointsSizer = new wxBoxSizer(wxHORIZONTAL);
 
-	availableSkillPointsLabel = new wxStaticText(this, wxID_ANY, _("Skill points:"), wxDefaultPosition, wxDefaultSize, 0);
+	availableSkillPointsLabel = new wxStaticText(this, wxID_ANY, _("Skill points:"));
 	availableSkillPointsLabel->Wrap(-1);
 	skillPointsSizer->Add(availableSkillPointsLabel, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
@@ -314,7 +314,7 @@ void EditorSkillsPanel::createSkillPointsOptionsPanel()
 	wxBoxSizer* spentSkillPointsSizer;
 	spentSkillPointsSizer = new wxBoxSizer(wxHORIZONTAL);
 
-	spentSkillPointsLabel = new wxStaticText(this, wxID_ANY, _("Spent skill points:"), wxDefaultPosition, wxDefaultSize, 0);
+	spentSkillPointsLabel = new wxStaticText(this, wxID_ANY, _("Spent skill points:"));
 	spentSkillPointsLabel->Wrap(-1);
 	spentSkillPointsLabel->SetToolTip(_("Total for all learned skills"));
 
@@ -337,7 +337,7 @@ void EditorSkillsPanel::createSkillPointsOptionsPanel()
 	wxBoxSizer* optionsSkillpointsSizer;
 	optionsSkillpointsSizer = new wxBoxSizer(wxHORIZONTAL);
 
-	affectAvailableSkillpointsCheckbox = new wxCheckBox(this, wxID_ANY, _("Affect available skillpoints:"), wxDefaultPosition, wxDefaultSize, 0);
+	affectAvailableSkillpointsCheckbox = new wxCheckBox(this, wxID_ANY, _("Affect available skillpoints:"));
 	optionsSkillpointsSizer->Add(affectAvailableSkillpointsCheckbox, 0, wxALL, 5);
 	affectAvailableSkillpointsCheckbox->Bind(wxEVT_CHECKBOX, &EditorSkillsPanel::onAffectSkillPointsCheck, this);
 
@@ -346,7 +346,7 @@ void EditorSkillsPanel::createSkillPointsOptionsPanel()
 	dontAllowSpendingMoreThanAvailableSkillpointsRadio->Bind(wxEVT_RADIOBUTTON, &EditorSkillsPanel::onDontAllowSpendingMoreThanAvailableSpRadio, this);
 	dontAllowSpendingMoreThanAvailableSkillpointsRadio->Disable();
 
-	allowNegativeSkillpointsRadio = new wxRadioButton(this, wxID_ANY, _("Allow negative skillpoints"), wxDefaultPosition, wxDefaultSize, 0);
+	allowNegativeSkillpointsRadio = new wxRadioButton(this, wxID_ANY, _("Allow negative skillpoints"));
 	allowNegativeSkillpointsRadio->SetToolTip(_("Might not work correctly ingame. Use at your own risk"));
 	allowNegativeSkillpointsRadio->Bind(wxEVT_RADIOBUTTON, &EditorSkillsPanel::onAllowNegativeSkillPointsRadio, this);
 	allowNegativeSkillpointsRadio->Disable();
@@ -359,7 +359,7 @@ void EditorSkillsPanel::createSkillPointsOptionsPanel()
 	wxBoxSizer* optionsGoldSizer;
 	optionsGoldSizer = new wxBoxSizer(wxHORIZONTAL);
 
-	affectGoldCheckbox = new wxCheckBox(this, wxID_ANY, _("Affect gold:"), wxDefaultPosition, wxDefaultSize, 0);
+	affectGoldCheckbox = new wxCheckBox(this, wxID_ANY, _("Affect gold:"));
 	optionsGoldSizer->Add(affectGoldCheckbox, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 	affectGoldCheckbox->Bind(wxEVT_CHECKBOX, &EditorSkillsPanel::onAffectGoldCheck, this);
 
@@ -368,7 +368,7 @@ void EditorSkillsPanel::createSkillPointsOptionsPanel()
 	dontAllowSpendingMoreThanAvailableGoldRadio->Bind(wxEVT_RADIOBUTTON, &EditorSkillsPanel::onDontAllowSpendingMoreThanAvailableGoldRadio, this);
 	dontAllowSpendingMoreThanAvailableGoldRadio->Disable();
 
-	allowNegativeGoldRadio = new wxRadioButton(this, wxID_ANY, _("Allow negative gold"), wxDefaultPosition, wxDefaultSize, 0);
+	allowNegativeGoldRadio = new wxRadioButton(this, wxID_ANY, _("Allow negative gold"));
 	allowNegativeGoldRadio->SetToolTip(_("Might not work correctly ingame. Use at your own risk"));
 	allowNegativeGoldRadio->Bind(wxEVT_RADIOBUTTON, &EditorSkillsPanel::onAllowNegativeGoldRadio, this);
 	allowNegativeGoldRadio->Disable();
@@ -381,7 +381,7 @@ void EditorSkillsPanel::createSkillPointsOptionsPanel()
 
 	optionsGoldSizer->Add(goldDisplayText, 0, wxALL, 5);
 
-	goldLabel = new wxStaticText(this, wxID_ANY, _("G"), wxDefaultPosition, wxDefaultSize, 0);
+	goldLabel = new wxStaticText(this, wxID_ANY, _("G"));
 	goldLabel->Wrap(-1);
 	optionsGoldSizer->Add(goldLabel, 0, wxALIGN_CENTER_VERTICAL | wxTOP | wxBOTTOM | wxRIGHT, 5);
 
@@ -399,17 +399,17 @@ void EditorSkillsPanel::createSkillPointsOptionsPanel()
 	classConstraintsInnerSizer->Add(classConstraintsNone, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 	classConstraintsNone->Bind(wxEVT_RADIOBUTTON, &EditorSkillsPanel::onRespectClassConstraintsNoRadio, this);
 
-	classConstraintsCurrentClass = new wxRadioButton(classConstraintsInnerSizer->GetStaticBox(), wxID_ANY, _("Of current class"), wxDefaultPosition, wxDefaultSize, 0);
+	classConstraintsCurrentClass = new wxRadioButton(classConstraintsInnerSizer->GetStaticBox(), wxID_ANY, _("Of current class"));
 	classConstraintsInnerSizer->Add(classConstraintsCurrentClass, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 	classConstraintsCurrentClass->Bind(wxEVT_RADIOBUTTON, &EditorSkillsPanel::onRespectClassConstraintsCurrentRadio, this);
 
-	classConstraintsPromotionClass = new wxRadioButton(classConstraintsInnerSizer->GetStaticBox(), wxID_ANY, _("Of any promotion class"), wxDefaultPosition, wxDefaultSize, 0);
+	classConstraintsPromotionClass = new wxRadioButton(classConstraintsInnerSizer->GetStaticBox(), wxID_ANY, _("Of any promotion class"));
 	classConstraintsPromotionClass->SetToolTip(_("The one which has highest mastery possible"));
 	classConstraintsPromotionClass->Bind(wxEVT_RADIOBUTTON, &EditorSkillsPanel::onRespectClassConstraintsPromotionRadio, this);
 
 	classConstraintsInnerSizer->Add(classConstraintsPromotionClass, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
-	applyClassConstraintsButton = new wxButton(classConstraintsInnerSizer->GetStaticBox(), wxID_ANY, _("Apply right now"), wxDefaultPosition, wxDefaultSize, 0);
+	applyClassConstraintsButton = new wxButton(classConstraintsInnerSizer->GetStaticBox(), wxID_ANY, _("Apply right now"));
 	applyClassConstraintsButton->SetToolTip(_("Only applies class constraints and takes into account gold and skillpoint settings. No other action is done"));
 	applyClassConstraintsButton->Bind(wxEVT_BUTTON, &EditorSkillsPanel::onApplyClassConstraintsButton, this);
 
@@ -418,7 +418,7 @@ void EditorSkillsPanel::createSkillPointsOptionsPanel()
 
 	classConstraintsSizer->Add(classConstraintsInnerSizer, 0, wxALL, 5);
 
-	respectClassConstraintsTooltip = new wxStaticBitmap(this, wxID_ANY, wxArtProvider::GetBitmap(wxART_INFORMATION, wxART_BUTTON), wxDefaultPosition, wxDefaultSize, 0);
+	respectClassConstraintsTooltip = new wxStaticBitmap(this, wxID_ANY, wxArtProvider::GetBitmap(wxART_INFORMATION, wxART_BUTTON));
 	respectClassConstraintsTooltip->SetToolTip(_("Skills will be learned at maximum level class supports. This means any use will reduce affected skill to compatible level! Skills class can't learn will be unlearned."));
 
 	classConstraintsSizer->Add(respectClassConstraintsTooltip, 0, wxALIGN_CENTER_VERTICAL | wxALL, 5);
@@ -430,7 +430,7 @@ void EditorSkillsPanel::createSkillPointsOptionsPanel()
 
 void EditorSkillsPanel::createSkillsPanel()
 {
-	skillValuesLabel = new wxStaticText(this, wxID_ANY, _("Set skill values:"), wxDefaultPosition, wxDefaultSize, 0);
+	skillValuesLabel = new wxStaticText(this, wxID_ANY, _("Set skill values:"));
 	skillValuesLabel->Wrap(-1);
 	skillValuesLabel->SetFont(wxFont(12, wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL, false, wxEmptyString));
 
@@ -595,7 +595,7 @@ void EditorSkillsPanel::createSkillsPanel()
 
 void EditorSkillsPanel::createActionsPanel()
 {
-	actionsLabel = new wxStaticText(this, wxID_ANY, _("Actions:"), wxDefaultPosition, wxDefaultSize, 0);
+	actionsLabel = new wxStaticText(this, wxID_ANY, _("Actions:"));
 	actionsLabel->Wrap(-1);
 	actionsLabel->SetFont(wxFont(12, wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL, false, wxEmptyString));
 	mainSizer->Add(actionsLabel, 0, wxALL | wxALIGN_CENTER_HORIZONTAL, 5);
@@ -603,22 +603,22 @@ void EditorSkillsPanel::createActionsPanel()
 	wxStaticBoxSizer* affectSizer;
 	affectSizer = new wxStaticBoxSizer(new wxStaticBox(this, wxID_ANY, _("Affect which skill categories?")), wxHORIZONTAL);
 
-	affectWeaponsCheckbox = new wxCheckBox(affectSizer->GetStaticBox(), wxID_ANY, _("Weapons"), wxDefaultPosition, wxDefaultSize, 0);
+	affectWeaponsCheckbox = new wxCheckBox(affectSizer->GetStaticBox(), wxID_ANY, _("Weapons"));
 	affectWeaponsCheckbox->SetValue(true);
 	affectSizer->Add(affectWeaponsCheckbox, 0, wxALL, 5);
 	affectWeaponsCheckbox->Bind(wxEVT_CHECKBOX, &EditorSkillsPanel::onAffectWeaponsCheck, this);
 
-	affectArmorCheckbox = new wxCheckBox(affectSizer->GetStaticBox(), wxID_ANY, _("Armor"), wxDefaultPosition, wxDefaultSize, 0);
+	affectArmorCheckbox = new wxCheckBox(affectSizer->GetStaticBox(), wxID_ANY, _("Armor"));
 	affectArmorCheckbox->SetValue(true);
 	affectSizer->Add(affectArmorCheckbox, 0, wxALL, 5);
 	affectArmorCheckbox->Bind(wxEVT_CHECKBOX, &EditorSkillsPanel::onAffectArmorCheck, this);
 
-	affectMagicCheckbox = new wxCheckBox(affectSizer->GetStaticBox(), wxID_ANY, _("Magic"), wxDefaultPosition, wxDefaultSize, 0);
+	affectMagicCheckbox = new wxCheckBox(affectSizer->GetStaticBox(), wxID_ANY, _("Magic"));
 	affectMagicCheckbox->SetValue(true);
 	affectSizer->Add(affectMagicCheckbox, 0, wxALL, 5);
 	affectMagicCheckbox->Bind(wxEVT_CHECKBOX, &EditorSkillsPanel::onAffectMagicCheck, this);
 
-	affectMiscCheckbox = new wxCheckBox(affectSizer->GetStaticBox(), wxID_ANY, _("Misc"), wxDefaultPosition, wxDefaultSize, 0);
+	affectMiscCheckbox = new wxCheckBox(affectSizer->GetStaticBox(), wxID_ANY, _("Misc"));
 	affectMiscCheckbox->SetValue(true);
 	affectSizer->Add(affectMiscCheckbox, 0, wxALL, 5);
 	affectMiscCheckbox->Bind(wxEVT_CHECKBOX, &EditorSkillsPanel::onAffectMiscCheck, this);
@@ -632,14 +632,14 @@ void EditorSkillsPanel::createActionsPanel()
 	wxBoxSizer* learnButtonsSizer;
 	learnButtonsSizer = new wxBoxSizer(wxVERTICAL);
 
-	godModeButton = new wxButton(learnSizer->GetStaticBox(), wxID_ANY, _("Learn all skills at maximum level game supports (god mode)"), wxDefaultPosition, wxDefaultSize, 0);
+	godModeButton = new wxButton(learnSizer->GetStaticBox(), wxID_ANY, _("Learn all skills at maximum level game supports (god mode)"));
 	learnButtonsSizer->Add(godModeButton, 0, wxALL, 5);
 	godModeButton->Bind(wxEVT_BUTTON, &EditorSkillsPanel::onGodModeButton, this);
 
 	wxBoxSizer* learnAllSkillsAtSizer;
 	learnAllSkillsAtSizer = new wxBoxSizer(wxHORIZONTAL);
 
-	setAllSkillsToButton = new wxButton(learnSizer->GetStaticBox(), wxID_ANY, _("Set all skills to:"), wxDefaultPosition, wxDefaultSize, 0);
+	setAllSkillsToButton = new wxButton(learnSizer->GetStaticBox(), wxID_ANY, _("Set all skills to:"));
 	learnAllSkillsAtSizer->Add(setAllSkillsToButton, 0, wxALL, 5);
 	setAllSkillsToButton->Bind(wxEVT_BUTTON, &EditorSkillsPanel::onSetAllSkillsButton, this);
 
@@ -662,7 +662,7 @@ void EditorSkillsPanel::createActionsPanel()
 	wxBoxSizer* learnSettingsSizer;
 	learnSettingsSizer = new wxBoxSizer(wxHORIZONTAL);
 
-	onlyAlreadyLearnedCheckbox = new wxCheckBox(learnSizer->GetStaticBox(), wxID_ANY, _("Only already learned"), wxDefaultPosition, wxDefaultSize, 0);
+	onlyAlreadyLearnedCheckbox = new wxCheckBox(learnSizer->GetStaticBox(), wxID_ANY, _("Only already learned"));
 	learnSettingsSizer->Add(onlyAlreadyLearnedCheckbox, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 	onlyAlreadyLearnedCheckbox->Bind(wxEVT_CHECKBOX, &EditorSkillsPanel::onOnlyAlreadyLearnedCheck, this);
 

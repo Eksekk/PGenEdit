@@ -30,7 +30,7 @@ public:
 		bool lower; // include lower tier?
 		bool higher; // include higher tier?
 		bool equal; // include same tier?
-		TreeOptions(bool lower = true, bool higher = true, bool equal = true) : lower(lower), higher(higher), equal(equal) {}
+		TreeOptions(bool lower = true, bool equal = true, bool higher = true) : lower(lower), equal(equal), higher(higher) {}
 	};
 	std::vector<PlayerClass*> getClassTree(const TreeOptions& options);
 	std::vector<PlayerClass*> getEntireClassTree(PlayerClass* start = nullptr);

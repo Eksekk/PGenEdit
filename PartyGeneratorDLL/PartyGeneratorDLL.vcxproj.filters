@@ -87,12 +87,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="headers\main.h">
-      <Filter>Pliki nagłówkowe</Filter>
-    </ClInclude>
-    <ClInclude Include="headers\pch.h">
-      <Filter>Pliki nagłówkowe</Filter>
-    </ClInclude>
     <ClInclude Include="headers\Structs.h">
       <Filter>Pliki nagłówkowe\GameStructs</Filter>
     </ClInclude>
@@ -110,9 +104,6 @@
     </ClInclude>
     <ClInclude Include="PlayerItem.h">
       <Filter>Pliki nagłówkowe\GameData</Filter>
-    </ClInclude>
-    <ClInclude Include="Tests.h">
-      <Filter>Pliki nagłówkowe</Filter>
     </ClInclude>
     <ClInclude Include="ClassSettingsTab.h">
       <Filter>Pliki nagłówkowe\Generator\GUI\Classes</Filter>
@@ -289,16 +280,22 @@
       <Filter>Pliki nagłówkowe\Editor\GUI</Filter>
     </ClInclude>
     <ClInclude Include="AutoBackup.h">
-      <Filter>Pliki nagłówkowe</Filter>
+      <Filter>Pliki nagłówkowe\Misc</Filter>
+    </ClInclude>
+    <ClInclude Include="headers\main.h">
+      <Filter>Pliki nagłówkowe\Misc</Filter>
+    </ClInclude>
+    <ClInclude Include="headers\pch.h">
+      <Filter>Pliki nagłówkowe\Misc</Filter>
+    </ClInclude>
+    <ClInclude Include="Tests.h">
+      <Filter>Pliki nagłówkowe\Misc</Filter>
+    </ClInclude>
+    <ClInclude Include="ResistanceWidget.h">
+      <Filter>Pliki nagłówkowe\Editor\GUI</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="sources\main.cpp">
-      <Filter>Pliki źródłowe</Filter>
-    </ClCompile>
-    <ClCompile Include="sources\pch.cpp">
-      <Filter>Pliki źródłowe</Filter>
-    </ClCompile>
     <ClCompile Include="sources\MainWindow.cpp">
       <Filter>Pliki źródłowe\Generator\GUI</Filter>
     </ClCompile>
@@ -325,9 +322,6 @@
     </ClCompile>
     <ClCompile Include="PlayerPanel.cpp">
       <Filter>Pliki źródłowe\Generator\GUI</Filter>
-    </ClCompile>
-    <ClCompile Include="Tests.cpp">
-      <Filter>Pliki źródłowe</Filter>
     </ClCompile>
     <ClCompile Include="DefaultPlayerPanel.cpp">
       <Filter>Pliki źródłowe\Generator\GUI</Filter>
@@ -453,7 +447,19 @@
       <Filter>Pliki źródłowe\Editor\GUI</Filter>
     </ClCompile>
     <ClCompile Include="AutoBackup.cpp">
-      <Filter>Pliki źródłowe</Filter>
+      <Filter>Pliki źródłowe\Misc</Filter>
+    </ClCompile>
+    <ClCompile Include="ResistanceWidget.cpp">
+      <Filter>Pliki źródłowe\Editor\GUI</Filter>
+    </ClCompile>
+    <ClCompile Include="sources\main.cpp">
+      <Filter>Pliki źródłowe\Misc</Filter>
+    </ClCompile>
+    <ClCompile Include="sources\pch.cpp">
+      <Filter>Pliki źródłowe\Misc</Filter>
+    </ClCompile>
+    <ClCompile Include="Tests.cpp">
+      <Filter>Pliki źródłowe\Misc</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

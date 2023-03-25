@@ -2,6 +2,7 @@
 #include "pch.h"
 #include "main.h"
 #include <wx/collpane.h>
+#include "ResistanceWidget.h"
 
 class wxSpinCtrl;
 class wxSpinCtrlDouble;
@@ -57,7 +58,8 @@ protected:
 	wxStaticLine* immediateStatisticsStaticLine;
 
 	// stat adjusters
-	std::unordered_map<int, std::unique_ptr<PrimaryStatWidget>> widgetToStatMap;
+	std::unordered_map<int, std::unique_ptr<PrimaryStatWidget>> primaryStatWidgetToStatIdMap;
+	std::unordered_map<int, std::unique_ptr<ResistanceWidget>> resistanceWidgetToResIdMap;
 
 	wxStaticText* adjustStatisticsLabel;
 	wxStaticText* primaryLabel;
@@ -80,25 +82,20 @@ protected:
 	wxStaticText* experienceLabel;
 	wxSpinCtrl* experience;
 	wxStaticBitmap* experienceHelp;
-	wxCheckBox* m_checkBox87;
 	wxStaticLine* statisticsAdjusterVerticalLine;
 	wxStaticText* resistancesLabel;
 	wxStaticText* resistancesBaseLabel;
 	wxStaticText* resistancesBonusLabel;
-	wxStaticLine* m_staticline211;
+	wxStaticText* resistancesSpellEffectLabel;
+	wxStaticLine* resistancesExtraStatsStaticLine;
 	wxCollapsiblePane* extraStatsPane;
-	wxStaticText* extraMaxHpLabel;
-	wxSpinCtrl* extraMaxHpValue;
-	wxStaticText* extraMaxSpLabel;
-	wxSpinCtrl* extraMaxSpValue;
-	wxStaticText* extraMeleeAttackLabel;
-	wxSpinCtrl* extraMeleeAttackValue;
-	wxStaticText* extraMeleeDamageLabel;
-	wxSpinCtrl* extraMeleeDamageValue;
-	wxStaticText* extraRangedAttackLabel;
-	wxSpinCtrl* extraRangedAttackValue;
-	wxStaticText* extraRangedDamageLabel;
-	wxSpinCtrl* extraRangedDamageValue;
+	struct StatExtra
+	{
+		wxStaticText* label;
+		wxSpinCtrl* value;
+	};
+	std::unordered_map<wxSpinCtrl*, int> statIdToStatExtraControlMap;
+	void onStatExtraChange(wxCommandEvent& event);
 
 	wxStaticLine* statisticsActionsStaticLine;
 
@@ -107,11 +104,7 @@ protected:
 	void onAgeBonusValueChange(wxCommandEvent& event);
 	void onLevelBaseValueChange(wxCommandEvent& event);
 	void onLevelBonusValueChange(wxCommandEvent& event);
-
-	void onResistanceBaseValueChange(wxCommandEvent& event);
-	void onResistanceBonusValueChange(wxCommandEvent& event);
-
-	void onMm67ExtraValueChange(wxCommandEvent& event);
+	void onExperienceChange(wxCommandEvent& event);
 
 	// actions
 	wxStaticText* actionsLabel;

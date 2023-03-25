@@ -4,6 +4,7 @@
 #include "PlayerClass.h"
 #include "PlayerSkill.h"
 #include "PlayerPrimaryStat.h"
+#include "PlayerResistance.h"
 
 extern bool inMM;
 
@@ -13,7 +14,8 @@ public:
 	// first int is id (ingame, not index)
 	static std::unordered_map<int, PlayerClass> classes; // lua + game structure parsing
 	static std::unordered_map<int, PlayerSkill> skills; // lua + game structure parsing
-	static std::map<int, PlayerPrimaryStat> primaryStats; // ordinary map to allow iterating in order
+	static std::map<int, std::unique_ptr<PlayerPrimaryStat>> primaryStats; // ordinary map to allow iterating in order
+	static std::map<int, std::unique_ptr<PlayerResistance>> resistances;
 
 	static bool processClassDataJson(const char* str);
 	static bool processSkillDataJson(const char* str);
@@ -24,7 +26,6 @@ public:
 
 	static bool allDataReceived; // from lua, like class info
 	static void postProcess();
-	static void reparse(const char* data[DATA_TYPE_COUNT]);
 	static void updateIsInGameAndPartySize();
 
 	// TODO functions to parse data from lua and to parse game structures
