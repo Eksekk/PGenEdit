@@ -34,6 +34,7 @@ protected:
 	wxStaticText* baseClassLabel;
 	wxChoice* baseClassChoice;
 	wxRadioBox* tierRadioBox;
+	wxChoice* fullClassChoice;
 	AlignmentRadioBox* alignmentRadioBox;
 	wxStaticText* recoveryDelayMultiplierLabel;
 	wxSpinCtrlDouble* recoveryDelayMultiplierValue;
@@ -46,21 +47,29 @@ protected:
 	void onCurrentSpChange(wxCommandEvent& event);
 	void onInfiniteSpCheck(wxCommandEvent& event);
 
-	void onClassChoiceChange(wxCommandEvent& event);
+	void onBaseClassChoiceChange(wxCommandEvent& event);
 	void onClassTierRadio(wxCommandEvent& event);
 	void onClassAlignmentRadio(wxCommandEvent& event);
+	enum ClassChangeWhat
+	{
+		CLASS_CHANGE_ALL, CLASS_CHANGE_BASE, CLASS_CHANGE_TIER, CLASS_CHANGE_ALIGNMENT
+	};
+	void processClassControlsChange(ClassChangeWhat what);
 
 	void onRecoveryDelayMultiplierChange(wxCommandEvent& event);
 	void onRecoverFullyPress(wxCommandEvent& event);
 	void onReduceBuffSpellRecoveryCheck(wxCommandEvent& event);
 	void onReduceBuffRecoveryOutOfCombatCheck(wxCommandEvent& event);
+	void onFullClassChoiceSelect(wxCommandEvent& event);
+
+	std::unordered_map<PlayerClass*, int> fullChoiceIdToClassMap;
+	std::unordered_map<int, PlayerClass*> classToFullChoiceIdMap;
+	std::unordered_map<int, PlayerClass*> classPtrToBaseClassChoiceIdMap;
+	std::unordered_map<PlayerClass*, int> baseClassChoiceIdToClassPtrMap;
 
 	wxStaticLine* immediateStatisticsStaticLine;
 
 	// stat adjusters
-	std::unordered_map<int, std::unique_ptr<PrimaryStatWidget>> primaryStatWidgetToStatIdMap;
-	std::unordered_map<int, std::unique_ptr<ResistanceWidget>> resistanceWidgetToResIdMap;
-
 	wxStaticText* adjustStatisticsLabel;
 	wxStaticText* primaryLabel;
 	wxStaticText* statisticsBaseLabel;
@@ -94,7 +103,9 @@ protected:
 		wxStaticText* label;
 		wxSpinCtrl* value;
 	};
-	std::unordered_map<wxSpinCtrl*, int> statIdToStatExtraControlMap;
+	std::unordered_map<int, std::unique_ptr<PrimaryStatWidget>> primaryStatWidgetToStatIdMap;
+	std::unordered_map<int, std::unique_ptr<ResistanceWidget>> resistanceWidgetToResIdMap;
+	std::unordered_map<wxSpinCtrl*, int> statIdToStatExtraSpinCtrlMap;
 	void onStatExtraChange(wxCommandEvent& event);
 
 	wxStaticLine* statisticsActionsStaticLine;
@@ -124,8 +135,6 @@ protected:
 	void onRelativePowerStatisticsPress(wxCommandEvent& event);
 
 	wxBoxSizer* mainSizer;
-
-	std::unordered_map<int, PlayerClass*> classToChoiceIndexMap;
 
 	void updateFromPlayerData();
 

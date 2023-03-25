@@ -85,6 +85,12 @@
     <Filter Include="Pliki źródłowe\Misc">
       <UniqueIdentifier>{7764d713-8c84-4d6c-906f-78c6b8d818f4}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Pliki nagłówkowe\Editor\GUI\Small widgets">
+      <UniqueIdentifier>{cd951ffd-dc71-47a5-a8d5-97201367dfae}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Pliki źródłowe\Editor\GUI\Small widgets">
+      <UniqueIdentifier>{f850b70a-b679-42af-be2e-896f779357c9}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="headers\Structs.h">
@@ -240,9 +246,6 @@
     <ClInclude Include="EditorSkillsPanel.h">
       <Filter>Pliki nagłówkowe\Editor\GUI</Filter>
     </ClInclude>
-    <ClInclude Include="EditorSkillValueChooser.h">
-      <Filter>Pliki nagłówkowe\Editor\GUI</Filter>
-    </ClInclude>
     <ClInclude Include="GameStructAccessor.h">
       <Filter>Pliki nagłówkowe\GameStructs\Accessors</Filter>
     </ClInclude>
@@ -273,9 +276,6 @@
     <ClInclude Include="PlayerPrimaryStat.h">
       <Filter>Pliki nagłówkowe\GameData</Filter>
     </ClInclude>
-    <ClInclude Include="PrimaryStatWidget.h">
-      <Filter>Pliki nagłówkowe\Editor\GUI</Filter>
-    </ClInclude>
     <ClInclude Include="GUI_tests.h">
       <Filter>Pliki nagłówkowe\Editor\GUI</Filter>
     </ClInclude>
@@ -291,8 +291,14 @@
     <ClInclude Include="Tests.h">
       <Filter>Pliki nagłówkowe\Misc</Filter>
     </ClInclude>
+    <ClInclude Include="PrimaryStatWidget.h">
+      <Filter>Pliki nagłówkowe\Editor\GUI\Small widgets</Filter>
+    </ClInclude>
     <ClInclude Include="ResistanceWidget.h">
-      <Filter>Pliki nagłówkowe\Editor\GUI</Filter>
+      <Filter>Pliki nagłówkowe\Editor\GUI\Small widgets</Filter>
+    </ClInclude>
+    <ClInclude Include="EditorSkillValueChooser.h">
+      <Filter>Pliki nagłówkowe\Editor\GUI\Small widgets</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -404,9 +410,6 @@
     <ClCompile Include="EditorSkillsPanel.cpp">
       <Filter>Pliki źródłowe\Editor\GUI</Filter>
     </ClCompile>
-    <ClCompile Include="EditorSkillValueChooser.cpp">
-      <Filter>Pliki źródłowe\Editor\GUI</Filter>
-    </ClCompile>
     <ClCompile Include="GameStructAccessor.cpp">
       <Filter>Pliki źródłowe\GameStructs\Accessors</Filter>
     </ClCompile>
@@ -440,17 +443,11 @@
     <ClCompile Include="PlayerPrimaryStat.cpp">
       <Filter>Pliki źródłowe\GameData</Filter>
     </ClCompile>
-    <ClCompile Include="PrimaryStatWidget.cpp">
-      <Filter>Pliki źródłowe\Editor\GUI</Filter>
-    </ClCompile>
     <ClCompile Include="GUI_tests.cpp">
       <Filter>Pliki źródłowe\Editor\GUI</Filter>
     </ClCompile>
     <ClCompile Include="AutoBackup.cpp">
       <Filter>Pliki źródłowe\Misc</Filter>
-    </ClCompile>
-    <ClCompile Include="ResistanceWidget.cpp">
-      <Filter>Pliki źródłowe\Editor\GUI</Filter>
     </ClCompile>
     <ClCompile Include="sources\main.cpp">
       <Filter>Pliki źródłowe\Misc</Filter>
@@ -460,6 +457,15 @@
     </ClCompile>
     <ClCompile Include="Tests.cpp">
       <Filter>Pliki źródłowe\Misc</Filter>
+    </ClCompile>
+    <ClCompile Include="PrimaryStatWidget.cpp">
+      <Filter>Pliki źródłowe\Editor\GUI\Small widgets</Filter>
+    </ClCompile>
+    <ClCompile Include="ResistanceWidget.cpp">
+      <Filter>Pliki źródłowe\Editor\GUI\Small widgets</Filter>
+    </ClCompile>
+    <ClCompile Include="EditorSkillValueChooser.cpp">
+      <Filter>Pliki źródłowe\Editor\GUI\Small widgets</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

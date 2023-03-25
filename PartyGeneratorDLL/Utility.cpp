@@ -85,6 +85,21 @@ wxString rep(const wxString& str, int n)
 	return ret;
 }
 
+void redBlackGreenTextThreshold(wxWindow* win, int value, int threshold)
+{
+	if (value < threshold)
+	{
+		win->SetOwnForegroundColour(*wxRED);
+	}
+	else if (value > threshold)
+	{
+		win->SetOwnForegroundColour(*wxGREEN);
+	}
+	else
+	{
+		win->SetOwnForegroundColour(*wxBLACK);
+	}
+}
 void Profiler::start(const std::string& action)
 {
 	this->action = action;

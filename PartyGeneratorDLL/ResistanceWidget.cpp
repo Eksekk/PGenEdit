@@ -49,20 +49,18 @@ ResistanceWidget::~ResistanceWidget()
 
 void ResistanceWidget::updateResistanceSpellEffect(int value)
 {
+	redBlackGreenTextThreshold(resistanceSpellEffect, value, 0);
 	wxString text;
-	if (value < 100)
+	if (value < 0)
 	{
-		resistanceSpellEffect->SetOwnForegroundColour(*wxRED);
 		text = "-" + wxString::Format("%d%%", 100 - value);
 	}
-	else if (value > 100)
+	else if (value > 0)
 	{
-		resistanceSpellEffect->SetOwnForegroundColour(*wxGREEN);
 		text = "+" + wxString::Format("%d%%", value - 100);
 	}
 	else
 	{
-		resistanceSpellEffect->SetOwnForegroundColour(*wxBLACK);
 		text = "0";
 	}
 	resistanceSpellEffect->SetLabel(text);
@@ -73,9 +71,7 @@ void ResistanceWidget::updateFromPlayerData()
 	(void)playerAccessor->forPlayer(playerIndex);
 	BaseBonus bb = playerAccessor->getStatBaseBonus(resId);
 	base->SetValue(bb.base);
-	static const std::array<wxColour, 3> colors = { *wxRED, *wxBLACK, *wxGREEN };
-	int resultIndex = std::bit_cast<int8_t>(bb.bonus <=> 0);
-	bonus->SetOwnForegroundColour(colors.at(resultIndex + 1));
+	redBlackGreenTextThreshold(bonus, bb.bonus, 0);
 	bonus->SetValue(bb.bonus);
 	updateResistanceSpellEffect(playerAccessor->getResistanceSpellEffect(resId));
 }

@@ -110,8 +110,10 @@ public:
 	// common stats
 	// TODO get full/current/bonus
 	[[nodiscard]] virtual int getHp();
+	[[nodiscard]] virtual int getFullHp() = 0;
 	[[nodiscard]] virtual void setHp(int value);
 	[[nodiscard]] virtual int getSp();
+	[[nodiscard]] virtual int getFullSp() = 0;
 	[[nodiscard]] virtual void setSp(int value);
 
 	[[nodiscard]] virtual int getClass() = 0;
@@ -128,6 +130,10 @@ public:
 
 	[[nodiscard]] virtual int getConditionEffectOnStat(int statId) = 0;
 	[[nodiscard]] virtual int getResistanceSpellEffect(int resId) = 0;
+
+	// TODO: unlearn skills, spells
+	virtual void setClass(PlayerClass* clas) = 0;
+	virtual void setClass(int classId) = 0;
 	// LATER
 	// virtual void setClass(PlayerClass* clas, bool affectSkills = false, bool affectSpells = false, bool removeInvalidEquippedItems = false,
 	//     bool affectAwards = false, bool tryToKeepTierAndAlignment = false) = 0;
@@ -262,6 +268,12 @@ public:
 
 	std::vector<PlayerSkillValue> getSkills() override;
 
+
+	int getFullHp() override;
+
+
+	int getFullSp() override;
+
 private:
 	// returns false if skill points requirements cannot be met, otherwise subtracts cost and returns true (need to set skillpoints manually at the end!)
 	bool trySubtractSkillpoints(SkillValue newSkillValue, SkillValue oldSkillValue, bool affectSkillpoints, bool allowNegativeSkillpoints, int& sp);
@@ -324,8 +336,10 @@ public:
 	virtual int getConditionEffectOnStat(int statId) override;
 
 	int getResistanceSpellEffect(int resId) override;
-};
 
+	void setClass(PlayerClass* clas) override;
+	void setClass(int classId) override;
+};
 using PlayerStructAccessor_6 = TemplatedPlayerStructAccessor<mm6::Player>;
 using PlayerStructAccessor_7 = TemplatedPlayerStructAccessor<mm7::Player>;
 using PlayerStructAccessor_8 = TemplatedPlayerStructAccessor<mm8::Player>;

@@ -83,31 +83,31 @@ MainWindow::MainWindow(wxWindow* parent, wxWindowID id, const wxString& title, c
 		buttonsSizer = new wxBoxSizer(wxHORIZONTAL);
 
 		{
-			loadButton = new wxButton(mainPanel, wxID_ANY, _("Load"), wxDefaultPosition, wxDefaultSize, 0);
+			loadButton = new wxButton(mainPanel, wxID_ANY, _("Load"));
 			loadButton->SetToolTip(_("Load settings from file"));
 			loadButton->SetMinSize(wxSize(-1, 30));
 
 			buttonsSizer->Add(loadButton, 1, wxALL, 5);
 
-			saveButton = new wxButton(mainPanel, wxID_ANY, _("Save"), wxDefaultPosition, wxDefaultSize, 0);
+			saveButton = new wxButton(mainPanel, wxID_ANY, _("Save"));
 			saveButton->SetToolTip(_("Save settings to file"));
 			saveButton->SetMinSize(wxSize(-1, 30));
 
 			buttonsSizer->Add(saveButton, 1, wxALL, 5);
 
-			clearButton = new wxButton(mainPanel, wxID_ANY, _("Clear"), wxDefaultPosition, wxDefaultSize, 0);
+			clearButton = new wxButton(mainPanel, wxID_ANY, _("Clear"));
 			clearButton->SetToolTip(_("Set settings to their default values"));
 			clearButton->SetMinSize(wxSize(-1, 30));
 
 			buttonsSizer->Add(clearButton, 1, wxALL, 5);
 
-			randomizeButton = new wxButton(mainPanel, wxID_ANY, _("Randomize"), wxDefaultPosition, wxDefaultSize, 0);
+			randomizeButton = new wxButton(mainPanel, wxID_ANY, _("Randomize"));
 			randomizeButton->SetToolTip(_("Create random settings"));
 			randomizeButton->SetMinSize(wxSize(-1, 30));
 
 			buttonsSizer->Add(randomizeButton, 1, wxALL, 5);
 
-			copyButton = new wxButton(mainPanel, wxID_ANY, _("Copy"), wxDefaultPosition, wxDefaultSize, 0);
+			copyButton = new wxButton(mainPanel, wxID_ANY, _("Copy"));
 			copyButton->SetToolTip(_("Copy settings or part of them from/to player"));
 			copyButton->SetMinSize(wxSize(-1, 30));
 
@@ -128,13 +128,13 @@ MainWindow::MainWindow(wxWindow* parent, wxWindowID id, const wxString& title, c
 			randomSeedRadio = new wxRadioButton(seedStaticBoxSizer->GetStaticBox(), wxID_ANY, _("Random"), wxDefaultPosition, wxDefaultSize, wxRB_GROUP);
 			seedStaticBoxSizer->Add(randomSeedRadio, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
-			specificSeedRadio = new wxRadioButton(seedStaticBoxSizer->GetStaticBox(), wxID_ANY, _("Specific:"), wxDefaultPosition, wxDefaultSize, 0);
+			specificSeedRadio = new wxRadioButton(seedStaticBoxSizer->GetStaticBox(), wxID_ANY, _("Specific:"));
 			seedStaticBoxSizer->Add(specificSeedRadio, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
 			specificSeedText = new wxTextCtrl(seedStaticBoxSizer->GetStaticBox(), wxID_ANY, _("0"), wxDefaultPosition, wxDefaultSize, wxTE_NOHIDESEL);
 			seedStaticBoxSizer->Add(specificSeedText, 0, wxALL, 5);
 
-			randomSeedInFileCheckbox = new wxCheckBox(seedStaticBoxSizer->GetStaticBox(), wxID_ANY, _("Keep random seed in file"), wxDefaultPosition, wxDefaultSize, 0);
+			randomSeedInFileCheckbox = new wxCheckBox(seedStaticBoxSizer->GetStaticBox(), wxID_ANY, _("Keep random seed in file"));
 			randomSeedInFileCheckbox->SetToolTip(_("If set and seed to use is random, writes information about randomness to file (another user will get different seed), otherwise seed in file is exact"));
 
 			seedStaticBoxSizer->Add(randomSeedInFileCheckbox, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
@@ -144,7 +144,7 @@ MainWindow::MainWindow(wxWindow* parent, wxWindowID id, const wxString& title, c
 
 		// ~~SEED~~ //
 
-		generateButton = new wxButton(mainPanel, wxID_ANY, _("Generate!"), wxDefaultPosition, wxDefaultSize, 0);
+		generateButton = new wxButton(mainPanel, wxID_ANY, _("Generate!"));
 		generateButton->SetFont(wxFont(15, wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL, false, wxEmptyString));
 		generateButton->SetMinSize(wxSize(200, 50));
 
@@ -152,10 +152,10 @@ MainWindow::MainWindow(wxWindow* parent, wxWindowID id, const wxString& title, c
 
 		mm8PartialGenerationWarningSizer = new wxBoxSizer(wxHORIZONTAL);
 
-		warningBitmap = new wxStaticBitmap(mainPanel, wxID_ANY, wxArtProvider::GetBitmap(wxART_WARNING, wxART_CMN_DIALOG), wxDefaultPosition, wxDefaultSize, 0);
+		warningBitmap = new wxStaticBitmap(mainPanel, wxID_ANY, wxArtProvider::GetBitmap(wxART_WARNING, wxART_CMN_DIALOG));
 		mm8PartialGenerationWarningSizer->Add(warningBitmap, 0, wxALL, 5);
 
-		warningText = new wxStaticText(mainPanel, wxID_ANY, _("Warning: your party count is x. Only x leftmost tabs will be generated, the rest is implicitly disabled."), wxDefaultPosition, wxDefaultSize, 0);
+		warningText = new wxStaticText(mainPanel, wxID_ANY, _("Warning: your party count is x. Only x leftmost tabs will be generated, the rest is implicitly disabled."));
 		mm8PartialGenerationWarningSizer->Add(warningText, 0, wxALIGN_CENTER_VERTICAL | wxALL, 5);
 
 		mainSizer->Add(mm8PartialGenerationWarningSizer, 0, wxEXPAND, 5);

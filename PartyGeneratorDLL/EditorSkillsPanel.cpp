@@ -561,29 +561,6 @@ void EditorSkillsPanel::createSkillsPanel()
 		profiler.endAggregatePart();
 	}
 
-	// colors
-	static const wxColour COLOR_FIRST{ 232, 231, 200 }, COLOR_SECOND{ 212, 211, 182 };
-	const wxBoxSizer* const sizers[4] = { weaponSkillsSizer, armorSkillsSizer, magicSkillsSizer, miscSkillsSizer };
-	for (auto sizer : sizers)
-	{
-		bool diffColor = false;
-		auto children = sizer->GetChildren();
-		for (int i = 1; i < children.size(); ++i) // i = 1 -- skip label
-		{
-			const wxSizerItem* const item = children[i];
-			EditorSkillValueChooser* const chooser = static_cast<EditorSkillValueChooser*>(item->GetWindow());
-			if (!diffColor)
-			{
-				diffColor = true;
-				//chooser->setRowColor(COLOR_FIRST);
-			}
-			else
-			{
-				diffColor = false;
-				//chooser->setRowColor(COLOR_SECOND);
-			}
-		}
-	}
 	profiler.endAggregate();
 	Thaw();
 	wxLogMessage(profiler.getAggregateDurationStr());

@@ -26,7 +26,7 @@ EditorMainWindow::EditorMainWindow(wxWindow* parent, wxWindowID id, const wxStri
 	auto names = playerAccessor->getPlayerNames();
 	for (int i = 0; i < MAX_PLAYERS; ++i)
 	{
-		playerButtons[i] = new wxButton(editPlayersSizer->GetStaticBox(), wxNewId(), names[i], wxDefaultPosition, wxDefaultSize, 0);
+		playerButtons[i] = new wxButton(editPlayersSizer->GetStaticBox(), wxNewId(), names[i]);
 		playerButtons[i]->SetMinSize(wxSize(100, 30));
 		editPlayersSizer->Add(playerButtons[i], 0, wxALL, 5);
 		playerButtons[i]->Bind(wxEVT_BUTTON, &EditorMainWindow::onPlayerButtonClick, this);
@@ -63,16 +63,16 @@ void EditorMainWindow::setupGlobalSettingsControls()
 	wxBoxSizer* miscGlobalSettingsSizer;
 	miscGlobalSettingsSizer = new wxBoxSizer(wxVERTICAL);
 
-	miscGlobalSettingsLabel = new wxStaticText(mainPanel, wxID_ANY, _("Misc/global settings"), wxDefaultPosition, wxDefaultSize, 0);
+	miscGlobalSettingsLabel = new wxStaticText(mainPanel, wxID_ANY, _("Misc/global settings"));
 	miscGlobalSettingsLabel->Wrap(-1);
 	miscGlobalSettingsLabel->SetFont(wxFont(12, wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL, false, wxEmptyString));
 
 	miscGlobalSettingsSizer->Add(miscGlobalSettingsLabel, 0, wxALL | wxALIGN_CENTER_HORIZONTAL, 5);
 
-	allowFindingEveryArtifactAgainButton = new wxButton(mainPanel, wxID_ANY, _("Allow finding every artifact again"), wxDefaultPosition, wxDefaultSize, 0);
+	allowFindingEveryArtifactAgainButton = new wxButton(mainPanel, wxID_ANY, _("Allow finding every artifact again"));
 	miscGlobalSettingsSizer->Add(allowFindingEveryArtifactAgainButton, 0, wxALL, 5);
 
-	hireDismissPartyMembersButton = new wxButton(mainPanel, wxID_ANY, _("Hire/dismiss party members"), wxDefaultPosition, wxDefaultSize, 0);
+	hireDismissPartyMembersButton = new wxButton(mainPanel, wxID_ANY, _("Hire/dismiss party members"));
 	hireDismissPartyMembersButton->SetToolTip(_("Only for MM8"));
 
 	miscGlobalSettingsSizer->Add(hireDismissPartyMembersButton, 0, wxALL, 5);
@@ -86,22 +86,22 @@ void EditorMainWindow::setupOtherSettingsButtons()
 	wxStaticBoxSizer* otherSettingsSizer;
 	otherSettingsSizer = new wxStaticBoxSizer(new wxStaticBox(mainPanel, wxID_ANY, _("Other")), wxHORIZONTAL);
 
-	mapSettingsButton = new wxButton(otherSettingsSizer->GetStaticBox(), wxID_ANY, _("Map settings"), wxDefaultPosition, wxDefaultSize, 0);
+	mapSettingsButton = new wxButton(otherSettingsSizer->GetStaticBox(), wxID_ANY, _("Map settings"));
 	mapSettingsButton->SetMinSize(wxSize(100, 30));
 
 	otherSettingsSizer->Add(mapSettingsButton, 0, wxALL, 5);
 
-	questSettingsButton = new wxButton(otherSettingsSizer->GetStaticBox(), wxID_ANY, _("Quest settings"), wxDefaultPosition, wxDefaultSize, 0);
+	questSettingsButton = new wxButton(otherSettingsSizer->GetStaticBox(), wxID_ANY, _("Quest settings"));
 	questSettingsButton->SetMinSize(wxSize(100, 30));
 
 	otherSettingsSizer->Add(questSettingsButton, 0, wxALL, 5);
 
-	npcSettingsButton = new wxButton(otherSettingsSizer->GetStaticBox(), wxID_ANY, _("NPC settings"), wxDefaultPosition, wxDefaultSize, 0);
+	npcSettingsButton = new wxButton(otherSettingsSizer->GetStaticBox(), wxID_ANY, _("NPC settings"));
 	npcSettingsButton->SetMinSize(wxSize(100, 30));
 
 	otherSettingsSizer->Add(npcSettingsButton, 0, wxALL, 5);
 
-	houseSettingsButton = new wxButton(otherSettingsSizer->GetStaticBox(), wxID_ANY, _("House settings"), wxDefaultPosition, wxDefaultSize, 0);
+	houseSettingsButton = new wxButton(otherSettingsSizer->GetStaticBox(), wxID_ANY, _("House settings"));
 	houseSettingsButton->SetMinSize(wxSize(100, 30));
 
 	otherSettingsSizer->Add(houseSettingsButton, 0, wxALL, 5);

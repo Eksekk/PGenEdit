@@ -27,7 +27,7 @@ EditorPlayerWindow::EditorPlayerWindow(wxWindow* parent, int playerIndex) : wxFr
 	mainSizer = new wxBoxSizer(wxVERTICAL);
 	mainPanel->SetSizer(mainSizer);
 
-	tabs = new wxNotebook(mainPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, 0);
+	tabs = new wxNotebook(mainPanel, wxID_ANY);
 	static const wxSize tabsImageSize = wxSize(50, 30);
 	wxImageList* tabsImages = new wxImageList(tabsImageSize.GetWidth(), tabsImageSize.GetHeight());
 	tabs->AssignImageList(tabsImages);

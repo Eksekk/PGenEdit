@@ -86,9 +86,7 @@ void PrimaryStatWidget::updateFromPlayerData()
 	(void)playerAccessor->forPlayer(playerIndex);
 	BaseBonus bb = playerAccessor->getStatBaseBonus(statId);
 	base->SetValue(bb.base);
-	static const std::array<wxColour, 3> colors = { *wxRED, *wxBLACK, *wxGREEN };
-	int resultIndex = std::bit_cast<int8_t>(bb.bonus <=> 0);
-	bonus->SetOwnForegroundColour(colors.at(resultIndex + 1));
+	redBlackGreenTextThreshold(bonus, bb.bonus, 0);
 	bonus->SetValue(bb.bonus);
 	updateConditionEffect(playerAccessor->getConditionEffectOnStat(statId));
 	blackPotionCheckbox->SetValue(playerAccessor->isBlackPotionUsed(statId));

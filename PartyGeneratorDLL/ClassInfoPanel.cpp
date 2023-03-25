@@ -13,7 +13,7 @@ ClassInfoPanel::ClassInfoPanel(wxWindow* parent, ClassGenerationSettings* linked
 	m_staticline4 = new wxStaticLine(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL);
 	mainSizer->Add(m_staticline4, 0, wxEXPAND | wxALL, 5);
 
-	classNameLabel = new wxStaticText(this, wxID_ANY, _("Class name"), wxDefaultPosition, wxDefaultSize, 0);
+	classNameLabel = new wxStaticText(this, wxID_ANY, _("Class name"));
 	classNameLabel->Wrap(-1);
 	classNameLabel->SetFont(wxFont(20, wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxEmptyString));
 
@@ -21,7 +21,7 @@ ClassInfoPanel::ClassInfoPanel(wxWindow* parent, ClassGenerationSettings* linked
 
 	checkboxesSizer = new wxBoxSizer(wxHORIZONTAL);
 
-	disabledCheckbox = new wxCheckBox(this, wxID_ANY, _("Disabled"), wxDefaultPosition, wxDefaultSize, 0);
+	disabledCheckbox = new wxCheckBox(this, wxID_ANY, _("Disabled"));
 	disabledCheckbox->SetToolTip(_("Excludes this class from generation"));
 	disabledCheckbox->Bind(wxEVT_CHECKBOX, &ClassInfoPanel::onDisabledCheck, this);
 	checkboxesSizer->Add(disabledCheckbox, 0, wxALL, 5);
@@ -36,7 +36,7 @@ ClassInfoPanel::ClassInfoPanel(wxWindow* parent, ClassGenerationSettings* linked
 	wxBoxSizer* bSizer40;
 	bSizer40 = new wxBoxSizer(wxHORIZONTAL);
 
-	classWeightText = new wxStaticText(this, wxID_ANY, _("Class weight:"), wxDefaultPosition, wxDefaultSize, 0);
+	classWeightText = new wxStaticText(this, wxID_ANY, _("Class weight:"));
 	classWeightText->Wrap(-1);
 	bSizer40->Add(classWeightText, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
@@ -52,7 +52,7 @@ ClassInfoPanel::ClassInfoPanel(wxWindow* parent, ClassGenerationSettings* linked
 	equalWeightsRadio = new wxRadioButton(tierSettings_sbs->GetStaticBox(), wxID_ANY, _("Equal weights"), wxDefaultPosition, wxDefaultSize, wxRB_GROUP);
 	tierSettings_sbs->Add(equalWeightsRadio, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 	equalWeightsRadio->Bind(wxEVT_RADIOBUTTON, &ClassInfoPanel::onEqualWeightsRadio, this);
-	manualWeightsRadio = new wxRadioButton(tierSettings_sbs->GetStaticBox(), wxID_ANY, _("Specific weights:"), wxDefaultPosition, wxDefaultSize, 0);
+	manualWeightsRadio = new wxRadioButton(tierSettings_sbs->GetStaticBox(), wxID_ANY, _("Specific weights:"));
 	manualWeightsRadio->SetToolTip(_("Tier 0, 1, 2"));
 	manualWeightsRadio->Bind(wxEVT_RADIOBUTTON, &ClassInfoPanel::onManualWeightsRadio, this);
 	tierSettings_sbs->Add(manualWeightsRadio, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);

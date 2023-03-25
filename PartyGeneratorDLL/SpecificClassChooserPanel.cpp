@@ -11,12 +11,12 @@ SpecificClassChooserPanel::SpecificClassChooserPanel(wxWindow* parent, ClassGene
 	wxBoxSizer* actionSizer;
 	actionSizer = new wxBoxSizer(wxHORIZONTAL);
 
-	generateSpecificClassCheckbox = new wxCheckBox(this, wxID_ANY, _("Generate specific class"), wxDefaultPosition, wxDefaultSize, 0);
+	generateSpecificClassCheckbox = new wxCheckBox(this, wxID_ANY, _("Generate specific class"));
 	generateSpecificClassCheckbox->SetToolTip(_("Always the same, no randomization involved. Overrides all other options."));
 
 	actionSizer->Add(generateSpecificClassCheckbox, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
-	chooseSpecificClassButton = new wxButton(this, wxID_ANY, _("Choose..."), wxDefaultPosition, wxDefaultSize, 0);
+	chooseSpecificClassButton = new wxButton(this, wxID_ANY, _("Choose..."));
 	actionSizer->Add(chooseSpecificClassButton, 0, wxALL, 5);
 
 	mainSizer->Add(actionSizer, 0, wxEXPAND, 5);
@@ -24,32 +24,32 @@ SpecificClassChooserPanel::SpecificClassChooserPanel(wxWindow* parent, ClassGene
 	wxStaticBoxSizer* classDetailsSizer;
 	classDetailsSizer = new wxStaticBoxSizer(new wxStaticBox(this, wxID_ANY, _("Chosen class details")), wxHORIZONTAL);
 
-	m_staticText56 = new wxStaticText(classDetailsSizer->GetStaticBox(), wxID_ANY, _("Base class:"), wxDefaultPosition, wxDefaultSize, 0);
+	m_staticText56 = new wxStaticText(classDetailsSizer->GetStaticBox(), wxID_ANY, _("Base class:"));
 	m_staticText56->Wrap(-1);
 	classDetailsSizer->Add(m_staticText56, 0, wxALL, 5);
 
-	chosenClassBaseLabel = new wxStaticText(classDetailsSizer->GetStaticBox(), wxID_ANY, _("N/A"), wxDefaultPosition, wxDefaultSize, 0);
+	chosenClassBaseLabel = new wxStaticText(classDetailsSizer->GetStaticBox(), wxID_ANY, _("N/A"));
 	chosenClassBaseLabel->Wrap(-1);
 	classDetailsSizer->Add(chosenClassBaseLabel, 0, wxALL, 5);
 
 	classDetailsSizer->Add(20, 0, 0, wxEXPAND, 5);
 
-	chosenClassTierLabel = new wxStaticText(classDetailsSizer->GetStaticBox(), wxID_ANY, _("Tier:"), wxDefaultPosition, wxDefaultSize, 0);
+	chosenClassTierLabel = new wxStaticText(classDetailsSizer->GetStaticBox(), wxID_ANY, _("Tier:"));
 	chosenClassTierLabel->Wrap(-1);
 	classDetailsSizer->Add(chosenClassTierLabel, 0, wxALL, 5);
 
-	chosenClassTierLabel = new wxStaticText(classDetailsSizer->GetStaticBox(), wxID_ANY, _("N/A"), wxDefaultPosition, wxDefaultSize, 0);
+	chosenClassTierLabel = new wxStaticText(classDetailsSizer->GetStaticBox(), wxID_ANY, _("N/A"));
 	chosenClassTierLabel->Wrap(-1);
 	classDetailsSizer->Add(chosenClassTierLabel, 0, wxALL, 5);
 
 
 	classDetailsSizer->Add(20, 0, 0, wxALL, 5);
 
-	chosenClassAlignmentLabel = new wxStaticText(classDetailsSizer->GetStaticBox(), wxID_ANY, _("Alignment:"), wxDefaultPosition, wxDefaultSize, 0);
+	chosenClassAlignmentLabel = new wxStaticText(classDetailsSizer->GetStaticBox(), wxID_ANY, _("Alignment:"));
 	chosenClassAlignmentLabel->Wrap(-1);
 	classDetailsSizer->Add(chosenClassAlignmentLabel, 0, wxALL, 5);
 
-	chosenClassAlignmentLabel = new wxStaticText(classDetailsSizer->GetStaticBox(), wxID_ANY, _("N/A"), wxDefaultPosition, wxDefaultSize, 0);
+	chosenClassAlignmentLabel = new wxStaticText(classDetailsSizer->GetStaticBox(), wxID_ANY, _("N/A"));
 	chosenClassAlignmentLabel->Wrap(-1);
 	classDetailsSizer->Add(chosenClassAlignmentLabel, 0, wxALL, 5);
 

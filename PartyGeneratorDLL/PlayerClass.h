@@ -5,6 +5,8 @@
 
 extern const int MAX_TIER;
 
+bool gameHasClassAlignment();
+
 class PlayerClass // holds data about classes, both from game structs and lua
 {
 public:

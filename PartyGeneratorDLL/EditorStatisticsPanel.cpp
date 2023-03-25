@@ -48,13 +48,17 @@ void EditorStatisticsPanel::onRelativePowerStatisticsPress(wxCommandEvent& event
 
 void EditorStatisticsPanel::updateFromPlayerData()
 {
-	for (auto& [statId, widget] : primaryStatWidgetToStatIdMap)
+	for (auto& [statId, widgetPtr] : primaryStatWidgetToStatIdMap)
 	{
-		widget->updateFromPlayerData();
+		widgetPtr->updateFromPlayerData();
 	}
-	for (auto& [resId, widget] : resistanceWidgetToResIdMap)
+	for (auto& [resId, widgetPtr] : resistanceWidgetToResIdMap)
 	{
-		widget->updateFromPlayerData();
+		widgetPtr->updateFromPlayerData();
+	}
+	for (auto& [widgetPtr, statId] : statIdToStatExtraSpinCtrlMap)
+	{
+		widgetPtr->SetValue(playerAccessor->forPlayer(playerIndex)->getStatBonus(statId));
 	}
 	wxFAIL; // TODO
 }
@@ -146,42 +150,71 @@ void EditorStatisticsPanel::createImmediateStatSettings()
 
 	wxStaticBoxSizer* classSizer;
 	classSizer = new wxStaticBoxSizer(new wxStaticBox(this, wxID_ANY, _("Class")), wxVERTICAL);
+	wxStaticBox* staticBox = classSizer->GetStaticBox();
 
 	wxGridBagSizer* innerClassSizer;
 	innerClassSizer = new wxGridBagSizer(0, 15);
 	innerClassSizer->SetFlexibleDirection(wxBOTH);
 	innerClassSizer->SetNonFlexibleGrowMode(wxFLEX_GROWMODE_SPECIFIED);
 
-	baseClassLabel = new wxStaticText(classSizer->GetStaticBox(), wxID_ANY, _("Base"));
-	baseClassLabel->Wrap(-1);
-	innerClassSizer->Add(baseClassLabel, wxGBPosition(0, 0), wxGBSpan(1, 1), wxALL | wxALIGN_CENTER_HORIZONTAL, 5);
-
-	wxArrayString classChoices;
-	int i = 0;
-	for (auto& [id, clas] : GameData::classes)
-	{
-		if (clas.tier == 0)
+	// NO CONST INT, because ranges will error out
+	std::vector<std::pair<int, PlayerClass*>> allClasses(GameData::classes.begin(), GameData::classes.end());
+	std::ranges::sort(allClasses, [](const auto& pair1, const auto& pair2) -> bool
 		{
-			classToChoiceIndexMap[i++] = &clas;
-			classChoices.Add(clas.name);
+			return pair1.second->name < pair2.second->name; // TODO: change sorting?
+		});
+	wxString classStr = gameHasClassAlignment() ? "%s, %d, %s" : "%s, %d";
+	wxArrayString baseClassChoices, fullClassChoices;
+	int baseClassCounter = 0, classCounter = 0;
+	fullClassChoices.reserve(allClasses.size());
+	for (auto& [id, classPtr] : allClasses)
+	{
+		if (classPtr->tier == 0)
+		{
+			classPtrToBaseClassChoiceIdMap[baseClassCounter++] = classPtr;
+			baseClassChoices.Add(classPtr->name);
 		}
+		wxString formattedClassText = gameHasClassAlignment()
+			? wxString::Format(classStr, classPtr->name, classPtr->tier, classPtr->getFormattedAlignment())
+			: wxString::Format(classStr, classPtr->name, classPtr->tier);
+		fullClassChoices.Add(std::move(formattedClassText));
+		classToFullChoiceIdMap[classCounter++] = classPtr;
 	}
-	baseClassChoice = new wxChoice(classSizer->GetStaticBox(), wxID_ANY, wxDefaultPosition, wxDefaultSize, classChoices, 0);
+	fullChoiceIdToClassMap = invertMap(classToFullChoiceIdMap);
+	baseClassChoiceIdToClassPtrMap = invertMap(classPtrToBaseClassChoiceIdMap);
+
+	wxStaticText* fullClassLabel = new wxStaticText(staticBox, wxID_ANY, _("Full class"));
+	innerClassSizer->Add(fullClassLabel, wxGBPosition(0, 0), wxGBSpan(1, 1), wxALIGN_CENTER_HORIZONTAL | wxALL, 5);
+	fullClassChoice = new wxChoice(staticBox, wxID_ANY, wxDefaultPosition, wxDefaultSize, fullClassChoices);
+	fullClassChoice->Bind(wxEVT_CHOICE, &EditorStatisticsPanel::onFullClassChoiceSelect, this);
+	innerClassSizer->Add(fullClassChoice, wxGBPosition(1, 0), wxGBSpan(1, 1), wxALL, 5);
+
+	wxStaticLine* classSettingsVerticalLine = new wxStaticLine(staticBox, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_VERTICAL);
+	innerClassSizer->Add(classSettingsVerticalLine, wxGBPosition(0, 1), wxGBSpan(2, 1), wxALL, 5);
+
+	baseClassLabel = new wxStaticText(staticBox, wxID_ANY, _("Base"));
+	baseClassLabel->Wrap(-1);
+	innerClassSizer->Add(baseClassLabel, wxGBPosition(0, 2), wxGBSpan(1, 1), wxALL | wxALIGN_CENTER_HORIZONTAL, 5);
+	baseClassChoice = new wxChoice(staticBox, wxID_ANY, wxDefaultPosition, wxDefaultSize, baseClassChoices, 0);
 	baseClassChoice->SetSelection(0);
-	baseClassChoice->Bind(wxEVT_CHOICE, &EditorStatisticsPanel::onClassChoiceChange, this);
-	innerClassSizer->Add(baseClassChoice, wxGBPosition(1, 0), wxGBSpan(1, 1), wxALL, 5);
+	baseClassChoice->Bind(wxEVT_CHOICE, &EditorStatisticsPanel::onBaseClassChoiceChange, this);
+	innerClassSizer->Add(baseClassChoice, wxGBPosition(1, 2), wxGBSpan(1, 1), wxALL, 5);
 
 	wxString tierRadioBoxChoices[] = { _("0"), _("1"), _("2") };
 	int tierRadioBoxNChoices = sizeof(tierRadioBoxChoices) / sizeof(wxString);
-	tierRadioBox = new wxRadioBox(classSizer->GetStaticBox(), wxID_ANY, _("Tier"), wxDefaultPosition, wxDefaultSize, tierRadioBoxNChoices, tierRadioBoxChoices, 1, wxRA_SPECIFY_ROWS);
+	tierRadioBox = new wxRadioBox(staticBox, wxID_ANY, _("Tier"), wxDefaultPosition, wxDefaultSize, tierRadioBoxNChoices, tierRadioBoxChoices, 1, wxRA_SPECIFY_ROWS);
 	tierRadioBox->SetSelection(0);
 	tierRadioBox->Bind(wxEVT_RADIOBOX, &EditorStatisticsPanel::onClassTierRadio, this);
-	innerClassSizer->Add(tierRadioBox, wxGBPosition(0, 1), wxGBSpan(2, 1), wxALL, 5);
+	innerClassSizer->Add(tierRadioBox, wxGBPosition(0, 3), wxGBSpan(2, 1), wxALL, 5);
 
-	alignmentRadioBox = new AlignmentRadioBox(this, "Alignment", false);
-	alignmentRadioBox->SetSelection(0);
+	alignmentRadioBox = new AlignmentRadioBox(staticBox, "Alignment", false);
+	alignmentRadioBox->setSelection(ALIGNMENT_NEUTRAL);
 	alignmentRadioBox->Bind(wxEVT_RADIOBOX, &EditorStatisticsPanel::onClassAlignmentRadio, this);
-	innerClassSizer->Add(alignmentRadioBox, wxGBPosition(0, 2), wxGBSpan(2, 1), wxALL, 5);
+	innerClassSizer->Add(alignmentRadioBox, wxGBPosition(0, 4), wxGBSpan(2, 1), wxALL, 5);
+	if (!gameHasClassAlignment())
+	{
+		alignmentRadioBox->Disable();
+	}
 
 	classSizer->Add(innerClassSizer, 1, wxEXPAND, 5);
 
@@ -418,7 +451,7 @@ void EditorStatisticsPanel::createStatisticsAdjuster()
 		auto [low, high] = boundsByType<int8_t>;
 		StatExtra stat;
 		stat.label = new wxStaticText(extraStatsPane->GetPane(), wxID_ANY, _(name));
-		stat.value = new wxSpinCtrl(extraStatsPane->GetPane(), wxID_ANY, wxEmptyString, low, high);
+		stat.value = new wxSpinCtrl(extraStatsPane->GetPane(), wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, low, high);
 		stat.value->Bind(wxEVT_SPINCTRL, &EditorStatisticsPanel::onStatExtraChange, this);
 		statExtrasSizer->Add(stat.label, wxSizerFlags().CenterVertical().Border(wxALL, 5));
 		statExtrasSizer->Add(stat.value, wxSizerFlags().CenterVertical().Border(wxALL, 5));
@@ -427,7 +460,7 @@ void EditorStatisticsPanel::createStatisticsAdjuster()
 			stat.label->Disable();
 			stat.value->Disable();
 		}
-		statIdToStatExtraControlMap[stat.value] = statId;
+		statIdToStatExtraSpinCtrlMap[stat.value] = statId;
 	}
 
 	extraStatsPane->GetPane()->SetSizer(statExtrasSizer);
@@ -506,6 +539,9 @@ EditorStatisticsPanel::~EditorStatisticsPanel()
 
 void EditorStatisticsPanel::onCurrentHpChange(wxCommandEvent& event)
 {
+	redBlackGreenTextThreshold(hpValue, hpValue->GetValue(), playerAccessor->forPlayer(playerIndex)->getFullHp());
+	hpValue->Refresh();
+	playerAccessor->forPlayer(playerIndex)->setHp(hpValue->GetValue());
 }
 
 void EditorStatisticsPanel::onInfiniteHpCheck(wxCommandEvent& event)
@@ -514,24 +550,125 @@ void EditorStatisticsPanel::onInfiniteHpCheck(wxCommandEvent& event)
 
 void EditorStatisticsPanel::onCurrentSpChange(wxCommandEvent& event)
 {
+	redBlackGreenTextThreshold(spValue, spValue->GetValue(), playerAccessor->forPlayer(playerIndex)->getFullSp());
+	spValue->Refresh();
+	playerAccessor->forPlayer(playerIndex)->setSp(spValue->GetValue());
 }
 
 void EditorStatisticsPanel::onInfiniteSpCheck(wxCommandEvent& event)
 {
 }
 
-void EditorStatisticsPanel::onClassChoiceChange(wxCommandEvent& event)
+void EditorStatisticsPanel::onBaseClassChoiceChange(wxCommandEvent& event)
 {
+	// tier 0 or 1 - change class
+	// tier 2 - change class, pick similar alignment
+	processClassControlsChange(CLASS_CHANGE_BASE);
 }
 
 void EditorStatisticsPanel::onClassTierRadio(wxCommandEvent& event)
 {
+	processClassControlsChange(CLASS_CHANGE_TIER);
 }
 
 void EditorStatisticsPanel::onClassAlignmentRadio(wxCommandEvent& event)
 {
+	processClassControlsChange(CLASS_CHANGE_ALIGNMENT);
 }
 
+void EditorStatisticsPanel::processClassControlsChange(ClassChangeWhat what)
+{
+	wxASSERT(gameHasClassAlignment());
+	PlayerClass* oldClas = playerAccessor->forPlayer(playerIndex)->getClassPtr();
+	// get consistent alignments by sorting
+	static const auto sort = [](std::vector<PlayerClass*>& vec) -> void
+	{
+		std::ranges::sort(vec, [](PlayerClass* const clas1, PlayerClass* const clas2) {return clas1->id < clas2->id; });
+	};
+	static const auto pickClassByAlignment = [](const std::vector<PlayerClass*>& tree, int newTier, Alignment al) -> std::tuple<PlayerClass*, bool, bool, bool>
+	{
+		PlayerClass* finalClass = nullptr;
+		bool hasNeutral = false, hasLight = false, hasDark = false; // is neutral alignment available for this class tree? etc.
+		if (newTier == 2) // actually choose alignment, if possible specified, otherwise first one (with smallest id)
+		{
+			for (PlayerClass* classPtr : tree)
+			{
+				if (classPtr->alignment == al)
+				{
+					finalClass = classPtr;
+				}
+				switch (classPtr->alignment)
+				{
+
+				case ALIGNMENT_NEUTRAL: hasNeutral = true; break;
+				case ALIGNMENT_LIGHT: hasLight = true; break;
+				case ALIGNMENT_DARK: hasDark = true; break;
+				default:
+				{
+					wxFAIL_MSG(wxString::Format("Unknown alignment %d", (int)classPtr->alignment));
+				}
+
+				}
+			}
+		}
+		else if (tree.size() > 0) // just pick any class, alignment doesn't matter
+		{
+			finalClass = tree.front();
+		}
+		else
+		{
+			wxFAIL;
+		}
+		return { finalClass, hasNeutral, hasLight, hasDark };
+	};
+	auto currClass = playerAccessor->forPlayer(playerIndex)->getClassPtr();
+	PlayerClass* clas;
+	bool hasNeutral, hasLight, hasDark;
+	if (what == CLASS_CHANGE_BASE)
+	{
+		PlayerClass* newBaseClass = classPtrToBaseClassChoiceIdMap.at(baseClassChoice->GetSelection());
+		auto tree = newBaseClass->getClassTree(PlayerClass::TreeOptions(false, true, false));
+		sort(tree);
+		std::tie(clas, hasNeutral, hasLight, hasDark) = pickClassByAlignment(tree, currClass->tier, currClass->alignment);
+	}
+	else if (what == CLASS_CHANGE_TIER)
+	{
+		// 0 -> 1, 1 -> 0 = change tier only, disable alignment
+		// 0 -> 2, 1 -> 2 = change tier, enable alignment selectively, pick first enabled
+		// 2 -> 0, 2 -> 1 = change tier, disable alignment
+		int newTier = tierRadioBox->GetSelection(), oldTier = currClass->tier;
+		auto tree = oldClas->getClassTree(PlayerClass::TreeOptions(newTier < oldTier, newTier == oldTier, newTier > oldTier));
+		sort(tree);
+		std::tie(clas, hasNeutral, hasLight, hasDark) = pickClassByAlignment(tree, newTier, ALIGNMENT_NEUTRAL);
+	}
+	else if (what == CLASS_CHANGE_ALIGNMENT)
+	{
+		auto tree = oldClas->getClassTree(PlayerClass::TreeOptions(false, true, false));
+		sort(tree);
+		std::tie(clas, hasNeutral, hasLight, hasDark) = pickClassByAlignment(tree, currClass->tier, ALIGNMENT_NEUTRAL);
+	}
+	else if (what == CLASS_CHANGE_ALL) // class is given in class combo box
+	{
+		clas = classToFullChoiceIdMap.at(fullClassChoice->GetSelection());
+		// calling this function here to have consistent hasXXX calculation, even though main result is not used
+		std::tie(std::ignore, hasNeutral, hasLight, hasDark) = pickClassByAlignment(clas->getEntireClassTree(), clas->tier, clas->alignment);
+		baseClassChoice->SetSelection(baseClassChoiceIdToClassPtrMap.at(clas));
+		tierRadioBox->SetSelection(clas->tier);
+		alignmentRadioBox->setSelection(clas->alignment);
+	}
+	else
+	{
+		wxFAIL;
+	}
+	playerAccessor->setClass(clas);
+	for (std::pair<Alignment, bool> pairs[]{ {ALIGNMENT_NEUTRAL, hasNeutral}, {ALIGNMENT_LIGHT, hasLight }, {ALIGNMENT_DARK, hasDark} };
+		auto [al, enabled] : pairs)
+	{
+		alignmentRadioBox->enableAlignment(al, enabled);
+	}
+
+	// unlearn skills/spells - either make CLASS_CHANGE_ALL, or put unlearning in calling function after calling with all three enum values
+}
 void EditorStatisticsPanel::onRecoveryDelayMultiplierChange(wxCommandEvent& event)
 {
 }
@@ -548,11 +685,15 @@ void EditorStatisticsPanel::onReduceBuffRecoveryOutOfCombatCheck(wxCommandEvent&
 {
 }
 
+void EditorStatisticsPanel::onFullClassChoiceSelect(wxCommandEvent& event)
+{
+	processClassControlsChange(CLASS_CHANGE_ALL);
+}
 void EditorStatisticsPanel::onStatExtraChange(wxCommandEvent& event)
 {
 	if (MMVER == 8) return;
 	wxSpinCtrl* ctrl = /*static*/dynamic_cast<wxSpinCtrl*>(event.GetEventObject());
-	int statId = statIdToStatExtraControlMap.at(ctrl);
+	int statId = statIdToStatExtraSpinCtrlMap.at(ctrl);
 	playerAccessor->forPlayer(playerIndex)->setStatBonus(statId, ctrl->GetValue());
 }
 void EditorStatisticsPanel::onExtraAcValueChange(wxCommandEvent& event)
@@ -577,6 +718,7 @@ void EditorStatisticsPanel::onLevelBaseValueChange(wxCommandEvent& event)
 
 void EditorStatisticsPanel::onLevelBonusValueChange(wxCommandEvent& event)
 {
+	redBlackGreenTextThreshold(levelBonus, levelBonus->GetValue(), 0);
 	playerAccessor->forPlayer(playerIndex)->setStatBonus(STAT_LEVEL, levelBonus->GetValue());
 }
 void EditorStatisticsPanel::onExperienceChange(wxCommandEvent& event)

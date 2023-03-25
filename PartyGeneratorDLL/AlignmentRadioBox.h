@@ -14,7 +14,6 @@ public:
 	Alignment getSelectedAlignment();
 	bool setSelection(Alignment alignment);
 	bool setSelection(const wxString& str);
-private:
-	bool useAny;
-	int firstIndex;
+	bool enableAlignment(Alignment alignment, bool enable = true);
+	const bool useAny;
 };

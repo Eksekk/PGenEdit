@@ -7,6 +7,11 @@
 extern const int INVALID_ID;
 const int MAX_TIER = 2;
 
+bool gameHasClassAlignment()
+{
+	return MMVER == 7 || (MMVER == 8 && IS_MERGE);
+}
+
 PlayerClass::PlayerClass() : id(INVALID_ID), name(""), tier(0), baseClass(nullptr), alignment(ALIGNMENT_NEUTRAL), playerTypeAffinity()
 {
 	for (int i = 0; i < PLAYER_TYPE_COUNT; ++i)

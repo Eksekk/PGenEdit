@@ -239,3 +239,5 @@ public:
 
 	Profiler();
 };
+
+void redBlackGreenTextThreshold(wxWindow* win, int value, int threshold);

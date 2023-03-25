@@ -7,14 +7,14 @@ PlayerPanelBase::PlayerPanelBase(wxWindow* parent, PlayerData* linkedGenerationD
 	assert(linkedGenerationData);
 	mainSizer = new wxBoxSizer(wxVERTICAL);
 
-	generationEnabledCheckbox = new wxCheckBox(this, wxID_ANY, _("Generate for this player"), wxDefaultPosition, wxDefaultSize, 0);
+	generationEnabledCheckbox = new wxCheckBox(this, wxID_ANY, _("Generate for this player"));
 	mainSizer->Add(generationEnabledCheckbox, 0, wxALL, 5);
 	generationEnabledCheckbox->Bind(wxEVT_CHECKBOX, &PlayerPanelBase::onGenerationEnabledCheck, this);
 
 	wxBoxSizer* bSizer27;
 	bSizer27 = new wxBoxSizer(wxHORIZONTAL);
 
-	m_staticText12 = new wxStaticText(this, wxID_ANY, _("Player type:"), wxDefaultPosition, wxDefaultSize, 0);
+	m_staticText12 = new wxStaticText(this, wxID_ANY, _("Player type:"));
 	m_staticText12->Wrap(-1);
 	bSizer27->Add(m_staticText12, 0, wxALIGN_CENTER_VERTICAL | wxALL, 5);
 
@@ -34,7 +34,7 @@ PlayerPanelBase::PlayerPanelBase(wxWindow* parent, PlayerData* linkedGenerationD
 	mainSizer->Add(strengthIndicatorRadioBox, 0, wxALL, 5);
 	strengthIndicatorRadioBox->Bind(wxEVT_RADIOBOX, &PlayerPanelBase::onStrengthIndicatorRadio, this);
 
-	m_notebook2 = new wxNotebook(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, 0);
+	m_notebook2 = new wxNotebook(this, wxID_ANY);
 	mainSizer->Add(m_notebook2, 1, wxEXPAND | wxALL, 0);
 	wxSize m_notebook2ImageSize = wxSize(30, 20);
 	wxImageList* m_notebook2Images = new wxImageList(m_notebook2ImageSize.GetWidth(), m_notebook2ImageSize.GetHeight());
@@ -75,11 +75,11 @@ PlayerPanelBase::PlayerPanelBase(wxWindow* parent, PlayerData* linkedGenerationD
 	wxBoxSizer* bSizer23;
 	bSizer23 = new wxBoxSizer(wxHORIZONTAL);
 
-	m_staticText111 = new wxStaticText(skillsPanel, wxID_ANY, _("Skill points multiplier (0.1 - 10)"), wxDefaultPosition, wxDefaultSize, 0);
+	m_staticText111 = new wxStaticText(skillsPanel, wxID_ANY, _("Skill points multiplier (0.1 - 10)"));
 	m_staticText111->Wrap(-1);
 	bSizer23->Add(m_staticText111, 0, wxALL, 5);
 
-	skillPointsMultiplier = new wxTextCtrl(skillsPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0);
+	skillPointsMultiplier = new wxTextCtrl(skillsPanel, wxID_ANY, wxEmptyString);
 	skillPointsMultiplier->Bind(wxEVT_TEXT, &PlayerPanelBase::onSkillPointsMulEnter, this);
 	bSizer23->Add(skillPointsMultiplier, 0, wxALL, 5);
 	bSizer22->Add(bSizer23, 1, wxEXPAND, 5);
@@ -98,7 +98,7 @@ PlayerPanelBase::PlayerPanelBase(wxWindow* parent, PlayerData* linkedGenerationD
 	wxBoxSizer* bSizer21;
 	bSizer21 = new wxBoxSizer(wxVERTICAL);
 
-	keepCurrentItemsCheckbox = new wxCheckBox(itemsPanel, wxID_ANY, _("Keep current items"), wxDefaultPosition, wxDefaultSize, 0);
+	keepCurrentItemsCheckbox = new wxCheckBox(itemsPanel, wxID_ANY, _("Keep current items"));
 	keepCurrentItemsCheckbox->SetToolTip(_("If unset, all items (equipped & backpack) will be removed before generation"));
 	keepCurrentItemsCheckbox->Bind(wxEVT_CHECKBOX, &PlayerPanelBase::onKeepCurrentItemsCheck, this);
 	bSizer21->Add(keepCurrentItemsCheckbox, 0, wxALL, 5);
@@ -118,7 +118,7 @@ PlayerPanelBase::PlayerPanelBase(wxWindow* parent, PlayerData* linkedGenerationD
 	wxBoxSizer* bSizer20;
 	bSizer20 = new wxBoxSizer(wxVERTICAL);
 
-	exclusiveResistancesCheckbox = new wxCheckBox(resistancesPanel, wxID_ANY, _("Generate (and show) exclusive resistances"), wxDefaultPosition, wxDefaultSize, 0);
+	exclusiveResistancesCheckbox = new wxCheckBox(resistancesPanel, wxID_ANY, _("Generate (and show) exclusive resistances"));
 	exclusiveResistancesCheckbox->SetToolTip(_("Normally unobtainable, like light/dark"));
 	exclusiveResistancesCheckbox->Bind(wxEVT_CHECKBOX, &PlayerPanelBase::onExclusiveResistancesCheck, this);
 	bSizer20->Add(exclusiveResistancesCheckbox, 0, wxALL, 5);
@@ -137,7 +137,7 @@ PlayerPanelBase::PlayerPanelBase(wxWindow* parent, PlayerData* linkedGenerationD
 	wxBoxSizer* bSizer25;
 	bSizer25 = new wxBoxSizer(wxVERTICAL);
 
-	zeroOutTimedSpellsCastsCheckbox = new wxCheckBox(spellsPanel, wxID_ANY, _("Zero out timed spell casts if they're learned"), wxDefaultPosition, wxDefaultSize, 0);
+	zeroOutTimedSpellsCastsCheckbox = new wxCheckBox(spellsPanel, wxID_ANY, _("Zero out timed spell casts if they're learned"));
 	zeroOutTimedSpellsCastsCheckbox->Bind(wxEVT_CHECKBOX, &PlayerPanelBase::onZeroOutTimedSpellCastsCheck, this);
 	bSizer25->Add(zeroOutTimedSpellsCastsCheckbox, 0, wxALL, 5);
 

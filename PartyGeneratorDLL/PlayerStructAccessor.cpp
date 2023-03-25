@@ -608,10 +608,20 @@ int TemplatedPlayerStructAccessor<Player>::getResistanceSpellEffect(int resId)
 }
 
 template<typename Player>
-TemplatedPlayerStructAccessor<Player>::TemplatedPlayerStructAccessor() : PlayerStructAccessor()
+void TemplatedPlayerStructAccessor<Player>::setClass(PlayerClass* clas)
 {
-
+	Player* pl = getPlayerToAffect();
+	pl->clas = clas->id;
 }
+
+template<typename Player>
+void TemplatedPlayerStructAccessor<Player>::setClass(int classId)
+{
+	setClass(&GameData::classes.at(classId));
+}
+
+template<typename Player>
+TemplatedPlayerStructAccessor<Player>::TemplatedPlayerStructAccessor() : PlayerStructAccessor() {}
 
 template<typename Player>
 void TemplatedPlayerStructAccessor<Player>::_initMaps()
@@ -695,6 +705,17 @@ int TemplatedPlayerStructAccessor<Player>::getStatBase(int stat)
 	}
 	wxASSERT_MSG(false, wxString::Format("Invalid stat %d", stat));
 	return 0;
+}
+template<typename Player>
+int TemplatedPlayerStructAccessor<Player>::getFullSp()
+{
+	return callMemoryAddress<int>(mmv(0x482090, 0x48E55D, 0x48DA18), 1, getPlayerToAffect());
+}
+
+template<typename Player>
+int TemplatedPlayerStructAccessor<Player>::getFullHp()
+{
+	return callMemoryAddress<int>(mmv(0x481EA0, 0x48E4F0, 0x48D9B4), 1, getPlayerToAffect());
 }
 
 PlayerStructAccessor* PlayerStructAccessor::forPlayer(int index)

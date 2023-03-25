@@ -20,11 +20,11 @@ GuaranteedClassDialog::GuaranteedClassDialog(wxWindow* parent, wxWindowID id, co
 	gbSizer2->SetFlexibleDirection(wxBOTH);
 	gbSizer2->SetNonFlexibleGrowMode(wxFLEX_GROWMODE_SPECIFIED);
 
-	m_staticText26 = new wxStaticText(this, wxID_ANY, _("Filters:"), wxDefaultPosition, wxDefaultSize, 0);
+	m_staticText26 = new wxStaticText(this, wxID_ANY, _("Filters:"));
 	m_staticText26->Wrap(-1);
 	gbSizer2->Add(m_staticText26, wxGBPosition(0, 0), wxGBSpan(2, 1), wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
-	m_staticText27 = new wxStaticText(this, wxID_ANY, _("Base class"), wxDefaultPosition, wxDefaultSize, 0);
+	m_staticText27 = new wxStaticText(this, wxID_ANY, _("Base class"));
 	m_staticText27->Wrap(-1);
 	gbSizer2->Add(m_staticText27, wxGBPosition(0, 1), wxGBSpan(1, 1), wxALL | wxALIGN_CENTER_HORIZONTAL, 5);
 
