@@ -7,18 +7,18 @@
 template<typename... Args>
 class AutoBackup
 {
-	std::tuple<std::decay_t<std::reference_wrapper<Args>>...> refs;
-	std::tuple<std::decay_t<Args>...> vals;
+	std::tuple<std::reference_wrapper<Args>...> refs;
+	std::tuple<Args&&...> vals; // rvalue reference is important
 
 public:
-	AutoBackup(Args&&... args);
+	AutoBackup(Args&... args);
 	~AutoBackup();
 };
 
 template<typename... Args>
-AutoBackup<Args...>::AutoBackup(Args&&... args)
-	: refs(std::reference_wrapper<std::decay_t<Args>>(args)...),
-	vals(static_cast<std::remove_reference_t<Args>>(args)...)
+AutoBackup<Args...>::AutoBackup(Args&... args)
+	: refs(std::reference_wrapper<Args>(args)...),
+	vals(Args(args)...)
 {
 	
 }
@@ -26,5 +26,5 @@ AutoBackup<Args...>::AutoBackup(Args&&... args)
 template<typename... Args>
 AutoBackup<Args...>::~AutoBackup()
 {
-	refs = std::move(vals);
+	refs = vals;
 }
