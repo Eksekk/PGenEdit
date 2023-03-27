@@ -1,0 +1,17 @@
+LIBRARY PGENEDIT
+VERSION 0.2
+EXPORTS
+	init
+	unloadCleanup
+	runEventLoopOnce
+	displayMainWindow
+	displayEditorMainWindow
+	displayControlPanel
+	setLuaState
+	setClassData
+	setSkillData
+	setMiscData
+	setCallbacks
+	setPlayerPointers
+	runTests
+	runLuaScriptFromDLL

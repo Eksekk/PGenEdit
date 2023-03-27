@@ -1039,8 +1039,8 @@ function printStruct(name, includeMembers, excludeMembers, indentLevel, saveToGe
 		io.save(pathToLoad, internal.persist(code))
 	else
 		if saveToGeneratorDirectory then
-			os.remove("C:\\Users\\Eksekk\\source\\repos\\PartyGenerator\\PartyGeneratorDLL\\headers\\structs")
-			os.remove("C:\\Users\\Eksekk\\source\\repos\\PartyGenerator\\PartyGeneratorDLL\\sources\\structs")
+			os.remove("C:\\Users\\Eksekk\\source\\repos\\PGenEdit\\PGenEditDLL\\headers\\structs")
+			os.remove("C:\\Users\\Eksekk\\source\\repos\\PGenEdit\\PGenEditDLL\\sources\\structs")
 		else
 			for p in path.find("C:\\Users\\Eksekk\\structOffsets\\*") do
 				if not mem.dll.shlwapi.PathIsDirectoryA(p) then
@@ -1075,13 +1075,13 @@ function printStruct(name, includeMembers, excludeMembers, indentLevel, saveToGe
 			})
 			local headerFileName, sourceFileName
 			if saveToGeneratorDirectory then
-				headerFileName = string.format("C:\\Users\\Eksekk\\source\\repos\\PartyGenerator\\PartyGeneratorDLL\\headers\\structs\\%s.h", fileName)
-				sourceFileName = string.format("C:\\Users\\Eksekk\\source\\repos\\PartyGenerator\\PartyGeneratorDLL\\sources\\structs\\%s.cpp", fileName)
+				headerFileName = string.format("C:\\Users\\Eksekk\\source\\repos\\PGenEdit\\PGenEditDLL\\headers\\structs\\%s.h", fileName)
+				sourceFileName = string.format("C:\\Users\\Eksekk\\source\\repos\\PGenEdit\\PGenEditDLL\\sources\\structs\\%s.cpp", fileName)
 			else
 				headerFileName = string.format("C:\\Users\\Eksekk\\structOffsets\\%s.h", fileName)
 				sourceFileName = string.format("C:\\Users\\Eksekk\\structOffsets\\%s.cpp", fileName)
 			end
-			local luaDataFileName = "C:\\Users\\Eksekk\\source\\repos\\PartyGenerator\\luaData.cpp"
+			local luaDataFileName = "C:\\Users\\Eksekk\\source\\repos\\PGenEdit\\luaData.cpp"
 			io.save(headerFileName, table.concat(currentCode.header, "\n"))
 			if #currentCode.source > 0 and saveToGeneratorDirectory then
 				local prefix = {

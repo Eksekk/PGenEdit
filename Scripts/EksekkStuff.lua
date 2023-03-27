@@ -1,7 +1,7 @@
-pgenData = pgenData or {}
+PGenEditData = PGenEditData or {}
 
 local M = {dll = _G.oldDll}
-mem.dll.kernel32.SetDllDirectoryA("C:\\Users\\Eksekk\\source\\repos\\PartyGenerator\\Debug\\")
+mem.dll.kernel32.SetDllDirectoryA("C:\\Users\\Eksekk\\source\\repos\\PGenEdit\\Debug\\")
 function events.GameInitialized1()
 	-- speed up loading and unloading my dll by not unloading dependencies which don't change
 	-- (they won't unload because this increments reference count)
@@ -21,7 +21,7 @@ function M.unloadDll()
 		_G.oldDll = nil
 		d = nil
 		-- loads twice for some reason
-		if mem.dll.kernel32.GetModuleHandleA("PartyGenerator.dll") ~= 0 then
+		if mem.dll.kernel32.GetModuleHandleA("PGenEdit.dll") ~= 0 then
 			mem.dll.kernel32.FreeLibrary(ptr)
 		end
 		events.Tick.Remove(runEventLoopOnce)
@@ -34,7 +34,7 @@ local FORMAT_MESSAGE_FROM_SYSTEM = 0x00001000
 function M.loadDll()
 	if offsets.MMVersion ~= 7 then return end
 	if not M.dll then
-		M.dll = mem.LoadDll("PartyGenerator.dll")
+		M.dll = mem.LoadDll("PGenEdit.dll")
 		if not M.dll then
 			local err = mem.dll.kernel32.GetLastError()
 			local buffer = mem.allocMM(500)
@@ -72,9 +72,9 @@ function getLuaState()
 	end
 end
 
-if pgenData.ptrs then
-	events.LoadMap.Remove(pgenData.ptrs)
-	pgenData.ptrs = nil
+if PGenEditData.ptrs then
+	events.LoadMap.Remove(PGenEditData.ptrs)
+	PGenEditData.ptrs = nil
 end
 function M.ptrs()
 	if M.dll then
@@ -86,9 +86,9 @@ function M.ptrs()
 		mem.freeMM(ptrs)
 	end
 end
---pgenData.ptrs = M.ptrs
+--PGenEditData.ptrs = M.ptrs
 
---events.LoadMap = pgenData.ptrs
+--events.LoadMap = PGenEditData.ptrs
 
 function M.reloadDll()
 	M.unloadDll()
@@ -97,31 +97,31 @@ end
 
 function M.C()
 	local ok
-	ok, M.classData = pcall(require, "pgenData\\classData");
-	package.loaded["pgenData\\classData"] = nil -- allow always reloading module
+	ok, M.classData = pcall(require, "PGenEditData\\classData");
+	package.loaded["PGenEditData\\classData"] = nil -- allow always reloading module
 	return M.classData
 end
 
 function M.Sk()
 	local ok
-	ok, M.skillData = pcall(require, "pgenData\\skillData");
-	package.loaded["pgenData\\skillData"] = nil
+	ok, M.skillData = pcall(require, "PGenEditData\\skillData");
+	package.loaded["PGenEditData\\skillData"] = nil
 	return M.skillData
 end
 
 function M.getMiscData()
 	local ok
-	ok, M.miscData = pcall(require, "pgenData\\miscData");
-	package.loaded["pgenData\\miscData"] = nil
+	ok, M.miscData = pcall(require, "PGenEditData\\miscData");
+	package.loaded["PGenEditData\\miscData"] = nil
 	return M.miscData
 end
 
 M.playerTypes = {caster = "caster", melee = "melee", ranged = "ranged", defensive = "defensive", utility = "utility"}
 
-pgenData = pgenData or {}
+PGenEditData = PGenEditData or {}
 function M.installKeyboardHandlers()
 	M.removeKeyboardHandlers()
-	pgenData.handlers = {}
+	PGenEditData.handlers = {}
 	local function loadUnload(t)
 		if t.Key == const.Keys.F3 and Game.CtrlPressed then
 			t.Handled = true
@@ -145,13 +145,13 @@ function M.installKeyboardHandlers()
 			end
 		end
 	end
-	table.insert(pgenData.handlers, loadUnload)
+	table.insert(PGenEditData.handlers, loadUnload)
 	events.AddFirst("KeyDown", loadUnload)
 end
 
 function M.removeKeyboardHandlers()
-	if pgenData.handlers then
-		for i, v in ipairs(pgenData.handlers) do
+	if PGenEditData.handlers then
+		for i, v in ipairs(PGenEditData.handlers) do
 			events.Remove(v)
 		end
 	end
@@ -603,7 +603,7 @@ function printSortedConst(c)
 end
 
 function M.reloadApi()
-	dofile "C:\\Users\\Eksekk\\source\\repos\\PartyGenerator\\Scripts\\General\\PartyGeneratorApi.lua"
+	dofile "C:\\Users\\Eksekk\\source\\repos\\PGenEdit\\Scripts\\General\\PGenEditApi.lua"
 end
 M.reloadApi()
 
