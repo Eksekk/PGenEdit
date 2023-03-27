@@ -87,6 +87,7 @@
     <ClInclude Include="ResistanceWidget.h" />
     <ClInclude Include="SpecificClassChooserPanel.h" />
     <ClInclude Include="Tests.h" />
+    <ClInclude Include="CommandManager.h" />
     <ClInclude Include="Utility.h" />
   </ItemGroup>
   <ItemGroup>
@@ -147,10 +148,8 @@
     <ClCompile Include="sources\structs\Lod.cpp" />
     <ClCompile Include="SpecificClassChooserPanel.cpp" />
     <ClCompile Include="Tests.cpp" />
+    <ClCompile Include="CommandManager.cpp" />
     <ClCompile Include="Utility.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <Text Include="Text.txt" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Lib.def" />

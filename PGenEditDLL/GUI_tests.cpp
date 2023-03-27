@@ -56,28 +56,28 @@ template<typename Player, typename Game>
 std::vector<wxString> GUI_tests::testEditorSkillsPanel()
 {
 	auto party = Game::party;
-
+	GameData::updateIsInGameAndPartySize();
 	auto eWindow = wxGetApp().editorMainWindow;
 	Asserter myasserter;
 
 	int index = 2;
-	AutoBackup backup(CURRENT_PARTY_SIZE, players[index]);
+	// have to use original player addresses because changing them for mmextension is tricky
+	AutoBackup backup(CURRENT_PARTY_SIZE, *reinterpret_cast<Player*>(players[index]));
 	CURRENT_PARTY_SIZE = index + 1;
-	Player* pl = new Player;
+	Player* pl = reinterpret_cast<Player*>(players[index]);
 	memset(pl, 0, sizeof(Player));
-	players[index] = pl;
-	(void)playerAccessor->forPlayer(index);
+	(void)playerAccessor->setPlayerOverride(pl);
 	wxUIActionSimulator sim;
 
 	auto autoClick = [&sim](wxWindow* window)
 	{
-		sim.MouseMove(window->GetScreenPosition());
+		wxASSERT(window->IsShown());
+		sim.MouseMove(window->GetScreenPosition() + wxPoint(10, 10));
 		sim.MouseClick();
 		wxYield();
 	};
 
 	// actual test code
-
 	EditorPlayerWindow* window = eWindow->createPlayerWindow(index);
 	myassert(window);
 	EditorSkillsPanel* panel = window->skillsPanel;
@@ -203,7 +203,7 @@ std::vector<wxString> GUI_tests::testEditorSkillsPanel()
 	// only already learned - skip (not using variable to keep track of it)
 
 	eWindow->destroyPlayerWindow(index);
-	delete pl;
+	playerAccessor->clearPlayerOverride();
 	return myasserter.errors;
 }
 
@@ -303,18 +303,21 @@ std::vector<wxString> GUI_tests::testGui()
 template<typename Player, typename Game>
 std::vector<wxString> GUI_tests::testEditorStatisticsPanel()
 {
-	Player* pl = new Player;
+	GameData::updateIsInGameAndPartySize();
+	int index = 1;
+	AutoBackup backup(CURRENT_PARTY_SIZE, *reinterpret_cast<Player*>(players[index]));
+	CURRENT_PARTY_SIZE = index + 1;
+	Player* pl = reinterpret_cast<Player*>(players[index]);
 	memset(pl, 0, sizeof(Player));
-	AutoBackup<int, void*> backup(CURRENT_PARTY_SIZE, players[0]);
-	CURRENT_PARTY_SIZE = 1;
-	players[0] = pl;
+	(void)playerAccessor->setPlayerOverride(pl);
 	auto eWindow = wxGetApp().editorMainWindow;
 	Asserter myasserter;
-	EditorStatisticsPanel* panel = eWindow->createPlayerWindow(0)->statisticsPanel;
+	EditorStatisticsPanel* panel = eWindow->createPlayerWindow(index)->statisticsPanel;
 	wxUIActionSimulator sim;
 	auto autoClick = [&sim](wxWindow* window) -> void
 	{
-		sim.MouseMove(window->GetScreenPosition());
+		wxASSERT(window->IsShown());
+		sim.MouseMove(window->GetScreenPosition() + wxPoint(10, 10));
 		sim.MouseClick();
 		wxYield();
 	};
@@ -342,7 +345,8 @@ std::vector<wxString> GUI_tests::testEditorStatisticsPanel()
 
 
 
-	eWindow->destroyPlayerWindow(0);
+	eWindow->destroyPlayerWindow(index);
+	playerAccessor->clearPlayerOverride();
 
 	return myasserter.errors;
 }

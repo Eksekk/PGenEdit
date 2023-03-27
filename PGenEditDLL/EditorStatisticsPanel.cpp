@@ -80,12 +80,14 @@ void EditorStatisticsPanel::updateFromPlayerData()
 
 	int acValue = playerAccessor->getStatBonus(STAT_ARMOR_CLASS);
 	int64_t expVal = playerAccessor->getExperience();
-	auto [ageBaseVal, ageBonusVal] = playerAccessor->getStatBaseBonus(STAT_AGE);
+	// TODO: age base needs to be calculated manually
+	//auto [ageBaseVal, ageBonusVal] = playerAccessor->getStatBaseBonus(STAT_AGE);
+	auto ageBonusVal = playerAccessor->getStatBonus(STAT_AGE);
 	auto [levelBaseVal, levelBonusVal] = playerAccessor->getStatBaseBonus(STAT_LEVEL);
 	redBlackGreenTextThreshold(extraAcValue, acValue, 0);
 	redBlackGreenTextThreshold(ageBonus, ageBonusVal, 0);
 	redBlackGreenTextThreshold(levelBonus, levelBonusVal, 0);
-	for (std::pair<wxSpinCtrl*, int> pairs[]{ {extraAcValue, acValue}, {ageBase, ageBaseVal}, {ageBonus, ageBonusVal}, {levelBase, levelBaseVal}, {levelBonus, levelBonusVal} };
+	for (std::pair<wxSpinCtrl*, int> pairs[]{ {extraAcValue, acValue}/*, {ageBase, ageBaseVal}*/, {ageBonus, ageBonusVal}, {levelBase, levelBaseVal}, {levelBonus, levelBonusVal} };
 		auto [spin, val] : pairs)
 	{
 		spin->SetValue(val);
@@ -401,7 +403,7 @@ void EditorStatisticsPanel::createStatisticsAdjuster()
 	resistancesSizer->Add(resistancesBonusLabel, wxGBPosition(1, 2), wxGBSpan(1, 1), wxALL | wxALIGN_CENTER_HORIZONTAL, 5);
 
 	resistancesSpellEffectLabel = new wxStaticText(this, wxID_ANY, _("Spell effect"));
-	resistancesSizer->Add(resistancesBonusLabel, wxGBPosition(1, 3), wxGBSpan(1, 1), wxALL | wxALIGN_CENTER_HORIZONTAL, 5);
+	resistancesSizer->Add(resistancesSpellEffectLabel, wxGBPosition(1, 3), wxGBSpan(1, 1), wxALL | wxALIGN_CENTER_HORIZONTAL, 5);
 
 	row = 2;
 	for (int i : STATS_RESISTANCES)

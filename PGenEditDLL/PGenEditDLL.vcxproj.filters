@@ -294,6 +294,9 @@
     <ClInclude Include="GUI_tests.h">
       <Filter>Pliki nagłówkowe\Editor GUI</Filter>
     </ClInclude>
+    <ClInclude Include="CommandManager.h">
+      <Filter>Pliki nagłówkowe\Misc</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="sources\MainWindow.cpp">
@@ -461,9 +464,9 @@
     <ClCompile Include="GUI_tests.cpp">
       <Filter>Pliki źródłowe\Editor GUI</Filter>
     </ClCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <Text Include="Text.txt" />
+    <ClCompile Include="CommandManager.cpp">
+      <Filter>Pliki źródłowe\Misc</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="Lib.def">

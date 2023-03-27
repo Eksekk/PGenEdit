@@ -351,7 +351,7 @@ bool GameData::processMiscDataJson(const char* str)
 		wxASSERT(GameData::resistances.size() >= (MMVER == 6 ? 5 : 9));
 		postProcess();
     }
-    catch (nlohmann::json::exception& e)
+    catch (const nlohmann::json::exception& e)
     {
         wxLogError("Json exception while parsing misc data: %s", e.what());
         wxLog::FlushActive();

@@ -160,7 +160,7 @@ wxString TemplatedPlayerStructAccessor<Player>::getNameOrDefault(int overridePla
 	{
 		int old = playerIndex;
 		auto name = forPlayer(overridePlayerIndex)->getName();
-		forPlayer(old);
+		playerIndex = old;
 		return name;
 	}
 	else
@@ -501,7 +501,7 @@ int TemplatedPlayerStructAccessor<Player>::getStatBonus(int stat)
 		auto field = baseBonusFieldToStatMap<int16_t>.at(stat).bonus;
 		return pl->*field;
 	}
-	else if (stat == STAT_ARMOR_CLASS)
+	else if (stat == STAT_ARMOR_CLASS || stat == STAT_AGE)
 	{
 		auto field = singleTypeFieldToStatMap<int16_t>.at(STAT_ARMOR_CLASS);
 		return pl->*field;
@@ -537,7 +537,7 @@ void TemplatedPlayerStructAccessor<Player>::setStatBonus(int stat, int value)
 		pl->*field = value;
 		return;
 	}
-	else if (stat == STAT_ARMOR_CLASS)
+	else if (stat == STAT_ARMOR_CLASS || stat == STAT_AGE)
 	{
 		boundsCheck(value, boundsByType<int16_t>);
 		auto field = singleTypeFieldToStatMap<int16_t>.at(STAT_ARMOR_CLASS);
@@ -601,7 +601,19 @@ template<typename Player>
 int TemplatedPlayerStructAccessor<Player>::getConditionEffectOnStat(int statId)
 {
 	wxASSERT_MSG(existsInVector(STATS_PRIMARY, statId), wxString::Format("Invalid stat %d", statId));
-	wxFAIL;
+	Player* pl = getPlayerToAffect();
+	// FIXME: proper condition order
+	// FIXME: location for MM8
+	wxASSERT(MMVER != 8);
+	const int condEffectBase = mmv(0x4C27B4, 0x4EDDF0, 0);
+	const int condCount = MMVER == 6 ? 18 : 19; // including "good"
+	for (int i = 0; i < condCount; ++i)
+	{
+		if (pl->conditions[i] != 0)
+		{
+			return byte(condEffectBase + statId * condCount + i);
+		}
+	}
 	return 100;
 }
 
@@ -609,7 +621,7 @@ template<typename Player>
 int TemplatedPlayerStructAccessor<Player>::getResistanceSpellEffect(int resId)
 {
 	wxASSERT_MSG(existsInVector(STATS_RESISTANCES, resId), wxString::Format("Invalid resistance %d", resId));
-	wxFAIL;
+	// TODO
 	return 0;
 }
 
@@ -818,6 +830,10 @@ int PlayerStructAccessor::getPlayerIndex()
 	}
 }
 
+int PlayerStructAccessor::getCurrentPlayerIndex()
+{
+	return playerIndex;
+}
 void PlayerStructAccessor::setPlayerOverride(void* ptr)
 {
 	playerOverride = ptr;

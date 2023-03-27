@@ -7,8 +7,8 @@
 template<typename... Args>
 class AutoBackup
 {
-	std::tuple<std::reference_wrapper<Args>...> refs;
-	std::tuple<Args&&...> vals; // rvalue reference is important
+	std::tuple<Args&...> refs;
+	std::tuple<Args...> vals; // rvalue reference is important
 
 public:
 	AutoBackup(Args&... args);
@@ -17,7 +17,7 @@ public:
 
 template<typename... Args>
 AutoBackup<Args...>::AutoBackup(Args&... args)
-	: refs(std::reference_wrapper<Args>(args)...),
+	: refs(std::tie(args...)),
 	vals(Args(args)...)
 {
 	
@@ -26,5 +26,5 @@ AutoBackup<Args...>::AutoBackup(Args&... args)
 template<typename... Args>
 AutoBackup<Args...>::~AutoBackup()
 {
-	refs = vals;
+	refs = std::move(vals);
 }

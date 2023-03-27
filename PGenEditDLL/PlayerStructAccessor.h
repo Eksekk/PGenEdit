@@ -30,8 +30,10 @@ protected:
 	int getPlayerIndex();
 	void* playerOverride; // mainly for testing - if it's not null, will always be used instead of index
 public:
-	inline void setPlayerOverride(void* ptr);
-	inline void clearPlayerOverride();
+	// CANNOT BE INLINE, or link errors
+	int getCurrentPlayerIndex();
+	void setPlayerOverride(void* ptr);
+	void clearPlayerOverride();
 
 	PlayerStructAccessor();
 
