@@ -8,7 +8,7 @@ template<typename... Args>
 class AutoBackup
 {
 	std::tuple<Args&...> refs;
-	std::tuple<Args...> vals; // rvalue reference is important
+	std::tuple<Args...> vals; // lack of reference is important
 
 public:
 	AutoBackup(Args&... args);

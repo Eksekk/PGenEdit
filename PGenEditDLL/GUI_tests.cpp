@@ -63,27 +63,20 @@ std::vector<wxString> GUI_tests::testEditorSkillsPanel()
 	int index = 2;
 	// have to use original player addresses because changing them for mmextension is tricky
 	AutoBackup backup(CURRENT_PARTY_SIZE, *reinterpret_cast<Player*>(players[index]));
+	// PARTY SIZE IS 0 BEFORE
 	CURRENT_PARTY_SIZE = index + 1;
 	Player* pl = reinterpret_cast<Player*>(players[index]);
 	memset(pl, 0, sizeof(Player));
 	(void)playerAccessor->setPlayerOverride(pl);
 	wxUIActionSimulator sim;
 
-	auto autoClick = [&sim](wxWindow* window)
-	{
-		wxASSERT(window->IsShown());
-		sim.MouseMove(window->GetScreenPosition() + wxPoint(10, 10));
-		sim.MouseClick();
-		wxYield();
-	};
-
 	// actual test code
 	EditorPlayerWindow* window = eWindow->createPlayerWindow(index);
 	myassert(window);
 	EditorSkillsPanel* panel = window->skillsPanel;
+	AutoClicker autoClick(*panel, sim);
 	window->Show();
 	window->tabs->SetSelection(EditorPlayerWindow::SKILLS_PANEL_INDEX);
-	wxYield();
 	autoClick(panel->affectAvailableSkillpointsCheckbox);
 	myassert(panel->options.affectSkillpoints);
 	myassert(panel->allowNegativeSkillpointsRadio->IsEnabled());
@@ -125,11 +118,11 @@ std::vector<wxString> GUI_tests::testEditorSkillsPanel()
 	{
 		PlayerSkill* skill = doNotGenerateSkills.front();
 		auto widget = panel->widgetToSkillMap.at(skill);
-		myassert(!widget->IsEnabled(), skill->name);
+		myassert(!widget->IsShown(), skill->name);
 		autoClick(panel->showUnobtainableSkillsCheckbox);
-		myassert(widget->IsEnabled(), skill->name);
+		myassert(widget->IsShown(), skill->name);
 		autoClick(panel->showUnobtainableSkillsCheckbox);
-		myassert(!widget->IsEnabled(), skill->name);
+		myassert(!widget->IsShown(), skill->name);
 	}
 	else
 	{
@@ -141,14 +134,15 @@ std::vector<wxString> GUI_tests::testEditorSkillsPanel()
 		// level
 		PlayerSkill* skill = &GameData::skills.at(i);
 		auto* widget = panel->widgetToSkillMap.at(skill);
-		autoClick(widget->skillLevel);
+		widget->SetFocus(); // IMPORTANT, or text won't work
 		sim.Text("23");
-		sim.MouseDown();
-		sim.MouseUp();
+		sim.Char(WXK_TAB); // lose focus
+		dispatchWindowMessages();
 		myassert(playerAccessor->getSkill(skill) == (SkillValue{ 23, 1 }), i);
-		sim.Text("4");
-		sim.MouseDown();
-		sim.MouseUp();
+		widget->SetFocus();
+ 		sim.Text("4");
+		sim.Char(WXK_TAB);
+		dispatchWindowMessages();
 		myassert(playerAccessor->getSkill(skill) == (SkillValue{ 4, 1 }), i);
 
 		// mastery choice
@@ -156,11 +150,17 @@ std::vector<wxString> GUI_tests::testEditorSkillsPanel()
 		skill = &GameData::skills.at(i);
 		widget = panel->widgetToSkillMap.at(skill);
 		autoClick(widget->skillMastery);
+		widget->SetFocus();
 		sim.Select("Master");
-		myassert(playerAccessor->getSkill(skill) == (SkillValue{ 1, 3 }), i);
+		sim.MouseClick();
+		dispatchWindowMessages();
+		myassert(playerAccessor->getSkill(skill) == (SkillValue{ 1, 3 }), i - 2);
 		autoClick(widget->skillMastery);
+		widget->SetFocus();
 		sim.Select("None");
-		myassert(playerAccessor->getSkill(skill) == (SkillValue{ 0, 0 }), i);
+		sim.MouseClick();
+		dispatchWindowMessages();
+		myassert(playerAccessor->getSkill(skill) == (SkillValue{ 0, 0 }), i - 2);
 	}
 
 	// class constraints
@@ -312,15 +312,13 @@ std::vector<wxString> GUI_tests::testEditorStatisticsPanel()
 	(void)playerAccessor->setPlayerOverride(pl);
 	auto eWindow = wxGetApp().editorMainWindow;
 	Asserter myasserter;
-	EditorStatisticsPanel* panel = eWindow->createPlayerWindow(index)->statisticsPanel;
+	EditorPlayerWindow* win = eWindow->createPlayerWindow(index);
+	win->Show();
+	EditorStatisticsPanel* panel = win->statisticsPanel;
+	win->tabs->SetSelection(EditorPlayerWindow::STATISTICS_PANEL_INDEX);
 	wxUIActionSimulator sim;
-	auto autoClick = [&sim](wxWindow* window) -> void
-	{
-		wxASSERT(window->IsShown());
-		sim.MouseMove(window->GetScreenPosition() + wxPoint(10, 10));
-		sim.MouseClick();
-		wxYield();
-	};
+	AutoClicker autoClick(*panel, sim);
+	wxASSERT(win->IsShown() && win->IsVisible());
 
 	struct Test
 	{
@@ -350,7 +348,6 @@ std::vector<wxString> GUI_tests::testEditorStatisticsPanel()
 
 	return myasserter.errors;
 }
-
 template std::vector<wxString> GUI_tests::testEditorStatisticsPanel<mm6::Player, mm6::Game>();
 template std::vector<wxString> GUI_tests::testEditorStatisticsPanel<mm7::Player, mm7::Game>();
 template std::vector<wxString> GUI_tests::testEditorStatisticsPanel<mm8::Player, mm8::Game>();
@@ -359,3 +356,34 @@ template std::vector<wxString> GUI_tests::testEditorStatisticsPanel<mm8::Player,
 template std::vector<wxString> GUI_tests::testGui<mm6::Player, mm6::Game>();
 template std::vector<wxString> GUI_tests::testGui<mm7::Player, mm7::Game>();
 template std::vector<wxString> GUI_tests::testGui<mm8::Player, mm8::Game>();
+
+void GUI_tests::dispatchWindowMessages()
+{
+	// temporary message loop to fix wxYield() not working due to no direct event loop
+	// for my dll
+	MSG msg;
+	while (PeekMessageA(&msg, 0, 0, 0, true))
+	{
+		TranslateMessage(&msg);
+		DispatchMessageA(&msg);
+	}
+}
+
+void GUI_tests::scrollIntoView(wxScrolledWindow* scrolled, wxWindow* window)
+{
+	int scrollRateY = 0;
+	scrolled->GetScrollPixelsPerUnit(nullptr, &scrollRateY);
+
+	const wxPoint windowPos = scrolled->CalcUnscrolledPosition(window->GetPosition());
+	scrolled->Scroll(0, windowPos.y / scrollRateY);
+}
+
+GUI_tests::AutoClicker::AutoClicker(wxScrolledWindow& scrolled, wxUIActionSimulator& sim) : scrolled(scrolled), sim(sim) {}
+
+void GUI_tests::AutoClicker::operator()(wxWindow* window)
+{
+	scrollIntoView(&scrolled, window);
+	sim.MouseMove(window->GetScreenPosition() + wxPoint(5, 5));
+	sim.MouseClick();
+	dispatchWindowMessages();
+}

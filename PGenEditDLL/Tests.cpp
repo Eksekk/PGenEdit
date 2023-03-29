@@ -687,13 +687,11 @@ template std::vector<wxString> Tests::testPlayerStructAccessor<mm8::Player, mm8:
 
 #pragma warning(push)
 #pragma warning(disable: 6001)
-#pragma warning(disable: 4700) // definitely initialized in dllApi.cpp, and if not I'll just get a segfault and fix it
-// (I test with low level debugger on at all time, so should be easy)
 template<typename Player, typename Game>
 std::vector<wxString> Tests::testMisc()
 {
 	Asserter myasserter;
-	Player** players = (Player**)players;
+	Player** playersConverted = (Player**)players;
 	for (int i = 0; i < MAX_PLAYERS; ++i) // TODO: player count can be different in mm8
 	{
 

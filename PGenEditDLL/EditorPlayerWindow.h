@@ -9,7 +9,8 @@ class EditorStatisticsPanel;
 class EditorPlayerWindow : public wxFrame
 {
 private:
-
+	bool myIsBeingDestroyed; // because apparently IsBeingDeleted() doesn't work,
+	// and I'm too lazy to debug it
 protected:
 	wxPanel* mainPanel;
 	wxNotebook* tabs;
@@ -39,6 +40,7 @@ public:
 	void onCloseWindow(wxCloseEvent& event);
 	bool AcceptsFocus() const override;
 	void onActivate(wxActivateEvent& event);
+	bool Destroy() override;
 
 	friend class GUI_tests;
 private:

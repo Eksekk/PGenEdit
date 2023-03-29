@@ -218,6 +218,10 @@ extern "C"
 			{
 				errors.push_back("Game skill info wasn't received from lua yet!");
 			}
+			if (GameData::primaryStats.empty())
+			{
+				errors.push_back("Statistics info wasn't received from lua yet!");
+			}
 			// TODO: check all data to be received from lua
 			wxMessageBox(concatWxStrings(errors, "\n"), "Error", wxOK | wxICON_ERROR);
 			return false;
@@ -335,7 +339,7 @@ extern "C"
             }
             if (errors.size() > 0)
             {
-				wxString str = concatWxStrings(errors);
+				wxString str = concatWxStrings(errors, "\n\n");
 				std::fstream file("pgen_errors.txt", std::ios::out | std::ios::trunc);
 				file << str;
 				file.close();

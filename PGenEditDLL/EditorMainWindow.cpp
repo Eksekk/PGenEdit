@@ -184,7 +184,7 @@ void EditorMainWindow::onPlayerButtonClick(wxCommandEvent& event)
 				playerWindows[i] = new EditorPlayerWindow(this, i);
 				wxToolTip::Enable(true);
 				profiler.end();
-				wxLogMessage(profiler.getDurationStr());
+				//wxLogMessage(profiler.getDurationStr());
 				wxLog::FlushActive();
 			}
 			playerWindows[i]->Show();

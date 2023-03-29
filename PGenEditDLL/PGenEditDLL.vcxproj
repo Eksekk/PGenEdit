@@ -167,6 +167,7 @@
     <ConfigurationType>DynamicLibrary</ConfigurationType>
     <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
+    <UseDebugLibraries>true</UseDebugLibraries>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>DynamicLibrary</ConfigurationType>
@@ -213,7 +214,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <TargetName>PGenEdit</TargetName>
     <IncludePath>headers;headers\structs;.;.\openresty-luajit\src</IncludePath>
-    <SourcePath>sources;C:\wxWidgets-3.2.1\src\common;C:\wxWidgets-3.2.1\src\msw;.</SourcePath>
+    <SourcePath>.;sources;C:\wxWidgets-3.2.1\src\common;C:\wxWidgets-3.2.1\src\msw;C:\wxWidgets-3.2.1\src\generic</SourcePath>
     <EnableMicrosoftCodeAnalysis>true</EnableMicrosoftCodeAnalysis>
     <ExternalIncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);json</ExternalIncludePath>
     <GenerateManifest>true</GenerateManifest>
@@ -249,8 +250,7 @@
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <MinimalRebuild>
-      </MinimalRebuild>
+      <MinimalRebuild>false</MinimalRebuild>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>

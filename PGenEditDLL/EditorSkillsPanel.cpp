@@ -12,7 +12,7 @@ extern wxTimer* mainUpdateTimer;
 EditorSkillsPanel::EditorSkillsPanel(wxWindow* parent, int playerIndex) : wxScrolledWindow(parent), playerIndex(playerIndex)
 {
 	SetScrollRate(10, 10);
-	SetSize(1024, 768);
+	SetSizeHints(1024, 768);
 
 	//SetBackgroundColour(wxSystemSettings::GetColour(wxSystemColour::wxSYS_COLOUR_MENU));
 
@@ -563,7 +563,7 @@ void EditorSkillsPanel::createSkillsPanel()
 
 	profiler.endAggregate();
 	Thaw();
-	wxLogMessage(profiler.getAggregateDurationStr());
+	//wxLogMessage(profiler.getAggregateDurationStr());
 	skillToWidgetMap = invertMap(widgetToSkillMap);
 	mainSizer->Add(skillsSizerHorizontal, 1, 0, 5);
 

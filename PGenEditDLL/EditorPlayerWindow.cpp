@@ -9,7 +9,7 @@
 #include "EditorStatisticsPanel.h"
 
 EditorPlayerWindow::EditorPlayerWindow(wxWindow* parent, int playerIndex) : wxFrame(parent, wxID_ANY, "Edit " + playerAccessor->getNameOrDefault(playerIndex),
-	wxDefaultPosition, wxSize(770, 670), wxDEFAULT_FRAME_STYLE | wxTAB_TRAVERSAL), playerIndex(playerIndex)
+	wxDefaultPosition, wxSize(1200, 950), wxDEFAULT_FRAME_STYLE | wxTAB_TRAVERSAL), playerIndex(playerIndex), myIsBeingDestroyed(false)
 {
 	windowDisabler = nullptr;
 	loop = nullptr;
@@ -115,9 +115,14 @@ bool EditorPlayerWindow::AcceptsFocus() const
 void EditorPlayerWindow::onActivate(wxActivateEvent& event)
 {
 	event.Skip();
-	if (event.GetActive())
+	if (event.GetActive() && !IsBeingDeleted() && !myIsBeingDestroyed) // second and third condition important to prevent tests failed message triggering assert in accessor
 	{
 		skillsPanel->updateFromPlayerData();
 		statisticsPanel->updateFromPlayerData();
 	}
+}
+bool EditorPlayerWindow::Destroy()
+{
+	myIsBeingDestroyed = true;
+	return wxFrame::Destroy();
 }
