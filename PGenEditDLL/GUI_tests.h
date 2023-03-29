@@ -3,6 +3,8 @@
 #include "main.h"
 
 class wxUIActionSimulator;
+class Asserter;
+
 class GUI_tests
 {
 public:
@@ -16,18 +18,21 @@ public:
 	template<typename Player, typename Game>
 	static std::vector<wxString> testEditorStatisticsPanel();
 
-	// this function retrieves messages
-	static void processOnlyDllMessages();
-	static void processWindowMessages();
+	static void dispatchWindowMessages();
 	static void scrollIntoView(wxScrolledWindow* scrolled, wxWindow* window);
 
-	class AutoClicker
+	class GuiTestHelper
 	{
 		wxUIActionSimulator& sim;
 		wxScrolledWindow& scrolled;
+		Asserter& myasserter;
 	public:
-		AutoClicker() = delete;
-		AutoClicker(wxScrolledWindow& scrolled, wxUIActionSimulator& sim);
-		void operator()(wxWindow* window);
+		GuiTestHelper() = delete;
+		GuiTestHelper(wxScrolledWindow& scrolled, wxUIActionSimulator& sim, Asserter& asserter);
+		void autoClick(wxWindow* window);
+		void autoText(wxWindow* target, const wxString& text);
+		void autoSelect(wxChoice* target, const wxString& text);
+// 		template<typename Player, typename FieldType>
+// 		void testLinkedSpinCtrl(wxSpinCtrl* ctrl, FieldType Player::* fieldPointer);
 	};
 };

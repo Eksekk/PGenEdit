@@ -12,9 +12,10 @@ const std::unordered_map<Mastery, int> EditorSkillValueChooser::idToMasteryMap =
 
 const std::array<wxString, 5> EditorSkillValueChooser::masteryNames{ "None", "Novice", "Expert", "Master", "GM" };
 
-wxDEFINE_EVENT(SKILL_VALUE_CHANGE, wxCommandEvent);
+wxDEFINE_EVENT(SKILL_VALUE_CHANGE_BY_USER, wxCommandEvent);
 
-EditorSkillValueChooser::EditorSkillValueChooser(wxWindow* parent, const wxString& labelText) : wxPanel(parent)
+EditorSkillValueChooser::EditorSkillValueChooser(wxWindow* parent, const wxString& labelText, int playerIndex, PlayerSkill* skill, PlayerStructAccessor::SkillOptions& options)
+    : wxPanel(parent), playerIndex(playerIndex), skill(skill), options(options)
 {
     wxBoxSizer* mainSizer = new wxBoxSizer(wxHORIZONTAL);
 	SetSizer(mainSizer);
@@ -52,8 +53,6 @@ EditorSkillValueChooser::EditorSkillValueChooser(wxWindow* parent, const wxStrin
 
 	skillMastery->Bind(wxEVT_CHOICE, &EditorSkillValueChooser::onValueChange, this);
 	innerSizer->Add(skillMastery);
-
-    Bind(wxEVT_SHOW, &EditorSkillValueChooser::onShow, this);
 }
 
 SkillValue EditorSkillValueChooser::getValue()
@@ -74,7 +73,8 @@ Mastery EditorSkillValueChooser::getMastery()
 void EditorSkillValueChooser::setValue(const SkillValue& value)
 {
     skillLevel->SetValue(value.level);
-    skillMastery->SetSelection(idToMasteryMap.at(static_cast<Mastery>(value.mastery)));
+	skillMastery->SetSelection(idToMasteryMap.at(static_cast<Mastery>(value.mastery)));
+	updateSkillBonus(playerAccessor->getSkillBonus(skill));
 }
 
 void EditorSkillValueChooser::setValue(int value)
@@ -84,12 +84,14 @@ void EditorSkillValueChooser::setValue(int value)
 
 void EditorSkillValueChooser::setLevel(int level)
 {
-    skillLevel->SetValue(level);
+	skillLevel->SetValue(level);
+	updateSkillBonus(playerAccessor->getSkillBonus(skill));
 }
 
 void EditorSkillValueChooser::setMastery(Mastery mastery)
 {
-    skillMastery->SetSelection(idToMasteryMap.at(mastery));
+	skillMastery->SetSelection(idToMasteryMap.at(mastery));
+	updateSkillBonus(playerAccessor->getSkillBonus(skill));
 }
 
 void EditorSkillValueChooser::updateSkillBonus(int value)
@@ -119,20 +121,47 @@ void EditorSkillValueChooser::updateSkillBonus(int value)
 void EditorSkillValueChooser::onValueChange(wxCommandEvent& event)
 {
     // doing this roundabout way because couldn't get event object in skills panel and decided to do my own event category
-    wxCommandEvent event2(SKILL_VALUE_CHANGE, GetId());
+    wxCommandEvent event2(SKILL_VALUE_CHANGE_BY_USER, GetId());
     event2.SetEventObject(this); // IMPORTANT !!!, event object is not set automatically
+    event2.SetInt(processValueChangeByUser());
     ProcessWindowEvent(event2);
 }
 
-void EditorSkillValueChooser::setRowColor(const wxColour& colour)
+bool EditorSkillValueChooser::processValueChangeByUser()
 {
-    SetBackgroundColour(colour);
+	SkillValue oldValue = playerAccessor->forPlayer(playerIndex)->getSkill(skill);
+	SkillValue newValue = getValue();
+    adjustNewSkillValue(oldValue, newValue);
+	if (!playerAccessor->setSkill(skill, newValue, options))
+	{
+        return false;
+	}
+    else
+    {
+        // value might have been reduced by class constraint
+        updateFromPlayerData();
+        return true;
+    }
 }
 
-void EditorSkillValueChooser::onShow(wxShowEvent& event)
+void EditorSkillValueChooser::adjustNewSkillValue(const SkillValue& oldValue, SkillValue& newValue)
 {
-    if (!event.IsShown()) return;
-    this->Layout();
-    Layout();
-    GetSizer()->Layout();
+	if (oldValue.isZero() && (newValue.level > 0 || newValue.mastery > 0))
+	{
+		newValue.level = std::max(newValue.level, 1);
+		newValue.mastery = std::max(newValue.mastery, (int)MASTERY_NOVICE);
+	}
+	else if (newValue.isZero() && (oldValue.level > 0 || oldValue.mastery > 0))
+	{
+		newValue = SkillValue{ 0, 0 };
+	}
+}
+void EditorSkillValueChooser::updateFromPlayerData()
+{
+    SkillValue sv = playerAccessor->forPlayer(playerIndex)->getSkill(skill);
+    setValue(sv);
+    if (MMVER > 6)
+    {
+		updateSkillBonus(playerAccessor->getSkillBonus(skill));
+    }
 }

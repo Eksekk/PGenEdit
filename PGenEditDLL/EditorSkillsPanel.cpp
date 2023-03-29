@@ -14,8 +14,6 @@ EditorSkillsPanel::EditorSkillsPanel(wxWindow* parent, int playerIndex) : wxScro
 	SetScrollRate(10, 10);
 	SetSizeHints(1024, 768);
 
-	//SetBackgroundColour(wxSystemSettings::GetColour(wxSystemColour::wxSYS_COLOUR_MENU));
-
 	mainSizer = new wxBoxSizer(wxVERTICAL);
 
 	createSkillPointsOptionsPanel();
@@ -28,13 +26,6 @@ EditorSkillsPanel::EditorSkillsPanel(wxWindow* parent, int playerIndex) : wxScro
 	m_staticline28 = new wxStaticLine(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL);
 	mainSizer->Add(m_staticline28, 0, wxEXPAND | wxALL, 5);
 
-	/*updateCallback = [this] {
-		if (this->IsShown())
-		{
-			this->updateSkillBonuses();
-			this->updateFromPlayerSkills();
-		}
-	};*/
 
 	createActionsPanel();
 
@@ -48,28 +39,14 @@ EditorSkillsPanel::EditorSkillsPanel(wxWindow* parent, int playerIndex) : wxScro
 
 void EditorSkillsPanel::updateFromPlayerData()
 {
-	updateSkillBonuses();
-	std::vector<PlayerSkillValue> skills = playerAccessor->forPlayer(playerIndex)->getSkills();
-	for (const auto& psv : skills)
+	for (auto& [skillPtr, widget] : widgetToSkillMap)
 	{
-		widgetToSkillMap.at(psv.skill)->setValue(psv.value);
+		widget->updateFromPlayerData();
 	}
 	goldDisplayText->SetLabel(wxString::Format("%d", partyAccessor->getGold()));
 	spentSkillPointsValue->SetValue(wxString::Format("%d", playerAccessor->getSpentSkillPoints()));
 	availableSkillPointsAmount->SetValue(wxString::Format("%d", playerAccessor->getSkillPoints()));
 	Layout();
-}
-
-void EditorSkillsPanel::updateSkillBonuses()
-{
-	if (MMVER == 6 || !inGame) return;
-	(void)playerAccessor->forPlayer(playerIndex);
-	for (auto& [id, skill] : GameData::skills)
-	{
-		auto* widget = widgetToSkillMap.at(&skill);
-		int bonus = playerAccessor->getSkillBonus(id);
-		widget->updateSkillBonus(bonus);
-	}
 }
 
 void EditorSkillsPanel::skillConstraintErrorMsgBox(bool multiple)
@@ -82,27 +59,12 @@ void EditorSkillsPanel::skillConstraintErrorMsgBox(bool multiple)
 void EditorSkillsPanel::onSkillValueChange(wxCommandEvent& event)
 {
 	auto* chooser = dynamic_cast<EditorSkillValueChooser*>(event.GetEventObject());
-	PlayerSkill* skill = skillToWidgetMap.at(chooser);
-	SkillValue oldValue = playerAccessor->forPlayer(playerIndex)->getSkill(skill);
-	SkillValue newValue = chooser->getValue();
-	if (oldValue.isZero() && (newValue.level > 0 || newValue.mastery > 0))
-	{
-		newValue.level = std::max(newValue.level, 1);
-		newValue.mastery = std::max(newValue.mastery, (int)MASTERY_NOVICE);
-	}
-	else if (newValue.isZero() && (oldValue.level > 0 || oldValue.mastery > 0))
-	{
-		newValue = SkillValue{ 0, 0 };
-	}
-	if (!playerAccessor->setSkill(skill, newValue, options))
+	if (!event.GetInt()) // "did skill assignment succeed?" boolean as int
 	{
 		skillConstraintErrorMsgBox(false);
 	}
 	else
 	{
-		newValue = playerAccessor->getSkill(skill); // might have been reduced by class constraint
-		chooser->setValue(newValue);
-		chooser->updateSkillBonus(playerAccessor->getSkillBonus(skill));
 		Layout();
 		if (options.affectSkillpoints)
 		{
@@ -205,7 +167,7 @@ void EditorSkillsPanel::onGodModeButton(wxCommandEvent& event)
 	(void)playerAccessor->forPlayer(playerIndex);
 	for (auto& [id, skill] : GameData::skills)
 	{
-		if (!learnedOnly || !playerAccessor->getSkill(&skill).isZero())
+		if ((!skill.doNotGenerate || showUnobtainableSkillsCheckbox->GetValue()) && (!learnedOnly || !playerAccessor->getSkill(&skill).isZero()))
 		{
 			skillsToSet.push_back(PlayerSkillValue{ &skill, SkillValue{ MAX_SKILL_LEVEL, MAX_MASTERY } });
 		}
@@ -225,12 +187,12 @@ void EditorSkillsPanel::onSetAllSkillsButton(wxCommandEvent& event)
 	(void)playerAccessor->forPlayer(playerIndex);
 	for (auto& [id, skill] : GameData::skills)
 	{
-		if (!learnedOnly || !playerAccessor->getSkill(&skill).isZero())
+		if ((!skill.doNotGenerate || showUnobtainableSkillsCheckbox->GetValue()) && (!learnedOnly || !playerAccessor->getSkill(&skill).isZero()))
 		{
 			skillsToSet.push_back(PlayerSkillValue{ &skill, val });
 		}
 	}
-	if (!playerAccessor->forPlayer(playerIndex)->setSkills(skillsToSet, options))
+	if (!playerAccessor->setSkills(skillsToSet, options))
 	{
 		skillConstraintErrorMsgBox(true);
 	}
@@ -271,24 +233,8 @@ void EditorSkillsPanel::affectCheckboxHelper(bool on, SkillCategory cat)
 	}
 }
 
-void EditorSkillsPanel::onScrollStart(wxScrollWinEvent& event)
-{
-	Freeze();
-}
-
-void EditorSkillsPanel::onScrollRelease(wxScrollWinEvent& event)
-{
-	Thaw();
-	Update();
-}
-
 EditorSkillsPanel::~EditorSkillsPanel()
 {
-}
-
-bool EditorSkillsPanel::AcceptsFocus() const
-{
-	return true;
 }
 
 void EditorSkillsPanel::createSkillPointsOptionsPanel()
@@ -530,12 +476,12 @@ void EditorSkillsPanel::createSkillsPanel()
 	for (PlayerSkill* skillPtr : skillsInOrder)
 	{
 		profiler.startAggregatePart();
-		EditorSkillValueChooser* chooser = new EditorSkillValueChooser(this, skillPtr->name);
+		EditorSkillValueChooser* chooser = new EditorSkillValueChooser(this, skillPtr->name, playerIndex, skillPtr, options);
 		widgetToSkillMap[skillPtr] = chooser;
 		int id = chooser->GetId();
 		widgetToWidgetIdMap[id] = chooser;
 		chooser->setValue(SkillValue{ 0, 0 });
-		chooser->Bind(SKILL_VALUE_CHANGE, &EditorSkillsPanel::onSkillValueChange, this);
+		chooser->Bind(SKILL_VALUE_CHANGE_BY_USER, &EditorSkillsPanel::onSkillValueChange, this);
 
 		switch (skillPtr->category)
 		{

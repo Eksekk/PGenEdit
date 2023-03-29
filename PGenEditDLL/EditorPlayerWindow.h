@@ -32,6 +32,7 @@ public:
 	const int playerIndex;
 
 	EditorPlayerWindow(wxWindow* parent, int playerIndex);
+	EditorPlayerWindow() = delete;
 
 	void showModal();
 	void onUpdateTimer(wxTimerEvent& event);

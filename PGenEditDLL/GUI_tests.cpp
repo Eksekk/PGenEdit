@@ -74,16 +74,16 @@ std::vector<wxString> GUI_tests::testEditorSkillsPanel()
 	EditorPlayerWindow* window = eWindow->createPlayerWindow(index);
 	myassert(window);
 	EditorSkillsPanel* panel = window->skillsPanel;
-	AutoClicker autoClick(*panel, sim);
+	GuiTestHelper helper(*panel, sim, myasserter);
 	window->Show();
 	window->tabs->SetSelection(EditorPlayerWindow::SKILLS_PANEL_INDEX);
-	autoClick(panel->affectAvailableSkillpointsCheckbox);
+	helper.autoClick(panel->affectAvailableSkillpointsCheckbox);
 	myassert(panel->options.affectSkillpoints);
 	myassert(panel->allowNegativeSkillpointsRadio->IsEnabled());
 	myassert(panel->dontAllowSpendingMoreThanAvailableSkillpointsRadio->IsEnabled());
-	autoClick(panel->dontAllowSpendingMoreThanAvailableSkillpointsRadio);
+	helper.autoClick(panel->dontAllowSpendingMoreThanAvailableSkillpointsRadio);
 	myassert(!panel->options.allowNegativeSkillpoints);
-	autoClick(panel->affectAvailableSkillpointsCheckbox);
+	helper.autoClick(panel->affectAvailableSkillpointsCheckbox);
 	myassert(!panel->options.affectSkillpoints);
 	myassert(!panel->dontAllowSpendingMoreThanAvailableSkillpointsRadio->IsEnabled());
 
@@ -100,6 +100,9 @@ std::vector<wxString> GUI_tests::testEditorSkillsPanel()
 	playerAccessor->setSkillPoints(500053);
 	panel->updateFromPlayerData();
 	myassert(panel->availableSkillPointsAmount->GetValue() == playerAccessor->getSkillPoints());
+	helper.autoText(panel->availableSkillPointsAmount, "34237");
+	panel->updateFromPlayerData();
+	myassert(panel->availableSkillPointsAmount->GetValue() == 34237);
 
 	playerAccessor->setSkill(5, SkillValue{ 4, 2 });
 	panel->updateFromPlayerData();
@@ -119,10 +122,12 @@ std::vector<wxString> GUI_tests::testEditorSkillsPanel()
 		PlayerSkill* skill = doNotGenerateSkills.front();
 		auto widget = panel->widgetToSkillMap.at(skill);
 		myassert(!widget->IsShown(), skill->name);
-		autoClick(panel->showUnobtainableSkillsCheckbox);
+		helper.autoClick(panel->showUnobtainableSkillsCheckbox);
 		myassert(widget->IsShown(), skill->name);
-		autoClick(panel->showUnobtainableSkillsCheckbox);
+		helper.autoClick(panel->showUnobtainableSkillsCheckbox);
 		myassert(!widget->IsShown(), skill->name);
+		helper.autoClick(panel->showUnobtainableSkillsCheckbox);
+		myassert(widget->IsShown(), skill->name);
 	}
 	else
 	{
@@ -134,69 +139,64 @@ std::vector<wxString> GUI_tests::testEditorSkillsPanel()
 		// level
 		PlayerSkill* skill = &GameData::skills.at(i);
 		auto* widget = panel->widgetToSkillMap.at(skill);
-		widget->SetFocus(); // IMPORTANT, or text won't work
-		sim.Text("23");
-		sim.Char(WXK_TAB); // lose focus
-		dispatchWindowMessages();
+		helper.autoText(widget->skillLevel, "23");
+		
 		myassert(playerAccessor->getSkill(skill) == (SkillValue{ 23, 1 }), i);
-		widget->SetFocus();
- 		sim.Text("4");
-		sim.Char(WXK_TAB);
-		dispatchWindowMessages();
+		helper.autoText(widget->skillLevel, "4");
 		myassert(playerAccessor->getSkill(skill) == (SkillValue{ 4, 1 }), i);
+		helper.autoClick(widget->skillLevel);
 
 		// mastery choice
 		i += 2; // different skill
 		skill = &GameData::skills.at(i);
 		widget = panel->widgetToSkillMap.at(skill);
-		autoClick(widget->skillMastery);
-		widget->SetFocus();
-		sim.Select("Master");
-		sim.MouseClick();
-		dispatchWindowMessages();
+		helper.autoSelect(widget->skillMastery, "Master");
 		myassert(playerAccessor->getSkill(skill) == (SkillValue{ 1, 3 }), i - 2);
-		autoClick(widget->skillMastery);
-		widget->SetFocus();
-		sim.Select("None");
-		sim.MouseClick();
-		dispatchWindowMessages();
+		helper.autoSelect(widget->skillMastery, "None");
 		myassert(playerAccessor->getSkill(skill) == (SkillValue{ 0, 0 }), i - 2);
 	}
 
 	// class constraints
-	autoClick(panel->classConstraintsCurrentClass);
+	helper.autoClick(panel->classConstraintsCurrentClass);
 	myassert(panel->options.classConstraint == PlayerStructAccessor::CLASS_CONSTRAINT_CURRENT_CLASS);
-	autoClick(panel->classConstraintsNone);
+	helper.autoClick(panel->classConstraintsNone);
 	myassert(panel->options.classConstraint == PlayerStructAccessor::CLASS_CONSTRAINT_NONE);
 
-	autoClick(panel->classConstraintsCurrentClass);
+	helper.autoClick(panel->classConstraintsCurrentClass);
 	Mastery m = playerAccessor->getSkillMaxMastery(5);
 	playerAccessor->setSkill(5, { 33, 4 });
 	panel->updateFromPlayerData();
-	autoClick(panel->applyClassConstraintsButton);
+	helper.autoClick(panel->applyClassConstraintsButton);
 	myassert(playerAccessor->getSkill(5).mastery <= m);
+	helper.autoClick(panel->classConstraintsNone);
 
 	// affect armor/weapons/...
-	autoClick(panel->affectArmorCheckbox);
-	autoClick(panel->affectWeaponsCheckbox);
-	autoClick(panel->affectMiscCheckbox);
+	helper.autoClick(panel->affectArmorCheckbox);
+	helper.autoClick(panel->affectWeaponsCheckbox);
+	helper.autoClick(panel->affectMiscCheckbox);
+	myassert(
+		!existsInVector(panel->options.batchSetAffectWhichSkillCategories, SKILLCAT_ARMOR)
+		&& !existsInVector(panel->options.batchSetAffectWhichSkillCategories, SKILLCAT_WEAPON)
+		&& !existsInVector(panel->options.batchSetAffectWhichSkillCategories, SKILLCAT_MISC)
+	);
+	helper.autoClick(panel->affectArmorCheckbox);
+	helper.autoClick(panel->affectWeaponsCheckbox);
+	helper.autoClick(panel->affectMiscCheckbox);
 	myassert(
 		existsInVector(panel->options.batchSetAffectWhichSkillCategories, SKILLCAT_ARMOR)
 		&& existsInVector(panel->options.batchSetAffectWhichSkillCategories, SKILLCAT_WEAPON)
 		&& existsInVector(panel->options.batchSetAffectWhichSkillCategories, SKILLCAT_MISC)
 	);
-	autoClick(panel->affectWeaponsCheckbox);
-	myassert(!existsInVector(panel->options.batchSetAffectWhichSkillCategories, SKILLCAT_WEAPON));
 
 	// set all skills to
 	panel->setAllSkillsToLevelSpinCtrl->SetValue(33);
 	panel->setAllSkillsToMasteryChoice->SetSelection(2); // expert
-	autoClick(panel->setAllSkillsToButton);
+	helper.autoClick(panel->setAllSkillsToButton);
 	myassert(playerAccessor->getSkill(3) == (SkillValue{ 33, 2 }));
 	myassert(playerAccessor->getSkill(9) == (SkillValue{ 33, 2 }));
 
 	// god mode
-	autoClick(panel->godModeButton);
+	helper.autoClick(panel->godModeButton);
 	myassert(playerAccessor->getSkill(11).mastery == MASTERY_GM);
 	myassert(playerAccessor->getSkill(27).level == MAX_SKILL_LEVEL);
 
@@ -317,7 +317,7 @@ std::vector<wxString> GUI_tests::testEditorStatisticsPanel()
 	EditorStatisticsPanel* panel = win->statisticsPanel;
 	win->tabs->SetSelection(EditorPlayerWindow::STATISTICS_PANEL_INDEX);
 	wxUIActionSimulator sim;
-	AutoClicker autoClick(*panel, sim);
+	GuiTestHelper helper(*panel, sim, myasserter);
 	wxASSERT(win->IsShown() && win->IsVisible());
 
 	struct Test
@@ -378,12 +378,32 @@ void GUI_tests::scrollIntoView(wxScrolledWindow* scrolled, wxWindow* window)
 	scrolled->Scroll(0, windowPos.y / scrollRateY);
 }
 
-GUI_tests::AutoClicker::AutoClicker(wxScrolledWindow& scrolled, wxUIActionSimulator& sim) : scrolled(scrolled), sim(sim) {}
+GUI_tests::GuiTestHelper::GuiTestHelper(wxScrolledWindow& scrolled, wxUIActionSimulator& sim, Asserter& asserter) : scrolled(scrolled), sim(sim), myasserter(asserter) {}
 
-void GUI_tests::AutoClicker::operator()(wxWindow* window)
+void GUI_tests::GuiTestHelper::autoClick(wxWindow* window)
 {
 	scrollIntoView(&scrolled, window);
 	sim.MouseMove(window->GetScreenPosition() + wxPoint(5, 5));
 	sim.MouseClick();
 	dispatchWindowMessages();
+}
+
+void GUI_tests::GuiTestHelper::autoText(wxWindow* target, const wxString& text)
+{
+	target->SetFocus();
+	sim.Text(text);
+	auto s = target->GetNextSibling();
+	(s != nullptr ? s : target->GetPrevSibling())->SetFocus();
+	dispatchWindowMessages();
+	assert(!target->HasFocus());
+}
+
+void GUI_tests::GuiTestHelper::autoSelect(wxChoice* target, const wxString& text)
+{
+	target->SetFocus();
+	sim.Select(text);
+	auto s = target->GetNextSibling();
+	(s != nullptr ? s : target->GetPrevSibling())->SetFocus();
+	dispatchWindowMessages();
+	assert(!target->HasFocus());
 }

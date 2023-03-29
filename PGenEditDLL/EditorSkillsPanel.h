@@ -37,7 +37,6 @@ private:
 
 	void affectCheckboxHelper(bool on, SkillCategory cat);
 
-	void onScrollStart(wxScrollWinEvent& event);
 	PlayerStructAccessor::SkillOptions options;
 
 	void onSkillValueChange(wxCommandEvent& event);
@@ -46,15 +45,14 @@ private:
 	std::unordered_map<EditorSkillValueChooser*, PlayerSkill*> skillToWidgetMap;
 	std::unordered_map<int, EditorSkillValueChooser*> widgetToWidgetIdMap;
 
-	const int playerIndex;
-
-	void updateSkillBonuses();
 	void skillConstraintErrorMsgBox(bool multiple);
 	wxStaticLine* armorMagicLine;
 	wxStaticLine* magicMiscLine;
 protected:
 
 public:
+	const int playerIndex;
+
 	wxStaticText* skillPointsAndOptionsHeader;
 	wxStaticText* availableSkillPointsLabel;
 	wxSpinCtrl* availableSkillPointsAmount;
@@ -94,14 +92,12 @@ public:
 	wxCheckBox* showUnobtainableSkillsCheckbox;
 
 	wxBoxSizer* mainSizer;
-	//std::function<void(void)> updateCallback;
 
 	EditorSkillsPanel(wxWindow* parent, int playerIndex);
+	EditorSkillsPanel() = delete;
 
-	void onScrollRelease(wxScrollWinEvent& event);
 	~EditorSkillsPanel();
 
-	bool AcceptsFocus() const override;
 	void updateFromPlayerData();
 
 	friend class GUI_tests;

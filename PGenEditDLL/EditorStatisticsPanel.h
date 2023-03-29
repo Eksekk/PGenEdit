@@ -19,7 +19,6 @@ private:
 	void createImmediateStatSettings();
 	void createStatisticsAdjuster();
 	void createActionsPanel();
-	const int playerIndex;
 protected:
 	// stat-like data
 	wxStaticText* currentHpLabel;
@@ -143,8 +142,10 @@ protected:
 
 	void onActivateWindow(wxActivateEvent& event);
 public:
+	const int playerIndex;
 
 	EditorStatisticsPanel(wxWindow* parent, int playerIndex);
+	EditorStatisticsPanel() = delete;
 
 	void updateFromPlayerData();
 	~EditorStatisticsPanel();
