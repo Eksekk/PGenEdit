@@ -57,7 +57,7 @@ EditorSkillValueChooser::EditorSkillValueChooser(wxWindow* parent, const wxStrin
 
 SkillValue EditorSkillValueChooser::getValue()
 {
-    return SkillValue{ skillLevel->GetValue(), masteryToIdMap.at(skillMastery->GetSelection()) };
+    return SkillValue{ skillLevel->GetValue(), masteryToIdMap.at(skillMastery->GetCurrentSelection()) };
 }
 
 int EditorSkillValueChooser::getLevel()
@@ -67,7 +67,7 @@ int EditorSkillValueChooser::getLevel()
 
 Mastery EditorSkillValueChooser::getMastery()
 {
-    return masteryToIdMap.at(skillMastery->GetSelection());
+    return masteryToIdMap.at(skillMastery->GetCurrentSelection());
 }
 
 void EditorSkillValueChooser::setValue(const SkillValue& value)
@@ -134,6 +134,7 @@ bool EditorSkillValueChooser::processValueChangeByUser()
     adjustNewSkillValue(oldValue, newValue);
 	if (!playerAccessor->setSkill(skill, newValue, options))
 	{
+        setValue(oldValue);
         return false;
 	}
     else

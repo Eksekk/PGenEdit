@@ -1,0 +1,9 @@
+[submodule "Zydis"]
+	path = PGenEditDLL/Zydis
+	url = https://github.com/zyantific/zydis.git
+[submodule "OpenResty LuaJIT"]
+	path = PGenEditDLL/openresty-luajit
+	url = https://github.com/openresty/luajit2.git
+[submodule "Google Test"]
+	path = googletest
+	url = https://github.com/google/googletest.git

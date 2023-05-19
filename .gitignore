@@ -362,5 +362,10 @@ MigrationBackup/
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
 
+
+
 # Visual Studio Code History for Lua scripts
 **/.history/*
+
+# Don't know what it is, but probably unneeded
+JSON/

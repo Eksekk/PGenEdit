@@ -9,7 +9,7 @@
 #include "EditorStatisticsPanel.h"
 
 EditorPlayerWindow::EditorPlayerWindow(wxWindow* parent, int playerIndex) : wxFrame(parent, wxID_ANY, "Edit " + playerAccessor->getNameOrDefault(playerIndex),
-	wxDefaultPosition, wxSize(1200, 950), wxDEFAULT_FRAME_STYLE | wxTAB_TRAVERSAL), playerIndex(playerIndex), myIsBeingDestroyed(false)
+	wxDefaultPosition, wxSize(1100, 950), wxDEFAULT_FRAME_STYLE | wxTAB_TRAVERSAL), playerIndex(playerIndex), myIsBeingDestroyed(false)
 {
 	windowDisabler = nullptr;
 	loop = nullptr;

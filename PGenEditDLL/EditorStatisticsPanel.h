@@ -107,16 +107,18 @@ protected:
 	std::unordered_map<int, std::unique_ptr<PrimaryStatWidget>> primaryStatWidgetToStatIdMap;
 	std::unordered_map<int, std::unique_ptr<ResistanceWidget>> resistanceWidgetToResIdMap;
 	std::unordered_map<wxSpinCtrl*, int> statIdToStatExtraSpinCtrlMap;
-	void onStatExtraChange(wxCommandEvent& event);
 
-	wxStaticLine* statisticsActionsStaticLine;
+	void onExtraStatsPaneClick(wxCollapsiblePaneEvent& event);
+	void onStatExtraChange(wxCommandEvent& event);
 
 	void onExtraAcValueChange(wxCommandEvent& event);
 	void onAgeBaseValueChange(wxCommandEvent& event);
 	void onAgeBonusValueChange(wxCommandEvent& event);
 	void onLevelBaseValueChange(wxCommandEvent& event);
 	void onLevelBonusValueChange(wxCommandEvent& event);
-	void onExperienceChange(wxCommandEvent& event);
+    void onExperienceChange(wxCommandEvent& event);
+
+    wxStaticLine* statisticsActionsStaticLine;
 
 	// actions
 	wxStaticText* actionsLabel;

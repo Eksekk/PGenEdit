@@ -19,6 +19,7 @@
 #include "PlayerData.h"
 #include "EditorStatisticsPanel.h"
 #include "MainWindow.h"
+#include "GuiTestHelper.h"
 
 std::vector<wxString> GUI_tests::testAlignmentRadioBox()
 {
@@ -61,13 +62,13 @@ std::vector<wxString> GUI_tests::testEditorSkillsPanel()
 	Asserter myasserter;
 
 	int index = 2;
+	Player* pl = reinterpret_cast<Player*>(players[index]);
 	// have to use original player addresses because changing them for mmextension is tricky
-	AutoBackup backup(CURRENT_PARTY_SIZE, *reinterpret_cast<Player*>(players[index]));
+	AutoBackup backup(CURRENT_PARTY_SIZE, *pl);
 	// PARTY SIZE IS 0 BEFORE
 	CURRENT_PARTY_SIZE = index + 1;
-	Player* pl = reinterpret_cast<Player*>(players[index]);
 	memset(pl, 0, sizeof(Player));
-	(void)playerAccessor->setPlayerOverride(pl);
+	playerAccessor->setPlayerOverride(pl);
 	wxUIActionSimulator sim;
 
 	// actual test code
@@ -140,7 +141,6 @@ std::vector<wxString> GUI_tests::testEditorSkillsPanel()
 		PlayerSkill* skill = &GameData::skills.at(i);
 		auto* widget = panel->widgetToSkillMap.at(skill);
 		helper.autoText(widget->skillLevel, "23");
-		
 		myassert(playerAccessor->getSkill(skill) == (SkillValue{ 23, 1 }), i);
 		helper.autoText(widget->skillLevel, "4");
 		myassert(playerAccessor->getSkill(skill) == (SkillValue{ 4, 1 }), i);
@@ -150,6 +150,24 @@ std::vector<wxString> GUI_tests::testEditorSkillsPanel()
 		i += 2; // different skill
 		skill = &GameData::skills.at(i);
 		widget = panel->widgetToSkillMap.at(skill);
+		// down arrow DOESN'T ADVANCE SELECTION INDEX
+		
+		// PROBLEM
+		/*
+		 // We prefer to exactly emulate what a(keyboard) user would do, so prefer
+		 // to emulate selecting the first item of the control if possible (this
+		 // works with wxChoice, wxListBox and wxComboBox with wxCB_READONLY style
+		 // under MSW).
+			 if (container->GetSelection() != 0)
+			 {
+				 Char(WXK_HOME);
+				 wxYield();
+
+				 // But if this didn't work, set the selection programmatically.
+				 if (container->GetSelection() != 0)
+					 container->SetSelection(0);
+			 }
+		 **/
 		helper.autoSelect(widget->skillMastery, "Master");
 		myassert(playerAccessor->getSkill(skill) == (SkillValue{ 1, 3 }), i - 2);
 		helper.autoSelect(widget->skillMastery, "None");
@@ -356,54 +374,3 @@ template std::vector<wxString> GUI_tests::testEditorStatisticsPanel<mm8::Player,
 template std::vector<wxString> GUI_tests::testGui<mm6::Player, mm6::Game>();
 template std::vector<wxString> GUI_tests::testGui<mm7::Player, mm7::Game>();
 template std::vector<wxString> GUI_tests::testGui<mm8::Player, mm8::Game>();
-
-void GUI_tests::dispatchWindowMessages()
-{
-	// temporary message loop to fix wxYield() not working due to no direct event loop
-	// for my dll
-	MSG msg;
-	while (PeekMessageA(&msg, 0, 0, 0, true))
-	{
-		TranslateMessage(&msg);
-		DispatchMessageA(&msg);
-	}
-}
-
-void GUI_tests::scrollIntoView(wxScrolledWindow* scrolled, wxWindow* window)
-{
-	int scrollRateY = 0;
-	scrolled->GetScrollPixelsPerUnit(nullptr, &scrollRateY);
-
-	const wxPoint windowPos = scrolled->CalcUnscrolledPosition(window->GetPosition());
-	scrolled->Scroll(0, windowPos.y / scrollRateY);
-}
-
-GUI_tests::GuiTestHelper::GuiTestHelper(wxScrolledWindow& scrolled, wxUIActionSimulator& sim, Asserter& asserter) : scrolled(scrolled), sim(sim), myasserter(asserter) {}
-
-void GUI_tests::GuiTestHelper::autoClick(wxWindow* window)
-{
-	scrollIntoView(&scrolled, window);
-	sim.MouseMove(window->GetScreenPosition() + wxPoint(5, 5));
-	sim.MouseClick();
-	dispatchWindowMessages();
-}
-
-void GUI_tests::GuiTestHelper::autoText(wxWindow* target, const wxString& text)
-{
-	target->SetFocus();
-	sim.Text(text);
-	auto s = target->GetNextSibling();
-	(s != nullptr ? s : target->GetPrevSibling())->SetFocus();
-	dispatchWindowMessages();
-	assert(!target->HasFocus());
-}
-
-void GUI_tests::GuiTestHelper::autoSelect(wxChoice* target, const wxString& text)
-{
-	target->SetFocus();
-	sim.Select(text);
-	auto s = target->GetNextSibling();
-	(s != nullptr ? s : target->GetPrevSibling())->SetFocus();
-	dispatchWindowMessages();
-	assert(!target->HasFocus());
-}

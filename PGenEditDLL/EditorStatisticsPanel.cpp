@@ -14,7 +14,7 @@
 //	long style = wxTAB_TRAVERSAL | wxHSCROLL | wxVSCROLL, const wxString& name = wxEmptyString)
 EditorStatisticsPanel::EditorStatisticsPanel(wxWindow* parent, int playerIndex) : playerIndex(playerIndex), wxScrolledWindow(parent)
 {
-	this->SetScrollRate(5, 5);
+	this->SetScrollRate(15, 15);
 	mainSizer = new wxBoxSizer(wxVERTICAL);
 
 	createImmediateStatSettings();
@@ -303,7 +303,7 @@ void EditorStatisticsPanel::createStatisticsAdjuster()
 	statisticsAdjusterSizer = new wxBoxSizer(wxHORIZONTAL);
 
 	wxGridBagSizer* primaryOtherStatisticsSizer;
-	primaryOtherStatisticsSizer = new wxGridBagSizer();
+	primaryOtherStatisticsSizer = new wxGridBagSizer(5, 5);
 
 	primaryLabel = new wxStaticText(this, wxID_ANY, _("Primary"));
 	primaryLabel->SetFont(wxFont(wxNORMAL_FONT->GetPointSize(), wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD));
@@ -389,7 +389,7 @@ void EditorStatisticsPanel::createStatisticsAdjuster()
 	resistanceExtraStatsSizer = new wxBoxSizer(wxVERTICAL);
 
 	wxGridBagSizer* resistancesSizer;
-	resistancesSizer = new wxGridBagSizer();
+	resistancesSizer = new wxGridBagSizer(5, 5);
 
 	resistancesLabel = new wxStaticText(this, wxID_ANY, _("Resistances"));
 	resistancesLabel->SetFont(wxFont(wxNORMAL_FONT->GetPointSize(), wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxEmptyString));
@@ -420,6 +420,7 @@ void EditorStatisticsPanel::createStatisticsAdjuster()
 	extraStatsPane = new wxCollapsiblePane(this, wxID_ANY, _("MM6/7 only"), wxDefaultPosition, wxDefaultSize, wxCP_DEFAULT_STYLE);
 	extraStatsPane->Collapse(true);
 	extraStatsPane->SetFont(wxFont(wxNORMAL_FONT->GetPointSize(), wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxEmptyString));
+	extraStatsPane->Bind(wxEVT_COLLAPSIBLEPANE_CHANGED, &EditorStatisticsPanel::onExtraStatsPaneClick, this);
 
 	wxFlexGridSizer* statExtrasSizer;
 	statExtrasSizer = new wxFlexGridSizer(0, 2, 0, 0);
@@ -604,7 +605,7 @@ void EditorStatisticsPanel::processClassControlsChange(ClassChangeWhat what, boo
 		std::ranges::sort(vec, [](PlayerClass* const clas1, PlayerClass* const clas2) {return clas1->id < clas2->id; });
 	};
 	auto currClass = playerAccessor->forPlayer(playerIndex)->getClassPtr();
-	PlayerClass* clas;
+	PlayerClass* clas = nullptr;
 	bool hasNeutral, hasLight, hasDark;
 	if (what == CLASS_CHANGE_BASE)
 	{
@@ -673,6 +674,13 @@ void EditorStatisticsPanel::onFullClassChoiceSelect(wxCommandEvent& event)
 {
 	processClassControlsChange(CLASS_CHANGE_ALL, false);
 }
+
+void EditorStatisticsPanel::onExtraStatsPaneClick(wxCollapsiblePaneEvent& event)
+{
+	SendSizeEvent();
+	event.Skip();
+}
+
 void EditorStatisticsPanel::onStatExtraChange(wxCommandEvent& event)
 {
 	if (MMVER == 8) return;

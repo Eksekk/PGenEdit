@@ -315,6 +315,9 @@
     <ClInclude Include="LuaFunctions.h">
       <Filter>Pliki nagłówkowe\Misc\Lua</Filter>
     </ClInclude>
+    <ClInclude Include="GuiTestHelper.h">
+      <Filter>Pliki nagłówkowe\Misc\Utils</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="sources\MainWindow.cpp">
@@ -484,6 +487,9 @@
     </ClCompile>
     <ClCompile Include="LuaFunctions.cpp">
       <Filter>Pliki źródłowe\Misc\Lua</Filter>
+    </ClCompile>
+    <ClCompile Include="GuiTestHelper.cpp">
+      <Filter>Pliki źródłowe\Misc\Utils</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

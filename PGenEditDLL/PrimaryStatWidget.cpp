@@ -21,9 +21,9 @@ PrimaryStatWidget::PrimaryStatWidget(wxWindow* panel, wxGridBagSizer* sizer, int
 	bonus = new wxSpinCtrl(panel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, low, high);
 	sizer->Add(bonus, wxGBPosition(rowId, 2), wxGBSpan(1, 1));
 	blackPotionCheckbox = new wxCheckBox(panel, wxID_ANY, "");
-	sizer->Add(blackPotionCheckbox, wxGBPosition(rowId, 3), wxGBSpan(1, 1));
-	conditionEffect = new wxStaticText(panel, wxID_ANY, "0");
-	sizer->Add(conditionEffect, wxGBPosition(rowId, 4), wxGBSpan(1, 1));
+	sizer->Add(blackPotionCheckbox, wxGBPosition(rowId, 3), wxGBSpan(1, 1), wxALIGN_CENTER_HORIZONTAL);
+    conditionEffect = new wxStaticText(panel, wxID_ANY, "0");
+    sizer->Add(conditionEffect, wxGBPosition(rowId, 4), wxGBSpan(1, 1), wxALIGN_CENTER_HORIZONTAL);
 
 	base->Bind(wxEVT_SPINCTRL, &PrimaryStatWidget::onBaseChange, this);
 	bonus->Bind(wxEVT_SPINCTRL, &PrimaryStatWidget::onBonusChange, this);

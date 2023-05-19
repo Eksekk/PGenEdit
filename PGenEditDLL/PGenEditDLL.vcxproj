@@ -38,6 +38,7 @@
     <ClInclude Include="GeneratorGuiBase.h" />
     <ClInclude Include="GuaranteedClassDialog.h" />
     <ClInclude Include="ClassGenerationData.h" />
+    <ClInclude Include="GuiTestHelper.h" />
     <ClInclude Include="GUI_tests.h" />
     <ClInclude Include="headers\structs\Arcomage.h" />
     <ClInclude Include="headers\structs\Bin.h" />
@@ -110,6 +111,7 @@
     <ClCompile Include="GeneralPanel.cpp" />
     <ClCompile Include="GeneratorGuiBase.cpp" />
     <ClCompile Include="GuaranteedClassDialog.cpp" />
+    <ClCompile Include="GuiTestHelper.cpp" />
     <ClCompile Include="GUI_tests.cpp" />
     <ClCompile Include="Hooks.cpp" />
     <ClCompile Include="LuaFunctions.cpp" />
@@ -213,7 +215,7 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <TargetName>PGenEdit</TargetName>
-    <IncludePath>headers;headers\structs;.;.\openresty-luajit\src</IncludePath>
+    <IncludePath>headers;headers\structs;.;C:\wxWidgets-3.2.1\include;.\openresty-luajit\src;.\Zydis\include;.\Zydis\dependencies\zycore\include</IncludePath>
     <SourcePath>.;sources;C:\wxWidgets-3.2.1\src\common;C:\wxWidgets-3.2.1\src\msw;C:\wxWidgets-3.2.1\src\generic</SourcePath>
     <EnableMicrosoftCodeAnalysis>true</EnableMicrosoftCodeAnalysis>
     <ExternalIncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);json</ExternalIncludePath>
@@ -228,7 +230,7 @@
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
-      <WarningLevel>Level2</WarningLevel>
+      <WarningLevel>Level3</WarningLevel>
       <SDLCheck>false</SDLCheck>
       <PreprocessorDefinitions>WIN32;WXUSINGDLL;_DEBUG;PGENEDITDLL_EXPORTS;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
@@ -251,13 +253,15 @@
       <BufferSecurityCheck>false</BufferSecurityCheck>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <MinimalRebuild>false</MinimalRebuild>
+      <BasicRuntimeChecks>UninitializedLocalUsageCheck</BasicRuntimeChecks>
+      <SupportJustMyCode>false</SupportJustMyCode>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
-      <AdditionalLibraryDirectories>.\openresty-luajit\src;C:\wxWidgets-3.2.1\lib\vc_dll;$(wxLibOrDllDir);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>wxmsw32ud_core.lib;wxbase32ud.lib;wxtiffd.lib;wxjpegd.lib;wxpngd.lib;wxzlibd.lib;wxregexud.lib;wxexpatd.lib;kernel32.lib;user32.lib;gdi32.lib;comdlg32.lib;winspool.lib;winmm.lib;shell32.lib;shlwapi.lib;comctl32.lib;ole32.lib;oleaut32.lib;uuid.lib;rpcrt4.lib;advapi32.lib;version.lib;ws2_32.lib;wininet.lib;lua51.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>.\openresty-luajit\src;C:\wxWidgets-3.2.1\lib\vc_dll;$(wxLibOrDllDir);.\Zydis\msvc\bin\DebugX86;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>wxmsw32ud_core.lib;wxbase32ud.lib;wxtiffd.lib;wxjpegd.lib;wxpngd.lib;wxzlibd.lib;wxregexud.lib;wxexpatd.lib;kernel32.lib;user32.lib;gdi32.lib;comdlg32.lib;winspool.lib;winmm.lib;shell32.lib;shlwapi.lib;comctl32.lib;ole32.lib;oleaut32.lib;uuid.lib;rpcrt4.lib;advapi32.lib;version.lib;ws2_32.lib;wininet.lib;lua51.lib;Zydis.lib;Zycore.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <RandomizedBaseAddress>false</RandomizedBaseAddress>
       <ForceFileOutput>
       </ForceFileOutput>

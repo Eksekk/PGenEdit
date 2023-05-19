@@ -18,7 +18,7 @@ enum HookElementType
 
 class HookElement
 {
-	bool active;
+	bool _active;
 public:
 	HookElementType type;
 	uint32_t address;
@@ -48,14 +48,14 @@ public:
 
 class Hook
 {
-	bool active;
+	bool _active;
 public:
 	std::vector<HookElement> elements;
 	void enable(bool enable = true);
 	void disable();
 	void toggle();
 	inline bool isActive() const;
-	bool isFullyActive() const; // every element is active
+	bool isFullyActive() const; // every element is _active
 
 	Hook(std::initializer_list<HookElement> elements);
 
