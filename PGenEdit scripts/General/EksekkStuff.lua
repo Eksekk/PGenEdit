@@ -1,4 +1,5 @@
 dofile"C:\\Users\\Eksekk\\Documents\\GitHub\\MMStuff\\A_EksekkFunctions.lua"
+dofile"C:\\Users\\Eksekk\\Documents\\GitHub\\MMStuff\\GenerateStructInfo.lua"
 PGenEditData = PGenEditData or {}
 
 local M = {dll = _G.oldDll}

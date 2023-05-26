@@ -11,9 +11,9 @@ std::unordered_map<uint32_t, std::vector<uint8_t>> hookRestoreList;
 
 void HookElement::enable(bool enable)
 {
-	if (enable && !active)
+	if (enable && !_active)
 	{
-		active = true;
+		_active = true;
 		switch (type)
 		{
 
@@ -44,9 +44,9 @@ void HookElement::enable(bool enable)
 
 		}
 	}
-	else if (!enable && active)
+	else if (!enable && _active)
 	{
-		active = false;
+		_active = false;
 		patchBytes(address, restoreData.data(), restoreData.size(), nullptr);
 		restoreData.clear();
 	}
@@ -59,15 +59,15 @@ void HookElement::disable()
 
 void HookElement::toggle()
 {
-	enable(!active);
+	enable(!_active);
 }
 
 inline bool HookElement::isActive() const
 {
-	return active;
+	return _active;
 }
 
-HookElement::HookElement() : active(false), type(HOOK_ELEM_TYPE_CALL_RAW), address(0), target(0), hookSize(5), dataSize(5)
+HookElement::HookElement() : _active(false), type(HOOK_ELEM_TYPE_CALL_RAW), address(0), target(0), hookSize(5), dataSize(5)
 {
 }
 
@@ -86,17 +86,17 @@ void Hook::disable()
 
 void Hook::toggle()
 {
-	enable(!active);
+	enable(!_active);
 }
 
 inline bool Hook::isActive() const
 {
-	return active;
+	return _active;
 }
 
 bool Hook::isFullyActive() const
 {
-	bool yes = active;
+	bool yes = _active;
 	for (const auto& elem : elements)
 	{
 		yes = !elem.isActive() ? false : yes;
@@ -104,7 +104,7 @@ bool Hook::isFullyActive() const
 	return yes;
 }
 
-Hook::Hook(std::initializer_list<HookElement> elements) : elements(elements), active(false)
+Hook::Hook(std::initializer_list<HookElement> elements) : elements(elements), _active(false)
 {
 	
 }

@@ -121,6 +121,38 @@ local function stripNamespaces(str)
 	return str:gsub(".-::", "")
 end
 
+function getStructureMembersInfoData(structName)
+	local oldStru = structs.f[structName]
+	local output = {}
+	structs.f[structName] = function(define, ...)
+		local oldInfo, oldFunc, oldMethod = types.Info, types.func, types.method
+		local prevDefined
+		function types.Info(t, ...)
+			local name = define.LastDefinedMemberName or "DefaultIndex"
+			if not t.new -- not added by mmext
+				and prevDefined ~= name then -- don't overwrite old data, for example if define.f.Something is defined, because it doesn't change "LastDefinedMemberName"
+				prevDefined = name
+				output[name] = t
+			end
+			return oldInfo(t, ...)
+		end
+		function types.func(def, ...)
+			define.LastDefinedMemberName = def.name
+			return oldFunc(def, ...)
+		end
+		function types.method(def, ...)
+			define.LastDefinedMemberName = def.name
+			return oldMethod(def, ...)
+		end
+		local ret = {oldStru(define, ...)}
+		types.Info, types.func, types.method = oldInfo, oldFunc, oldMethod
+		return unpack(ret)
+	end
+	mem.struct(structs.f[structName])
+	structs.f[structName] = oldStru
+	return output
+end
+
 -- decided to keep all three games' structures in one file, because I would have to include files for all games anyway
 local structureByFile =
 {
@@ -138,7 +170,7 @@ local structureByFile =
 
 	Arcomage = {"ArcomageAction", "ArcomageActions", "ArcomageCard", "ArcomagePlayer", "Arcomage"},
 
-	Lod = {"LodRecord", "CustomLods", "LodFile", "Lod", "LodSprite", "LodSpriteD3D", "SpritesLod", "LodBitmap", "BitmapsLod", "LodSpriteLine"},
+	Lod = {"LodRecord", "CustomLods", "LodFile", "Lod", "LodSprite", "LodSpriteD3D", "SpritesLod", "LodBitmap", "BitmapsLod", "LodSpriteLine", "LodPcx"},
 
 	Bin = {"DecListItem", "OverlayItem", "TileItem", "ObjListItem", "DChestItem", "SoundsItem", "TFTItem", "MonListItem", "PFTItem", "IFTItem", "SFTItem", "SFT", "CurrentTileBin"},
 	
@@ -146,7 +178,7 @@ local structureByFile =
 
 	GameDataStructs = {"GameRaces", "GameClasses", "GameClassKinds", "DialogLogic", "Dlg", "GameScreen"},
 
-	GameMisc = {"SpellInfo", "TravelInfo", "FogChances", "ShopItemKind", "GeneralStoreItemKind", "HouseMovie", "Weather", "MoveToMap", "MissileSetup", "TownPortalTownInfo", "EventLine", "ProgressBar", "ActionItem", "PatchOptions", "GameMouse", "MouseStruct"},
+	GameMisc = {"SpellInfo", "TravelInfo", "FogChances", "ShopItemKind", "GeneralStoreItemKind", "HouseMovie", "Weather", "MoveToMap", "MissileSetup", "TownPortalTownInfo", "EventLine", "ProgressBar", "ActionItem", "PatchOptions", "GameMouse", "MouseStruct", "Fnt"},
 
 	Player = {"FaceAnimationInfo", "LloydBeaconSlot", "BaseBonus", "Player"},
 
@@ -161,19 +193,21 @@ local globalExcludes =
 {
 	Player = {"Attrs"}, -- attrs is from merge.
 	GameStructure = {"Dialogs"}, -- mmext
+	Item = {"ExtraData"}, -- my stuff for MAW mod
 }
+
 local function getStructFile(name)
 	for k, v in pairs(structureByFile) do
 		if table.find(v, name) then
 			return k
 		end
 	end
-	print(string.format("No file specified for name %q", name))
+	printf("No file specified for name %q", name)
 	return "unknown"
 end
 
 -- helper functions
--- DEFINED IN EksekkStuff.lua
+-- DEFINED IN A_EksekkFunctions.lua
 
 --[[
 all possible attributes:
@@ -745,7 +779,7 @@ function processStruct(args)
 	local indentOuter, indentInner = string.rep(INDENT_CHARS, args.indentLevel), string.rep(INDENT_CHARS, args.indentLevel + 1)
 	local customFieldSizes = not args.union and getCustomFieldSizes(args.name) or {}
 	local staticPtrDeclarationCode, staticConvertToPointerDeclarationCode, staticDefinitionCode = {}, {}, {}
-	for mname, f in pairs(members) do
+	for mname, f in sortpairs(members) do
 		if (type(args.includeMembers) == "table" and not table.find(args.includeMembers, mname)) or (type(mname) == "string" and mname:len() == 0) then -- last check is for dummy names
 			goto continue
 		elseif type(args.excludeMembers) == "table" and table.find(args.excludeMembers, mname) or globalExcludes[args.name] and table.find(globalExcludes[args.name], mname) then
@@ -781,11 +815,11 @@ function processStruct(args)
 			elseif (data.array and data.innerType.convertToPointer) or data.convertToPointer then
 				findDependencies(args, data, structureDependencies)
 				if not args.saveToGeneratorDirectory then
-					local f = M.deepcopyMM(data)
+					local f = deepcopyMM(data)
 					table.insert(fields, f)
 				end
 				local arrays, comments, baseData = getArraysCommentsAndBaseData(data)
-				local arraysOrig = M.deepcopyMM(arrays)
+				local arraysOrig = deepcopyMM(arrays)
 				if #arrays > 0 then
 					table.remove(arrays, 1)
 				end
@@ -877,7 +911,10 @@ function processStruct(args)
 		if a.offset ~= b.offset then
 			return a.offset < b.offset
 		end
-		return a.size > b.size
+		if a.size ~= b.size then
+			return a.size > b.size
+		end
+		return a.name < b.name
 	end)
 	local cppAssert = "%sstatic_assert(sizeof(%s) == 0x%X, \"Invalid \\\"%s\\\" structure size\");"
 	local code = {}
@@ -911,7 +948,7 @@ function processStruct(args)
 		end
 		local members
 		members, i, maxNextOffset = getGroup(fields, currentField, i)
-		local group = processGroup(members, args.indentLevel + 1, not args.union and args.name, not args.union and args.prependNamespace and namespaceStr or "", debugLines, saveToGeneratorDirectory)
+		local group = processGroup(members, args.indentLevel + 1, not args.union and args.name, not args.union and args.prependNamespace and namespaceStr or "", debugLines, args.saveToGeneratorDirectory)
 		multipleInsert(code, #code + 1, group)
 		prevOffset = maxNextOffset
 	end
@@ -951,7 +988,7 @@ function processStruct(args)
 		end
 		-- unions are not considered structs in many aspects
 		-- structure needs to be after all of its dependencies
-		local maxI = 1
+		local maxI = 0
 		for i, name in ipairs(args.structOrder) do
 			if table.find(structureDependencies, name) then
 				maxI = i
@@ -964,7 +1001,7 @@ end
 
 -- saveToGeneratorDirectory - whether it's for my project (true) or for reverse engineering purposes (false)
 -- isLast if it's last of 3 games processed
-function printStruct(name, includeMembers, excludeMembers, indentLevel, saveToGeneratorDirectory, isLast) 
+function printStruct(name, includeMembers, excludeMembers, indentLevel, saveToGeneratorDirectory, isLast, directoryPrefix) 
 	luaData = {}
 	local processed = {}
 	indentLevel = wrapInHeaderStuff and 1 or indentLevel or 1 -- always 1 indentation level if wrapping
@@ -1078,8 +1115,8 @@ function printStruct(name, includeMembers, excludeMembers, indentLevel, saveToGe
 				headerFileName = string.format("C:\\Users\\Eksekk\\source\\repos\\PGenEdit\\PGenEditDLL\\headers\\structs\\%s.h", fileName)
 				sourceFileName = string.format("C:\\Users\\Eksekk\\source\\repos\\PGenEdit\\PGenEditDLL\\sources\\structs\\%s.cpp", fileName)
 			else
-				headerFileName = string.format("C:\\Users\\Eksekk\\structOffsets\\%s.h", fileName)
-				sourceFileName = string.format("C:\\Users\\Eksekk\\structOffsets\\%s.cpp", fileName)
+				headerFileName = string.format("%s\\MM%d\\%s.h", directoryPrefix or "C:\\Users\\Eksekk\\structOffsets", Game.Version, fileName)
+				sourceFileName = string.format("%s\\MM%d\\%s.cpp", directoryPrefix or "C:\\Users\\Eksekk\\structOffsets", Game.Version, fileName)
 			end
 			local luaDataFileName = "C:\\Users\\Eksekk\\source\\repos\\PGenEdit\\luaData.cpp"
 			io.save(headerFileName, table.concat(currentCode.header, "\n"))

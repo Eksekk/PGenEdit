@@ -335,12 +335,12 @@ function printSortedConst(c)
 	end
 end
 
-function debugTable(tbl) -- makes table print its contents in stacktrace instead of "(table: 0x0ff488f8)"
+function debugTable(tbl, dumpDepth) -- makes table print its contents in stacktrace instead of "(table: 0x0ff488f8)"
 	local mt = getmetatable(tbl) or {}
 	if not mt.__tostring then
 		function mt.__tostring(t)
-			rawset(getmetatable(t), "__tostring", nil)
-			return dump(t)
+			rawset(getmetatable(t), "__tostring", nil) -- avoid infinite recursion
+			return dump(t, dumpDepth)
 		end
 	end
 	setmetatable(tbl, mt)
@@ -511,4 +511,18 @@ function cmpSetMapvarBool(name)
 		mapvars[name] = true
 	end
 	return x
+end
+
+function printBitValues(combined, bitDesc)
+	local t = {}
+	local bitDescriptions = bitDesc
+	if type(next(bitDesc)) ~= "number" then
+		bitDescriptions = table.invert(bitDesc)
+	end
+	for i, v in sortpairs(bitDescriptions) do
+		if bit.band(combined, i) ~= 0 then
+			table.insert(t, string.format("[0x%X] = %s", i, v))
+		end
+	end
+	print(table.concat(t, "\r\n"))
 end
