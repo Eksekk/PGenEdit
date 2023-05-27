@@ -489,20 +489,16 @@ local function getArraysCommentsAndBaseData(data)
 	return arrays, comments, data
 end
 
-local function processSingle(data, indentLevel, structName, namespaceStr, debugLines, saveToGeneratorDirectory)
+local function processSingle(data, indentLevel, structName, namespaceStr, debugLines)
 	indentLevel = indentLevel or 0
 	local indentOuter, indentInner = string.rep(INDENT_CHARS, indentLevel), string.rep(INDENT_CHARS, indentLevel + 1)
 	local dataCopy = data
-	
 	local s = indentOuter
 	local arrays, comments, data = getArraysCommentsAndBaseData(data)
 	if #arrays == 0 then arrays = nil end
 	
-	data.name = tostring(data.name)
 	-- use camel case (I personally prefer it)
-	local name = toCamelCase(data.name)
-	data.name = name
-	-- arrays taken care of
+	data.name = toCamelCase(tostring(data.name))
 
 	local function doBaseType(doArrays)
 		local result = data.static and "static " or ""
@@ -530,9 +526,8 @@ local function processSingle(data, indentLevel, structName, namespaceStr, debugL
 		return result
 	end
 	if data.union then
-		local code = data.code
 		s = {}
-		for i, v in ipairs(code) do
+		for i, v in ipairs(data.code) do
 			s[i] = indentOuter .. v
 		end
 	elseif arrays and #arrays == 1 and data.padding then -- NPCTopic, NPCText - element size 4, "real" size 8, overlapping
@@ -585,12 +580,12 @@ end
 -- using visual studio code with "lua booster" extension
 -- need to dummy forward declare to not miss recursive call when using "find references"
 local processGroup
-function processGroup(group, indentLevel, structName, namespaceStr, debugLines, saveToGeneratorDirectory)
+function processGroup(group, indentLevel, structName, namespaceStr, debugLines)
 	-- messing around
 	--setmetatable(getfenv(1), {__index = function(t, k) if not xxx then print(k); return rawget(t, k) end end})
 	indentLevel = indentLevel or 0
 	if #group == 1 then
-		local ret = processSingle(group[1], indentLevel, structName, namespaceStr, debugLines, saveToGeneratorDirectory)
+		local ret = processSingle(group[1], indentLevel, structName, namespaceStr, debugLines)
 		return type(ret) == "table" and ret or {ret}
 	end
 	local indentOuter, indentInner = string.rep(INDENT_CHARS, indentLevel), string.rep(INDENT_CHARS, indentLevel + 1) -- 3, 4 for union
@@ -624,7 +619,7 @@ function processGroup(group, indentLevel, structName, namespaceStr, debugLines, 
 				indentLevel = indentLevel + 1
 				code[#code + 1] = string.rep(INDENT_CHARS, indentLevel + 1) .. skipBytesText:format(padding)
 			end
-			code[#code + 1] = processSingle(member, indentLevel + 1, structName, namespaceStr, debugLines, saveToGeneratorDirectory)
+			code[#code + 1] = processSingle(member, indentLevel + 1, structName, namespaceStr, debugLines)
 			if padding and not skipFirst then
 				indentLevel = indentLevel - 1
 				code[#code + 1] = indentInner .. "};"
@@ -689,9 +684,9 @@ function processGroup(group, indentLevel, structName, namespaceStr, debugLines, 
 				end
 			end
 			if #members == 1 then
-				code[#code + 1] = processSingle(currentField, indentLevel + 2, structName, namespaceStr, debugLines, saveToGeneratorDirectory)
+				code[#code + 1] = processSingle(currentField, indentLevel + 2, structName, namespaceStr, debugLines)
 			else
-				code[#code + 1] = processGroup(members, indentLevel + 2, structName, namespaceStr, debugLines, saveToGeneratorDirectory) -- nested unions
+				code[#code + 1] = processGroup(members, indentLevel + 2, structName, namespaceStr, debugLines) -- nested unions
 			end
 			lastOffset = currentField.offset + currentField.size
 			if i > #wrap then break end
@@ -702,7 +697,7 @@ function processGroup(group, indentLevel, structName, namespaceStr, debugLines, 
 	return code
 end
 
-local function findDependencies(args, data, structureDependencies)
+local function findDependencies(data, structureDependencies)
 	local data2 = data
 	while data2 do
 		if data2.struct then
@@ -713,12 +708,12 @@ local function findDependencies(args, data, structureDependencies)
 		data2 = data2.innerType
 	end
 end
-
+ -- for doing unions
+ -- returns group members, next index for full members array, and offset which marks group end (non-inclusive, member at this offset won't be in group)
 function getGroup(fields, firstField, i)
-	local members = {firstField} -- for doing unions
+	local members = {firstField}
 	debugTable(firstField)
 	
-	--if firstField.name == "QuestsTxt" then error"" end
 	local maxNextOffset = firstField.offset + firstField.size
 
 	for j = i + 1, #fields do
@@ -836,12 +831,12 @@ function processStruct(args)
 					data.typeName,
 					toCamelCase(data.name))
 				)
-				findDependencies(args, data, structureDependencies)
+				findDependencies(data, structureDependencies)
 				goto continue
 			elseif data.struct and data.size == 0 then -- Merge, PartyLight
 				goto continue
 			elseif (data.array and data.innerType.convertToPointer) or data.convertToPointer then
-				findDependencies(args, data, structureDependencies)
+				findDependencies(data, structureDependencies)
 				if not args.saveToGeneratorDirectory then
 					local f = deepcopyMM(data)
 					table.insert(fields, f)
@@ -918,7 +913,7 @@ function processStruct(args)
 			elseif data.replaceWith then
 				multipleInsert(fields, #fields + 1, data.replaceWith)
 			else
-				findDependencies(args, data, structureDependencies)
+				findDependencies(data, structureDependencies)
 				table.insert(fields, data)
 				addArraySizeField()
 			end
@@ -966,7 +961,7 @@ function processStruct(args)
 		end
 		local members
 		members, i, maxNextOffset = getGroup(fields, currentField, i)
-		local group = processGroup(members, args.indentLevel + 1, not args.union and args.name, not args.union and myNamespaceStr or "", debugLines, args.saveToGeneratorDirectory)
+		local group = processGroup(members, args.indentLevel + 1, not args.union and args.name, not args.union and myNamespaceStr or "", debugLines)
 		multipleInsert(code, #code + 1, group)
 		prevOffset = maxNextOffset
 	end
