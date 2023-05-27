@@ -753,6 +753,15 @@ local function addNamespacePrefixes(data, namespaceStr)
 		data2 = data2.innerType
 	end
 end
+
+local function definitelyShouldSkipMember(structName, includeMembers, excludeMembers, memberName)
+	if (type(includeMembers) == "table" and not table.find(includeMembers, memberName)) or (type(memberName) == "string" and memberName:len() == 0) then -- last check is for dummy names
+		return true
+	elseif type(excludeMembers) == "table" and table.find(excludeMembers, memberName) or globalExcludes[structName] and table.find(globalExcludes[structName], memberName) then
+		return true
+	end
+	return false
+end
 --[[
 args = table with:
 	name - structure/union name
@@ -774,29 +783,34 @@ function returns table with definition lines, array of names of structures it de
 ]]
 local processStruct
 function processStruct(args)
-	args.processedStructs = args.processedStructs or {}
-	args.indentLevel = args.indentLevel or 0
+	-- initialization
+
+	-- default arguments
 	args.offset = args.offset or 0
+	args.structOrder = args.structOrder or {}
+	args.indentLevel = args.indentLevel or 0
+	args.processedStructs = args.processedStructs or {}
+
+	-- locals
+	local fields, structureDependencies = {}, {}
+	local myNamespaceStr = args.prependNamespace and namespaceStr or ""
+	local indentOuter, indentInner = string.rep(INDENT_CHARS, args.indentLevel), string.rep(INDENT_CHARS, args.indentLevel + 1)
+	local customFieldSizes = not args.union and getCustomFieldSizes(args.name) or {}
+	local staticPtrDeclarationCode, staticConvertToPointerDeclarationCode, staticDefinitionCode = {}, {}, {}
 	local offsets, members = args.offsets or structs.o[args.name], args.members or structs.m[args.name]
 	local class, rofields = args.class or structs.class(args.name), args.rofields or {}
 	local size = not args.union and structs[args.name]["?size"] or 0
+	
+	-- after initialization
 	if not next(members) or (not args.union and size == 0) then -- forward declaration only, idk if 0 size struct is possible in C++
 		local data = {code = {string.format("%sstruct %s; // 0-size struct, declaration only", string.rep(INDENT_CHARS, args.indentLevel), args.name)}, dependencies = {}, size = 0}
 		args.processedStructs[args.name] = data
 		table.insert(tget(args, "structOrder"), 1, args.name)
 		return data.code, data.dependencies, size, args.processedStructs
 	end
-	args.structOrder = args.structOrder or {}
-	local fields, structureDependencies = {}, {}
 	addExtraFields(args.name, fields)
-	local myNamespaceStr = args.prependNamespace and namespaceStr or ""
-	local indentOuter, indentInner = string.rep(INDENT_CHARS, args.indentLevel), string.rep(INDENT_CHARS, args.indentLevel + 1)
-	local customFieldSizes = not args.union and getCustomFieldSizes(args.name) or {}
-	local staticPtrDeclarationCode, staticConvertToPointerDeclarationCode, staticDefinitionCode = {}, {}, {}
 	for mname, f in sortpairs(members) do
-		if (type(args.includeMembers) == "table" and not table.find(args.includeMembers, mname)) or (type(mname) == "string" and mname:len() == 0) then -- last check is for dummy names
-			goto continue
-		elseif type(args.excludeMembers) == "table" and table.find(args.excludeMembers, mname) or globalExcludes[args.name] and table.find(globalExcludes[args.name], mname) then
+		if definitelyShouldSkipMember(args.name, args.includeMembers, args.excludeMembers, mname) then
 			goto continue
 		end
 		local data = getMemberData(args.name, mname, f, offsets, members, class, rofields, customFieldSizes, false)
@@ -814,7 +828,7 @@ function processStruct(args)
 				data.name = "_" .. tostring(data.name)
 			end
 			-- add pointers for structs which don't really reside at 0 address, TODO: take into account limits removal relocation
-			if data.struct and data.offset == 0  then
+			if data.struct and data.offset == 0 then
 				table.insert(staticPtrDeclarationCode,
 					string.format("%sstatic inline %s%s* const %s = 0;",
 					indentInner,
@@ -924,11 +938,7 @@ function processStruct(args)
 		end
 		return a.name < b.name
 	end)
-	local cppAssert = "%sstatic_assert(sizeof(%s) == 0x%X, \"Invalid \\\"%s\\\" structure size\");"
 	local code = {}
-	if not args.union then-- insert later, because size not known yet
-		code[#code + 1] = string.format("%sstruct %s // size: 0x%X", indentOuter, args.name, size)
-	end
 	code[#code + 1] = indentOuter .. "{"
 	if #staticPtrDeclarationCode > 0 then
 		table.insert(staticPtrDeclarationCode, "")
@@ -956,7 +966,7 @@ function processStruct(args)
 		end
 		local members
 		members, i, maxNextOffset = getGroup(fields, currentField, i)
-		local group = processGroup(members, args.indentLevel + 1, not args.union and args.name, not args.union and args.prependNamespace and namespaceStr or "", debugLines, args.saveToGeneratorDirectory)
+		local group = processGroup(members, args.indentLevel + 1, not args.union and args.name, not args.union and myNamespaceStr or "", debugLines, args.saveToGeneratorDirectory)
 		multipleInsert(code, #code + 1, group)
 		prevOffset = maxNextOffset
 	end
@@ -968,14 +978,20 @@ function processStruct(args)
 	code[#code + 1] = args.union and string.format("%s} %s;", indentOuter, args.name) or (indentOuter .. "};")
 	if args.union then
 		table.insert(code, 1, string.format("%sstruct // size: 0x%X, MMExt union", indentOuter, size))
+	else
+		table.insert(code, 1, string.format("%sstruct %s // size: 0x%X", indentOuter, args.name, size))
 	end
-	local tmpname = (not args.union and namespaceStr or "") .. args.name -- unions are inline&anonymous struct, so need to check instance of it, not type
-	code[#code + 1] = cppAssert:format(indentOuter, tmpname, size, tmpname)
+	do
+		local tmpname = (not args.union and namespaceStr or "") .. args.name -- unions are inline&anonymous struct, so need to check instance of it, not type
+		local cppAssert = "%sstatic_assert(sizeof(%s) == 0x%X, \"Invalid \\\"%s\\\" structure size\");"
+		code[#code + 1] = cppAssert:format(indentOuter, tmpname, size, tmpname)
+	end
 	for i, v in ipairs(debugLines) do
 		-- even out indentation
-		debugLines[i] = v:gsub(INDENT_CHARS .. "+", indentOuter)
+		debugLines[i] = v:gsub(INDENT_CHARS:escapeRegex() .. "+", indentOuter)
 	end
 	multipleInsert(code, #code + 1, debugLines)
+	-- unions are not considered structs in many aspects
 	if not args.union then
 		if args.processDependencies then
 			local addDepNames = {}
@@ -993,7 +1009,6 @@ function processStruct(args)
 		if not args.processedStructs[args.name] then -- unions are inline
 			args.processedStructs[args.name] = {code = code, dependencies = structureDependencies, size = size, staticDefinitionCode = staticDefinitionCode}
 		end
-		-- unions are not considered structs in many aspects
 		-- structure needs to be after all of its dependencies
 		local maxI = 0
 		for i, name in ipairs(args.structOrder) do
