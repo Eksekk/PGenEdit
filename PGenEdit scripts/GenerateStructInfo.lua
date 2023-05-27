@@ -82,6 +82,7 @@ local booleanHandlers = {
 	[getUpvalue(mem.structs.types.b2, "handler")] = 2,
 	[getUpvalue(mem.structs.types.b4, "handler")] = 4,
 }
+
 local bitIndex = {}
 local bit = 1
 for i = 0, 7 do
@@ -98,6 +99,7 @@ local function setBaseTypeField(data, field, value) -- if there are arrays, skip
 	end
 	data2[field] = value
 end
+
 local function getBaseTypeField(data, field)
 	local data2 = data
 	while data2.array do
@@ -105,18 +107,21 @@ local function getBaseTypeField(data, field)
 	end
 	return data2[field]
 end
+
 local getGroup
+
 local function getCustomFieldSizes(structName)
-	local oldMember = mem.structs.types.CustomType
+	local oldMember = types.CustomType
 	local fieldSizes = {}
-	function mem.structs.types.CustomType(name, size, f, ...)
+	function types.CustomType(name, size, f, ...)
 		fieldSizes[name] = size
 		return oldMember(name, size, f, ...)
 	end
 	mem.struct(structs.f[structName])
-	mem.structs.types.CustomType = oldMember
+	types.CustomType = oldMember
 	return fieldSizes
 end
+
 local function stripNamespaces(str)
 	return str:gsub(".-::", "")
 end
@@ -437,24 +442,6 @@ function getMemberData(structName, memberName, member, offsets, members, class, 
 	return data
 end
 
---[[
-remaining to do:
-f = {  -- table: 0x02e88ff0\
-},\
-func = function: 0x02e19fb8,\
-goto = function: 0x02ea5550,\
-
-i8x = function: 0x02e91a80,\
-iany = function: 0x02e91728,\
-indexmember = function: 0x02e19948,\
-m = table: 0x02e88ff0,\
-method = function: 0x02e19f90,\
-newindexmember = function: 0x02e19968,\
-u8x = function: 0x02e91b30,\
-uany = function: 0x02e916e8,\
-vmethod = function: 0x02e19fe0\
---]]
-
 function getArrayPointerString(arrays, last, addPointer) -- for testing: https://cdecl.org/
 	local stdArray = "std::array<%s, %d>"
 	local type, name = last.typeName .. (last.ptr and "*" or "") .. (last.constPtr and "const" or ""), last.name
@@ -590,7 +577,10 @@ function processGroup(group, indentLevel, structName, namespaceStr, debugLines)
 	end
 	local indentOuter, indentInner = string.rep(INDENT_CHARS, indentLevel), string.rep(INDENT_CHARS, indentLevel + 1) -- 3, 4 for union
 	-- do union wrap
-	local code = {indentOuter .. "union", indentOuter .. "{"}
+	local code = {
+		indentOuter .. "union",
+		indentOuter .. "{"
+	}
 	setmetatable(code, {__newindex = function(t, k, v) -- used in processSingle(), for convenience value can be table
 		if type(v) == "table" then
 			multipleInsert(t, k, v)
@@ -623,7 +613,6 @@ function processGroup(group, indentLevel, structName, namespaceStr, debugLines)
 			if padding and not skipFirst then
 				indentLevel = indentLevel - 1
 				code[#code + 1] = indentInner .. "};"
-				dontSkipFirst = false
 			end
 			if padding then
 				skipFirst = not skipFirst
@@ -667,21 +656,20 @@ function processGroup(group, indentLevel, structName, namespaceStr, debugLines)
 				local total = skipBits - skip > 0 and string.format(" // skipping %d bytes and %d bits, in total %d bits", skipBits:div(8), skipBits % 8, skipBits) or ""
 				code[#code + 1] = indentInnerInner .. skipBitsText:format(skip) .. total
 				skipBits = skipBits - skip
-				if skipBits > 0 then
-					skip = math.min(skipBits, 8) -- no more than 8 bits in one go
-					code[#code + 1] = indentInnerInner .. skipBitsText:format(skip)
-					skipBits = skipBits - skip
+				local function doBits()
+					if skipBits > 0 then
+						skip = math.min(skipBits, 8) -- no more than 8 bits in one go
+						code[#code + 1] = indentInnerInner .. skipBitsText:format(skip)
+						skipBits = skipBits - skip
+					end
 				end
+				doBits()
 				local skipBytes = skipBits:div(8)
 				if skipBytes > 0 then
 					code[#code + 1] = indentInnerInner .. skipBytesText:format(skip)
 					skipBits = skipBits - skipBytes * 8
 				end
-				if skipBits > 0 then
-					skip = math.min(skipBits, 8) -- no more than 8 bits in one go
-					code[#code + 1] = indentInnerInner .. skipBitsText:format(skip)
-					skipBits = skipBits - skip
-				end
+				doBits()
 			end
 			if #members == 1 then
 				code[#code + 1] = processSingle(currentField, indentLevel + 2, structName, namespaceStr, debugLines)
@@ -776,6 +764,10 @@ args = table with:
 function returns table with definition lines, array of names of structures it depends on (they also need to be defined),
 	calculated size (most useful for mmext unions) and "processedStructs" table (if you were too lazy to pass your own)
 ]]
+local function invalidIndex(tbl, key)
+	error(string.format("Unexpected struct table index %q", key), 2)
+end
+
 local processStruct
 function processStruct(args)
 	-- initialization
@@ -900,16 +892,16 @@ function processStruct(args)
 				end
 				baseData.typeName, baseData.name = old1, old2
 			elseif data.union then
-				local depends
-				data.code, depends, data.size = processStruct{name = data.name:sub(1, 1):lower() .. data.name:sub(2), offsets = data.offsets, members = data.fields, rofields = data.rofields,
+				local res = processStruct{name = data.name:sub(1, 1):lower() .. data.name:sub(2), offsets = data.offsets, members = data.fields, rofields = data.rofields,
 					union = true, indentLevel = 0, prependNamespace = args.prependNamespace, offset = data.offset, processedStructs = args.processedStructs, parent = args.name,
 					processDependencies = args.processDependencies, structOrder = args.structOrder, shouldProcessdependency = args.shouldProcessdependency}
+				data.code, data.size = res.code, res.size
 					-- unions have 0 indent level and this breaks normal structs processed as dependencies
 					-- this whole indent system should be probably redone anyways
 				-- doesn't work with non-integer key tables
 				--multipleInsert(fields, #fields + 1, data)
 				table.insert(fields, data)
-				mergeArraysShallowCopy(structureDependencies, depends, true)
+				mergeArraysShallowCopy(structureDependencies, res.dependencies, true)
 			elseif data.replaceWith then
 				multipleInsert(fields, #fields + 1, data.replaceWith)
 			else
@@ -994,15 +986,16 @@ function processStruct(args)
 				if not args.processedStructs[name] and (not args.shouldProcessdependency or args.shouldProcessdependency(name)) then
 					local passArgs = table.copy(args)
 					passArgs.name = name
-					local depCode, depends, size = processStruct(passArgs)
+					local res = processStruct(passArgs)
 					--args.processedStructs[name] = {code = depCode, dependencies = depends, size = size} -- args.processedStructs is shared and written to a bit further
-					mergeArraysShallowCopy(addDepNames, depends, true)
+					mergeArraysShallowCopy(addDepNames, res.dependencies, true)
 				end
 			end
 			mergeArraysShallowCopy(structureDependencies, addDepNames, true)
 		end
 		if not args.processedStructs[args.name] then -- unions are inline
-			args.processedStructs[args.name] = {code = code, dependencies = structureDependencies, size = size, staticDefinitionCode = staticDefinitionCode}
+			args.processedStructs[args.name] = setmetatable({code = code, dependencies = structureDependencies, size = size, staticDefinitionCode = staticDefinitionCode},
+				{__index = invalidIndex})
 		end
 		-- structure needs to be after all of its dependencies
 		local maxI = 0
@@ -1013,7 +1006,7 @@ function processStruct(args)
 		end
 		table.insert(args.structOrder, math.min(#args.structOrder + 1, maxI + 1), args.name)
 	end
-	return code, structureDependencies, size, args.processedStructs
+	return setmetatable({code = code, dependencies = structureDependencies, size = size, processedStructs = args.processedStructs}, {__index = invalidIndex})
 end
 
 -- saveToGeneratorDirectory - whether it's for my project (true) or for reverse engineering purposes (false)
@@ -1025,13 +1018,13 @@ function printStruct(name, includeMembers, excludeMembers, indentLevel, saveToGe
 	local args = {name = name, includeMembers = includeMembers, indentLevel = indentLevel, processDependencies = true,
 		prependNamespace = true, processedStructs = processed, excludeMembers = excludeMembers, structOrder = {},
 		saveToGeneratorDirectory = saveToGeneratorDirectory}
-	local t, dep = processStruct(args)
+	local t = processStruct(args)
 	local old = args.name
 	args.name = "Button" -- npc dialog item
 	do local x = structs.Button end -- generate data (__index)
-	t, dep = processStruct(args)
+	t = processStruct(args)
 	args.name = old
-	_G.t, _G.dep, _G.processed, _G.args = t, dep, processed, args
+	_G.t, _G.processed, _G.args = t, processed, args
 	local pathToLoad = "C:\\Users\\Eksekk\\code.bin"
 	local oldCode
 	local ok, fileContent = pcall(io.load, pathToLoad)
@@ -1296,10 +1289,3 @@ function writeConsts()
 	io.save("constSource.cpp", table.concat(source, "\n"))
 	header, source = {}, {}
 end
-
---[[
-	[mmv(0x6A7680, 0x7214E8, 0x75E450)].array{1, mmv(517, 789, 1000), ItemSize = 8}.EditPChar  'NPCTopic'
-	[mmv(0x6A7684, 0x7214EC, 0x75E454)].array{1, mmv(517, 789, 1000), ItemSize = 8}.EditPChar  'NPCText'
-	
-	[mmv(0x6A8804, 0x722D90, 0x760390)].array(0, 512).EditPChar  'QuestsTxt'
-]]
