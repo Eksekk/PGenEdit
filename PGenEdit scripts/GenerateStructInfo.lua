@@ -731,6 +731,28 @@ function getGroup(fields, firstField, i)
 	return members, #fields + 1, maxNextOffset
 end
 
+local function addExtraFields(name, fields)
+	-- fields hardcoded into this file, because they really need special processing (for example,
+	-- light resistance doesn't have name and thus also offset)
+	local extra = extra[name]
+	if extra then
+		for k, v in pairs(extra) do
+			if table.find(v.games, offsets.MMVersion) then
+				fields[#fields + 1] = table.copy(v.data)
+			end
+		end
+	end
+end
+
+local function addNamespacePrefixes(data, namespaceStr)
+	local data2 = data
+	while data2 do
+		if data2.struct then
+			data2.typeName = namespaceStr .. data2.typeName
+		end
+		data2 = data2.innerType
+	end
+end
 --[[
 args = table with:
 	name - structure/union name
@@ -766,16 +788,8 @@ function processStruct(args)
 	end
 	args.structOrder = args.structOrder or {}
 	local fields, structureDependencies = {}, {}
-	-- fields hardcoded into this file, because they really need special processing (for example,
-	-- light resistance doesn't have name and thus also offset)
-	local extra = extra[args.name]
-	if extra then
-		for k, v in pairs(extra) do
-			if table.find(v.games, _G.offsets.MMVersion) then
-				fields[#fields + 1] = table.copy(v.data)
-			end
-		end
-	end
+	addExtraFields(args.name, fields)
+	local myNamespaceStr = args.prependNamespace and namespaceStr or ""
 	local indentOuter, indentInner = string.rep(INDENT_CHARS, args.indentLevel), string.rep(INDENT_CHARS, args.indentLevel + 1)
 	local customFieldSizes = not args.union and getCustomFieldSizes(args.name) or {}
 	local staticPtrDeclarationCode, staticConvertToPointerDeclarationCode, staticDefinitionCode = {}, {}, {}
@@ -804,7 +818,7 @@ function processStruct(args)
 				table.insert(staticPtrDeclarationCode,
 					string.format("%sstatic inline %s%s* const %s = 0;",
 					indentInner,
-					args.prependNamespace and namespaceStr or "",
+					myNamespaceStr,
 					data.typeName,
 					toCamelCase(data.name))
 				)
@@ -840,7 +854,7 @@ function processStruct(args)
 						comment
 					)
 				)
-				baseData.name = (args.prependNamespace and namespaceStr or "") .. args.name .. "::" .. baseData.name
+				baseData.name = myNamespaceStr .. args.name .. "::" .. baseData.name
 				resultTypeAndName = getArrayPointerString(arrays, baseData, true)
 				table.insert(staticDefinitionCode, string.format("%s = nullptr;", resultTypeAndName))
 				if arraysOrig[1] then
@@ -868,7 +882,7 @@ function processStruct(args)
 						string.format("%s %s = %s;",
 						-- prepend namespace here should always be implicitly true because wrapping in header stuff requires it, but whatever
 						typeNameWithPtr,
-						(args.prependNamespace and namespaceStr or "") .. args.name .. "::" .. fieldName,
+						myNamespaceStr .. args.name .. "::" .. fieldName,
 						isPointer and "nullptr" or "0"
 						)
 					)
@@ -880,7 +894,7 @@ function processStruct(args)
 				local depends
 				data.code, depends, data.size = processStruct{name = data.name:sub(1, 1):lower() .. data.name:sub(2), offsets = data.offsets, members = data.fields, rofields = data.rofields,
 					union = true, indentLevel = 0, prependNamespace = args.prependNamespace, offset = data.offset, processedStructs = args.processedStructs, parent = args.name,
-					processDependencies = args.processDependencies, structOrder = args.structOrder, shouldProcessDependencyFunc = args.shouldProcessDependencyFunc}
+					processDependencies = args.processDependencies, structOrder = args.structOrder, shouldProcessdependency = args.shouldProcessdependency}
 					-- unions have 0 indent level and this breaks normal structs processed as dependencies
 					-- this whole indent system should be probably redone anyways
 				-- doesn't work with non-integer key tables
@@ -894,13 +908,7 @@ function processStruct(args)
 				table.insert(fields, data)
 				addArraySizeField()
 			end
-			local data2 = data
-			while data2 do
-				if data2.struct then
-					data2.typeName = (args.prependNamespace and namespaceStr or "") .. data2.typeName
-				end
-				data2 = data2.innerType
-			end
+			addNamespacePrefixes(data, myNamespaceStr)
 			if not getBaseTypeField(data, "static") and not ((data.array and data.innerType.convertToPointer) or data.convertToPointer) then
 				size = math.max(size, math.ceil(data.offset + (data.size or 0)))
 			end
@@ -961,7 +969,6 @@ function processStruct(args)
 	if args.union then
 		table.insert(code, 1, string.format("%sstruct // size: 0x%X, MMExt union", indentOuter, size))
 	end
-	--local tmpname = prep .. (args.parent and (args.parent .. "::") or "") .. args.name
 	local tmpname = (not args.union and namespaceStr or "") .. args.name -- unions are inline&anonymous struct, so need to check instance of it, not type
 	code[#code + 1] = cppAssert:format(indentOuter, tmpname, size, tmpname)
 	for i, v in ipairs(debugLines) do
@@ -973,10 +980,10 @@ function processStruct(args)
 		if args.processDependencies then
 			local addDepNames = {}
 			for i, name in ipairs(structureDependencies) do
-				if not args.processedStructs[name] and (not args.shouldProcessDependencyFunc or args.shouldProcessDependencyFunc(name)) then
-					local depCode, depends, size = processStruct{name = name, indentLevel = args.indentLevel, prependNamespace = args.prependNamespace,
-						processedStructs = args.processedStructs, processDependencies = args.processDependencies, structOrder = args.structOrder,
-						shouldProcessDependencyFunc = args.shouldProcessDependencyFunc, saveToGeneratorDirectory = args.saveToGeneratorDirectory}
+				if not args.processedStructs[name] and (not args.shouldProcessdependency or args.shouldProcessdependency(name)) then
+					local passArgs = table.copy(args)
+					passArgs.name = name
+					local depCode, depends, size = processStruct(passArgs)
 					--args.processedStructs[name] = {code = depCode, dependencies = depends, size = size} -- args.processedStructs is shared and written to a bit further
 					mergeArraysShallowCopy(addDepNames, depends, true)
 				end
