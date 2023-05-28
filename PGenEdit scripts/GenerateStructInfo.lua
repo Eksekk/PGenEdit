@@ -1035,22 +1035,30 @@ function processStruct(args)
 		processedStructs = args.processedStructs, groups = groups, fields = fields}, {__index = invalidIndex})
 end
 
--- saveToGeneratorDirectory - whether it's for my project (true) or for reverse engineering purposes (false)
--- isLast if it's last of 3 games processed
-function printStruct(name, includeMembers, excludeMembers, indentLevel, saveToGeneratorDirectory, isLast, directoryPrefix) 
-	luaData = {}
+local function processAll(args)
 	local processed = {}
-	indentLevel = wrapInHeaderStuff and 1 or indentLevel or 1 -- always 1 indentation level if wrapping
-	local args = {name = name, includeMembers = includeMembers, indentLevel = indentLevel, processDependencies = true,
-		prependNamespace = true, processedStructs = processed, excludeMembers = excludeMembers, structOrder = {},
-		saveToGeneratorDirectory = saveToGeneratorDirectory}
+	args = args or {}
+	args.indentLevel = args.indentLevel or 0
+	table.copy({name = "GameStructure", processDependencies = true,
+		prependNamespace = true, processedStructs = processed
+	}, args, true)
 	local t = processStruct(args)
 	local old = args.name
 	args.name = "Button" -- npc dialog item
 	do local x = structs.Button end -- generate data (__index)
 	t = processStruct(args)
 	args.name = old
-	_G.t, _G.processed, _G.args = t, processed, args
+	return processed
+end
+
+-- saveToGeneratorDirectory - whether it's for my project (true) or for reverse engineering purposes (false)
+-- isLast if it's last of 3 games processed
+function printStruct(name, includeMembers, excludeMembers, indentLevel, saveToGeneratorDirectory, isLast, directoryPrefix) 
+	luaData = {}
+	indentLevel = indentLevel or 1 -- always 1 indentation level if wrapping
+	local args = {name = name, includeMembers = includeMembers, excludeMembers = excludeMembers, indentLevel = indentLevel, saveToGeneratorDirectory = saveToGeneratorDirectory}
+	local processed = processAll(args)
+	_G.processed, _G.args = processed, args
 	local pathToLoad = "C:\\Users\\Eksekk\\code.bin"
 	local oldCode
 	local ok, fileContent = pcall(io.load, pathToLoad)
@@ -1214,15 +1222,6 @@ end
 function pr3(isLast)
 	printStruct("GameStructure", nil, nil, nil, false, isLast)
 end
-
--- fuck msvc
--- outside struct type has size x
--- then each bitfield member has size x (even if just one bit!), unsigned (so uint(n)_t)
--- this includes skipbits
--- OR
--- split skipbits into groups of 8 (need same type as members - bool - 1 byte; can't have more skipped than field size even if it's just for skipping...)
-
-
 
 -- "ENUM" GENERATOR
 local namePrefixes = {["Stats"] = "STAT", ["Skills"] = "SKILL", ["Damage"] = "DMG"}
