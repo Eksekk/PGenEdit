@@ -275,7 +275,7 @@ function table.slice(tbl, first, last)
 	local n = #tbl
 	local tableFirstIndex = tbl[0] ~= nil and 0 or 1
 	first = first or tableFirstIndex
-	last = last or n
+	last = last or math.max(n, first)
 	local orig1, orig2 = first, last
 	if first < 0 then
 		first = n + first + 1
@@ -283,7 +283,6 @@ function table.slice(tbl, first, last)
 	if last < 0 then
 		last = n + last + 1
 	end
-	last = math.min(last, n)
 	if first < tableFirstIndex or first > last then
 		error(string.format("bad index values [%d, %d] (table size: %d)", orig1, orig2, n), 2)
 	end

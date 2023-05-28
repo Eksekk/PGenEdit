@@ -222,7 +222,7 @@ all possible attributes:
 	- size - full array size (product of count and all child array counts and base type size)
 	- low - first element index (usually 0 or 1)
 	- innerType - return value from recursive call
-- typeName - data type name
+- typeName - data type name (for structs it's struct name)
 - constValue - value of this member can't be changed
 - formatTypeName - %s is embedded in string and represents member name and thus must be formatted
 - ptr - is ptr to something (array, character string, structure etc.)
@@ -444,7 +444,7 @@ end
 
 function getArrayPointerString(arrays, last, addPointer) -- for testing: https://cdecl.org/
 	local stdArray = "std::array<%s, %d>"
-	local type, name = last.typeName .. (last.ptr and "*" or "") .. (last.constPtr and "const" or ""), last.name
+	local type = (last.namespacePrefix or "") .. last.typeName .. (last.ptr and "*" or "") .. (last.constPtr and "const" or "")
 	for i = #arrays, 1, -1 do
 		local arr = arrays[i]
 		if arr.count == 0 then
@@ -454,7 +454,7 @@ function getArrayPointerString(arrays, last, addPointer) -- for testing: https:/
 			-- std::array<std::array<uint8_t, 128>*, 128> heightMap;
 		end
 	end
-	return type .. (addPointer and "*" or "") .. " " .. name
+	return type .. (addPointer and "*" or "") .. " " .. last.name
 end
 
 local function toCamelCase(str)
@@ -499,7 +499,7 @@ local function processSingle(data, indentLevel, structName, namespaceStr, debugL
 			if arrays and doArrays then
 				result = result .. getArrayPointerString(arrays, data)
 			else
-				result = result .. data.typeName .. (data.ptr and "*" or "") .. " " .. data.name
+				result = result .. (data.namespacePrefix or "") .. data.typeName .. (data.ptr and "*" or "") .. " " .. data.name
 			end
 		end
 		local offset = arrays and arrays[1] and arrays[1].offset or data.offset or 0
@@ -731,7 +731,7 @@ local function addNamespacePrefixes(data, namespaceStr)
 	local data2 = data
 	while data2 do
 		if data2.struct then
-			data2.typeName = namespaceStr .. data2.typeName
+			data2.namespacePrefix = namespaceStr
 		end
 		data2 = data2.innerType
 	end
@@ -764,8 +764,13 @@ args = table with:
 function returns table with definition lines, array of names of structures it depends on (they also need to be defined),
 	calculated size (most useful for mmext unions) and "processedStructs" table (if you were too lazy to pass your own)
 ]]
-local function invalidIndex(tbl, key)
-	error(string.format("Unexpected struct table index %q", key), 2)
+local checkInvalidProcessedStructIndex
+do
+	local expected = {"code", "dependencies", "size", "processedStructs", "staticDefinitionCode"}
+	function checkInvalidProcessedStructIndex(tbl, key)
+		if table.find(expected, key) then return end
+		error(string.format("Unexpected struct table index %q", key), 2)
+	end
 end
 
 local processStruct
@@ -789,13 +794,25 @@ function processStruct(args)
 	local size = not args.union and structs[args.name]["?size"] or 0
 	
 	-- after initialization
-	if not next(members) or (not args.union and size == 0) then -- forward declaration only, idk if 0 size struct is possible in C++
-		local data = {code = {string.format("%sstruct %s; // 0-size struct, declaration only", string.rep(INDENT_CHARS, args.indentLevel), args.name)}, dependencies = {}, size = 0}
+	-- forward declaration only if structure has 0 size or no members (yes, those exists)
+	-- idk if 0 size struct is possible in C++
+	if not next(members) or (not args.union and size == 0) then
+		local data = {
+			code = {
+				string.format("%sstruct %s; // 0-size struct, declaration only", string.rep(INDENT_CHARS, args.indentLevel), args.name)
+			}, 
+			dependencies = {}, 
+			size = 0,
+			processedStructs = args.processedStructs
+		}
 		args.processedStructs[args.name] = data
 		table.insert(tget(args, "structOrder"), 1, args.name)
-		return data.code, data.dependencies, size, args.processedStructs
+		return setmetatable(data, {__index = invalidIndex})
 	end
+
 	addExtraFields(args.name, fields)
+
+	-- process members
 	for mname, f in sortpairs(members) do
 		if definitelyShouldSkipMember(args.name, args.includeMembers, args.excludeMembers, mname) then
 			goto continue
@@ -808,16 +825,17 @@ function processStruct(args)
 				table.insert(fields, t)
 			end
 		end
-		if data then
+		if data then -- in certain cases member data is unknown or otherwise unavailable to gather
+			addNamespacePrefixes(data, myNamespaceStr)
 			if args.union and tonumber(data.name) then
 				-- array with some fields rearranged, so it can't be indexed with const.* in all cases
 				-- TODO: proper handling, like static const translation table
 				data.name = "_" .. tostring(data.name)
 			end
-			-- add pointers for structs which don't really reside at 0 address, TODO: take into account limits removal relocation
+			-- add pointers for structs which don't really reside at 0 address
 			if data.struct and data.offset == 0 then
 				table.insert(staticPtrDeclarationCode,
-					string.format("%sstatic inline %s%s* const %s = 0;",
+					string.format("%sstatic inline %s%s* const %s = 0;", -- assumes C++17 for static inline const
 					indentInner,
 					myNamespaceStr,
 					data.typeName,
@@ -829,22 +847,18 @@ function processStruct(args)
 				goto continue
 			elseif (data.array and data.innerType.convertToPointer) or data.convertToPointer then
 				findDependencies(data, structureDependencies)
-				if not args.saveToGeneratorDirectory then
+				if not args.saveToGeneratorDirectory then -- keep normal field only if reverse engineering?
 					local f = deepcopyMM(data)
 					table.insert(fields, f)
 				end
 				local arrays, comments, baseData = getArraysCommentsAndBaseData(data)
-				local arraysOrig = deepcopyMM(arrays)
-				if #arrays > 0 then
-					table.remove(arrays, 1)
-				end
-				local old1, old2 = baseData.typeName, baseData.name
-				baseData.typeName = (baseData.struct and args.prependNamespace and namespaceStr or "") .. baseData.typeName
+				local arraysNestedOnly = table.slice(deepcopyMM(arrays), 2)
+				local old1 = baseData.name
 				baseData.name = toCamelCase(baseData.name)
-				local resultTypeAndName = getArrayPointerString(arrays, baseData, true)
+				local resultTypeAndName = getArrayPointerString(arraysNestedOnly, baseData, true)
 				local comment = "" -- "converted to pointer to not break with limits removal scripts"
 				comment = comment .. string.format(--[[", ]]"original offset 0x%X (%d decimal)", data.offset, data.offset)
-				if #arraysOrig > 0 then
+				if #arrays > 0 then
 					comment = comment .. string.format(--[[", ]]"element size: 0x%X (%d decimal)", data.innerType.size, data.innerType.size)
 				end
 				table.insert(staticConvertToPointerDeclarationCode,
@@ -856,19 +870,19 @@ function processStruct(args)
 					)
 				)
 				baseData.name = myNamespaceStr .. args.name .. "::" .. baseData.name
-				resultTypeAndName = getArrayPointerString(arrays, baseData, true)
+				resultTypeAndName = getArrayPointerString(arraysNestedOnly, baseData, true)
 				table.insert(staticDefinitionCode, string.format("%s = nullptr;", resultTypeAndName))
-				if arraysOrig[1] then
+				if arrays[1] then
 					if not args.saveToGeneratorDirectory then addArraySizeField() end
-					local isPointer = arraysOrig[1].lenA and true or false
+					local isPointer = arrays[1].lenA and true or false
 					-- size field pointer, getting one (but not pointer) even if original array doesn't have it
-					local typeNameWithPtr = isPointer and (commonTypeNamesToCpp["u" .. arraysOrig[1].lenA] .. "*") or commonTypeNamesToCpp.u4
+					local typeNameWithPtr = isPointer and (commonTypeNamesToCpp["u" .. arrays[1].lenA] .. "*") or commonTypeNamesToCpp.u4
 					local fieldName = toCamelCase(mname .. "_size") .. (isPointer and "Ptr" or "")
 					local comment = "Offset/size: " -- (isPointer and "pointer to size" or "size field") .. ", set during initialization. Original offset/size: "
 					comment = comment .. (
 						string.format("0x%X (%d decimal)",
-							isPointer and arraysOrig[1].lenP or arraysOrig[1].count,
-							isPointer and arraysOrig[1].lenP or arraysOrig[1].count
+							isPointer and arrays[1].lenP or arrays[1].count,
+							isPointer and arrays[1].lenP or arrays[1].count
 						)
 					)
 					table.insert(staticConvertToPointerDeclarationCode,
@@ -890,11 +904,11 @@ function processStruct(args)
 
 					tget(luaData, args.name, baseData.name).sizePtrName = toCamelCase(mname .. "_size")
 				end
-				baseData.typeName, baseData.name = old1, old2
+				baseData.name = old1
 			elseif data.union then
 				local res = processStruct{name = data.name:sub(1, 1):lower() .. data.name:sub(2), offsets = data.offsets, members = data.fields, rofields = data.rofields,
 					union = true, indentLevel = 0, prependNamespace = args.prependNamespace, offset = data.offset, processedStructs = args.processedStructs, parent = args.name,
-					processDependencies = args.processDependencies, structOrder = args.structOrder, shouldProcessdependency = args.shouldProcessdependency}
+					processDependencies = args.processDependencies, structOrder = args.structOrder, shouldProcessDependency = args.shouldProcessDependency}
 				data.code, data.size = res.code, res.size
 					-- unions have 0 indent level and this breaks normal structs processed as dependencies
 					-- this whole indent system should be probably redone anyways
@@ -909,8 +923,8 @@ function processStruct(args)
 				table.insert(fields, data)
 				addArraySizeField()
 			end
-			addNamespacePrefixes(data, myNamespaceStr)
-			if not getBaseTypeField(data, "static") and not ((data.array and data.innerType.convertToPointer) or data.convertToPointer) then
+			local convertToPointer = (data.array and data.innerType.convertToPointer) or data.convertToPointer
+			if not getBaseTypeField(data, "static") and not convertToPointer then
 				size = math.max(size, math.ceil(data.offset + (data.size or 0)))
 			end
 		end
@@ -940,6 +954,7 @@ function processStruct(args)
 	local i = 1
 	local maxNextOffset = 0
 	local debugLines = {}
+	local groups = {}
 	while true do
 		local currentField = fields[i]
 		if not currentField then break end
@@ -952,15 +967,20 @@ function processStruct(args)
 			end
 		end
 		local members
+		local firstIndex = i
 		members, i, maxNextOffset = getGroup(fields, currentField, i)
+		groups[#groups + 1] = {members = members, firstIndex = firstIndex, maxNextOffset = maxNextOffset}
 		local group = processGroup(members, args.indentLevel + 1, not args.union and args.name, not args.union and myNamespaceStr or "", debugLines)
 		multipleInsert(code, #code + 1, group)
 		prevOffset = maxNextOffset
 	end
-	size = args.union and math.ceil(maxNextOffset - args.offset) or size -- ceil is for bits
-	local endPadding = size - prevOffset
-	if endPadding >= 1 then
-		code[#code + 1] = indentInner .. skipBytesText:format(endPadding)
+	if args.union then
+		size = math.ceil(maxNextOffset - args.offset) -- ceil is for bits
+	else
+		local endPadding = size - prevOffset
+		if endPadding >= 1 then
+			code[#code + 1] = indentInner .. skipBytesText:format(endPadding)
+		end
 	end
 	code[#code + 1] = args.union and string.format("%s} %s;", indentOuter, args.name) or (indentOuter .. "};")
 	if args.union then
@@ -983,7 +1003,7 @@ function processStruct(args)
 		if args.processDependencies then
 			local addDepNames = {}
 			for i, name in ipairs(structureDependencies) do
-				if not args.processedStructs[name] and (not args.shouldProcessdependency or args.shouldProcessdependency(name)) then
+				if not args.processedStructs[name] and (not args.shouldProcessDependency or args.shouldProcessDependency(name)) then
 					local passArgs = table.copy(args)
 					passArgs.name = name
 					local res = processStruct(passArgs)
@@ -994,8 +1014,10 @@ function processStruct(args)
 			mergeArraysShallowCopy(structureDependencies, addDepNames, true)
 		end
 		if not args.processedStructs[args.name] then -- unions are inline
-			args.processedStructs[args.name] = setmetatable({code = code, dependencies = structureDependencies, size = size, staticDefinitionCode = staticDefinitionCode},
-				{__index = invalidIndex})
+			args.processedStructs[args.name] = setmetatable({code = code, dependencies = structureDependencies,
+				size = size, staticDefinitionCode = staticDefinitionCode, groups = groups, fields = fields},
+				{__index = invalidIndex}
+			)
 		end
 		-- structure needs to be after all of its dependencies
 		local maxI = 0
@@ -1006,7 +1028,8 @@ function processStruct(args)
 		end
 		table.insert(args.structOrder, math.min(#args.structOrder + 1, maxI + 1), args.name)
 	end
-	return setmetatable({code = code, dependencies = structureDependencies, size = size, processedStructs = args.processedStructs}, {__index = invalidIndex})
+	return setmetatable(args.processedStructs[args.name] or {code = code, dependencies = structureDependencies, size = size,
+		processedStructs = args.processedStructs, groups = groups, fields = fields}, {__index = invalidIndex})
 end
 
 -- saveToGeneratorDirectory - whether it's for my project (true) or for reverse engineering purposes (false)
