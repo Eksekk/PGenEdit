@@ -905,7 +905,7 @@ function processStruct(args)
 						)
 					)
 
-					tget(luaData, args.name, baseData.name).sizePtrName = toCamelCase(mname .. "_size")
+					tget(luaData, args.name, baseData.name).sizePtrName = fieldName
 				end
 				baseData.name, baseData.namespacePrefix = old1, old2
 			elseif data.union then
