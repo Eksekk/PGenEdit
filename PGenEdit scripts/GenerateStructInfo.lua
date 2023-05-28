@@ -869,11 +869,14 @@ function processStruct(args)
 						comment
 					)
 				)
-				baseData.name = myNamespaceStr .. args.name .. "::" .. baseData.name
+				local old2 = baseData.namespacePrefix
+				baseData.namespacePrefix = myNamespaceStr .. args.name .. "::"
 				resultTypeAndName = getArrayPointerString(arraysNestedOnly, baseData, true)
 				table.insert(staticDefinitionCode, string.format("%s = nullptr;", resultTypeAndName))
 				if arrays[1] then
-					if not args.saveToGeneratorDirectory then addArraySizeField() end
+					if not args.saveToGeneratorDirectory then -- if for reverse engineering, add default size field
+						addArraySizeField()
+					end
 					local isPointer = arrays[1].lenA and true or false
 					-- size field pointer, getting one (but not pointer) even if original array doesn't have it
 					local typeNameWithPtr = isPointer and (commonTypeNamesToCpp["u" .. arrays[1].lenA] .. "*") or commonTypeNamesToCpp.u4
@@ -895,16 +898,16 @@ function processStruct(args)
 					)
 					table.insert(staticDefinitionCode,
 						string.format("%s %s = %s;",
-						-- prepend namespace here should always be implicitly true because wrapping in header stuff requires it, but whatever
-						typeNameWithPtr,
-						myNamespaceStr .. args.name .. "::" .. fieldName,
-						isPointer and "nullptr" or "0"
+							-- prepend namespace here should always be implicitly true because wrapping in header stuff requires it, but whatever
+							typeNameWithPtr,
+							myNamespaceStr .. args.name .. "::" .. fieldName,
+							isPointer and "nullptr" or "0"
 						)
 					)
 
 					tget(luaData, args.name, baseData.name).sizePtrName = toCamelCase(mname .. "_size")
 				end
-				baseData.name = old1
+				baseData.name, baseData.namespacePrefix = old1, old2
 			elseif data.union then
 				local res = processStruct{name = data.name:sub(1, 1):lower() .. data.name:sub(2), offsets = data.offsets, members = data.fields, rofields = data.rofields,
 					union = true, indentLevel = 0, prependNamespace = args.prependNamespace, offset = data.offset, processedStructs = args.processedStructs, parent = args.name,
