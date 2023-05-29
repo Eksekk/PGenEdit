@@ -84,10 +84,12 @@ local booleanHandlers = {
 }
 
 local bitIndex = {}
-local bit = 1
-for i = 0, 7 do
-	bitIndex[bit] = i
-	bit = bit * 2
+do
+	local bit = 1
+	for i = 0, 7 do
+		bitIndex[bit] = i
+		bit = bit * 2
+	end
 end
 local AnyABitHandler = getU(getU(types.abit, "doBit"), "AnyABitHandler")
 
@@ -134,7 +136,7 @@ function getStructureMembersInfoData(structName)
 		local prevDefined
 		function types.Info(t, ...)
 			local name = define.LastDefinedMemberName or "DefaultIndex"
-			if not t.new -- not added by mmext
+			if t ~= nil and (type(t) ~= "table" or not t.new) -- not added by mmext
 				and prevDefined ~= name then -- don't overwrite old data, for example if define.f.Something is defined, because it doesn't change "LastDefinedMemberName"
 				prevDefined = name
 				output[name] = t
@@ -354,14 +356,14 @@ function getMemberData(structName, memberName, member, offsets, members, class, 
 		data.size = 4
 		data.typeName = "char"
 		data.ptr = true
-		data.dataType = types.editpchar
+		data.dataType = types.EditPChar
 		addComment("EditPChar")
 	elseif getUpvalueByValue(member, EditConstPChar_newindex) then
 		data.size = 4
 		data.typeName = "char"
 		data.ptr = true
 		addComment("EditConstPChar - unprotect before/protect after edit")
-		data.dataType = types.editconstpchar
+		data.dataType = types.EditConstPChar
 	elseif boolsize then
 		if boolsize == 1 then
 			data.typeName = "bool"
@@ -442,6 +444,23 @@ function getMemberData(structName, memberName, member, offsets, members, class, 
 	return data
 end
 
+function getFunctionsData(class, infoData)
+	local data = {}
+	for mname, handler in pairs(class or {}) do
+		local def = getU(handler, "def")
+		if type(def) == "table" then
+			data[mname] = data[mname] or {}
+			data[mname] = {def = def}
+		end
+		local info = infoData[mname]
+		if type(info) == "table" and info.Sig then
+			data[mname] = data[mname] or {}
+			data[mname].sig = info.Sig
+		end
+	end
+	return data
+end
+
 function getArrayPointerString(arrays, last, addPointer) -- for testing: https://cdecl.org/
 	local stdArray = "std::array<%s, %d>"
 	local type = (last.namespacePrefix or "") .. last.typeName .. (last.ptr and "*" or "") .. (last.constPtr and "const" or "")
@@ -485,6 +504,8 @@ local function processSingle(data, indentLevel, structName, namespaceStr, debugL
 	if #arrays == 0 then arrays = nil end
 	
 	-- use camel case (I personally prefer it)
+	data.pascalCaseName = data.name
+	table.foreach(arrays or {}, function(v) v.pascalCaseName = v.name end)
 	data.name = toCamelCase(tostring(data.name))
 
 	local function doBaseType(doArrays)
@@ -766,7 +787,7 @@ function returns table with definition lines, array of names of structures it de
 ]]
 local checkInvalidProcessedStructIndex
 do
-	local expected = {"code", "dependencies", "size", "processedStructs", "staticDefinitionCode"}
+	local expected = {"code", "dependencies", "size", "processedStructs", "staticDefinitionCode", "fields", "groups", "memberInfoData", "functionData"}
 	function checkInvalidProcessedStructIndex(tbl, key)
 		if table.find(expected, key) then return end
 		error(string.format("Unexpected struct table index %q", key), 2)
@@ -803,7 +824,9 @@ function processStruct(args)
 			}, 
 			dependencies = {}, 
 			size = 0,
-			processedStructs = args.processedStructs
+			processedStructs = args.processedStructs,
+			fields = {},
+			functionData = {}
 		}
 		args.processedStructs[args.name] = data
 		table.insert(tget(args, "structOrder"), 1, args.name)
@@ -811,6 +834,11 @@ function processStruct(args)
 	end
 
 	addExtraFields(args.name, fields)
+
+	-- get Info{} data
+	local infoData = not args.union and getStructureMembersInfoData(args.name)
+	-- get function data
+	local functionData = not args.union and getFunctionsData(class, infoData)
 
 	-- process members
 	for mname, f in sortpairs(members) do
@@ -820,7 +848,9 @@ function processStruct(args)
 		local data = getMemberData(args.name, mname, f, offsets, members, class, rofields, customFieldSizes, false)
 		local function addArraySizeField()
 			if data.array and data.lenP then
-				local t = {name = mname .. "_size", offset = data.lenP, size = data.lenA, typeName = commonTypeNamesToCpp["u" .. data.lenA]}
+				local t = {name = mname .. "_size", offset = data.lenP, size = data.lenA, 
+					typeName = commonTypeNamesToCpp["u" .. data.lenA], dataType = types["u" .. data.lenA]}
+				t.pascalCaseName = t.name
 				table.insert(tget(data, "comments"), string.format("size field offset is 0x%X", data.lenP))
 				table.insert(fields, t)
 			end
@@ -1018,7 +1048,8 @@ function processStruct(args)
 		end
 		if not args.processedStructs[args.name] then -- unions are inline
 			args.processedStructs[args.name] = setmetatable({code = code, dependencies = structureDependencies,
-				size = size, staticDefinitionCode = staticDefinitionCode, groups = groups, fields = fields},
+				size = size, staticDefinitionCode = staticDefinitionCode, groups = groups, fields = fields, memberInfoData = infoData,
+				functionData = functionData},
 				{__index = invalidIndex}
 			)
 		end
@@ -1032,7 +1063,8 @@ function processStruct(args)
 		table.insert(args.structOrder, math.min(#args.structOrder + 1, maxI + 1), args.name)
 	end
 	return setmetatable(args.processedStructs[args.name] or {code = code, dependencies = structureDependencies, size = size,
-		processedStructs = args.processedStructs, groups = groups, fields = fields}, {__index = invalidIndex})
+		processedStructs = args.processedStructs, groups = groups, fields = fields, memberInfoData = infoData,
+		functionData = functionData}, {__index = invalidIndex})
 end
 
 local function processAll(args)
@@ -1222,6 +1254,94 @@ end
 function pr3(isLast)
 	printStruct("GameStructure", nil, nil, nil, false, isLast)
 end
+
+do
+	local singleInstanceStructs = {GameStructure = "Game", GameParty = "Party", GameMap = "Map", GameMouse = "Mouse", GameScreen = "Screen"}
+	local commonTypes = {[types.u1] = "u1", [types.u2] = "u2", [types.u4] = "u4", [types.u8] = "u8", [types.i1] = "i1", [types.i2] = "i2", [types.i4] = "i4", [types.i8] = "i8", [types.r4] = "r4", [types.r8] = "r8", [types.r10] = "r10", [types.pchar] = "PChar", [types.b1] = "b1", [types.b2] = "b2", [types.b4] = "b4", [types.EditPChar] = "EditPChar", [types.EditConstPChar] = "EditConstPChar"}
+	local format = string.format
+	local json = require"json"
+	function processDebuggerDatabase()
+		local database = json.decode(io.load(format("mm%d.exe.dd32", Game.Version)))
+		local labelsByAddress = {}
+		for i, label in ipairs(database.labels) do
+			labelsByAddress[label.address] = label
+		end
+		local processed = processAll()
+		local moduleStr = format("mm%d.exe", Game.Version)
+		for structName, structData in pairs(processed) do
+			local singleName = singleInstanceStructs[structName]
+			if singleName then
+				for _, data in ipairs(structData.fields) do
+					local mname = data.pascalCaseName
+					if not mname then error(data.name) end
+					-- TODO: deal with alts and duplicated names
+					if labelsByAddress[data.offset] then
+						printf("%q : label at address 0x%X already exists (text: %q)", mname, data.offset, labelsByAddress[data.offset].text)
+						goto continue
+					end
+					local label = {
+						module = moduleStr,
+						address = format("0x%X", data.offset),
+						manual = false, -- just in case
+					}
+					local text = format("%s.%s (%%s)", singleName, mname)
+					local commonStr = commonTypes[data.dataType]
+					if commonStr then
+						text = text:format(commonStr)
+					elseif data.dataType == types.string then
+						text = text:format(format("string[%d]", data.count))
+					else
+						printf("Skipping member %s.%s - unknown type", singleName, mname)
+						goto continue
+					end
+
+					labelsByAddress[data.offset] = label
+					label.text = text
+					::continue::
+				end
+			end
+			-- functions
+			for fname, data in pairs(structData.functionData) do
+				local def = data.def
+				local str = structName .. (def.cc == 1 and "::" or ".") .. fname
+				if data.sig then
+					str = str .. format("(%s)", data.sig)
+				else
+					printf("%q : missing signature", fname)
+					local len = #def
+					local tab = {}
+					for i = 1, len do
+						tab[#tab] = "?"
+					end
+					str = str .. format("(%s)", table.concat(tab, ", "))
+				end
+				str = select(def.cc + 1, "stdcall", "thiscall", "fastcall", "fastcall+eax") .. str
+				local p = def.p
+				local label = {
+					module = moduleStr,
+					address = format("0x%X", p),
+					manual = false, -- just in case
+					text = str
+				}
+				if labelsByAddress[p] then
+					printf("%q : label at address 0x%X already exists (text: %q)", fname, p, labelsByAddress[p].text)
+					goto continueF
+				end
+				labelsByAddress[def.p] = label
+				::continueF::
+			end
+		end
+		local labels = {}
+		for k, v in pairs(labelsByAddress) do
+			labels[#labels + 1] = v
+		end
+		database.labels = labels
+		io.save(format("processed mm%d.exe.dd32", Game.Version), json.encode(database))
+	end
+end
+
+
+
 
 -- "ENUM" GENERATOR
 local namePrefixes = {["Stats"] = "STAT", ["Skills"] = "SKILL", ["Damage"] = "DMG"}
