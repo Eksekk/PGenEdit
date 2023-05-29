@@ -1351,12 +1351,15 @@ do
 			-- functions
 			local done = {} -- some functions have two names and only one has extra info
 			-- store done here and if old doesn't have sig or has less arguments, overwrite
+
+			-- TODO: because "define.class.AddHitPoints" doesn't use "method{}" call, it's not considered a method and thus
+			-- overwrites "AddHP()" with two argument parentheses
 			for fname, data in pairs(structData.functionData) do
 				local def = data.def
 				local isMethod = structData.methods and structData.methods[fname]
 				local moduleOffset = checkOffset(def.p, fname)
 				local str = (singleName or structName) .. (isMethod and "::" or ".") .. fname
-				local argCount = #def - (isMethod and 1 or 0)
+				local argCount = math.max(#def, def.must) - (isMethod and 1 or 0)
 				local sig = data.info and data.info.Sig
 				if sig then
 					str = str .. format("(%s)", sig)
@@ -1494,10 +1497,4 @@ end
 
 local constsToProcess = {"Damage"}
 function writeConsts()
-	for _, const in ipairs(constsToProcess) do
-		processConst(const)
-	end
-	io.save("constHeader.h", table.concat(header, "\n"))
-	io.save("constSource.cpp", table.concat(source, "\n"))
-	header, source = {}, {}
-end
+	for _, const in ipairs(constsToProcess
