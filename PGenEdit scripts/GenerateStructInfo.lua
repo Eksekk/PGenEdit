@@ -213,6 +213,25 @@ local function getStructFile(name)
 	return "unknown"
 end
 
+function getFunctionsData(class, infoData)
+	local data = {}
+	for mname, handler in pairs(class or {}) do
+		if type(handler) == "function" then
+			local def = getU(handler, "def")
+			if type(def) == "table" then
+				data[mname] = data[mname] or {}
+				data[mname] = {def = def}
+			end
+			local info = infoData[mname]
+			if type(info) == "table" and info.Sig then
+				data[mname] = data[mname] or {}
+				data[mname].sig = info.Sig
+			end
+		end
+	end
+	return data
+end
+
 -- helper functions
 -- DEFINED IN A_EksekkFunctions.lua
 
@@ -440,23 +459,6 @@ function getMemberData(structName, memberName, member, offsets, members, class, 
 	if convertToPointers[structName] and table.find(convertToPointers[structName], data.name) then
 		tget(luaData, structName, data.name).ptrName = data.name
 		data.convertToPointer = true
-	end
-	return data
-end
-
-function getFunctionsData(class, infoData)
-	local data = {}
-	for mname, handler in pairs(class or {}) do
-		local def = getU(handler, "def")
-		if type(def) == "table" then
-			data[mname] = data[mname] or {}
-			data[mname] = {def = def}
-		end
-		local info = infoData[mname]
-		if type(info) == "table" and info.Sig then
-			data[mname] = data[mname] or {}
-			data[mname].sig = info.Sig
-		end
 	end
 	return data
 end
@@ -811,7 +813,7 @@ function processStruct(args)
 	local customFieldSizes = not args.union and getCustomFieldSizes(args.name) or {}
 	local staticPtrDeclarationCode, staticConvertToPointerDeclarationCode, staticDefinitionCode = {}, {}, {}
 	local offsets, members = args.offsets or structs.o[args.name], args.members or structs.m[args.name]
-	local class, rofields = args.class or structs.class(args.name), args.rofields or {}
+	local class, rofields = args.class or structs[args.name], args.rofields or {}
 	local size = not args.union and structs[args.name]["?size"] or 0
 	
 	-- after initialization
@@ -1254,17 +1256,44 @@ end
 function pr3(isLast)
 	printStruct("GameStructure", nil, nil, nil, false, isLast)
 end
-
+--[[
+	if mmver > 6 then
+		define[0].struct(structs.Arcomage)  'Arcomage'
+	end
+	if mmver == 7 then
+		define[0].struct(structs.GameRaces)  'Races'
+	end
+	define
+	[0].struct(structs.GameClasses)  'Classes'
+	[0].struct(structs.GameClassKinds)  'ClassKinds'
+	[0].struct(structs.GameParty)  'Party'
+	[0].struct(structs.GameMap)  'Map'
+	[mmv(0x6A6110, 0, 0)].struct(structs.GameMouse)  'Mouse'
+	[0].struct(structs.Weather)  'Weather'
+	[mmv(0x971068, 0xDF1A68, 0xEC1980)].struct(structs.GameScreen)  'Screen'
+]]
 do
-	local singleInstanceStructs = {GameStructure = "Game", GameParty = "Party", GameMap = "Map", GameMouse = "Mouse", GameScreen = "Screen"}
+	local singleInstanceStructs = {GameStructure = "Game", GameParty = "Party", GameMap = "Map", GameMouse = "Mouse", GameScreen = "Screen", Arcomage = "Arcomage",
+		GameRaces = "Races", GameClasses = "Classes", GameClassKinds = "ClassKinds", Weather = "Weather"}
+	local singleInstanceCustomOffsets = {GameMouse = Mouse["?ptr"], GameScreen = Screen["?ptr"]}
 	local commonTypes = {[types.u1] = "u1", [types.u2] = "u2", [types.u4] = "u4", [types.u8] = "u8", [types.i1] = "i1", [types.i2] = "i2", [types.i4] = "i4", [types.i8] = "i8", [types.r4] = "r4", [types.r8] = "r8", [types.r10] = "r10", [types.pchar] = "PChar", [types.b1] = "b1", [types.b2] = "b2", [types.b4] = "b4", [types.EditPChar] = "EditPChar", [types.EditConstPChar] = "EditConstPChar"}
 	local format = string.format
 	local json = require"json"
-	function processDebuggerDatabase()
+	local function checkOffset(offset, structName, mname)
+		local offset2 = offset - 0x400000
+		if offset2 < 0 then
+			printf("%q : offset is less than 0x400000", mname)
+			return offset
+		end
+		return offset2
+	end
+	function processDebuggerDatabase(removeOld) -- remove old for testing
 		local database = json.decode(io.load(format("mm%d.exe.dd32", Game.Version)))
 		local labelsByAddress = {}
-		for i, label in ipairs(database.labels) do
-			labelsByAddress[label.address] = label
+		if not removeOld then
+			for i, label in ipairs(database.labels) do
+				labelsByAddress[label.address] = label
+			end
 		end
 		local processed = processAll()
 		local moduleStr = format("mm%d.exe", Game.Version)
@@ -1273,15 +1302,21 @@ do
 			if singleName then
 				for _, data in ipairs(structData.fields) do
 					local mname = data.pascalCaseName
-					if not mname then error(data.name) end
+					data.offset = data.offset + (singleInstanceCustomOffsets[structName] or 0)
+					local moduleOffset = checkOffset(data.offset, mname)
+					if data.offset > 0x1500000 then
+						printf("%q : member has too high address (0x%X). It could be dynamically assigned", mname, data.offset)
+						goto continue
+					end
 					-- TODO: deal with alts and duplicated names
-					if labelsByAddress[data.offset] then
-						printf("%q : label at address 0x%X already exists (text: %q)", mname, data.offset, labelsByAddress[data.offset].text)
+					if labelsByAddress[moduleOffset] then
+						printf("%q : label at address 0x%X already exists (text: %q)", format("%s::%s", singleName, mname),
+							data.offset, labelsByAddress[moduleOffset].text)
 						goto continue
 					end
 					local label = {
 						module = moduleStr,
-						address = format("0x%X", data.offset),
+						address = format("0x%X", moduleOffset),
 						manual = false, -- just in case
 					}
 					local text = format("%s.%s (%%s)", singleName, mname)
@@ -1295,7 +1330,7 @@ do
 						goto continue
 					end
 
-					labelsByAddress[data.offset] = label
+					labelsByAddress[moduleOffset] = label
 					label.text = text
 					::continue::
 				end
@@ -1303,11 +1338,12 @@ do
 			-- functions
 			for fname, data in pairs(structData.functionData) do
 				local def = data.def
-				local str = structName .. (def.cc == 1 and "::" or ".") .. fname
+				local moduleOffset = checkOffset(def.p, fname)
+				local str = (singleName or structName) .. (def.cc == 1 and "::" or ".") .. fname
 				if data.sig then
 					str = str .. format("(%s)", data.sig)
 				else
-					printf("%q : missing signature", fname)
+					printf("%q : missing signature", format("%s::%s", singleName or structName, fname))
 					local len = #def
 					local tab = {}
 					for i = 1, len do
@@ -1315,19 +1351,18 @@ do
 					end
 					str = str .. format("(%s)", table.concat(tab, ", "))
 				end
-				str = select(def.cc + 1, "stdcall", "thiscall", "fastcall", "fastcall+eax") .. str
-				local p = def.p
+				str = "__" .. select(def.cc + 1, "stdcall", "thiscall", "fastcall", "fastcall+eax") .. " " .. str
 				local label = {
 					module = moduleStr,
-					address = format("0x%X", p),
+					address = format("0x%X", moduleOffset),
 					manual = false, -- just in case
 					text = str
 				}
-				if labelsByAddress[p] then
-					printf("%q : label at address 0x%X already exists (text: %q)", fname, p, labelsByAddress[p].text)
+				if labelsByAddress[moduleOffset] then
+					printf("%q : label at address 0x%X already exists (text: %q)", fname, def.p, labelsByAddress[moduleOffset].text)
 					goto continueF
 				end
-				labelsByAddress[def.p] = label
+				labelsByAddress[moduleOffset] = label
 				::continueF::
 			end
 		end
