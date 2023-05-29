@@ -29,54 +29,12 @@ local _DEBUG = true
 	-- debug.getinfo also was useful in one case
 ]]
 
--- constants
-local skipBitsText = "SKIPBITS(%d);"
-local skipBytesText = "SKIP(%d);"
-local INDENT_CHARS = "\t"
+-- generic constants
+
 local types = mem.structs.types
-local namespaceStr = "mm" .. _G.offsets.MMVersion .. "::"
-local commonTypeNamesToCpp = 
-{
-	u1 = "uint8_t",
-	u2 = "uint16_t",
-	u4 = "uint32_t",
-	u8 = "uint64_t",
-	i1 = "int8_t",
-	i2 = "int16_t",
-	i4 = "int32_t",
-	i8 = "int64_t",
-	r4 = "float",
-	r8 = "double",
-	r10 = "long double",
-	b1 = "bool",
-}
-local extra = -- extra fields in structs
-{
-	Player =
-	{
-		{games = {7, 8}, data = {offset = structs.o.Player.FireResistanceBase + 18, name = "LightResistanceBase", typeName = commonTypeNamesToCpp.i2, size = 2} },
-		{games = {7, 8}, data = {offset = structs.o.Player.FireResistanceBase + 20, name = "DarkResistanceBase", typeName = commonTypeNamesToCpp.i2, size = 2} },
-		{games = {7, 8}, data = {offset = structs.o.Player.FireResistanceBase + 22 + 18, name = "LightResistanceBonus", typeName = commonTypeNamesToCpp.i2, size = 2} },
-		{games = {7, 8}, data = {offset = structs.o.Player.FireResistanceBase + 22 + 20, name = "DarkResistanceBonus", typeName = commonTypeNamesToCpp.i2, size = 2} },
-	}
-}
-local globalReplacements = {class = "clas", ["if"] = "if_", ["else"] = "else_"}
-local convertToPointers = -- because updated during runtime etc.
-{
-	SpritesLod = {"SpritesSW"},
-	GameStructure = {"NPCDataTxt", "MonstersTxt", "CharacterPortraits", "TransportLocations", "NPCGroup", "NPCText", "TransTxt", "ShopTheftExpireTime",
-		"MapDoorSound", "GlobalEvtLines", "ItemsTxt", "NPC", "MixPotions", "ReagentSettings", "NPCNews", "MapFogChances",
-		"ShopItems", "GuildItems", "NPCTopic", "ShopSpecialItems", "AutonoteTxt", "MapStats", "Houses", "ClassNames", "HostileTxt",
-		"PlaceMonTxt", "AutonoteCategory", "QuestsTxt", "HousesExtra", "CharacterDollTypes", "HouseMovies", "NPCGreet", "TransportIndex",
-		"GuildNextRefill2", "ShopNextRefill", "ClassNames" -- from merge
-		, "PatchOptions" -- potentially relocated each run
-		, "CustomLods", "MonsterKinds", "TitleTrackOffset", "MissileSetup", "AwardsSort" -- MMExt
-	},
-	GameClasses = {"HPBase", "SPBase", "HPFactor", "SPFactor", "StartingStats", "Skills" -- Merge
-	, "SPStats"}, -- MMExt
-	GameClassKinds = {"StartingSkills"}, -- Merge
-	DialogLogic = {"List"} -- MMExt
-}
+
+local EditPChar_newindex, EditConstPChar_newindex = getmetatable(mem.EditPChar).__newindex, getmetatable(mem.EditConstPChar).__newindex
+
 local booleanHandlers = {
 	[getUpvalue(mem.structs.types.b1, "handler")] = 1,
 	[getUpvalue(mem.structs.types.b2, "handler")] = 2,
@@ -122,10 +80,6 @@ local function getCustomFieldSizes(structName)
 	mem.struct(structs.f[structName])
 	types.CustomType = oldMember
 	return fieldSizes
-end
-
-local function stripNamespaces(str)
-	return str:gsub(".-::", "")
 end
 
 function getStructureMembersInfoData(structName)
@@ -174,6 +128,75 @@ function getStructureMembersInfoData(structName)
 	return output, methods
 end
 
+local globalExcludes =
+{
+	Player = {"Attrs"}, -- attrs is from merge.
+	GameStructure = {"Dialogs"}, -- mmext
+	Item = {"ExtraData"}, -- my stuff for MAW mod
+}
+
+function getFunctionsData(class, infoData)
+	local data = {}
+	for mname, handler in pairs(class or {}) do
+		if type(handler) == "function" then
+			local def = getU(handler, "def")
+			if type(def) == "table" then
+				data[mname] = data[mname] or {}
+				data[mname] = {def = def, info = infoData[mname]}
+			end
+		end
+	end
+	return data
+end
+
+-- C++ definition generator constants
+local skipBitsText = "SKIPBITS(%d);"
+local skipBytesText = "SKIP(%d);"
+local INDENT_CHARS = "\t"
+local namespaceStr = "mm" .. _G.offsets.MMVersion .. "::"
+local commonTypeNamesToCpp = 
+{
+	u1 = "uint8_t",
+	u2 = "uint16_t",
+	u4 = "uint32_t",
+	u8 = "uint64_t",
+	i1 = "int8_t",
+	i2 = "int16_t",
+	i4 = "int32_t",
+	i8 = "int64_t",
+	r4 = "float",
+	r8 = "double",
+	r10 = "long double",
+	b1 = "bool",
+}
+local extra = -- extra fields in structs
+{
+	Player =
+	{
+		{games = {7, 8}, data = {offset = structs.o.Player.FireResistanceBase + 18, name = "LightResistanceBase", typeName = commonTypeNamesToCpp.i2, size = 2, dataType = types.i2} },
+		{games = {7, 8}, data = {offset = structs.o.Player.FireResistanceBase + 20, name = "DarkResistanceBase", typeName = commonTypeNamesToCpp.i2, size = 2, dataType = types.i2} },
+		{games = {7, 8}, data = {offset = structs.o.Player.FireResistanceBase + 22 + 18, name = "LightResistanceBonus", typeName = commonTypeNamesToCpp.i2, size = 2, dataType = types.i2} },
+		{games = {7, 8}, data = {offset = structs.o.Player.FireResistanceBase + 22 + 20, name = "DarkResistanceBonus", typeName = commonTypeNamesToCpp.i2, size = 2, dataType = types.i2} },
+	}
+}
+local globalReplacements = {class = "clas", ["if"] = "if_", ["else"] = "else_"}
+local convertToPointers = -- because updated during runtime etc.
+{
+	SpritesLod = {"SpritesSW"},
+	GameStructure = {"NPCDataTxt", "MonstersTxt", "CharacterPortraits", "TransportLocations", "NPCGroup", "NPCText", "TransTxt", "ShopTheftExpireTime",
+		"MapDoorSound", "GlobalEvtLines", "ItemsTxt", "NPC", "MixPotions", "ReagentSettings", "NPCNews", "MapFogChances",
+		"ShopItems", "GuildItems", "NPCTopic", "ShopSpecialItems", "AutonoteTxt", "MapStats", "Houses", "ClassNames", "HostileTxt",
+		"PlaceMonTxt", "AutonoteCategory", "QuestsTxt", "HousesExtra", "CharacterDollTypes", "HouseMovies", "NPCGreet", "TransportIndex",
+		"GuildNextRefill2", "ShopNextRefill", "ClassNames" -- from merge
+		, "PatchOptions" -- potentially relocated each run
+		, "CustomLods", "MonsterKinds", "TitleTrackOffset", "MissileSetup", "AwardsSort" -- MMExt
+	},
+	GameClasses = {"HPBase", "SPBase", "HPFactor", "SPFactor", "StartingStats", "Skills" -- Merge
+	, "SPStats"}, -- MMExt
+	GameClassKinds = {"StartingSkills"}, -- Merge
+	DialogLogic = {"List"} -- MMExt
+}
+
 -- decided to keep all three games' structures in one file, because I would have to include files for all games anyway
 local structureByFile =
 {
@@ -210,12 +233,9 @@ local structureByFile =
 	GameStructure = {"GameStructure"}
 }
 
-local globalExcludes =
-{
-	Player = {"Attrs"}, -- attrs is from merge.
-	GameStructure = {"Dialogs"}, -- mmext
-	Item = {"ExtraData"}, -- my stuff for MAW mod
-}
+local function stripNamespaces(str)
+	return str:gsub(".-::", "")
+end
 
 local function getStructFile(name)
 	for k, v in pairs(structureByFile) do
@@ -225,20 +245,6 @@ local function getStructFile(name)
 	end
 	printf("No file specified for name %q", name)
 	return "unknown"
-end
-
-function getFunctionsData(class, infoData)
-	local data = {}
-	for mname, handler in pairs(class or {}) do
-		if type(handler) == "function" then
-			local def = getU(handler, "def")
-			if type(def) == "table" then
-				data[mname] = data[mname] or {}
-				data[mname] = {def = def, info = infoData[mname]}
-			end
-		end
-	end
-	return data
 end
 
 -- helper functions
@@ -270,7 +276,6 @@ all possible attributes:
 - [added in processStruct] ptrValue - pointer with set value
 - [added in getGroup] padStart
 ]]
-local EditPChar_newindex, EditConstPChar_newindex = getmetatable(mem.EditPChar).__newindex, getmetatable(mem.EditConstPChar).__newindex
 local getMemberData
 function getMemberData(structName, memberName, member, offsets, members, class, rofields, customFieldSizes, inArray)
 	rofields = rofields or {}
@@ -600,8 +605,6 @@ end
 -- need to dummy forward declare to not miss recursive call when using "find references"
 local processGroup
 function processGroup(group, indentLevel, structName, namespaceStr, debugLines)
-	-- messing around
-	--setmetatable(getfenv(1), {__index = function(t, k) if not xxx then print(k); return rawget(t, k) end end})
 	indentLevel = indentLevel or 0
 	if #group == 1 then
 		local ret = processSingle(group[1], indentLevel, structName, namespaceStr, debugLines)
@@ -823,7 +826,7 @@ function processStruct(args)
 	local staticPtrDeclarationCode, staticConvertToPointerDeclarationCode, staticDefinitionCode = {}, {}, {}
 	local offsets, members = args.offsets or structs.o[args.name], args.members or structs.m[args.name]
 	local class, rofields = args.class or structs[args.name], args.rofields or {}
-	local size = not args.union and structs[args.name]["?size"] or 0
+	local size = not args.union and class["?size"] or 0
 	
 	-- after initialization
 	-- forward declaration only if structure has 0 size or no members (yes, those exists)
@@ -838,7 +841,7 @@ function processStruct(args)
 			processedStructs = args.processedStructs,
 			fields = {},
 			functionData = {},
-			methods = {}
+			methods = {}, class = {}
 		}
 		args.processedStructs[args.name] = data
 		table.insert(tget(args, "structOrder"), 1, args.name)
@@ -1064,7 +1067,7 @@ function processStruct(args)
 		if not args.processedStructs[args.name] then -- unions are inline
 			args.processedStructs[args.name] = setmetatable({code = code, dependencies = structureDependencies,
 				size = size, staticDefinitionCode = staticDefinitionCode, groups = groups, fields = fields, memberInfoData = infoData,
-				functionData = functionData, methods = methods},
+				functionData = functionData, methods = methods, class = class},
 				{__index = invalidIndex}
 			)
 		end
@@ -1079,7 +1082,7 @@ function processStruct(args)
 	end
 	return setmetatable(args.processedStructs[args.name] or {code = code, dependencies = structureDependencies, size = size,
 		processedStructs = args.processedStructs, groups = groups, fields = fields, memberInfoData = infoData,
-		functionData = functionData, methods = methods}, {__index = invalidIndex})
+		functionData = functionData, methods = methods, class = class}, {__index = invalidIndex})
 end
 
 local function processAll(args)
@@ -1352,8 +1355,9 @@ do
 			local done = {} -- some functions have two names and only one has extra info
 			-- store done here and if old doesn't have sig or has less arguments, overwrite
 
-			-- TODO: because "define.class.AddHitPoints" doesn't use "method{}" call, it's not considered a method and thus
+			-- obsolete TODO: because "define.class.AddHitPoints" doesn't use "method{}" call, it's not considered a method and thus
 			-- overwrites "AddHP()" with two argument parentheses
+			-- fixed by adding condition to not replace label if I don't have info data and other one has
 			for fname, data in pairs(structData.functionData) do
 				local def = data.def
 				local isMethod = structData.methods and structData.methods[fname]
@@ -1380,7 +1384,7 @@ do
 				}
 				local otherDone = done[moduleOffset]
 				if labelsByAddress[moduleOffset] then
-					if otherDone and (
+					if otherDone and not (otherDone.info and not data.info) and ( -- I don't have info, other does
 						otherDone.info == false -- explicitly set to false to disable (misspelling etc.)
 						or (not otherDone.info and data.info) -- I have info, other doesn't
 						or ((not otherDone.info or not otherDone.info.Sig) and data.info and data.info.Sig) -- I have sig, other doesn't
@@ -1497,4 +1501,10 @@ end
 
 local constsToProcess = {"Damage"}
 function writeConsts()
-	for _, const in ipairs(constsToProcess
+	for _, const in ipairs(constsToProcess) do
+		processConst(const)
+	end
+	io.save("constHeader.h", table.concat(header, "\n"))
+	io.save("constSource.cpp", table.concat(source, "\n"))
+	header, source = {}, {}
+end
