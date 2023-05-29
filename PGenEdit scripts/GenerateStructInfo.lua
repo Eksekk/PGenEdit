@@ -130,14 +130,15 @@ end
 
 function getStructureMembersInfoData(structName)
 	local oldStru = structs.f[structName]
-	local output = {}
+	local output, methods = {}, {}
 	structs.f[structName] = function(define, ...)
 		local oldInfo, oldFunc, oldMethod = types.Info, types.func, types.method
 		local prevDefined
 		function types.Info(t, ...)
 			local name = define.LastDefinedMemberName or "DefaultIndex"
 			if t ~= nil and (type(t) ~= "table" or not t.new) -- not added by mmext
-				and prevDefined ~= name then -- don't overwrite old data, for example if define.f.Something is defined, because it doesn't change "LastDefinedMemberName"
+				and prevDefined ~= name -- don't overwrite old data, for example if define.f.Something is defined, because it doesn't change "LastDefinedMemberName"
+			then
 				prevDefined = name
 				output[name] = t
 			end
@@ -149,15 +150,28 @@ function getStructureMembersInfoData(structName)
 		end
 		function types.method(def, ...)
 			define.LastDefinedMemberName = def.name
+			methods[def.name] = true
 			return oldMethod(def, ...)
+		end
+		-- skip info calls after "define.f.functionName" or "define.m.functionName"
+		local metaF, metaM = getmetatable(types.f), getmetatable(types.m)
+		local oldF, oldM = metaF.__newindex, metaM.__newindex
+		function metaF.__newindex(...)
+			prevDefined = define.LastDefinedMemberName 
+			return oldF(...)
+		end
+		function metaM.__newindex(...)
+			prevDefined = define.LastDefinedMemberName
+			return oldM(...)
 		end
 		local ret = {oldStru(define, ...)}
 		types.Info, types.func, types.method = oldInfo, oldFunc, oldMethod
+		metaF.__newindex, metaM.__newindex = oldF, oldM
 		return unpack(ret)
 	end
 	mem.struct(structs.f[structName])
 	structs.f[structName] = oldStru
-	return output
+	return output, methods
 end
 
 -- decided to keep all three games' structures in one file, because I would have to include files for all games anyway
@@ -220,12 +234,7 @@ function getFunctionsData(class, infoData)
 			local def = getU(handler, "def")
 			if type(def) == "table" then
 				data[mname] = data[mname] or {}
-				data[mname] = {def = def}
-			end
-			local info = infoData[mname]
-			if type(info) == "table" and info.Sig then
-				data[mname] = data[mname] or {}
-				data[mname].sig = info.Sig
+				data[mname] = {def = def, info = infoData[mname]}
 			end
 		end
 	end
@@ -789,7 +798,7 @@ function returns table with definition lines, array of names of structures it de
 ]]
 local checkInvalidProcessedStructIndex
 do
-	local expected = {"code", "dependencies", "size", "processedStructs", "staticDefinitionCode", "fields", "groups", "memberInfoData", "functionData"}
+	local expected = {"code", "dependencies", "size", "processedStructs", "staticDefinitionCode", "fields", "groups", "memberInfoData", "functionData", "methods"}
 	function checkInvalidProcessedStructIndex(tbl, key)
 		if table.find(expected, key) then return end
 		error(string.format("Unexpected struct table index %q", key), 2)
@@ -828,7 +837,8 @@ function processStruct(args)
 			size = 0,
 			processedStructs = args.processedStructs,
 			fields = {},
-			functionData = {}
+			functionData = {},
+			methods = {}
 		}
 		args.processedStructs[args.name] = data
 		table.insert(tget(args, "structOrder"), 1, args.name)
@@ -838,7 +848,10 @@ function processStruct(args)
 	addExtraFields(args.name, fields)
 
 	-- get Info{} data
-	local infoData = not args.union and getStructureMembersInfoData(args.name)
+	local infoData, methods
+	if not args.union then
+		infoData, methods = getStructureMembersInfoData(args.name)
+	end
 	-- get function data
 	local functionData = not args.union and getFunctionsData(class, infoData)
 
@@ -1051,7 +1064,7 @@ function processStruct(args)
 		if not args.processedStructs[args.name] then -- unions are inline
 			args.processedStructs[args.name] = setmetatable({code = code, dependencies = structureDependencies,
 				size = size, staticDefinitionCode = staticDefinitionCode, groups = groups, fields = fields, memberInfoData = infoData,
-				functionData = functionData},
+				functionData = functionData, methods = methods},
 				{__index = invalidIndex}
 			)
 		end
@@ -1066,7 +1079,7 @@ function processStruct(args)
 	end
 	return setmetatable(args.processedStructs[args.name] or {code = code, dependencies = structureDependencies, size = size,
 		processedStructs = args.processedStructs, groups = groups, fields = fields, memberInfoData = infoData,
-		functionData = functionData}, {__index = invalidIndex})
+		functionData = functionData, methods = methods}, {__index = invalidIndex})
 end
 
 local function processAll(args)
@@ -1336,18 +1349,22 @@ do
 				end
 			end
 			-- functions
+			local done = {} -- some functions have two names and only one has extra info
+			-- store done here and if old doesn't have sig or has less arguments, overwrite
 			for fname, data in pairs(structData.functionData) do
 				local def = data.def
+				local isMethod = structData.methods and structData.methods[fname]
 				local moduleOffset = checkOffset(def.p, fname)
-				local str = (singleName or structName) .. (def.cc == 1 and "::" or ".") .. fname
-				if data.sig then
-					str = str .. format("(%s)", data.sig)
+				local str = (singleName or structName) .. (isMethod and "::" or ".") .. fname
+				local argCount = #def - (isMethod and 1 or 0)
+				local sig = data.info and data.info.Sig
+				if sig then
+					str = str .. format("(%s)", sig)
 				else
 					printf("%q : missing signature", format("%s::%s", singleName or structName, fname))
-					local len = #def
 					local tab = {}
-					for i = 1, len do
-						tab[#tab] = "?"
+					for i = 1, argCount do
+						tab[#tab + 1] = "?"
 					end
 					str = str .. format("(%s)", table.concat(tab, ", "))
 				end
@@ -1358,16 +1375,31 @@ do
 					manual = false, -- just in case
 					text = str
 				}
+				local otherDone = done[moduleOffset]
 				if labelsByAddress[moduleOffset] then
-					printf("%q : label at address 0x%X already exists (text: %q)", fname, def.p, labelsByAddress[moduleOffset].text)
-					goto continueF
+					if otherDone and (
+						otherDone.info == false -- explicitly set to false to disable (misspelling etc.)
+						or (not otherDone.info and data.info) -- I have info, other doesn't
+						or ((not otherDone.info or not otherDone.info.Sig) and data.info and data.info.Sig) -- I have sig, other doesn't
+						or (argCount > otherDone.arg)) -- I have more arguments
+					then
+						printf("Replacing %q (sig: %s, arg: %d) with %q (sig: %s, arg: %d)",
+							otherDone.name, otherDone.info and otherDone.info.Sig and true or false, otherDone.arg,
+							fname, data.info and data.info.Sig and true or false, argCount
+						)
+					else
+						printf("%q : label at address 0x%X already exists (text: %q)", format("%s::%s", singleName or structName, fname),
+							def.p, labelsByAddress[moduleOffset].text)
+						goto continueF
+					end
 				end
+				done[moduleOffset] = {info = data.info, arg = argCount, name = fname}
 				labelsByAddress[moduleOffset] = label
 				::continueF::
 			end
 		end
 		local labels = {}
-		for k, v in pairs(labelsByAddress) do
+		for k, v in sortpairs(labelsByAddress) do
 			labels[#labels + 1] = v
 		end
 		database.labels = labels
