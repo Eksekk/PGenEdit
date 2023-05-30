@@ -343,6 +343,7 @@ function getMemberData(structName, memberName, member, offsets, members, class, 
 			--data.innerType.size = up.size
 		end
 		if data.innerType.bit then
+			data.originalBitCount = data.count
 			local bytes = data.count:div(8)
 			data.count = bytes
 			addComment("array of " .. (data.innerType.anti and "abits (real index = 7 - usual)" or "bits"))
@@ -1295,7 +1296,8 @@ do
 	local commonTypes = {[types.u1] = "u1", [types.u2] = "u2", [types.u4] = "u4", [types.u8] = "u8", [types.i1] = "i1", [types.i2] = "i2", [types.i4] = "i4", [types.i8] = "i8", [types.r4] = "r4", [types.r8] = "r8", [types.r10] = "r10", [types.pchar] = "PChar", [types.b1] = "b1", [types.b2] = "b2", [types.b4] = "b4", [types.EditPChar] = "EditPChar", [types.EditConstPChar] = "EditConstPChar"}
 	local format = string.format
 	local json = require"json"
-	local function checkOffset(offset, structName, mname)
+
+	local function getModuleOffset(offset, mname)
 		local offset2 = offset - 0x400000
 		if offset2 < 0 then
 			printf("%q : offset is less than 0x400000", mname)
@@ -1303,6 +1305,22 @@ do
 		end
 		return offset2
 	end
+
+	local function getArrayStr(arrays)
+		local str = ""
+		for i, arr in ipairs(arrays) do
+			if arr.ptr then
+				str = str .. "->"
+			end
+			if arr.count == 0 then
+				str = str .. "[]"
+			else
+				str = str .. format("[%d]", arr.originalBitCount or arr.count)
+			end
+		end
+		return str
+	end
+
 	function processDebuggerDatabase(removeOld) -- remove old for testing
 		local database = json.decode(io.load(format("mm%d.exe.dd32", Game.Version)))
 		local labelsByAddress = {}
@@ -1317,16 +1335,21 @@ do
 			local singleName = singleInstanceStructs[structName]
 			if singleName then
 				for _, data in ipairs(structData.fields) do
+					local arrays, comments, baseData = getArraysCommentsAndBaseData(data)
 					local mname = data.pascalCaseName
+					if baseData.struct and singleInstanceStructs[baseData.typeName] then
+						printf("%s.%s - skipping, single instance struct as member", singleName, mname)
+						goto continue
+					end
 					data.offset = data.offset + (singleInstanceCustomOffsets[structName] or 0)
-					local moduleOffset = checkOffset(data.offset, mname)
+					local moduleOffset = getModuleOffset(data.offset, mname)
 					if data.offset > 0x1500000 then
-						printf("%q : member has too high address (0x%X). It could be dynamically assigned", mname, data.offset)
+						printf("%q : member has too high address (0x%X). It could be dynamically assigned. Skipping", format("%s::%s", singleName, mname), data.offset)
 						goto continue
 					end
 					-- TODO: deal with alts and duplicated names
 					if labelsByAddress[moduleOffset] then
-						printf("%q : label at address 0x%X already exists (text: %q)", format("%s::%s", singleName, mname),
+						printf("%q : label at address 0x%X already exists (text: %q). Skipping", format("%s::%s", singleName, mname),
 							data.offset, labelsByAddress[moduleOffset].text)
 						goto continue
 					end
@@ -1336,11 +1359,16 @@ do
 						manual = false, -- just in case
 					}
 					local text = format("%s.%s (%%s)", singleName, mname)
-					local commonStr = commonTypes[data.dataType]
+					local arrayStr = getArrayStr(arrays)
+					local commonStr = commonTypes[baseData.dataType]
 					if commonStr then
-						text = text:format(commonStr)
-					elseif data.dataType == types.string then
-						text = text:format(format("string[%d]", data.count))
+						text = text:format(commonStr .. arrayStr)
+					elseif baseData.dataType == types.string then
+						text = text:format(format("string%s[%d]", arrayStr, baseData.count))
+					elseif baseData.struct then
+						text = text:format(format("%s%s", baseData.typeName, arrayStr))
+					elseif baseData.bit and not baseData.bitValue then -- only bit arrays, because x64dbg doesn't support plain bits
+						text = text:format((baseData.anti and "abit" or "bit") .. arrayStr)
 					else
 						printf("Skipping member %s.%s - unknown type", singleName, mname)
 						goto continue
@@ -1350,6 +1378,10 @@ do
 					label.text = text
 					::continue::
 				end
+			else
+				-- generate x64dbg struct json
+				local defs = {}
+
 			end
 			-- functions
 			local done = {} -- some functions have two names and only one has extra info
@@ -1361,7 +1393,11 @@ do
 			for fname, data in pairs(structData.functionData) do
 				local def = data.def
 				local isMethod = structData.methods and structData.methods[fname]
-				local moduleOffset = checkOffset(def.p, fname)
+				-- exception for party struct
+				if structName == "GameParty" and structData.class.ptr and def[1] == structData.class.ptr then
+					isMethod = true
+				end
+				local moduleOffset = getModuleOffset(def.p, fname)
 				local str = (singleName or structName) .. (isMethod and "::" or ".") .. fname
 				local argCount = math.max(#def, def.must) - (isMethod and 1 or 0)
 				local sig = data.info and data.info.Sig
@@ -1384,7 +1420,7 @@ do
 				}
 				local otherDone = done[moduleOffset]
 				if labelsByAddress[moduleOffset] then
-					if otherDone and not (otherDone.info and not data.info) and ( -- I don't have info, other does
+					if otherDone and not (otherDone.info and not data.info) and ( -- [I don't have info, other does] -> skip
 						otherDone.info == false -- explicitly set to false to disable (misspelling etc.)
 						or (not otherDone.info and data.info) -- I have info, other doesn't
 						or ((not otherDone.info or not otherDone.info.Sig) and data.info and data.info.Sig) -- I have sig, other doesn't
@@ -1394,6 +1430,7 @@ do
 							otherDone.name, otherDone.info and otherDone.info.Sig and true or false, otherDone.arg,
 							fname, data.info and data.info.Sig and true or false, argCount
 						)
+
 					else
 						printf("%q : label at address 0x%X already exists (text: %q)", format("%s::%s", singleName or structName, fname),
 							def.p, labelsByAddress[moduleOffset].text)
@@ -1410,7 +1447,7 @@ do
 			labels[#labels + 1] = v
 		end
 		database.labels = labels
-		io.save(format("processed mm%d.exe.dd32", Game.Version), json.encode(database))
+		io.save(format("processed %s.dd32", moduleStr), json.encode(database))
 	end
 end
 
