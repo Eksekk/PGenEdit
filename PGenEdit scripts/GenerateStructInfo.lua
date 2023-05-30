@@ -1273,34 +1273,25 @@ end
 function pr3(isLast)
 	printStruct("GameStructure", nil, nil, nil, false, isLast)
 end
---[[
-	if mmver > 6 then
-		define[0].struct(structs.Arcomage)  'Arcomage'
-	end
-	if mmver == 7 then
-		define[0].struct(structs.GameRaces)  'Races'
-	end
-	define
-	[0].struct(structs.GameClasses)  'Classes'
-	[0].struct(structs.GameClassKinds)  'ClassKinds'
-	[0].struct(structs.GameParty)  'Party'
-	[0].struct(structs.GameMap)  'Map'
-	[mmv(0x6A6110, 0, 0)].struct(structs.GameMouse)  'Mouse'
-	[0].struct(structs.Weather)  'Weather'
-	[mmv(0x971068, 0xDF1A68, 0xEC1980)].struct(structs.GameScreen)  'Screen'
-]]
+
+-- adding most information from lua to x64dbg database
+
 do
+	-- these are structs which only exist one at a time, at fixed offset, so their fields can be directly labelled
 	local singleInstanceStructs = {GameStructure = "Game", GameParty = "Party", GameMap = "Map", GameMouse = "Mouse", GameScreen = "Screen", Arcomage = "Arcomage",
 		GameRaces = "Races", GameClasses = "Classes", GameClassKinds = "ClassKinds", Weather = "Weather"}
+	-- some are created at offset other than 0
 	local singleInstanceCustomOffsets = {GameMouse = Mouse["?ptr"], GameScreen = Screen["?ptr"]}
-	local commonTypes = {[types.u1] = "u1", [types.u2] = "u2", [types.u4] = "u4", [types.u8] = "u8", [types.i1] = "i1", [types.i2] = "i2", [types.i4] = "i4", [types.i8] = "i8", [types.r4] = "r4", [types.r8] = "r8", [types.r10] = "r10", [types.pchar] = "PChar", [types.b1] = "b1", [types.b2] = "b2", [types.b4] = "b4", [types.EditPChar] = "EditPChar", [types.EditConstPChar] = "EditConstPChar"}
+	local commonTypes = {[types.u1] = "u1", [types.u2] = "u2", [types.u4] = "u4", [types.u8] = "u8", [types.i1] = "i1", [types.i2] = "i2", [types.i4] = "i4",
+		[types.i8] = "i8", [types.r4] = "r4", [types.r8] = "r8", [types.r10] = "r10", [types.pchar] = "PChar", [types.b1] = "b1", [types.b2] = "b2",
+		[types.b4] = "b4", [types.EditPChar] = "EditPChar", [types.EditConstPChar] = "EditConstPChar"}
 	local format = string.format
 	local json = require"json"
 
-	local function getModuleOffset(offset, mname)
+	local function getModuleOffset(offset, structName, mname)
 		local offset2 = offset - 0x400000
 		if offset2 < 0 then
-			printf("%q : offset is less than 0x400000", mname)
+			printf("%q : offset is less than 0x400000", format("%s::%s", structName, mname))
 			return offset
 		end
 		return offset2
@@ -1308,9 +1299,15 @@ do
 
 	local function getArrayStr(arrays)
 		local str = ""
+		local hasPtr
 		for i, arr in ipairs(arrays) do
 			if arr.ptr then
-				str = str .. "->"
+				if hasPtr then
+					error("Two pointers in array series", 2)
+				elseif i ~= 1 then
+					error("Pointer to array not at first level", 2)
+				end
+				hasPtr = true
 			end
 			if arr.count == 0 then
 				str = str .. "[]"
@@ -1318,7 +1315,11 @@ do
 				str = str .. format("[%d]", arr.originalBitCount or arr.count)
 			end
 		end
-		return str
+		return str, hasPtr
+	end
+
+	local function structureMemberStr(structName, mname, dot)
+		return format(dot and "%s.%s" or "%s::%s", structName, mname)
 	end
 
 	function processDebuggerDatabase(removeOld) -- remove old for testing
@@ -1338,18 +1339,18 @@ do
 					local arrays, comments, baseData = getArraysCommentsAndBaseData(data)
 					local mname = data.pascalCaseName
 					if baseData.struct and singleInstanceStructs[baseData.typeName] then
-						printf("%s.%s - skipping, single instance struct as member", singleName, mname)
+						printf("%q : skipping, single instance struct as member", structureMemberStr(singleName, mname, true))
 						goto continue
 					end
 					data.offset = data.offset + (singleInstanceCustomOffsets[structName] or 0)
-					local moduleOffset = getModuleOffset(data.offset, mname)
+					local moduleOffset = getModuleOffset(data.offset, singleName, mname)
 					if data.offset > 0x1500000 then
-						printf("%q : member has too high address (0x%X). It could be dynamically assigned. Skipping", format("%s::%s", singleName, mname), data.offset)
+						printf("%q : member has too high address (0x%X). It could be dynamically assigned. Skipping", structureMemberStr(singleName, mname), data.offset)
 						goto continue
 					end
 					-- TODO: deal with alts and duplicated names
 					if labelsByAddress[moduleOffset] then
-						printf("%q : label at address 0x%X already exists (text: %q). Skipping", format("%s::%s", singleName, mname),
+						printf("%q : label at address 0x%X already exists (text: %q). Skipping", structureMemberStr(singleName, mname),
 							data.offset, labelsByAddress[moduleOffset].text)
 						goto continue
 					end
@@ -1359,21 +1360,21 @@ do
 						manual = false, -- just in case
 					}
 					local text = format("%s.%s (%%s)", singleName, mname)
-					local arrayStr = getArrayStr(arrays)
+					local arrayStr, hasPtr = getArrayStr(arrays)
+					local ptrString = hasPtr and "->" or ""
 					local commonStr = commonTypes[baseData.dataType]
 					if commonStr then
-						text = text:format(commonStr .. arrayStr)
+						text = text:format(ptrString .. commonStr .. arrayStr)
 					elseif baseData.dataType == types.string then
-						text = text:format(format("string%s[%d]", arrayStr, baseData.count))
+						text = text:format(format("%sstring%s[%d]", ptrString, arrayStr, baseData.count))
 					elseif baseData.struct then
-						text = text:format(format("%s%s", baseData.typeName, arrayStr))
+						text = text:format(format("%s%s%s", ptrString, baseData.typeName, arrayStr))
 					elseif baseData.bit and not baseData.bitValue then -- only bit arrays, because x64dbg doesn't support plain bits
-						text = text:format((baseData.anti and "abit" or "bit") .. arrayStr)
+						text = text:format(ptrString .. (baseData.anti and "abit" or "bit") .. arrayStr)
 					else
-						printf("Skipping member %s.%s - unknown type", singleName, mname)
+						printf("%q : unknown type, skipping", structureMemberStr(singleName, mname))
 						goto continue
 					end
-
 					labelsByAddress[moduleOffset] = label
 					label.text = text
 					::continue::
@@ -1381,7 +1382,8 @@ do
 			else
 				-- generate x64dbg struct json
 				local defs = {}
-
+				
+				io.save(moduleStr .. " json type definitions.json", json.encode(defs))
 			end
 			-- functions
 			local done = {} -- some functions have two names and only one has extra info
@@ -1397,14 +1399,14 @@ do
 				if structName == "GameParty" and structData.class.ptr and def[1] == structData.class.ptr then
 					isMethod = true
 				end
-				local moduleOffset = getModuleOffset(def.p, fname)
+				local moduleOffset = getModuleOffset(def.p, singleName or structName, fname)
 				local str = (singleName or structName) .. (isMethod and "::" or ".") .. fname
 				local argCount = math.max(#def, def.must) - (isMethod and 1 or 0)
 				local sig = data.info and data.info.Sig
 				if sig then
 					str = str .. format("(%s)", sig)
 				else
-					printf("%q : missing signature", format("%s::%s", singleName or structName, fname))
+					printf("%q : missing signature", format("%s::%s()", singleName or structName, fname))
 					local tab = {}
 					for i = 1, argCount do
 						tab[#tab + 1] = "?"
@@ -1430,7 +1432,6 @@ do
 							otherDone.name, otherDone.info and otherDone.info.Sig and true or false, otherDone.arg,
 							fname, data.info and data.info.Sig and true or false, argCount
 						)
-
 					else
 						printf("%q : label at address 0x%X already exists (text: %q)", format("%s::%s", singleName or structName, fname),
 							def.p, labelsByAddress[moduleOffset].text)
