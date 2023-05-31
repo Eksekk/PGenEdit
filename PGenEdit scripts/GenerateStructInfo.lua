@@ -512,7 +512,7 @@ local function getArraysCommentsAndBaseData(data)
 	return arrays, comments, data
 end
 
-local function processSingle(data, indentLevel, structName, namespaceStr, debugLines, memberGroup)
+local function processSingle(data, indentLevel, structName, namespaceStr, debugLines, layout)
 	indentLevel = indentLevel or 0
 	local indentOuter, indentInner = string.rep(INDENT_CHARS, indentLevel), string.rep(INDENT_CHARS, indentLevel + 1)
 	local dataCopy = data
@@ -602,17 +602,41 @@ local function processSingle(data, indentLevel, structName, namespaceStr, debugL
 	return s
 end
 
+--[[
+	{type = "member", value = {name = "X"}},
+	{type = "padding", value = 5},
+	{type = "member", value = {name = "StableZ"}},
+	{type = "union", value = {
+		{type = "member", value = {size = 6}},
+		{type = "struct", value = {
+			{type = "padding", value = 4},
+			{type = "member", value = {size = 1}},
+			{type = "member", value = {size = 1}},
+		}
+	},
+	{type = "struct", value = {
+		{type = "member", value = {name = "X"}},
+		{type = "member", value = {name = "Y"}},
+		{type = "member", value = {name = "Z"}},
+	},
+	{type = "padding", value = 20},
+	{type = "member", value = {name = "LookAngle", dataType = types.i4}},
+]]
+
 -- using visual studio code with "lua booster" extension
 -- need to dummy forward declare to not miss recursive call when using "find references"
 local processGroup
 function processGroup(group, indentLevel, structName, namespaceStr, debugLines)
 	indentLevel = indentLevel or 0
+	group.layout = group.layout or {}
 	if #group == 1 then
-		local ret = processSingle(group[1], indentLevel, structName, namespaceStr, debugLines, {})
+		local ret = processSingle(group[1], indentLevel, structName, namespaceStr, debugLines, group.layout)
 		return type(ret) == "table" and ret or {ret}
 	end
 	local indentOuter, indentInner = string.rep(INDENT_CHARS, indentLevel), string.rep(INDENT_CHARS, indentLevel + 1)
 	-- do union wrap
+	local union = {type = "union"}
+	table.insert(group.layout, union)
 	local memberGroup = tget(group, "layout")
 	local code = {
 		indentOuter .. "union",
@@ -641,21 +665,23 @@ function processGroup(group, indentLevel, structName, namespaceStr, debugLines)
 			-- for now taken care of by processSingle
 			local padding = member.innerType and member.innerType.padding
 			local old = memberGroup
+			local layout = union
 			if padding and not skipFirst then
 				code[#code + 1] = indentInner .. "struct"
 				code[#code + 1] = indentInner .. "{"
 				indentLevel = indentLevel + 1
 				code[#code + 1] = string.rep(INDENT_CHARS, indentLevel + 1) .. skipBytesText:format(padding)
-				memberGroup = tget(memberGroup, "struct")
-				table.insert(memberGroup, padding)
+				local stru = {type = "struct", value = {}}
+				table.insert(layout, stru)
+				table.insert(stru, {type = "padding", value = padding})
+				layout = stru
 			end
-			code[#code + 1] = processSingle(member, indentLevel + 1, structName, namespaceStr, debugLines, memberGroup)
+			code[#code + 1] = processSingle(member, indentLevel + 1, structName, namespaceStr, debugLines, union)
 			table.insert(memberGroup, member)
 			if padding and not skipFirst then
 				indentLevel = indentLevel - 1
 				code[#code + 1] = indentInner .. "};"
 			end
-			memberGroup = old
 			if padding then
 				skipFirst = not skipFirst
 			end
