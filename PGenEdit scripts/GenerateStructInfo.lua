@@ -459,7 +459,7 @@ function getMemberData(structName, memberName, member, offsets, members, class, 
 		data.dataType = isPtr and types.pstruct or types.struct
 	else
 		data.array = true
-		data.innerType = {size = 1, typeName = commonTypeNamesToCpp.u1, name = memberName}
+		data.innerType = {size = 1, typeName = commonTypeNamesToCpp.u1, name = memberName, dataType = types.u1, unknownType = true}
 		data.count = customFieldSizes[memberName] or error("Unknown custom type name: " .. memberName, 2)
 		if data.count == 0 then
 			--data.count = 1
@@ -1298,10 +1298,14 @@ do
 	local format = string.format
 	local json = require"json"
 
+	local function structureMemberStr(structName, mname, dot)
+		return format(dot and "%s.%s" or "%s::%s", structName, mname)
+	end
+
 	local function getModuleOffset(offset, structName, mname)
 		local offset2 = offset - 0x400000
 		if offset2 < 0 then
-			printf("%q : offset is less than 0x400000", format("%s::%s", structName, mname))
+			printf("%q : offset is less than 0x400000", structureMemberStr(structName, mname))
 			return offset
 		end
 		return offset2
@@ -1326,10 +1330,6 @@ do
 			end
 		end
 		return str, hasPtr
-	end
-
-	local function structureMemberStr(structName, mname, dot)
-		return format(dot and "%s.%s" or "%s::%s", structName, mname)
 	end
 
 	--[[
@@ -1430,7 +1430,9 @@ do
 					local arrayStr, hasPtr = getArrayStr(arrays)
 					local ptrString = hasPtr and "->" or ""
 					local commonStr = commonTypes[baseData.dataType]
-					if commonStr then
+					if baseData.unknownType and arrays[1].size > 0 then -- if custom type, innermost size is always nonzero, real size is array element count
+						printf("%q : unknown type member labelled because of nonzero size", structureMemberStr(singleName, mname))
+					elseif commonStr and not baseData.unknownType then
 						text = text:format(ptrString .. commonStr .. arrayStr)
 					elseif baseData.dataType == types.string then
 						text = text:format(format("%sstring%s", ptrString, arrayStr, baseData.count))
@@ -1513,7 +1515,7 @@ do
 				if sig then
 					str = str .. format("(%s)", sig)
 				else
-					printf("%q : missing signature", format("%s::%s()", singleName or structName, fname))
+					--printf("%q : missing signature", format("%s::%s()", singleName or structName, fname))
 					local tab = {}
 					for i = 1, argCount do
 						tab[#tab + 1] = "?"
