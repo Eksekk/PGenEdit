@@ -364,7 +364,7 @@ function getMemberData(structName, memberName, member, offsets, members, class, 
 		data.count = stringLen
 		data.low = 0
 		data.size = data.count
-		data.innerType = {typeName = "char", name = memberName, offset = 0, size = 1}
+		data.innerType = {typeName = "char", name = memberName, offset = 0, size = 1, dataType = types.string}
 		addComment("fixed size string, " .. (up.NoZero and "doesn't require null terminator" or "requires null terminator"))
 		data.dataType = types.string
 	elseif bitValue then
@@ -512,7 +512,7 @@ local function getArraysCommentsAndBaseData(data)
 	return arrays, comments, data
 end
 
-local function processSingle(data, indentLevel, structName, namespaceStr, debugLines)
+local function processSingle(data, indentLevel, structName, namespaceStr, debugLines, memberGroup)
 	indentLevel = indentLevel or 0
 	local indentOuter, indentInner = string.rep(INDENT_CHARS, indentLevel), string.rep(INDENT_CHARS, indentLevel + 1)
 	local dataCopy = data
@@ -608,11 +608,12 @@ local processGroup
 function processGroup(group, indentLevel, structName, namespaceStr, debugLines)
 	indentLevel = indentLevel or 0
 	if #group == 1 then
-		local ret = processSingle(group[1], indentLevel, structName, namespaceStr, debugLines)
+		local ret = processSingle(group[1], indentLevel, structName, namespaceStr, debugLines, {})
 		return type(ret) == "table" and ret or {ret}
 	end
-	local indentOuter, indentInner = string.rep(INDENT_CHARS, indentLevel), string.rep(INDENT_CHARS, indentLevel + 1) -- 3, 4 for union
+	local indentOuter, indentInner = string.rep(INDENT_CHARS, indentLevel), string.rep(INDENT_CHARS, indentLevel + 1)
 	-- do union wrap
+	local memberGroup = tget(group, "layout")
 	local code = {
 		indentOuter .. "union",
 		indentOuter .. "{"
@@ -639,17 +640,22 @@ function processGroup(group, indentLevel, structName, namespaceStr, debugLines)
 		else
 			-- for now taken care of by processSingle
 			local padding = member.innerType and member.innerType.padding
+			local old = memberGroup
 			if padding and not skipFirst then
 				code[#code + 1] = indentInner .. "struct"
 				code[#code + 1] = indentInner .. "{"
 				indentLevel = indentLevel + 1
 				code[#code + 1] = string.rep(INDENT_CHARS, indentLevel + 1) .. skipBytesText:format(padding)
+				memberGroup = tget(memberGroup, "struct")
+				table.insert(memberGroup, padding)
 			end
-			code[#code + 1] = processSingle(member, indentLevel + 1, structName, namespaceStr, debugLines)
+			code[#code + 1] = processSingle(member, indentLevel + 1, structName, namespaceStr, debugLines, memberGroup)
+			table.insert(memberGroup, member)
 			if padding and not skipFirst then
 				indentLevel = indentLevel - 1
 				code[#code + 1] = indentInner .. "};"
 			end
+			memberGroup = old
 			if padding then
 				skipFirst = not skipFirst
 			end
@@ -662,6 +668,7 @@ function processGroup(group, indentLevel, structName, namespaceStr, debugLines)
 		code[#code + 1] = indentInner .. "struct"
 		code[#code + 1] = indentInner .. "{"
 		local indentInnerInner = string.rep(INDENT_CHARS, indentLevel + 2)
+		memberGroup = tget(memberGroup, "struct")
 		local lastOffset = group[1].offset
 		local i = 1
 		while true do
@@ -708,9 +715,12 @@ function processGroup(group, indentLevel, structName, namespaceStr, debugLines)
 				doBits()
 			end
 			if #members == 1 then
-				code[#code + 1] = processSingle(currentField, indentLevel + 2, structName, namespaceStr, debugLines)
+				code[#code + 1] = processSingle(currentField, indentLevel + 2, structName, namespaceStr, debugLines, memberGroup)
 			else
 				code[#code + 1] = processGroup(members, indentLevel + 2, structName, namespaceStr, debugLines) -- nested unions
+				for k, v in pairs(members.layout) do
+					table.copy(members.layout, memberGroup)
+				end
 			end
 			lastOffset = currentField.offset + currentField.size
 			if i > #wrap then break end
@@ -1322,6 +1332,55 @@ do
 		return format(dot and "%s.%s" or "%s::%s", structName, mname)
 	end
 
+	--[[
+		enum Primitive
+{
+    Void,
+    Int8,
+    Uint8,
+    Int16,
+    Uint16,
+    Int32,
+    Uint32,
+    Int64,
+    Uint64,
+    Dsint,
+    Duint,
+    Float,
+    Double,
+    Pointer,
+    PtrString, //char* (null-terminated)
+    PtrWString //wchar_t* (null-terminated)
+};
+	]]
+	-- https://x64dbg.com/blog/2016/12/04/type-system.html
+	-- https://gist.github.com/mrexodia/e949ab26d5986a5fc1fa4944ac68147a#file-types-json
+	local mmextToX64Dbg = {
+		[types.i1] = "Int8",
+		[types.i2] = "Int16",
+		[types.i4] = "Int32",
+		[types.i8] = "Int64",
+		[types.u1] = "Uint8",
+		[types.u2] = "Uint16",
+		[types.u4] = "Uint32",
+		[types.u8] = "Uint64",
+		[types.r4] = "Float",
+		[types.r8] = "Double",
+		[types.EditPChar] = "PtrString",
+		[types.EditConstPChar] = "PtrString",
+		[types.PChar] = "PtrString",
+	}
+	local function doPrimitive(data)			
+		local primitive = mmextToX64Dbg[data.dataType]
+		if primitive then
+			return {
+				type = primitive,
+				name = data.pascalCaseName,
+			}
+		end
+		error("Invalid type", 2)
+	end
+
 	function processDebuggerDatabase(removeOld) -- remove old for testing
 		local database = json.decode(io.load(format("mm%d.exe.dd32", Game.Version)))
 		local labelsByAddress = {}
@@ -1332,6 +1391,14 @@ do
 		end
 		local processed = processAll()
 		local moduleStr = format("mm%d.exe", Game.Version)
+		local defs = {structs = {}, unions = {}}
+		local done = {} -- some functions have two names and only one has extra info
+		-- store done here and if old doesn't have sig or has less arguments, overwrite
+		local logLines = {}
+		local function printf(...) -- replace with temporary version to automatically save to log file
+			logLines[#logLines + 1] = string.print(string.format(...))
+			_G.printf(...)
+		end
 		for structName, structData in pairs(processed) do
 			local singleName = singleInstanceStructs[structName]
 			if singleName then
@@ -1366,7 +1433,7 @@ do
 					if commonStr then
 						text = text:format(ptrString .. commonStr .. arrayStr)
 					elseif baseData.dataType == types.string then
-						text = text:format(format("%sstring%s[%d]", ptrString, arrayStr, baseData.count))
+						text = text:format(format("%sstring%s", ptrString, arrayStr, baseData.count))
 					elseif baseData.struct then
 						text = text:format(format("%s%s%s", ptrString, baseData.typeName, arrayStr))
 					elseif baseData.bit and not baseData.bitValue then -- only bit arrays, because x64dbg doesn't support plain bits
@@ -1380,14 +1447,54 @@ do
 					::continue::
 				end
 			else
+				local function getJsonForMember(data)
+					local arrays, comments, baseData = getArraysCommentsAndBaseData(data)
+					if #arrays == 0 then
+						return doPrimitive(baseData)
+					elseif #arrays == 1 and not baseData.ptr then
+						local json = doPrimitive(baseData)
+						json.arrsize = arrays[1].count
+						return json
+					else -- #arrays >= 2 or #arrays == 1 and baseData.ptr
+						-- define inner arrays
+						local sname = baseData.typeName
+						for arrid = #arrays, baseData.ptr and 1 or 2, -1 do -- if not ptr, base array can be done with arrsize
+							-- ->u1[5][5]
+							local arr = arrays[arrid]
+							local sname2 = format("Array_%s_%s", arr.count, sname)
+							defs.structs[sname2] = defs.structs[sname2] or {
+								name = sname2,
+								members = {
+									{
+										type = sname,
+										name = "value",
+										arrsize = arr.count
+									}
+								}
+							}
+							sname = sname2
+						end
+						return {
+							type = sname .. (baseData.ptr and "*" or ""),
+							name = baseData.pascalCaseName,
+							arrsize = not baseData.ptr and arrays[1].count
+						}
+					end
+				end
+				local def = {name = structName, members = {}}
 				-- generate x64dbg struct json
-				local defs = {}
-				
+				for i, group in ipairs(structData.groups) do
+					-- missing integer keys after filter?
+					group = table.filterFunc(group, function(data) return not data.bitValue end)
+					if #group == 1 then
+						table.insert(def.members, getJsonForMember(group[1]))
+					elseif #group > 1 then -- make union
+						
+					end
+				end
 				io.save(moduleStr .. " json type definitions.json", json.encode(defs))
 			end
 			-- functions
-			local done = {} -- some functions have two names and only one has extra info
-			-- store done here and if old doesn't have sig or has less arguments, overwrite
 
 			-- obsolete TODO: because "define.class.AddHitPoints" doesn't use "method{}" call, it's not considered a method and thus
 			-- overwrites "AddHP()" with two argument parentheses
@@ -1422,15 +1529,17 @@ do
 				}
 				local otherDone = done[moduleOffset]
 				if labelsByAddress[moduleOffset] then
-					if otherDone and not (otherDone.info and not data.info) and ( -- [I don't have info, other does] -> skip
-						otherDone.info == false -- explicitly set to false to disable (misspelling etc.)
+					 -- replace BitmapsLod and SpritesLod with base Lod where possible
+					if otherDone and not (otherDone.info and not data.info) and not table.find({"BitmapsLod", "SpritesLod"}, structName) and ( -- [I don't have info, other does] -> skip
+						(structName == "Lod")
+						or otherDone.info == false -- explicitly set to false to disable (misspelling etc.)
 						or (not otherDone.info and data.info) -- I have info, other doesn't
 						or ((not otherDone.info or not otherDone.info.Sig) and data.info and data.info.Sig) -- I have sig, other doesn't
 						or (argCount > otherDone.arg)) -- I have more arguments
 					then
 						printf("Replacing %q (sig: %s, arg: %d) with %q (sig: %s, arg: %d)",
-							otherDone.name, otherDone.info and otherDone.info.Sig and true or false, otherDone.arg,
-							fname, data.info and data.info.Sig and true or false, argCount
+							structureMemberStr(otherDone.structName, otherDone.name) .. "()", otherDone.info and otherDone.info.Sig and true or false, otherDone.arg,
+							structureMemberStr(singleName or structName, fname) .. "()", data.info and data.info.Sig and true or false, argCount
 						)
 					else
 						printf("%q : label at address 0x%X already exists (text: %q)", format("%s::%s", singleName or structName, fname),
@@ -1438,7 +1547,7 @@ do
 						goto continueF
 					end
 				end
-				done[moduleOffset] = {info = data.info, arg = argCount, name = fname}
+				done[moduleOffset] = {info = data.info, arg = argCount, name = fname, structName = singleName or structName}
 				labelsByAddress[moduleOffset] = label
 				::continueF::
 			end
@@ -1449,6 +1558,7 @@ do
 		end
 		database.labels = labels
 		io.save(format("processed %s.dd32", moduleStr), json.encode(database))
+		io.save("debugger database log.txt", table.concat(logLines, "\r\n"))
 	end
 end
 

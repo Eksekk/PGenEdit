@@ -329,7 +329,7 @@ void EditorStatisticsPanel::createStatisticsAdjuster()
 	}
 
 	primaryOtherStaticLine = new wxStaticLine(this);
-	primaryOtherStatisticsSizer->Add(primaryOtherStaticLine, wxGBPosition(9, 0), wxGBSpan(1, 4), wxEXPAND | wxALL, 5);
+	primaryOtherStatisticsSizer->Add(primaryOtherStaticLine, wxGBPosition(9, 0), wxGBSpan(1, 5), wxEXPAND | wxALL, 5);
 
 	otherLabel = new wxStaticText(this, wxID_ANY, _("Other"));
 	otherLabel->SetFont(wxFont(wxNORMAL_FONT->GetPointSize(), wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD));
@@ -380,16 +380,14 @@ void EditorStatisticsPanel::createStatisticsAdjuster()
 	experienceHelp->SetToolTip(_("Enough to train to level %d"));
 	primaryOtherStatisticsSizer->Add(experienceHelp, wxGBPosition(15, 3), wxGBSpan(1, 1), wxALL, 5);
 
-	statisticsAdjusterSizer->Add(primaryOtherStatisticsSizer, 0, 0, 5);
+	statisticsAdjusterSizer->Add(primaryOtherStatisticsSizer, 0, wxALL, 5);
 
 	statisticsAdjusterVerticalLine = new wxStaticLine(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_VERTICAL);
 	statisticsAdjusterSizer->Add(statisticsAdjusterVerticalLine, 0, wxEXPAND | wxALL, 5);
 
-	wxBoxSizer* resistanceExtraStatsSizer;
-	resistanceExtraStatsSizer = new wxBoxSizer(wxVERTICAL);
+	wxBoxSizer* resistanceExtraStatsSizer = new wxBoxSizer(wxVERTICAL);
 
-	wxGridBagSizer* resistancesSizer;
-	resistancesSizer = new wxGridBagSizer(5, 5);
+	wxGridBagSizer* resistancesSizer = new wxGridBagSizer(5, 5);
 
 	resistancesLabel = new wxStaticText(this, wxID_ANY, _("Resistances"));
 	resistancesLabel->SetFont(wxFont(wxNORMAL_FONT->GetPointSize(), wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxEmptyString));
@@ -412,7 +410,7 @@ void EditorStatisticsPanel::createStatisticsAdjuster()
 		resistanceWidgetToResIdMap.emplace(i, std::make_unique<ResistanceWidget>(this, resistancesSizer, row++, resPtr.get(), playerIndex));
 	}
 
-	resistanceExtraStatsSizer->Add(resistancesSizer, 0, wxEXPAND, 5);
+	resistanceExtraStatsSizer->Add(resistancesSizer, 0, wxEXPAND | wxALL, 5);
 
 	resistancesExtraStatsStaticLine = new wxStaticLine(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL);
 	resistanceExtraStatsSizer->Add(resistancesExtraStatsStaticLine, 0, wxEXPAND | wxALL, 5);
@@ -455,9 +453,9 @@ void EditorStatisticsPanel::createStatisticsAdjuster()
 	statExtrasSizer->Fit(extraStatsPane->GetPane());
 	resistanceExtraStatsSizer->Add(extraStatsPane, 0, wxEXPAND | wxALL, 5);
 
-	statisticsAdjusterSizer->Add(resistanceExtraStatsSizer, 1, wxEXPAND, 5);
+	statisticsAdjusterSizer->Add(resistanceExtraStatsSizer, 1, wxALL | wxEXPAND, 5);
 
-	mainSizer->Add(statisticsAdjusterSizer, 0, wxEXPAND, 5);
+	mainSizer->Add(statisticsAdjusterSizer, 0, wxALL | wxEXPAND, 5);
 }
 
 void EditorStatisticsPanel::createActionsPanel()
