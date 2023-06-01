@@ -512,6 +512,19 @@ local function getArraysCommentsAndBaseData(data)
 	return arrays, comments, data
 end
 
+local function structField(value)
+	return {type = "struct", value = value}
+end
+local function memberField(value)
+	return {type = "member", value = value}
+end
+local function unionField(value)
+	return {type = "union", value = value}
+end
+local function paddingField(value)
+	return {type = "padding", value = value}
+end
+
 local function processSingle(data, indentLevel, structName, namespaceStr, debugLines, layout)
 	indentLevel = indentLevel or 0
 	local indentOuter, indentInner = string.rep(INDENT_CHARS, indentLevel), string.rep(INDENT_CHARS, indentLevel + 1)
@@ -550,11 +563,13 @@ local function processSingle(data, indentLevel, structName, namespaceStr, debugL
 		end
 		return result
 	end
+	local layoutAdd
 	if data.union then
 		s = {}
 		for i, v in ipairs(data.code) do
 			s[i] = indentOuter .. v
 		end
+		layoutAdd = assert(data.layout)
 	elseif arrays and #arrays == 1 and data.padding then -- NPCTopic, NPCText - element size 4, "real" size 8, overlapping
 		local structName = "__" .. data.name
 		local old1 = data.name
@@ -566,11 +581,18 @@ local function processSingle(data, indentLevel, structName, namespaceStr, debugL
 			indentInner .. 		skipBytesText:format(data.padding),
 			indentOuter .. "};"
 		}
+		layoutAdd = {
+			{type = "struct", value = {
+				{type = "member", value = data},
+				{type = "padding", value = data.padding}
+			}
+		}}
 		data.name = old1
 		local old2, old3 = data.typeName, data.ptr -- hacky hacky
 		data.typeName = structName
 		data.ptr = nil
 		s[#s + 1] = indentOuter .. doBaseType(true) .. ";"
+		table.insert(layoutAdd, {type = "member", value = arrays and arrays[1] or data})
 		data.typeName, data.ptr = old2, old3
 	else
 		if data.padStart then
@@ -581,8 +603,15 @@ local function processSingle(data, indentLevel, structName, namespaceStr, debugL
 				indentInner .. 		doBaseType(true) .. ";",
 				indentOuter .. "};"
 			}
+			layoutAdd = {
+				{type = "struct", value = {
+					{type = "padding", value = data.padStart},
+					{type = "member", value = arrays and arrays[1] or data}
+				}
+			}}
 		else
 			s = s .. doBaseType(true)
+			layoutAdd = {{type = "member", value = arrays and arrays[1] or data}}
 		end
 	end
 	local commentsStr = #comments > 0 and (" // " .. table.concat(comments, " | ")) or ""
@@ -599,6 +628,7 @@ local function processSingle(data, indentLevel, structName, namespaceStr, debugL
 		end
 	end
 	data = dataCopy
+	mergeArraysShallowCopy(layout, assert(layoutAdd), true)
 	return s
 end
 
@@ -626,18 +656,17 @@ end
 -- using visual studio code with "lua booster" extension
 -- need to dummy forward declare to not miss recursive call when using "find references"
 local processGroup
-function processGroup(group, indentLevel, structName, namespaceStr, debugLines)
+function processGroup(group, indentLevel, structName, namespaceStr, debugLines, layout)
 	indentLevel = indentLevel or 0
-	group.layout = group.layout or {}
 	if #group == 1 then
-		local ret = processSingle(group[1], indentLevel, structName, namespaceStr, debugLines, group.layout)
+		local ret = processSingle(group[1], indentLevel, structName, namespaceStr, debugLines, layout)
 		return type(ret) == "table" and ret or {ret}
 	end
 	local indentOuter, indentInner = string.rep(INDENT_CHARS, indentLevel), string.rep(INDENT_CHARS, indentLevel + 1)
 	-- do union wrap
-	local union = {type = "union"}
-	table.insert(group.layout, union)
-	local memberGroup = tget(group, "layout")
+	local union = {type = "union", value = {}}
+	table.insert(layout, union)
+	layout = union.value -- everything else goes into union
 	local code = {
 		indentOuter .. "union",
 		indentOuter .. "{"
@@ -664,20 +693,18 @@ function processGroup(group, indentLevel, structName, namespaceStr, debugLines)
 		else
 			-- for now taken care of by processSingle
 			local padding = member.innerType and member.innerType.padding
-			local old = memberGroup
-			local layout = union
+			local layoutTmp = layout
 			if padding and not skipFirst then
 				code[#code + 1] = indentInner .. "struct"
 				code[#code + 1] = indentInner .. "{"
 				indentLevel = indentLevel + 1
 				code[#code + 1] = string.rep(INDENT_CHARS, indentLevel + 1) .. skipBytesText:format(padding)
 				local stru = {type = "struct", value = {}}
+				table.insert(stru.value, {type = "padding", value = padding})
+				layoutTmp = stru.value -- next call will pack members into this struct
 				table.insert(layout, stru)
-				table.insert(stru, {type = "padding", value = padding})
-				layout = stru
 			end
-			code[#code + 1] = processSingle(member, indentLevel + 1, structName, namespaceStr, debugLines, union)
-			table.insert(memberGroup, member)
+			code[#code + 1] = processSingle(member, indentLevel + 1, structName, namespaceStr, debugLines, layoutTmp)
 			if padding and not skipFirst then
 				indentLevel = indentLevel - 1
 				code[#code + 1] = indentInner .. "};"
@@ -691,10 +718,14 @@ function processGroup(group, indentLevel, structName, namespaceStr, debugLines)
 	if #wrap > 0 then
 		-- do struct wrap
 		table.sort(wrap, function(a, b) return a.offset < b.offset end)
+		do
+			local stru = structField{}
+			table.insert(layout, stru)
+			layout = stru.value
+		end
 		code[#code + 1] = indentInner .. "struct"
 		code[#code + 1] = indentInner .. "{"
 		local indentInnerInner = string.rep(INDENT_CHARS, indentLevel + 2)
-		memberGroup = tget(memberGroup, "struct")
 		local lastOffset = group[1].offset
 		local i = 1
 		while true do
@@ -705,6 +736,7 @@ function processGroup(group, indentLevel, structName, namespaceStr, debugLines)
 			if skipBits > 0 and skipBits % 8 == 0 then
 				local bytes = skipBits:div(8)
 				code[#code + 1] = indentInnerInner .. skipBytesText:format(bytes)
+				table.insert(layout, paddingField(bytes))
 			elseif skipBits > 0 then
 				--[[
 				SATISFY MSVC
@@ -724,29 +756,29 @@ function processGroup(group, indentLevel, structName, namespaceStr, debugLines)
 				-- don't print total if it's just single skipbits "instruction"
 				local total = skipBits - skip > 0 and string.format(" // skipping %d bytes and %d bits, in total %d bits", skipBits:div(8), skipBits % 8, skipBits) or ""
 				code[#code + 1] = indentInnerInner .. skipBitsText:format(skip) .. total
+				table.insert(layout, paddingField(skip / 8))
 				skipBits = skipBits - skip
 				local function doBits()
 					if skipBits > 0 then
 						skip = math.min(skipBits, 8) -- no more than 8 bits in one go
 						code[#code + 1] = indentInnerInner .. skipBitsText:format(skip)
 						skipBits = skipBits - skip
+						table.insert(layout, paddingField(skip / 8))
 					end
 				end
-				doBits()
+				doBits() -- TODO: useless call?
 				local skipBytes = skipBits:div(8)
 				if skipBytes > 0 then
-					code[#code + 1] = indentInnerInner .. skipBytesText:format(skip)
+					code[#code + 1] = indentInnerInner .. skipBytesText:format(skipBytes)
+					table.insert(layout, paddingField(skipBytes))
 					skipBits = skipBits - skipBytes * 8
 				end
 				doBits()
 			end
 			if #members == 1 then
-				code[#code + 1] = processSingle(currentField, indentLevel + 2, structName, namespaceStr, debugLines, memberGroup)
+				code[#code + 1] = processSingle(currentField, indentLevel + 2, structName, namespaceStr, debugLines, layout)
 			else
-				code[#code + 1] = processGroup(members, indentLevel + 2, structName, namespaceStr, debugLines) -- nested unions
-				for k, v in pairs(members.layout) do
-					table.copy(members.layout, memberGroup)
-				end
+				code[#code + 1] = processGroup(members, indentLevel + 2, structName, namespaceStr, debugLines, layout) -- nested unions
 			end
 			lastOffset = currentField.offset + currentField.size
 			if i > #wrap then break end
@@ -854,6 +886,7 @@ function processStruct(args)
 	args.structOrder = args.structOrder or {}
 	args.indentLevel = args.indentLevel or 0
 	args.processedStructs = args.processedStructs or {}
+	local layout = args.layout or {}
 
 	-- locals
 	local fields, structureDependencies = {}, {}
@@ -878,7 +911,7 @@ function processStruct(args)
 			processedStructs = args.processedStructs,
 			fields = {},
 			functionData = {},
-			methods = {}, class = {}
+			methods = {}, class = {}, layout = {}
 		}
 		args.processedStructs[args.name] = data
 		table.insert(tget(args, "structOrder"), 1, args.name)
@@ -996,8 +1029,8 @@ function processStruct(args)
 			elseif data.union then
 				local res = processStruct{name = data.name:sub(1, 1):lower() .. data.name:sub(2), offsets = data.offsets, members = data.fields, rofields = data.rofields,
 					union = true, indentLevel = 0, prependNamespace = args.prependNamespace, offset = data.offset, processedStructs = args.processedStructs, parent = args.name,
-					processDependencies = args.processDependencies, structOrder = args.structOrder, shouldProcessDependency = args.shouldProcessDependency}
-				data.code, data.size = res.code, res.size
+					processDependencies = args.processDependencies, structOrder = args.structOrder, shouldProcessDependency = args.shouldProcessDependency, layout = {}}
+				data.code, data.size, data.layout = res.code, res.size, res.layout
 					-- unions have 0 indent level and this breaks normal structs processed as dependencies
 					-- this whole indent system should be probably redone anyways
 				-- doesn't work with non-integer key tables
@@ -1052,13 +1085,14 @@ function processStruct(args)
 			skip = skip > 0 and math.floor(skip) or 0 -- bits
 			if skip > 0 then
 				code[#code + 1] = indentInner .. skipBytesText:format(skip)
+				table.insert(layout, {type = "padding", value = skip})
 			end
 		end
 		local members
 		local firstIndex = i
 		members, i, maxNextOffset = getGroup(fields, currentField, i)
 		groups[#groups + 1] = {members = members, firstIndex = firstIndex, maxNextOffset = maxNextOffset}
-		local group = processGroup(members, args.indentLevel + 1, not args.union and args.name, not args.union and myNamespaceStr or "", debugLines)
+		local group = processGroup(members, args.indentLevel + 1, not args.union and args.name, not args.union and myNamespaceStr or "", debugLines, layout)
 		multipleInsert(code, #code + 1, group)
 		prevOffset = maxNextOffset
 	end
@@ -1068,6 +1102,7 @@ function processStruct(args)
 		local endPadding = size - prevOffset
 		if endPadding >= 1 then
 			code[#code + 1] = indentInner .. skipBytesText:format(endPadding)
+			table.insert(layout, {type = "padding", value = endPadding})
 		end
 	end
 	code[#code + 1] = args.union and string.format("%s} %s;", indentOuter, args.name) or (indentOuter .. "};")
@@ -1104,7 +1139,7 @@ function processStruct(args)
 		if not args.processedStructs[args.name] then -- unions are inline
 			args.processedStructs[args.name] = setmetatable({code = code, dependencies = structureDependencies,
 				size = size, staticDefinitionCode = staticDefinitionCode, groups = groups, fields = fields, memberInfoData = infoData,
-				functionData = functionData, methods = methods, class = class},
+				functionData = functionData, methods = methods, class = class, layout = layout},
 				{__index = invalidIndex}
 			)
 		end
@@ -1119,7 +1154,7 @@ function processStruct(args)
 	end
 	return setmetatable(args.processedStructs[args.name] or {code = code, dependencies = structureDependencies, size = size,
 		processedStructs = args.processedStructs, groups = groups, fields = fields, memberInfoData = infoData,
-		functionData = functionData, methods = methods, class = class}, {__index = invalidIndex})
+		functionData = functionData, methods = methods, class = class, layout = layout}, {__index = invalidIndex})
 end
 
 local function processAll(args)
@@ -1416,6 +1451,7 @@ do
 			end
 		end
 		local processed = processAll()
+		print(dump(processed.Item.layout))
 		local moduleStr = format("mm%d.exe", Game.Version)
 		local defs = {structs = {}, unions = {}}
 		local done = {} -- some functions have two names and only one has extra info
