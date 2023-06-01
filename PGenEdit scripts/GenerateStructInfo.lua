@@ -1415,7 +1415,7 @@ do
 		[types.string] = "char", -- there's no "inline string" type :(
 	}
 	local function doPrimitive(data)
-		local typ = mmextToX64Dbg[data.dataType] or (data.struct and data.pascalCaseName)
+		local typ = mmextToX64Dbg[data.dataType] or (data.struct and data.typeName)
 		if typ then
 			return {
 				type = typ,
