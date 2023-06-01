@@ -1393,27 +1393,6 @@ do
 		return str, hasPtr
 	end
 
-	--[[
-		enum Primitive
-{
-    Void,
-    Int8,
-    Uint8,
-    Int16,
-    Uint16,
-    Int32,
-    Uint32,
-    Int64,
-    Uint64,
-    Dsint,
-    Duint,
-    Float,
-    Double,
-    Pointer,
-    PtrString, //char* (null-terminated)
-    PtrWString //wchar_t* (null-terminated)
-};
-	]]
 	-- https://x64dbg.com/blog/2016/12/04/type-system.html
 	-- https://gist.github.com/mrexodia/e949ab26d5986a5fc1fa4944ac68147a#file-types-json
 	local mmextToX64Dbg = {
@@ -1430,14 +1409,17 @@ do
 		[types.EditPChar] = "PtrString",
 		[types.EditConstPChar] = "PtrString",
 		[types.PChar] = "PtrString",
+		[types.string] = "Uint8", -- there's no "inline string" type :(
 	}
-	local function doPrimitive(data)			
-		local primitive = mmextToX64Dbg[data.dataType]
-		if primitive then
+	local function doPrimitive(data)
+		local typ = mmextToX64Dbg[data.dataType] or (data.struct and data.pascalCaseName)
+		if typ then
 			return {
-				type = primitive,
+				type = typ,
 				name = data.pascalCaseName,
 			}
+		elseif data.bit then -- skip
+			return false
 		end
 		error("Invalid type", 2)
 	end
@@ -1451,7 +1433,6 @@ do
 			end
 		end
 		local processed = processAll()
-		print(dump(processed.Item.layout))
 		local moduleStr = format("mm%d.exe", Game.Version)
 		local defs = {structs = {}, unions = {}}
 		local done = {} -- some functions have two names and only one has extra info
@@ -1464,6 +1445,7 @@ do
 		for structName, structData in pairs(processed) do
 			local singleName = singleInstanceStructs[structName]
 			if singleName then
+				-- single instance - add all fields at fixed offset
 				for _, data in ipairs(structData.fields) do
 					local arrays, comments, baseData = getArraysCommentsAndBaseData(data)
 					local mname = data.pascalCaseName
@@ -1492,7 +1474,7 @@ do
 					local arrayStr, hasPtr = getArrayStr(arrays)
 					local ptrString = hasPtr and "->" or ""
 					local commonStr = commonTypes[baseData.dataType]
-					if baseData.unknownType and arrays[1].size > 0 then -- if custom type, innermost size is always nonzero, real size is array element count
+					if baseData.unknownType and arrays[1].size > 0 then -- if custom type, innermost size is always nonzero (u1), real size is array element count
 						printf("%q : unknown type member labelled because of nonzero size", structureMemberStr(singleName, mname))
 					elseif commonStr and not baseData.unknownType then
 						text = text:format(ptrString .. commonStr .. arrayStr)
@@ -1516,12 +1498,31 @@ do
 					if #arrays == 0 then
 						return doPrimitive(baseData)
 					elseif #arrays == 1 and not baseData.ptr then
+						if baseData.bit then
+							local t = {
+								name = baseData.name,
+								type = mmextToX64Dbg.u1,
+								arrsize = arrays[1].size / 8, -- shrink array 8-fold and set base data type to u1
+							}
+							assert(t.arrsize % 1 == 0)
+							return t
+						end
 						local json = doPrimitive(baseData)
 						json.arrsize = arrays[1].count
 						return json
 					else -- #arrays >= 2 or #arrays == 1 and baseData.ptr
 						-- define inner arrays
-						local sname = baseData.typeName
+						local sname
+						if baseData.bit then -- again shrink and set type, this time last array
+							local a = arrays[#arrays]
+							local count = a.size / 8
+							assert(count % 1 == 0)
+							a.size = count
+							a.count = count
+							sname = mmextToX64Dbg.u1
+						else
+							sname = baseData.typeName
+						end
 						for arrid = #arrays, baseData.ptr and 1 or 2, -1 do -- if not ptr, base array can be done with arrsize
 							-- ->u1[5][5]
 							local arr = arrays[arrid]
@@ -1545,17 +1546,59 @@ do
 						}
 					end
 				end
-				local def = {name = structName, members = {}}
-				-- generate x64dbg struct json
-				for i, group in ipairs(structData.groups) do
-					-- missing integer keys after filter?
-					group = table.filterFunc(group, function(data) return not data.bitValue end)
-					if #group == 1 then
-						table.insert(def.members, getJsonForMember(group[1]))
-					elseif #group > 1 then -- make union
-						
-					end
+				local paddingIndex = 0
+				local function doPadding(size)
+					local p = {
+						name = "padding_" .. paddingIndex,
+						sname = mmextToX64Dbg.u1,
+						arrsize = size
+					}
+					paddingIndex = paddingIndex + 1
+					return p
 				end
+				local structIndex = 0
+				local doStructUnion
+				function doStructUnion(struct, isUnion)
+					local json = {
+						name = (isUnion and "union" or "struct") .. "_" .. structIndex,
+						members = {}
+					}
+					structIndex = structIndex + 1
+					local skippingBits, lastOffsetBeforeBits
+					for i, v in ipairs(struct) do
+						local what, value = v.type, v.value
+						if what == "padding" then
+							table.insert(json.members, doPadding(value))
+						elseif what == "member" then
+							if value.bit then
+								skippingBits = true
+								lastOffsetBeforeBits = (i > 1 and struct[i - 1].offset or 0)
+							else
+								if skippingBits then
+									skippingBits = false
+									local pad = value.offset - lastOffsetBeforeBits
+									assert(pad % 1 == 0)
+									table.insert(json.members, doPadding(pad))
+								end
+								local memberJson = getJsonForMember(value)
+								table.insert(json.members, memberJson)
+							end
+						elseif what == "struct" or what == "union" then
+							local structJson = doStructUnion(value, what == "union")
+							table.insert(json.members, {
+								name = structJson.name,
+								type = structJson.name,
+							})
+						else
+							error(format("Unknown layout element %q", what))
+						end
+					end
+					table.insert(isUnion and defs.unions or defs.structs, json)
+					return json
+				end
+				doStructUnion(structData.layout, false)
+				-- generate x64dbg struct json
+				
 				io.save(moduleStr .. " json type definitions.json", json.encode(defs))
 			end
 			-- functions
