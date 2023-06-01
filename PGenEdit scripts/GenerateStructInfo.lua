@@ -1396,23 +1396,23 @@ do
 	-- https://x64dbg.com/blog/2016/12/04/type-system.html
 	-- https://gist.github.com/mrexodia/e949ab26d5986a5fc1fa4944ac68147a#file-types-json
 	local mmextToX64Dbg = {
-		[types.i1] = "Int8",
-		[types.i2] = "Int16",
-		[types.i4] = "Int32",
-		[types.i8] = "Int64",
-		[types.u1] = "Uint8",
-		[types.u2] = "Uint16",
-		[types.u4] = "Uint32",
-		[types.u8] = "Uint64",
-		[types.b1] = "Uint8",
-		[types.b2] = "Uint16",
-		[types.b4] = "Uint32",
-		[types.r4] = "Float",
-		[types.r8] = "Double",
-		[types.EditPChar] = "PtrString",
-		[types.EditConstPChar] = "PtrString",
-		[types.PChar] = "PtrString",
-		[types.string] = "Uint8", -- there's no "inline string" type :(
+		[types.i1] = "char",
+		[types.i2] = "short",
+		[types.i4] = "int",
+		[types.i8] = "long long",
+		[types.u1] = "unsigned char",
+		[types.u2] = "unsigned short",
+		[types.u4] = "unsigned int",
+		[types.u8] = "unsigned long long",
+		[types.b1] = "unsigned char",
+		[types.b2] = "unsigned short",
+		[types.b4] = "unsigned int",
+		[types.r4] = "float",
+		[types.r8] = "double",
+		[types.EditPChar] = "char*",
+		[types.EditConstPChar] = "char*",
+		[types.PChar] = "char*",
+		[types.string] = "char", -- there's no "inline string" type :(
 	}
 	local function doPrimitive(data)
 		local typ = mmextToX64Dbg[data.dataType] or (data.struct and data.pascalCaseName)
@@ -1539,7 +1539,7 @@ do
 							if arr.count == 0 then -- replace with pointer
 								sname = sname .. "*"
 							else
-								local sname2 = format("Array_%s_%s", noInfinity(arr.count), sname)
+								local sname2 = format("%s[%d]", sname, noInfinity(arr.count))
 								if not table.findIf(defs.structs, function(s) return s.name == sname2 end) then
 									table.insert(defs.structs, {
 										name = sname2,
@@ -1580,27 +1580,28 @@ do
 					}
 					structIndex = structIndex + 1
 					local skippingBits, lastOffsetBeforeBits
+					local pad = 0
+					local function maybePadding()
+						if pad > 0 then
+							table.insert(json.members, doPadding(math.ceil(pad)))
+							pad = 0
+						end
+					end
 					for i, v in ipairs(struct) do
 						local what, value = v.type, v.value
 						if what == "padding" then
-							table.insert(json.members, doPadding(value))
+							pad = pad + value
+							--table.insert(json.members, doPadding(value))
 						elseif what == "member" then
 							if value.bit then
-								if not skippingBits then
-									lastOffsetBeforeBits = (i > 1 and struct[i - 1].offset or 0)
-								end
-								skippingBits = true
+									pad = pad + 0.125
 							else
-								if skippingBits then
-									skippingBits = false
-									local pad = value.offset - lastOffsetBeforeBits
-									assert(pad % 1 == 0)
-									table.insert(json.members, doPadding(pad))
-								end
+								maybePadding()
 								local memberJson = getJsonForMember(value)
 								table.insert(json.members, memberJson)
 							end
 						elseif what == "struct" or what == "union" then
+							maybePadding()
 							local structJson = doStructUnion(value, nil, what == "union")
 							table.insert(json.members, {
 								name = structJson.name,
@@ -1610,7 +1611,7 @@ do
 							error(format("Unknown layout element %q", what))
 						end
 					end
-					--json.name = json.name or name2
+					maybePadding()
 					table.insert(isUnion and defs.unions or defs.structs, json)
 					return json
 				end
