@@ -1404,6 +1404,9 @@ do
 		[types.u2] = "Uint16",
 		[types.u4] = "Uint32",
 		[types.u8] = "Uint64",
+		[types.b1] = "Uint8",
+		[types.b2] = "Uint16",
+		[types.b4] = "Uint32",
 		[types.r4] = "Float",
 		[types.r8] = "Double",
 		[types.EditPChar] = "PtrString",
@@ -1442,10 +1445,10 @@ do
 			logLines[#logLines + 1] = string.print(string.format(...))
 			_G.printf(...)
 		end
+		local structIndex = 0 -- anonymous struct index for, well, anonymous structs/unions
 		for structName, structData in pairs(processed) do
 			local singleName = singleInstanceStructs[structName]
-			if singleName then
-				-- single instance - add all fields at fixed offset
+			if singleName then -- single instance - add all fields at fixed offset
 				for _, data in ipairs(structData.fields) do
 					local arrays, comments, baseData = getArraysCommentsAndBaseData(data)
 					local mname = data.pascalCaseName
@@ -1492,30 +1495,37 @@ do
 					label.text = text
 					::continue::
 				end
-			else
+			else -- multi instance - add dedicated type for inspection
 				local function getJsonForMember(data)
+					local function noInfinity(amount) -- structs.Fnt
+						if math.abs(amount) ~= 1/0 then
+							return amount
+						end
+						return 256
+					end
 					local arrays, comments, baseData = getArraysCommentsAndBaseData(data)
+
 					if #arrays == 0 then
 						return doPrimitive(baseData)
-					elseif #arrays == 1 and not baseData.ptr then
+					elseif #arrays == 1 and not arrays[1].ptr and arrays[1].count > 0 then -- not pointer, not variable size
 						if baseData.bit then
 							local t = {
 								name = baseData.name,
 								type = mmextToX64Dbg.u1,
-								arrsize = arrays[1].size / 8, -- shrink array 8-fold and set base data type to u1
+								arrsize = noInfinity(arrays[1].size) --/ 8, -- shrink array 8-fold and set base data type to u1
 							}
 							assert(t.arrsize % 1 == 0)
 							return t
 						end
 						local json = doPrimitive(baseData)
-						json.arrsize = arrays[1].count
+						json.arrsize = noInfinity(arrays[1].count)
 						return json
-					else -- #arrays >= 2 or #arrays == 1 and baseData.ptr
+					else -- #arrays >= 2 or #arrays == 1 and (arrays[1].ptr or arrays[1].count == 0)
 						-- define inner arrays
 						local sname
 						if baseData.bit then -- again shrink and set type, this time last array
 							local a = arrays[#arrays]
-							local count = a.size / 8
+							local count = noInfinity(a.size) --/ 8
 							assert(count % 1 == 0)
 							a.size = count
 							a.count = count
@@ -1523,26 +1533,32 @@ do
 						else
 							sname = baseData.typeName
 						end
-						for arrid = #arrays, baseData.ptr and 1 or 2, -1 do -- if not ptr, base array can be done with arrsize
+						for arrid = #arrays, 1, -1 do -- if not ptr, base array can be done with arrsize
 							-- ->u1[5][5]
 							local arr = arrays[arrid]
-							local sname2 = format("Array_%s_%s", arr.count, sname)
-							defs.structs[sname2] = defs.structs[sname2] or {
-								name = sname2,
-								members = {
-									{
-										type = sname,
-										name = "value",
-										arrsize = arr.count
-									}
-								}
-							}
-							sname = sname2
+							if arr.count == 0 then -- replace with pointer
+								sname = sname .. "*"
+							else
+								local sname2 = format("Array_%s_%s", noInfinity(arr.count), sname)
+								if not table.findIf(defs.structs, function(s) return s.name == sname2 end) then
+									table.insert(defs.structs, {
+										name = sname2,
+										members = {
+											{
+												type = sname,
+												name = "value",
+												arrsize = noInfinity(arr.count)
+											}
+										}
+									})
+								end
+								sname = sname2
+							end
 						end
 						return {
-							type = sname .. (baseData.ptr and "*" or ""),
+							type = sname,
 							name = baseData.pascalCaseName,
-							arrsize = not baseData.ptr and arrays[1].count
+							arrsize = not arrays[1].ptr and arrays[1].size > 0 and arrays[1].count or nil
 						}
 					end
 				end
@@ -1556,11 +1572,10 @@ do
 					paddingIndex = paddingIndex + 1
 					return p
 				end
-				local structIndex = 0
 				local doStructUnion
-				function doStructUnion(struct, isUnion)
+				function doStructUnion(struct, name, isUnion)
 					local json = {
-						name = (isUnion and "union" or "struct") .. "_" .. structIndex,
+						name = name or ("anon_" .. (isUnion and "union" or "struct") .. "_" .. structIndex),
 						members = {}
 					}
 					structIndex = structIndex + 1
@@ -1571,8 +1586,10 @@ do
 							table.insert(json.members, doPadding(value))
 						elseif what == "member" then
 							if value.bit then
+								if not skippingBits then
+									lastOffsetBeforeBits = (i > 1 and struct[i - 1].offset or 0)
+								end
 								skippingBits = true
-								lastOffsetBeforeBits = (i > 1 and struct[i - 1].offset or 0)
 							else
 								if skippingBits then
 									skippingBits = false
@@ -1584,7 +1601,7 @@ do
 								table.insert(json.members, memberJson)
 							end
 						elseif what == "struct" or what == "union" then
-							local structJson = doStructUnion(value, what == "union")
+							local structJson = doStructUnion(value, nil, what == "union")
 							table.insert(json.members, {
 								name = structJson.name,
 								type = structJson.name,
@@ -1593,13 +1610,11 @@ do
 							error(format("Unknown layout element %q", what))
 						end
 					end
+					--json.name = json.name or name2
 					table.insert(isUnion and defs.unions or defs.structs, json)
 					return json
 				end
-				doStructUnion(structData.layout, false)
-				-- generate x64dbg struct json
-				
-				io.save(moduleStr .. " json type definitions.json", json.encode(defs))
+				doStructUnion(structData.layout, assert(structName), false)
 			end
 			-- functions
 
@@ -1659,6 +1674,7 @@ do
 				::continueF::
 			end
 		end
+		io.save(moduleStr .. " json type definitions.json", json.encode(defs))
 		local labels = {}
 		for k, v in sortpairs(labelsByAddress) do
 			labels[#labels + 1] = v
@@ -1667,6 +1683,7 @@ do
 		io.save(format("processed %s.dd32", moduleStr), json.encode(database))
 		io.save("debugger database log.txt", table.concat(logLines, "\r\n"))
 	end
+	pdd = processDebuggerDatabase
 end
 
 
