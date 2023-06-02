@@ -1460,6 +1460,7 @@ do
 		local structIndex = 0 -- anonymous struct index for, well, anonymous structs/unions
 		for structName, structData in pairs(processed) do
 			local singleName = singleInstanceStructs[structName]
+			-- TODO: if single instance, add labels recursively - for example Mouse.Item
 			if singleName then -- single instance - add all fields at fixed offset
 				for _, data in ipairs(structData.fields) do
 					local arrays, comments, baseData = getArraysCommentsAndBaseData(data)
@@ -1579,7 +1580,7 @@ do
 				local function doPadding(size)
 					local p = {
 						name = "padding_" .. paddingIndex,
-						sname = mmextToX64Dbg.u1,
+						type = mmextToX64Dbg[types.u1],
 						arrsize = size
 					}
 					paddingIndex = paddingIndex + 1
