@@ -1350,9 +1350,11 @@ end
 do
 	-- these are structs which only exist one at a time, at fixed offset, so their fields can be directly labelled
 	local singleInstanceStructs = {GameStructure = "Game", GameParty = "Party", GameMap = "Map", GameMouse = "Mouse", GameScreen = "Screen", Arcomage = "Arcomage",
-		GameRaces = "Races", GameClasses = "Classes", GameClassKinds = "ClassKinds", Weather = "Weather", DialogLogic = "DialogLogic"}
+		GameRaces = "Races", GameClasses = "Classes", GameClassKinds = "ClassKinds", Weather = "Weather", DialogLogic = "DialogLogic", SpritesLod = "SpritesLod",
+		BitmapsLod = "BitmapsLod", IconsLod = "IconsLod"}
 	-- some are created at offset other than 0
-	local singleInstanceCustomOffsets = {GameMouse = Mouse["?ptr"], GameScreen = Screen["?ptr"]}
+	local singleInstanceCustomOffsets = {GameMouse = Mouse["?ptr"], GameScreen = Screen["?ptr"], BitmapsLod = Game.BitmapsLod["?ptr"], 
+		IconsLod = Game.IconsLod["?ptr"], SpritesLod = Game.SpritesLod["?ptr"]}
 	local commonTypes = {[types.u1] = "u1", [types.u2] = "u2", [types.u4] = "u4", [types.u8] = "u8", [types.i1] = "i1", [types.i2] = "i2", [types.i4] = "i4",
 		[types.i8] = "i8", [types.r4] = "r4", [types.r8] = "r8", [types.r10] = "r10", [types.pchar] = "PChar", [types.b1] = "b1", [types.b2] = "b2",
 		[types.b4] = "b4", [types.EditPChar] = "EditPChar", [types.EditConstPChar] = "EditConstPChar"}
@@ -1443,6 +1445,9 @@ do
 			end
 		end
 		local processed = processAll()
+		_G.processed = processed
+		-- hack to process also icons lod (it's really bitmaps lod struct, not its own type, so loop below wouldn't catch it)
+		processed.IconsLod = processed.BitmapsLod
 		local moduleStr = format("mm%d.exe", Game.Version)
 		local defs = {structs = {}, unions = {}}
 		local done = {} -- some functions have two names and only one has extra info
@@ -1542,7 +1547,7 @@ do
 								sname = sname .. "*"
 							else
 								local sname2 = format("%s[%d]", sname, noInfinity(arr.count))
-								if not added and not baseData.struct then
+								if not added and not baseData.struct then -- struct has version added a bit above
 									sname2 = Game.Version .. sname2
 									added = true
 								end
@@ -1551,7 +1556,7 @@ do
 										name = sname2,
 										members = {
 											{
-												type = (not isPlain and not baseData.struct and Game.Version or "") .. sname,
+												type = (not isPlain and not baseData.struct and Game.Version or "") .. sname, -- also struct has version added a bit above
 												name = "value",
 												arrsize = noInfinity(arr.count)
 											}
