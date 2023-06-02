@@ -1542,7 +1542,7 @@ do
 								sname = sname .. "*"
 							else
 								local sname2 = format("%s[%d]", sname, noInfinity(arr.count))
-								if not added then
+								if not added and not baseData.struct then
 									sname2 = Game.Version .. sname2
 									added = true
 								end
@@ -1551,7 +1551,7 @@ do
 										name = sname2,
 										members = {
 											{
-												type = (not isPlain and Game.Version or "") .. sname,
+												type = (not isPlain and not baseData.struct and Game.Version or "") .. sname,
 												name = "value",
 												arrsize = noInfinity(arr.count)
 											}
