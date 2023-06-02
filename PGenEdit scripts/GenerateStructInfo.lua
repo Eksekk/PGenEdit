@@ -1350,7 +1350,7 @@ end
 do
 	-- these are structs which only exist one at a time, at fixed offset, so their fields can be directly labelled
 	local singleInstanceStructs = {GameStructure = "Game", GameParty = "Party", GameMap = "Map", GameMouse = "Mouse", GameScreen = "Screen", Arcomage = "Arcomage",
-		GameRaces = "Races", GameClasses = "Classes", GameClassKinds = "ClassKinds", Weather = "Weather"}
+		GameRaces = "Races", GameClasses = "Classes", GameClassKinds = "ClassKinds", Weather = "Weather", DialogLogic = "DialogLogic"}
 	-- some are created at offset other than 0
 	local singleInstanceCustomOffsets = {GameMouse = Mouse["?ptr"], GameScreen = Screen["?ptr"]}
 	local commonTypes = {[types.u1] = "u1", [types.u2] = "u2", [types.u4] = "u4", [types.u8] = "u8", [types.i1] = "i1", [types.i2] = "i2", [types.i4] = "i4",
@@ -1415,7 +1415,7 @@ do
 		[types.string] = "char", -- there's no "inline string" type :(
 	}
 	local function doPrimitive(data)
-		local typ = mmextToX64Dbg[data.dataType] or (data.struct and data.typeName)
+		local typ = mmextToX64Dbg[data.dataType] or (data.struct and (Game.Version .. data.typeName))
 		if typ then
 			return {
 				type = typ,
@@ -1424,7 +1424,14 @@ do
 		elseif data.bit then -- skip
 			return false
 		end
-		error("Invalid type", 2)
+		error("Unknown type", 2)
+	end
+
+	local function noInfinity(amount) -- structs.Fnt
+		if math.abs(amount) ~= 1/0 then
+			return amount
+		end
+		return 256
 	end
 
 	function processDebuggerDatabase(removeOld) -- remove old for testing
@@ -1482,7 +1489,7 @@ do
 					elseif commonStr and not baseData.unknownType then
 						text = text:format(ptrString .. commonStr .. arrayStr)
 					elseif baseData.dataType == types.string then
-						text = text:format(format("%sstring%s", ptrString, arrayStr, baseData.count))
+						text = text:format(format("%sstring%s", ptrString, arrayStr))
 					elseif baseData.struct then
 						text = text:format(format("%s%s%s", ptrString, baseData.typeName, arrayStr))
 					elseif baseData.bit and not baseData.bitValue then -- only bit arrays, because x64dbg doesn't support plain bits
@@ -1497,14 +1504,7 @@ do
 				end
 			else -- multi instance - add dedicated type for inspection
 				local function getJsonForMember(data)
-					local function noInfinity(amount) -- structs.Fnt
-						if math.abs(amount) ~= 1/0 then
-							return amount
-						end
-						return 256
-					end
 					local arrays, comments, baseData = getArraysCommentsAndBaseData(data)
-
 					if #arrays == 0 then
 						return doPrimitive(baseData)
 					elseif #arrays == 1 and not arrays[1].ptr and arrays[1].count > 0 then -- not pointer, not variable size
@@ -1522,7 +1522,7 @@ do
 						return json
 					else -- #arrays >= 2 or #arrays == 1 and (arrays[1].ptr or arrays[1].count == 0)
 						-- define inner arrays
-						local sname
+						local sname, isPlain
 						if baseData.bit then -- again shrink and set type, this time last array
 							local a = arrays[#arrays]
 							local count = noInfinity(a.size) --/ 8
@@ -1531,21 +1531,27 @@ do
 							a.count = count
 							sname = mmextToX64Dbg.u1
 						else
-							sname = baseData.typeName
+							isPlain = mmextToX64Dbg[baseData.dataType] and true or false
+							sname = (baseData.struct and Game.Version or "") .. (baseData.struct and baseData.typeName or mmextToX64Dbg[baseData.dataType])
 						end
-						for arrid = #arrays, 1, -1 do -- if not ptr, base array can be done with arrsize
+						local added = false
+						for arrid = 1, #arrays do -- if not ptr, base array can be done with arrsize
 							-- ->u1[5][5]
 							local arr = arrays[arrid]
 							if arr.count == 0 then -- replace with pointer
 								sname = sname .. "*"
 							else
 								local sname2 = format("%s[%d]", sname, noInfinity(arr.count))
+								if not added then
+									sname2 = Game.Version .. sname2
+									added = true
+								end
 								if not table.findIf(defs.structs, function(s) return s.name == sname2 end) then
 									table.insert(defs.structs, {
 										name = sname2,
 										members = {
 											{
-												type = sname,
+												type = (not isPlain and Game.Version or "") .. sname,
 												name = "value",
 												arrsize = noInfinity(arr.count)
 											}
@@ -1555,6 +1561,8 @@ do
 								sname = sname2
 							end
 						end
+						-- here add prefix???
+
 						return {
 							type = sname,
 							name = baseData.pascalCaseName,
@@ -1575,11 +1583,11 @@ do
 				local doStructUnion
 				function doStructUnion(struct, name, isUnion)
 					local json = {
-						name = name or ("anon_" .. (isUnion and "union" or "struct") .. "_" .. structIndex),
+						-- Game.Version disambiguator needed because struct database is shared apparently
+						name = Game.Version .. (name or ("anon_" .. (isUnion and "union" or "struct") .. "_" .. structIndex)),
 						members = {}
 					}
 					structIndex = structIndex + 1
-					local skippingBits, lastOffsetBeforeBits
 					local pad = 0
 					local function maybePadding()
 						if pad > 0 then
@@ -1591,10 +1599,9 @@ do
 						local what, value = v.type, v.value
 						if what == "padding" then
 							pad = pad + value
-							--table.insert(json.members, doPadding(value))
 						elseif what == "member" then
 							if value.bit then
-									pad = pad + 0.125
+								pad = pad + 0.125
 							else
 								maybePadding()
 								local memberJson = getJsonForMember(value)
