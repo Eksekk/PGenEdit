@@ -52,22 +52,27 @@ function events.GameInitialized2()
 	end
 end
 
-function mtm(str)
+function mtm(str, x, y, z)
 	-- show error instead of crashing game
 	local s1, s2 = path.setext(str:lower(), ".odm"), path.setext(str:lower(), ".blv")
+	local zero = not str or str:match("^0")
 
 	--assert(mapFileNamesToNames[s1] or table.find(fileNames, s1), "Invalid map name")
 	return evt.MoveToMap{Name = assert(
 		fileNameByMapName[str:lower()]
 		or fileNames[table.find(fileNames, s1)]
-		or fileNames[table.find(fileNames, s2)],
-		"Invalid map name")
+		or fileNames[table.find(fileNames, s2)]
+		or zero and "0",
+		"Invalid map name"),
+		X = x or nil,
+		Y = y or nil,
+		Z = z or nil,
 	}
 end
 
-function kill()
+function kill(includeFriendly)
 	for k, v in Map.Monsters do
-		if v.Hostile then
+		if includeFriendly or v.Hostile then
 			v.HP = 0
 		end
 	end
@@ -83,6 +88,21 @@ end
 
 function item(id)
 	evt.GiveItem{Id = mapIdsToItemNames[id] or id}
+end
+
+-- gives ring with spc bonus with "NameAdd" matching provided text
+function spcBonus(what)
+	what = what:lower()
+	for i, spc in Game.SpcItemsTxt do
+		if spc.NameAdd:lower():match(what) then
+			evt.GiveItem{Type = const.ItemType.Ring, Strength = 5}
+			Mouse.Item.Bonus = 0
+			Mouse.Item.Bonus2 = i + 1
+			Mouse:ReleaseItem()
+			return true
+		end
+	end
+	error(string.format("%q doesn't match any NameAdd", what))
 end
 
 function increaseSpawnsInMapstats(infile, outfile, s, e, howMuch)
@@ -303,9 +323,13 @@ function mergeArraysShallowCopy(t1, t2, inplace) -- handles duplicate keys
 	return tt
 end
 
-function getUpvalue(f, name)
+function getUpvalue(f, name, ...)
 	local n, v = debug.findupvalue(f, name)
-	return v
+	if select("#", ...) > 0 then
+		return getUpvalue(v, ...)
+	else
+		return v
+	end
 end
 
 function upvalueDump(f) -- dump() doesn't work
@@ -525,3 +549,36 @@ function printBitValues(combined, bitDesc)
 	end
 	print(table.concat(t, "\r\n"))
 end
+
+function mtarget()
+	local t = Mouse:GetTarget()
+	local i = t.Index
+	if t.Kind == 0 then
+		return
+	elseif t.Kind == 1 then
+		return Map.Doors[i], i
+	elseif t.Kind == 2 then
+		return Map.Objects[i], i
+	elseif t.Kind == 3 then
+		return Map.Monsters[i], i
+	elseif t.Kind == 4 then
+		return Party[i], i
+	elseif t.Kind == 5 then
+		return Map.Sprites[i], i
+	elseif t.Kind == 6 then
+		if Map.IsOutdoor() then
+			return Map.Models[i:div(64)].Facets[i % 64], i:div(64), i % 64
+		else
+			return Map.Facets[i], i
+		end
+	elseif t.Kind == 7 then
+		return Map.Lights[i], i
+	end
+	error("Invalid mouse target")
+end
+
+local max, min = math.max, math.min
+function math.clamp(num, low, high)
+	return max(min(num, high), low)
+end
+getmetatable(1).__index.clamp = math.clamp

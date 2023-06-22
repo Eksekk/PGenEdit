@@ -9,6 +9,24 @@ std::unordered_map<int, Hook> hooks;
 std::unordered_map<uint32_t, HookFunc> hookFuncMap;
 std::unordered_map<uint32_t, std::vector<uint8_t>> hookRestoreList;
 
+void checkOverlap(uint32_t address, uint32_t size = 5)
+{
+	if (hookFuncMap.contains(address))
+	{
+		wxFAIL_MSG(wxString::Format("Hook at address 0x%X is already set", address));
+	}
+	else
+	{
+		for (int checkAddr = address - size + 1; checkAddr <= address + size - 1; ++checkAddr)
+		{
+			if (hookFuncMap.contains(checkAddr))
+			{
+				wxFAIL_MSG(wxString::Format("Hook at 0x%X overlaps with existing hook at 0x%X", address, checkAddr));
+			}
+		}
+	}
+}
+
 void HookElement::enable(bool enable)
 {
 	if (enable && !_active)
@@ -19,21 +37,28 @@ void HookElement::enable(bool enable)
 
 		case HOOK_ELEM_TYPE_PATCH_DATA:
 		{
-			patchBytes(address, reinterpret_cast<void*>(target), dataSize, &restoreData);
+			void* target = patchDataStr ? (void*)patchDataStr : target;
+			int dataSize = patchDataStr ? strlen(patchDataStr) : dataSize;
+			patchBytes(address, target, dataSize, &restoreData);
 		}
 		break;
 		case HOOK_ELEM_TYPE_CALL_RAW:
 		{
+			checkOverlap(address, hookSize);
 			hookCallRaw(address, reinterpret_cast<void*>(target), &restoreData, hookSize);
 		}
 		break;
 		case HOOK_ELEM_TYPE_CALL:
 		{
-			wxFAIL_MSG("Not implemented yet");
+			checkOverlap(address, hookSize);
+			// for now potentially break instructions, need to add hook size detection
+			hookCallRaw(address, reinterpret_cast<void*>(myHookProc), &restoreData, hookSize);
+			hookFuncMap[address] = func;
 		}
 		break;
 		case HOOK_ELEM_TYPE_JUMP:
-		{
+        {
+            checkOverlap(address, hookSize);
 			hookJumpRaw(address, reinterpret_cast<void*>(target), &restoreData, hookSize);
 		}
 		break;
@@ -49,6 +74,10 @@ void HookElement::enable(bool enable)
 		_active = false;
 		patchBytes(address, restoreData.data(), restoreData.size(), nullptr);
 		restoreData.clear();
+		if (type == HOOK_ELEM_TYPE_CALL)
+		{
+			hookFuncMap.erase(address);
+		}
 	}
 }
 
@@ -67,46 +96,132 @@ inline bool HookElement::isActive() const
 	return _active;
 }
 
-HookElement::HookElement() : _active(false), type(HOOK_ELEM_TYPE_CALL_RAW), address(0), target(0), hookSize(5), dataSize(5)
+HookElement::HookElement() : _active(false), type(HOOK_ELEM_TYPE_CALL_RAW), address(0), target(0), hookSize(5), dataSize(0), func(0), patchDataStr(0), needUnprotect(false)
 {
+}
+
+HookElementBuilder& HookElementBuilder::type(HookElementType type)
+{
+    elem.type = type;
+    return *this;
+}
+
+HookElementBuilder& HookElementBuilder::address(uint32_t address)
+{
+    elem.address = address;
+    return *this;
+}
+
+HookElementBuilder& HookElementBuilder::target(uint32_t target)
+{
+    elem.target = target;
+    return *this;
+}
+
+HookElementBuilder& HookElementBuilder::size(uint32_t size)
+{
+    elem.hookSize = size;
+    return *this;
+}
+
+HookElementBuilder& HookElementBuilder::dataSize(uint32_t dataSize)
+{
+    elem.dataSize = dataSize;
+    return *this;
+}
+
+HookElementBuilder& HookElementBuilder::func(HookFunc func)
+{
+    elem.func = func;
+    return *this;
+}
+
+HookElementBuilder& HookElementBuilder::needUnprotect(bool needUnprotect)
+{
+    elem.needUnprotect = needUnprotect;
+    return *this;
+}
+
+HookElement HookElementBuilder::build()
+{
+    // hook properties: type, address, dataSize, hookSize, target, func, needUnprotect
+    // hook types: jump, call raw, call, patch data
+    
+    // all need address
+    if (elem.address == 0)
+    {
+        wxFAIL_MSG("Hook address not set");
+    }
+    // patch data needs data size and target
+	if (elem.type == HOOK_ELEM_TYPE_PATCH_DATA)
+	{
+        if (elem.dataSize <= 0 && elem.patchDataStr == nullptr)
+        {
+            wxFAIL_MSG("Patch data hook: not using string and data size not set or <= 0");
+        }
+        else if (elem.target <= 0 && elem.patchDataStr == nullptr)
+        {
+            wxFAIL_MSG("Patch data hook: neither of target bytes ptr or patch data string is set");
+        }
+        else if (elem.target > 0 && elem.patchDataStr != nullptr)
+        {
+            wxFAIL_MSG("Patch data hook: target and patch str can't both be set");
+        }
+	}
+    // call needs func (call raw jumps to any code, skipping hook proc)
+    if (elem.type == HOOK_ELEM_TYPE_CALL && elem.func == 0)
+    {
+        wxFAIL_MSG("Call hook: function not set");
+    }
+    // call/call raw/jump need hook size >= 5
+    if ((elem.type == HOOK_ELEM_TYPE_JUMP || elem.type == HOOK_ELEM_TYPE_CALL || elem.type == HOOK_ELEM_TYPE_CALL_RAW) && elem.hookSize < 5)
+    {
+        wxFAIL_MSG("Call/jump hook size can't be less than 5");
+    }
+    // jump/call raw need target (intended to jump/call simple asm functions)
+    if ((elem.type == HOOK_ELEM_TYPE_JUMP || elem.type == HOOK_ELEM_TYPE_CALL_RAW) && elem.target <= 0)
+    {
+        wxFAIL_MSG("Jump/call raw hook: target to jump to not set or <= 0");
+    }
+    return elem;
 }
 
 void Hook::enable(bool enable)
 {
-	for (auto& elem : elements)
-	{
-		elem.enable(enable);
-	}
+    for (auto& elem : elements)
+    {
+        elem.enable(enable);
+    }
 }
 
 void Hook::disable()
 {
-	enable(false);
+    enable(false);
 }
 
 void Hook::toggle()
 {
-	enable(!_active);
+    enable(!_active);
 }
 
 inline bool Hook::isActive() const
 {
-	return _active;
+    return _active;
 }
 
 bool Hook::isFullyActive() const
 {
-	bool yes = _active;
-	for (const auto& elem : elements)
-	{
-		yes = !elem.isActive() ? false : yes;
-	}
-	return yes;
+    bool yes = _active;
+    for (const auto& elem : elements)
+    {
+        yes = !elem.isActive() ? false : yes;
+    }
+    return yes;
 }
 
 Hook::Hook(std::initializer_list<HookElement> elements) : elements(elements), _active(false)
 {
-	
+
 }
 
 void storeBytes(std::vector<uint8_t>* storeAt, uint32_t addr, uint32_t size)
@@ -127,7 +242,7 @@ void hookCallRaw(uint32_t addr, void* func, std::vector<uint8_t>* storeAt, uint3
 	sdword(addr + 1) = (int32_t)func - addr - 5;
 	if (size > 5)
 	{
-		memset((void*)(addr + 5), 0x90, size - 5);
+		memset((void*)(addr + 5), 0x90, size - 5); // 0x90 = NOP
 	}
 	VirtualProtect((void*)addr, size, tmp, &tmp);
 }
@@ -142,7 +257,7 @@ void hookJumpRaw(uint32_t addr, void* func, std::vector<uint8_t>* storeAt, uint3
 	sdword(addr + 1) = (int32_t)func - addr - 5;
 	if (size > 5)
 	{
-		memset((void*)(addr + 5), 0x90, size - 5); // 0x90 = NOP
+		memset((void*)(addr + 5), 0x90, size - 5);
 	}
 	VirtualProtect((void*)addr, size, tmp, &tmp);
 }
@@ -181,6 +296,15 @@ void patchQword(uint32_t addr, uint64_t val, std::vector<uint8_t>* storeAt)
 	VirtualProtect((void*)addr, 8, PAGE_EXECUTE_READWRITE, &tmp);
 	qword(addr) = val;
 	VirtualProtect((void*)addr, 8, tmp, &tmp);
+}
+
+void patchSDword(uint32_t addr, int32_t val, std::vector<uint8_t>* storeAt)
+{
+    storeBytes(storeAt, addr, 4);
+    DWORD tmp;
+    VirtualProtect((void*)addr, 4, PAGE_EXECUTE_READWRITE, &tmp);
+    sdword(addr) = val;
+    VirtualProtect((void*)addr, 4, tmp, &tmp);
 }
 
 void eraseCode(uint32_t addr, uint32_t size, std::vector<uint8_t>* storeAt)
@@ -241,7 +365,7 @@ void __fastcall dispatchHook(uint32_t esp)
 
 void __declspec(naked) myHookProc()
 {
-	// code taken from MMExtension RSMem.cpp
+	// code taken from MMExtension RSMem.cpp and adapted
 	_asm
 	{
 		pushfd // push eflags first, because below sub would corrupt them, and we want to preserve them
@@ -277,47 +401,4 @@ void __declspec(naked) myHookProc()
 		mov esp, [esp]
 		ret
 	}
-}
-
-HookElementBuilder& HookElementBuilder::type(HookElementType type)
-{
-	elem.type = type;
-	return *this;
-}
-
-HookElementBuilder& HookElementBuilder::address(uint32_t address)
-{
-	elem.address = address;
-	return *this;
-}
-
-HookElementBuilder& HookElementBuilder::target(uint32_t target)
-{
-	elem.target = target;
-	return *this;
-}
-
-HookElementBuilder& HookElementBuilder::size(uint32_t size)
-{
-	elem.hookSize = size;
-	return *this;
-}
-
-HookElementBuilder& HookElementBuilder::dataSize(uint32_t dataSize)
-{
-	elem.dataSize = dataSize;
-	return *this;
-}
-
-HookElement HookElementBuilder::build()
-{
-	if (elem.address == 0)
-	{
-		wxFAIL_MSG("Hook address not set");
-	}
-	if (elem.target == 0)
-	{
-		wxFAIL_MSG("Target not set");
-	}
-	return elem;
 }

@@ -1413,9 +1413,10 @@ do
 		[types.r8] = "double",
 		[types.EditPChar] = "char*",
 		[types.EditConstPChar] = "char*",
-		[types.PChar] = "char*",
+		[types.PChar] = "const char*",
 		[types.string] = "char", -- there's no "inline string" type :(
 	}
+
 	local function doPrimitive(data)
 		local typ = mmextToX64Dbg[data.dataType] or (data.struct and (Game.Version .. data.typeName))
 		if typ then
@@ -1656,7 +1657,7 @@ do
 					end
 					str = str .. format("(%s)", table.concat(tab, ", "))
 				end
-				str = "__" .. select(def.cc + 1, "stdcall", "thiscall", "fastcall", "fastcall+eax") .. " " .. str
+				str = "__" .. assert(select(def.cc + 1, "stdcall", "thiscall", "fastcall", "fastcall+eax"), dump(def)) .. " " .. str
 				local label = {
 					module = moduleStr,
 					address = format("0x%X", moduleOffset),

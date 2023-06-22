@@ -8,6 +8,9 @@
 // - integration with lua
 // 
 
+struct HookData;
+typedef void(__stdcall* HookFunc)(HookData*);
+
 enum HookElementType
 {
 	HOOK_ELEM_TYPE_CALL_RAW, // simple call hook
@@ -23,9 +26,12 @@ public:
 	HookElementType type;
 	uint32_t address;
 	uint32_t target;
+	const char* patchDataStr;
 	uint32_t hookSize;
 	uint32_t dataSize;
 	std::vector<uint8_t> restoreData;
+	HookFunc func;
+	bool needUnprotect;
 
 	void enable(bool enable = true);
 	void disable();
@@ -43,6 +49,9 @@ public:
 	HookElementBuilder& target(uint32_t target);
 	HookElementBuilder& size(uint32_t size);
 	HookElementBuilder& dataSize(uint32_t dataSize);
+    HookElementBuilder& func(HookFunc func);
+    HookElementBuilder& patchDataStr(const char* patchDataStr);
+	HookElementBuilder& needUnprotect(bool needUnprotect);
 	HookElement build();
 };
 
@@ -66,10 +75,7 @@ public:
 
 extern std::unordered_map<int, Hook> hooks;
 
-struct HookData;
-
 extern std::unordered_map<uint32_t, std::vector<uint8_t> > hookRestoreList;
-typedef void(__stdcall *HookFunc)(HookData*);
 extern std::unordered_map<uint32_t, HookFunc> hookFuncMap;
 
 void __fastcall dispatchHook(uint32_t esp);
@@ -102,6 +108,8 @@ void patchByte(uint32_t addr, uint8_t val, std::vector<uint8_t>* storeAt);
 void patchWord(uint32_t addr, uint16_t val, std::vector<uint8_t>* storeAt);
 void patchDword(uint32_t addr, uint32_t val, std::vector<uint8_t>* storeAt);
 void patchQword(uint32_t addr, uint64_t val, std::vector<uint8_t>* storeAt);
+
+void patchSDword(uint32_t addr, int32_t val, std::vector<uint8_t>* storeAt);
 
 // erases code (NOPs), writing jump forward if number of bytes erased is high enough
 void eraseCode(uint32_t addr, uint32_t size, std::vector<uint8_t>* storeAt);
