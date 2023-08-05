@@ -402,3 +402,24 @@ void __declspec(naked) myHookProc()
 		ret
 	}
 }
+
+int getInstructionSize(void* addr)
+{
+	ZyanU64 runtimeAddr = (ZyanU64)addr;
+	ZydisDisassembledInstruction instr;
+	if (!ZydisDisassembleIntel(ZydisMachineMode::ZYDIS_MACHINE_MODE_LEGACY_32, runtimeAddr, addr, 20, &instr))
+	{
+		wxMessageBox(wxString::Format("Couldn't get instruction length at address 0x%X", addr), "Error", wxCENTER | wxOK | wxICON_ERROR);
+		return 1; // so no infinite loops happen
+	}
+	else
+	{
+		wxLogInfo("Instruction at address 0x%X has length of %d", addr, instr.info.length);
+		return instr.info.length;
+	}
+}
+
+int getInstructionSize(uint32_t addr)
+{
+	return getInstructionSize((void*)addr);
+}

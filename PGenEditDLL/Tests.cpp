@@ -915,3 +915,181 @@ std::vector<wxString> Tests::testSkillFunctions()
 
 	return myasserter.errors;
 }
+
+// dst, src, size
+std::vector<uint8_t> memcpyVector(void* src, uint32_t size)
+{
+	std::vector<uint8_t> v(size);
+	memcpy(v.data(), src, size);
+	return v;
+}
+
+__declspec(naked) static int hook2Bytes()
+{
+    _asm
+    {
+        mov edi, edi
+        push ebx
+        dec eax
+        int3
+        int3
+        int3
+        add ebx, eax
+        ret
+    }
+}
+
+__declspec(naked) static int hook5Bytes()
+{
+    _asm
+    {
+        mov ecx, 0xDEADBEEF
+        push ebx
+        dec eax
+        int3
+        int3
+        int3
+        add ebx, eax
+        ret
+    }
+}
+
+static __declspec(naked) int hook10Bytes()
+{
+    _asm
+    {
+        mov DWORD PTR[ebp - 0x3640e], 0x42f300
+        push ebx
+        dec eax
+        int3
+        int3
+        int3
+        add ebx, eax
+        ret
+    }
+}
+
+// converts string to hexadecimal character notation
+std::string codeToSemiReadableString(const std::string& input)
+{
+	std::string out;
+	out.resize(input.size() * 4);
+	char buf[8];
+	for (unsigned char c : input)
+	{
+		sprintf_s(buf, 8, "%X");
+		out += "\\x";
+		out += buf;
+	}
+	return out;
+}
+
+template<typename Player, typename Game>
+static std::vector<wxString>
+Tests::testHookPlacingAndSize()
+{
+    std::vector<std::vector<uint8_t>> codeCopy;
+    // test hook size: patchData, callRaw, call, jump (for detours check if opcode and function address is correct, for all check that bytes beyond 5 are NOP-ed if they are in range of hook size)
+	// for each type do at least three different size instructions at the beginning
+	// on the occasion, also test if disabling a hook fully restores previous instructions/data
+    codeCopy.push_back(memcpyVector(hook2Bytes, 10));
+    codeCopy.push_back(memcpyVector(hook5Bytes, 13));
+    codeCopy.push_back(memcpyVector(hook10Bytes, 18));
+
+	auto hookTypeToString = [](HookElementType type)
+	{
+		switch (type)
+		{
+		case HOOK_ELEM_TYPE_CALL: return "call";
+		case HOOK_ELEM_TYPE_CALL_RAW: return "call raw";
+		case HOOK_ELEM_TYPE_JUMP: return "jump";
+		case HOOK_ELEM_TYPE_PATCH_DATA: return "patch data";
+		}
+	}
+
+	auto readCodeAsString = [](uin32_t addr, int size) -> std::string
+	{
+		return std::string((char*)addr, (char*)(addr + size));
+	}
+
+	void* funcs[3] = { hook2Bytes, hook5Bytes, hook10Bytes };
+	int funcSizes[3] = { 2, 5, 10 };
+
+	auto test = [&hookTypeToString, &readCodeAsString, &funcs, &funcSizes, &](const wxString& errorFormat, HookElementType type)
+	{
+		const wxString& backupCodeFailed = "[%s] Backed up code doesn't match code stored before (hook size: %d bytes)";
+		const wxString& hookTypeStr = hookTypeToString(type);
+		for (int hookSize = 0; hookSize < 3; ++hookSize)
+        {
+			char patchContent[10] = "aabbccddee";
+			for (int funcId = 0; funcId < 3; ++i)
+            {
+				void* func = funcs[funcId];
+				int funcStartSize = funcSizes[funcId];
+				int realHookSize;
+                switch (type)
+                {
+                case HOOK_ELEM_TYPE_CALL_RAW:
+					realHookSize = 5 + hookSize * 2;
+                    hookCallRaw(func, (void*)0xFEFEFEFE, &copy, realHookSize);
+                    break;
+                case HOOK_ELEM_TYPE_CALL:
+					realHookSize = 5 + hookSize * 2;
+                    hookCall(func, (void*)0xFEFEFEFE, &copy, realHookSize);
+                    break;
+                case HOOK_ELEM_TYPE_JUMP:
+					realHookSize = 5 + hookSize * 2;
+                    hookJumpRaw(func, (void*)0xFEFEFEFE, &copy, realHookSize);
+					break;
+                case HOOK_ELEM_TYPE_PATCH_DATA:
+					realHookSize = 3 + hookSize * 2;
+					patchBytes(hook2Bytes, patchContent, realHookSize);
+                    // && sdword(hook2Bytes + 1) + hook2Bytes + 1 == 0xFEFEFEFE && byte(hook2Bytes + 5) != 0x90, 
+                }
+                wxString basicInfoStr = wxString::Format("[%s] [hookSizeId: %d, real: %d] [funcId: %d]: ", hookTypeStr, hookSize, funcId);
+				int cmpFirstByte = -1;
+				wxString opcodeName;
+				if (type == HookElementType::HOOK_ELEM_TYPE_CALL || type == HookElementType::HOOK_ELEM_TYPE_CALL_RAW)
+				{
+					cmpFirstByte = 0xE8;
+					opcodeName = "call";
+				else if (type == HOOK_ELEM_TYPE_JUMP)
+					cmpFirstByte = 0xE9;
+					opcodeName = "jump";
+                }
+				if (cmpFirstByte >= 0)
+                {
+                    myassert(byte(func) == cmpFirstByte, wxString::Format("%sFirst byte is not %s opcode (it's '%s')",
+                        basicInfoStr, opcodeName, codeToSemiReadableString(readCodeAsString(hook2Bytes, 1))));
+				}
+				
+				if (type == HookElementType::HOOK_ELEM_TYPE_CALL_RAW || type == HOOK_ELEM_TYPE_JUMP || type == HOOK_ELEM_TYPE_CALL)
+				{
+
+					long long addr = sdword(func + 1) + func + 6;
+					long long expected = type == HOOK_ELEM_TYPE_CALL ? myHookProc : 0xFEFEFEFE;
+					myassert(addr == expected, wxString::Format("%sCall hook has invalid address (0x%X, expected 0x%X)",
+						basicInfoStr, addr, expected));
+				}
+				auto oldCode = codeCopy.at(hookSize);
+			}
+
+		}
+	};
+
+	for (HookElementType type = HOOK_ELEM_TYPE_CALL_RAW; type <= HOOK_ELEM_TYPE_PATCH_DATA; ++type)
+	{
+		
+	}
+}
+
+template<typename Player, typename Game>
+static std::vector<wxString>
+Tests::testHooks()
+{
+	
+}
+
+template std::vector<wxString> Tests::testHooks<mm6::Player, mm6::Game>();
+template std::vector<wxString> Tests::testHooks<mm7::Player, mm7::Game>();
+template std::vector<wxString> Tests::testHooks<mm8::Player, mm8::Game>();

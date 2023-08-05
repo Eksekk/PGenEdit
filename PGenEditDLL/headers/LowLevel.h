@@ -1,6 +1,7 @@
 #pragma once
 #include "pch.h"
 #include "main.h"
+#include "Zydis/Zydis.h"
 
 // REMAINING TO IMITATE MMEXT
 // - disassembler engine
@@ -242,3 +243,6 @@ struct HookData
 #pragma pack(pop)
 
 void myHookProc();
+
+int getInstructionSize(void* addr);
+int getInstructionSize(uint32_t addr);

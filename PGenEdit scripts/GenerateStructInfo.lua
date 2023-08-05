@@ -1418,7 +1418,7 @@ do
 	}
 
 	local function doPrimitive(data)
-		local typ = mmextToX64Dbg[data.dataType] or (data.struct and (Game.Version .. data.typeName))
+		local typ = mmextToX64Dbg[data.dataType] or (data.struct and data.typeName)
 		if typ then
 			return {
 				type = typ,
@@ -1539,9 +1539,8 @@ do
 							sname = mmextToX64Dbg.u1
 						else
 							isPlain = mmextToX64Dbg[baseData.dataType] and true or false
-							sname = (baseData.struct and Game.Version or "") .. (baseData.struct and baseData.typeName or mmextToX64Dbg[baseData.dataType])
+							sname = baseData.struct and baseData.typeName or mmextToX64Dbg[baseData.dataType]
 						end
-						local added = false
 						for arrid = 1, #arrays do -- if not ptr, base array can be done with arrsize
 							-- ->u1[5][5]
 							local arr = arrays[arrid]
@@ -1549,16 +1548,12 @@ do
 								sname = sname .. "*"
 							else
 								local sname2 = format("%s[%d]", sname, noInfinity(arr.count))
-								if not added and not baseData.struct then -- struct has version added a bit above
-									sname2 = Game.Version .. sname2
-									added = true
-								end
 								if not table.findIf(defs.structs, function(s) return s.name == sname2 end) then
 									table.insert(defs.structs, {
 										name = sname2,
 										members = {
 											{
-												type = (not isPlain and not baseData.struct and Game.Version or "") .. sname, -- also struct has version added a bit above
+												type = sname, -- also struct has version added a bit above
 												name = "value",
 												arrsize = noInfinity(arr.count)
 											}
@@ -1590,8 +1585,7 @@ do
 				local doStructUnion
 				function doStructUnion(struct, name, isUnion)
 					local json = {
-						-- Game.Version disambiguator needed because struct database is shared apparently
-						name = Game.Version .. (name or ("anon_" .. (isUnion and "union" or "struct") .. "_" .. structIndex)),
+						name = name or ((isUnion and "U" or "S") .. "_" .. structIndex),
 						members = {}
 					}
 					structIndex = structIndex + 1

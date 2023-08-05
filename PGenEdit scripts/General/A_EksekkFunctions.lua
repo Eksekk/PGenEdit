@@ -60,6 +60,7 @@ function mtm(str, x, y, z)
 	--assert(mapFileNamesToNames[s1] or table.find(fileNames, s1), "Invalid map name")
 	return evt.MoveToMap{Name = assert(
 		fileNameByMapName[str:lower()]
+		or fileNameByMapName["the " .. str:lower()]
 		or fileNames[table.find(fileNames, s1)]
 		or fileNames[table.find(fileNames, s2)]
 		or zero and "0",
@@ -80,14 +81,37 @@ end
 
 local mapIdsToItemNames = {}
 
+local invItemType = table.invert(const.ItemType)
+
 function events.GameInitialized2()
 	for i, entry in Game.ItemsTxt do
-		mapIdsToItemNames[entry.Name:lower()] = i
+		local stat = entry.EquipStat + 1
+		table.insert(tget(mapIdsToItemNames, entry.Name:lower()), {id = i, typeName = invItemType[stat]:lower()})
 	end
 end
 
-function item(id)
-	evt.GiveItem{Id = mapIdsToItemNames[id] or id}
+function item(what, typ, props)
+	local item
+	if type(what) == "number" then
+		item = what
+	else
+		local find = table.findIf(mapIdsToItemNames[what:lower()] or {}, function(data)
+			if not typ then return true end
+			if data.typeName:find(typ:lower(), nil, true) then
+				return true
+			end
+		end)
+		if find then
+			item = mapIdsToItemNames[what][find].id
+		end
+	end
+	if not item then
+		error(string.format("Couldn't find item %q", what) .. (typ and string.format(", type %q", typ) or ""))
+	end
+	evt.GiveItem{Id = item}
+	for k, v in pairs(props or {}) do
+		Mouse.Item[k] = v
+	end
 end
 
 -- gives ring with spc bonus with "NameAdd" matching provided text
@@ -291,6 +315,14 @@ function table.filterFunc(t, func) -- filter is taken by merge
 	return out
 end
 
+function table.reduce(t, func)
+	local val = t[1]
+	for i = 2, #t do
+		val = func(val, t[i])
+	end
+	return val
+end
+
 function table.slice(tbl, first, last)
 	local n = #tbl
 	local tableFirstIndex = tbl[0] ~= nil and 0 or 1
@@ -362,8 +394,11 @@ function debugTable(tbl, dumpDepth) -- makes table print its contents in stacktr
 	local mt = getmetatable(tbl) or {}
 	if not mt.__tostring then
 		function mt.__tostring(t)
+			local tostr = rawget(getmetatable(t), "__tostring")
 			rawset(getmetatable(t), "__tostring", nil) -- avoid infinite recursion
-			return dump(t, dumpDepth)
+			local ret = dump(t, dumpDepth)
+			rawset(getmetatable(t), "__tostring", tostr)
+			return ret
 		end
 	end
 	setmetatable(tbl, mt)
@@ -582,3 +617,7 @@ function math.clamp(num, low, high)
 	return max(min(num, high), low)
 end
 getmetatable(1).__index.clamp = math.clamp
+
+function arrayEndPtr(arr)
+	return (arr["?ptr"] + arr.Limit * arr.ItemSize):tohex()
+end
