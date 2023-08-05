@@ -43,7 +43,9 @@ template<typename Player, typename Game>
 std::vector<wxString> Tests::run()
 {
 	testingNow = true;
-	auto ret = mergeVectors({ testMisc<Player, Game>(), testSkillFunctions()/*, testJson()*/, GUI_tests::testGui<Player, Game>()/*, testPlayerStructAccessor<Player, Game>()*/, testHooks() });
+	auto ret = mergeVectors({ testMisc<Player, Game>(), testSkillFunctions()/*, testJson()*/, GUI_tests::testGui<Player, Game>()
+		/*, testPlayerStructAccessor<Player, Game>()*/, testHooks<Player, Game>()
+	});
 	testingNow = false;
 	return ret;
 }
@@ -90,7 +92,7 @@ void testSettableStructField(
 		0, 1, 4, 10, 22, high - unit * 42, high - unit * 22, high - unit * 5, high - unit, high - 20, high - 3, high - 1, high };
 
 	int oldErrorsNum = myasserter.errors.size();
-	for (int i = 0; i < tests.size(); ++i)
+	for (size_t i = 0; i < tests.size(); ++i)
 	{
 		int64_t test = tests[i];
 		wxString failMsg = wxString::Format("[%s] Test #%d (value: %lld) failed", logId, i, test);

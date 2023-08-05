@@ -413,7 +413,7 @@ TemplatedPlayerStructAccessor<Player>::getSkills()
 	Player* pl = getPlayerToAffect();
 	std::vector<PlayerSkillValue> ret;
 	ret.reserve(GameData::skills.size());
-	for (int i = 0; i < pl->skills.size(); ++i)
+	for (size_t i = 0; i < pl->skills.size(); ++i)
 	{
 		SkillValue val = splitSkill(pl->skills[i]);
 		auto itr = GameData::skills.find(i);

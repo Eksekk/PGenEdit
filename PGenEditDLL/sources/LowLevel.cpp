@@ -17,7 +17,7 @@ void checkOverlap(uint32_t address, uint32_t size = 5)
 	}
 	else
 	{
-		for (int checkAddr = address - size + 1; checkAddr <= address + size - 1; ++checkAddr)
+		for (uint32_t checkAddr = address - size + 1; checkAddr <= address + size - 1; ++checkAddr)
 		{
 			if (hookFuncMap.contains(checkAddr))
 			{
@@ -37,8 +37,8 @@ void HookElement::enable(bool enable)
 
 		case HOOK_ELEM_TYPE_PATCH_DATA:
 		{
-			void* target = patchDataStr ? (void*)patchDataStr : target;
-			int dataSize = patchDataStr ? strlen(patchDataStr) : dataSize;
+			void* target = patchDataStr ? (void*)patchDataStr : (void*)this->target;
+			int dataSize = patchDataStr ? strlen(patchDataStr) : this->dataSize;
 			patchBytes(address, target, dataSize, &restoreData);
 		}
 		break;
@@ -50,10 +50,7 @@ void HookElement::enable(bool enable)
 		break;
 		case HOOK_ELEM_TYPE_CALL:
 		{
-			checkOverlap(address, hookSize);
-			// for now potentially break instructions, need to add hook size detection
-			hookCallRaw(address, reinterpret_cast<void*>(myHookProc), &restoreData, hookSize);
-			hookFuncMap[address] = func;
+			hookCall(address, reinterpret_cast<HookFunc>(target), &restoreData, hookSize);
 		}
 		break;
 		case HOOK_ELEM_TYPE_JUMP:
@@ -98,6 +95,14 @@ inline bool HookElement::isActive() const
 
 HookElement::HookElement() : _active(false), type(HOOK_ELEM_TYPE_CALL_RAW), address(0), target(0), hookSize(5), dataSize(0), func(0), patchDataStr(0), needUnprotect(false)
 {
+}
+
+HookElement::~HookElement()
+{
+	if (_active)
+	{
+		disable();
+	}
 }
 
 HookElementBuilder& HookElementBuilder::type(HookElementType type)
@@ -224,6 +229,14 @@ Hook::Hook(std::initializer_list<HookElement> elements) : elements(elements), _a
 
 }
 
+Hook::~Hook()
+{
+	if (_active)
+	{
+		disable();
+	}
+}
+
 void storeBytes(std::vector<uint8_t>* storeAt, uint32_t addr, uint32_t size)
 {
 	if (storeAt)
@@ -260,6 +273,14 @@ void hookJumpRaw(uint32_t addr, void* func, std::vector<uint8_t>* storeAt, uint3
 		memset((void*)(addr + 5), 0x90, size - 5);
 	}
 	VirtualProtect((void*)addr, size, tmp, &tmp);
+}
+
+void hookCall(uint32_t addr, HookFunc func, std::vector<uint8_t>* storeAt, uint32_t size /*= 5*/)
+{
+    checkOverlap(addr, size);
+    // for now potentially break instructions, need to add hook size detection
+    hookCallRaw(addr, reinterpret_cast<void*>(myHookProc), storeAt, size);
+    hookFuncMap[addr] = func;
 }
 
 void patchByte(uint32_t addr, uint8_t val, std::vector<uint8_t>* storeAt)

@@ -7,7 +7,7 @@ extern int MMVER;
 template<typename T>
 bool existsInVector(const std::vector<T>& vec, const T& val)
 {
-	for (int i = 0; i < vec.size(); ++i)
+	for (size_t i = 0; i < vec.size(); ++i)
 	{
 		if (vec[i] == val)
 		{
@@ -20,7 +20,7 @@ bool existsInVector(const std::vector<T>& vec, const T& val)
 template<typename T>
 int indexInVector(const std::vector<T>& vec, const T& val)
 {
-	for (int i = 0; i < vec.size(); ++i)
+	for (size_t i = 0; i < vec.size(); ++i)
 	{
 		if (vec[i] == val)
 		{

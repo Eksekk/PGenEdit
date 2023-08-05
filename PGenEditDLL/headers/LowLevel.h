@@ -39,6 +39,7 @@ public:
 	void toggle();
 	inline bool isActive() const;
 	HookElement();
+	~HookElement();
 };
 
 class HookElementBuilder
@@ -71,6 +72,7 @@ public:
 
 	Hook() = delete;
 	Hook(const Hook&) = delete;
+	~Hook();
 	Hook& operator=(const Hook&) = delete;
 };
 
@@ -104,6 +106,8 @@ void storeBytes(std::vector<uint8_t>* storeAt, uint32_t addr, uint32_t size);
 void hookCallRaw(uint32_t addr, void* func, std::vector<uint8_t>* storeAt, uint32_t size = 5);
 void hookJumpRaw(uint32_t addr, void* func, std::vector<uint8_t>* storeAt, uint32_t size = 5);
 
+void hookCall(uint32_t addr, HookFunc func, std::vector<uint8_t>* storeAt, uint32_t size = 5);
+
 // data patching functions which unprotect before/protect after (essential for patching code etc.)
 void patchByte(uint32_t addr, uint8_t val, std::vector<uint8_t>* storeAt);
 void patchWord(uint32_t addr, uint16_t val, std::vector<uint8_t>* storeAt);
@@ -116,7 +120,7 @@ void patchSDword(uint32_t addr, int32_t val, std::vector<uint8_t>* storeAt);
 void eraseCode(uint32_t addr, uint32_t size, std::vector<uint8_t>* storeAt);
 
 // patches sequence of bytes (unprotect/protect)
-void patchBytes(uint32_t addr, void* bytes, uint32_t size, std::vector<uint8_t>* storeAt);
+void patchBytes(uint32_t addr, void* bytes, uint32_t size, std::vector<uint8_t>* storeAt = nullptr);
 
 void removeHooks();
 

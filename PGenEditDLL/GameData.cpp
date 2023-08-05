@@ -104,7 +104,7 @@ bool GameData::processClassDataJson(const char* str)
             if (classEntry.contains("masteries"))
             {
                 const auto& vec = classEntry["masteries"].get<std::vector<int>>();
-                for (int i = 0; i < vec.size(); ++i)
+                for (size_t i = 0; i < vec.size(); ++i)
                 {
                     // can't have assert that skill exists because skills might not be processed yet
                     cls.maximumSkillMasteries[i] = static_cast<Mastery>(vec[i]);
@@ -210,7 +210,7 @@ bool GameData::processSkillDataJson(const char* str)
             sk.name = skillEntry["name"];
             //assert(!sk.name.empty());
             auto maxMasteryByClass = skillEntry["maxMasteryByClass"].get<std::vector<int> >();
-            for (int i = 0; i < maxMasteryByClass.size(); ++i)
+            for (size_t i = 0; i < maxMasteryByClass.size(); ++i)
             {
                 sk.maxMasteryByClass.emplace(i, (Mastery)maxMasteryByClass[i]);
             }
@@ -258,7 +258,7 @@ bool GameData::processSkillDataJson(const char* str)
             if (skillEntry.contains("trainCost"))
             {
                 auto vec = skillEntry["trainCost"].get<std::vector<int>>();
-                for (int i = 0; i < vec.size(); ++i)
+                for (size_t i = 0; i < vec.size(); ++i)
                 {
                     int index = MASTERY_NOVICE + i;
                     sk.trainCost.at(index) = vec[i];
@@ -348,7 +348,7 @@ bool GameData::processMiscDataJson(const char* str)
 			// TODO: resistance spells
 			GameData::resistances.emplace(useId, std::make_unique<PlayerResistance>(useId, data["name"], data["exclusive"], nullptr, nullptr));
 		}
-		wxASSERT(GameData::resistances.size() >= (MMVER == 6 ? 5 : 9));
+		wxASSERT(GameData::resistances.size() >= (MMVER == 6 ? 5U : 9U));
 		postProcess();
     }
     catch (const nlohmann::json::exception& e)
