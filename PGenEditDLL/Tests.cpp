@@ -985,6 +985,16 @@ std::string codeToSemiReadableString(const std::string& input)
 	return out;
 }
 
+std::string readCodeAsString(uint32_t addr, int size)
+{
+    return std::string((char*)addr, (char*)(addr + size));
+}
+
+std::string getCodeString(uint32_t addr, int size)
+{
+	return codeToSemiReadableString(readCodeAsString(addr, size));
+}
+
 template<typename Player, typename Game>
 static std::vector<wxString>
 Tests::testHookPlacingAndSize()
@@ -1011,11 +1021,6 @@ Tests::testHookPlacingAndSize()
 		}
 	};
 
-	auto readCodeAsString = [](uint32_t addr, int size) -> std::string
-	{
-		return std::string((char*)addr, (char*)(addr + size));
-	};
-
 	void* funcs[3] = { (void*)hook2Bytes, (void*)hook5Bytes, (void*)hook10Bytes };
 	int funcStartSizes[3] = { 2, 5, 10 };
 	Asserter myasserter;
@@ -1034,23 +1039,24 @@ Tests::testHookPlacingAndSize()
 				int funcStartSize = funcStartSizes[funcId];
 				int funcSize = funcSizes[funcId];
 				int hookSize;
+				std::vector<uint8_t> autoCodeCopy;
                 switch (type)
                 {
                 case HOOK_ELEM_TYPE_CALL_RAW:
 					hookSize = 5 + hookSizeId * 2;
-                    hookCallRaw(addr, (void*)0xFEFEFEFE, nullptr, hookSize);
+                    hookCallRaw(addr, (void*)0xFEFEFEFE, &autoCodeCopy, hookSize);
                     break;
                 case HOOK_ELEM_TYPE_CALL:
 					hookSize = 5 + hookSizeId * 2;
-                    hookCall(addr, (HookFunc)0xFEFEFEFE, nullptr, hookSize);
+                    hookCall(addr, (HookFunc)0xFEFEFEFE, &autoCodeCopy, hookSize);
                     break;
                 case HOOK_ELEM_TYPE_JUMP:
 					hookSize = 5 + hookSizeId * 2;
-                    hookJumpRaw(addr, (void*)0xFEFEFEFE, nullptr, hookSize);
+                    hookJumpRaw(addr, (void*)0xFEFEFEFE, &autoCodeCopy, hookSize);
 					break;
                 case HOOK_ELEM_TYPE_PATCH_DATA:
 					hookSize = 3 + hookSizeId * 2;
-					patchBytes(addr, (unsigned char*)patchContent, hookSize, nullptr, true); // useNops == true
+					patchBytes(addr, (unsigned char*)patchContent, hookSize, &autoCodeCopy, true); // useNops == true
                     // && sdword(hook2Bytes + 1) + hook2Bytes + 1 == 0xFEFEFEFE && byte(hook2Bytes + 5) != 0x90, 
                 }
                 wxString basicInfoStr = wxString::Format("[%s] [hookSizeId: %d, real: %d] [funcId: %d]: ", hookTypeStr, hookSizeId, hookSize, funcId);
@@ -1069,7 +1075,7 @@ Tests::testHookPlacingAndSize()
 				if (cmpFirstByte >= 0)
                 {
                     myassert(byte(addr) == cmpFirstByte, wxString::Format("%sFirst byte is not %s opcode (it's '%s')",
-                        basicInfoStr, opcodeName, codeToSemiReadableString(readCodeAsString(addr, 1)))
+                        basicInfoStr, opcodeName, getCodeString(addr, 1))
 					);
 				}
 				
@@ -1098,6 +1104,12 @@ Tests::testHookPlacingAndSize()
                 // check that all required bytes are NOP-ed
 				int firstNopIndex = type == HOOK_ELEM_TYPE_PATCH_DATA ? hookSize : 5;
 				int realSize = getRealHookSize(oldCode, hookSize);
+				myassert(realSize == autoCodeCopy.size(), wxString::Format("%sReal hook size (%d) and auto code backup size (%d) don't match", realSize, autoCodeCopy.size()));
+				myassert(memcmp((void*)oldCodeVec.data(), (void*)autoCodeCopy.data(), realSize) == 0,
+					wxString::Format("%sBackup memory and backup memory done by hook functions don't match: %s\t\t%s",
+						getCodeString((uint32_t)codeBackup[funcId].data(), realSize), getCodeString((uint32_t)autoCodeCopy.data(), realSize)
+					)
+				);
 				for (int i = firstNopIndex; i < realSize; ++i)
                 {
                     myassert(byte(newCode + i) == 0x90, wxString::Format("%sRequired byte is not NOP-ed (address 0x%X, byte index %d)", basicInfoStr, addr, i));
