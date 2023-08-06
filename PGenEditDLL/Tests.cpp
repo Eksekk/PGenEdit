@@ -1081,10 +1081,10 @@ Tests::testHookPlacingAndSize()
 							basicInfoStr, addr)
 						);
 					}
-					long long targetAddr = sdword(addr + 1) + addr + 6;
-					long long expected = type == HOOK_ELEM_TYPE_CALL ? reinterpret_cast<uint32_t>(myHookProc) : 0xFEFEFEFEU;
+					long long targetAddr = sdword(addr + 1) + addr + 5;
+					uint32_t expected = type == HOOK_ELEM_TYPE_CALL ? reinterpret_cast<uint32_t>(myHookProc) : 0xFEFEFEFEU;
 					myassert(targetAddr == expected, wxString::Format("%sCall hook has invalid address (0x%X, expected 0x%X)",
-						basicInfoStr, targetAddr, expected));
+						basicInfoStr, (uint32_t)targetAddr, expected));
 				}
 				else if (type == HOOK_ELEM_TYPE_PATCH_DATA)
 				{
@@ -1120,7 +1120,8 @@ Tests::testHookPlacingAndSize()
 				patchBytes(addr, codeBackup[funcId].data(), funcSize);
 				if (type == HOOK_ELEM_TYPE_CALL)
 				{
-					hooks.erase(addr);
+					assert(hookFuncMap.contains(addr));
+					hookFuncMap.erase(addr);
 				}
 			}
 

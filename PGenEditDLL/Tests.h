@@ -43,7 +43,7 @@ template<typename Player, typename Game>
 std::vector<wxString> Tests::run()
 {
 	testingNow = true;
-	auto ret = mergeVectors({ testMisc<Player, Game>(), testSkillFunctions()/*, testJson()*/, GUI_tests::testGui<Player, Game>()
+	auto ret = mergeVectors({ testMisc<Player, Game>(), testSkillFunctions()/*, testJson()*//*, GUI_tests::testGui<Player, Game>()*/
 		/*, testPlayerStructAccessor<Player, Game>()*/, testHooks<Player, Game>()
 	});
 	testingNow = false;

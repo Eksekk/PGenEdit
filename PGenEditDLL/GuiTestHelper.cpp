@@ -75,7 +75,7 @@ void GuiTestHelper::autoSelect(wxChoice* target, const wxString& text)
 	scrollIntoView(target);
 	target->SetFocus();
 	dispatchWindowMessages();
-	wxMessageBox("Set breakpoint in wxYield() now");
+	//wxMessageBox("Set breakpoint in wxYield() now");
 	// a hack, but temporary event loop is needed for wxwidgets
 	wxEventLoop::SetActive(tmpLoop);
 	// IMPORTANT

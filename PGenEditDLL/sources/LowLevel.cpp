@@ -237,6 +237,17 @@ Hook::~Hook()
 	}
 }
 
+int getRealHookSize(uint32_t addr, uint32_t size)
+{
+	int n = 0;
+	while (n < size)
+	{
+		n = n + getInstructionSize(addr + n);
+	}
+	assert(n >= 5);
+	return n;
+}
+
 void storeBytes(std::vector<uint8_t>* storeAt, uint32_t addr, uint32_t size)
 {
 	if (storeAt)
@@ -247,7 +258,7 @@ void storeBytes(std::vector<uint8_t>* storeAt, uint32_t addr, uint32_t size)
 
 void hookCallRaw(uint32_t addr, void* func, std::vector<uint8_t>* storeAt, uint32_t size)
 {
-	assert(size >= 5);
+	size = getRealHookSize(addr, size);
 	storeBytes(storeAt, addr, size);
 	DWORD tmp;
 	VirtualProtect((void*)addr, size, PAGE_EXECUTE_READWRITE, &tmp);
@@ -262,7 +273,7 @@ void hookCallRaw(uint32_t addr, void* func, std::vector<uint8_t>* storeAt, uint3
 
 void hookJumpRaw(uint32_t addr, void* func, std::vector<uint8_t>* storeAt, uint32_t size)
 {
-	assert(size >= 5);
+	size = getRealHookSize(addr, size);
 	storeBytes(storeAt, addr, size);
 	DWORD tmp;
 	VirtualProtect((void*)addr, size, PAGE_EXECUTE_READWRITE, &tmp);
@@ -277,6 +288,7 @@ void hookJumpRaw(uint32_t addr, void* func, std::vector<uint8_t>* storeAt, uint3
 
 void hookCall(uint32_t addr, HookFunc func, std::vector<uint8_t>* storeAt, uint32_t size /*= 5*/)
 {
+	size = getRealHookSize(addr, size);
     checkOverlap(addr, size);
     // for now potentially break instructions, need to add hook size detection
     hookCallRaw(addr, reinterpret_cast<void*>(myHookProc), storeAt, size);
@@ -430,12 +442,12 @@ int getInstructionSize(void* addr)
 	ZydisDisassembledInstruction instr;
 	if (!ZydisDisassembleIntel(ZydisMachineMode::ZYDIS_MACHINE_MODE_LEGACY_32, runtimeAddr, addr, 20, &instr))
 	{
-		wxMessageBox(wxString::Format("Couldn't get instruction length at address 0x%X", addr), "Error", wxCENTER | wxOK | wxICON_ERROR);
+		wxMessageBox(wxString::Format("Couldn't get instruction length at address 0x%X", (uint32_t)addr), "Error", wxCENTER | wxOK | wxICON_ERROR);
 		return 1; // so no infinite loops happen
 	}
 	else
 	{
-		wxLogInfo("Instruction at address 0x%X has length of %d", addr, instr.info.length);
+		wxLogInfo("Instruction at address 0x%X has length of %d", (uint32_t)addr, (uint32_t)instr.info.length);
 		return instr.info.length;
 	}
 }
