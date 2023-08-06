@@ -1024,7 +1024,7 @@ Tests::testHookPlacingAndSize()
 	{
 		const wxString& backupCodeFailed = "[%s] Backed up code doesn't match code stored before (hook size: %d bytes)";
 		const wxString& hookTypeStr = hookTypeToString(type);
-		for (int hookSize = 0; hookSize < 3; ++hookSize)
+		for (int hookSizeId = 0; hookSizeId < 3; ++hookSizeId)
         {
 			char patchContent[] = "aabbccddeegghhii";
 			for (int funcId = 0; funcId < 3; ++funcId)
@@ -1033,27 +1033,27 @@ Tests::testHookPlacingAndSize()
 				uint32_t addr = reinterpret_cast<uint32_t>(func);
 				int funcStartSize = funcStartSizes[funcId];
 				int funcSize = funcSizes[funcId];
-				int realHookSize;
+				int hookSize;
                 switch (type)
                 {
                 case HOOK_ELEM_TYPE_CALL_RAW:
-					realHookSize = 5 + hookSize * 2;
-                    hookCallRaw(addr, (void*)0xFEFEFEFE, nullptr, realHookSize);
+					hookSize = 5 + hookSizeId * 2;
+                    hookCallRaw(addr, (void*)0xFEFEFEFE, nullptr, hookSize);
                     break;
                 case HOOK_ELEM_TYPE_CALL:
-					realHookSize = 5 + hookSize * 2;
-                    hookCall(addr, (HookFunc)0xFEFEFEFE, nullptr, realHookSize);
+					hookSize = 5 + hookSizeId * 2;
+                    hookCall(addr, (HookFunc)0xFEFEFEFE, nullptr, hookSize);
                     break;
                 case HOOK_ELEM_TYPE_JUMP:
-					realHookSize = 5 + hookSize * 2;
-                    hookJumpRaw(addr, (void*)0xFEFEFEFE, nullptr, realHookSize);
+					hookSize = 5 + hookSizeId * 2;
+                    hookJumpRaw(addr, (void*)0xFEFEFEFE, nullptr, hookSize);
 					break;
                 case HOOK_ELEM_TYPE_PATCH_DATA:
-					realHookSize = 3 + hookSize * 2;
-					patchBytes(addr, (unsigned char*)patchContent, realHookSize);
+					hookSize = 3 + hookSizeId * 2;
+					patchBytes(addr, (unsigned char*)patchContent, hookSize, nullptr, true); // useNops == true
                     // && sdword(hook2Bytes + 1) + hook2Bytes + 1 == 0xFEFEFEFE && byte(hook2Bytes + 5) != 0x90, 
                 }
-                wxString basicInfoStr = wxString::Format("[%s] [hookSizeId: %d, real: %d] [funcId: %d]: ", hookTypeStr, hookSize, funcId);
+                wxString basicInfoStr = wxString::Format("[%s] [hookSizeId: %d, real: %d] [funcId: %d]: ", hookTypeStr, hookSizeId, hookSize, funcId);
 				int cmpFirstByte = -1;
 				wxString opcodeName;
 				if (type == HookElementType::HOOK_ELEM_TYPE_CALL || type == HookElementType::HOOK_ELEM_TYPE_CALL_RAW)
@@ -1088,34 +1088,20 @@ Tests::testHookPlacingAndSize()
 				}
 				else if (type == HOOK_ELEM_TYPE_PATCH_DATA)
 				{
-					myassert(readCodeAsString(addr, realHookSize) == std::string(patchContent).substr(0, realHookSize),
+					myassert(readCodeAsString(addr, hookSize) == std::string(patchContent).substr(0, hookSize),
 						wxString::Format("%sData after patching is different from intended", basicInfoStr)
 					);
 				}
-				auto oldCodeVec = codeBackup.at(hookSize);
+				auto oldCodeVec = codeBackup.at(funcId);
 				uint32_t oldCode = reinterpret_cast<uint32_t>(oldCodeVec.data());
-				uint32_t newCode = addr;
-				int firstNopIndex = type == HOOK_ELEM_TYPE_PATCH_DATA ? realHookSize : 5;
-				for (int offset = 0; offset <= funcSize;)
-				{
-					int instrSize = getInstructionSize(oldCode + offset);
-					int newOffset = offset + instrSize;
-					if (newOffset >= firstNopIndex)
-					{
-						// check that all required bytes are NOP-ed
-						for (int j = firstNopIndex; j < newOffset; ++j)
-						{
-							myassert(byte(newCode + offset) == 0x90, wxString::Format("%sRequired byte is not NOP-ed (address 0x%X, byte index %d)", basicInfoStr, addr, j)
-							);
-						}
-						break;
-					}
-					offset = newOffset;
-					if (newOffset >= realHookSize)
-					{
-						break;
-					}
-				}
+                uint32_t newCode = addr;
+                // check that all required bytes are NOP-ed
+				int firstNopIndex = type == HOOK_ELEM_TYPE_PATCH_DATA ? hookSize : 5;
+				int realSize = getRealHookSize(oldCode, hookSize);
+				for (int i = firstNopIndex; i < realSize; ++i)
+                {
+                    myassert(byte(newCode + i) == 0x90, wxString::Format("%sRequired byte is not NOP-ed (address 0x%X, byte index %d)", basicInfoStr, addr, i));
+                }
 				// restore backup code
 				patchBytes(addr, codeBackup[funcId].data(), funcSize);
 				if (type == HOOK_ELEM_TYPE_CALL)

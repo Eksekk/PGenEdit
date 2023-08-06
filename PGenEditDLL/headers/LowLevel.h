@@ -83,6 +83,7 @@ extern std::unordered_map<uint32_t, HookFunc> hookFuncMap;
 
 void __fastcall dispatchHook(uint32_t esp);
 
+int getRealHookSize(uint32_t addr, uint32_t size);
 void storeBytes(std::vector<uint8_t>* storeAt, uint32_t addr, uint32_t size);
 
 // credits to Tomsod for his elemental mod sources (and of course to Grayface), they made it much easier
@@ -120,7 +121,7 @@ void patchSDword(uint32_t addr, int32_t val, std::vector<uint8_t>* storeAt);
 void eraseCode(uint32_t addr, uint32_t size, std::vector<uint8_t>* storeAt);
 
 // patches sequence of bytes (unprotect/protect)
-void patchBytes(uint32_t addr, void* bytes, uint32_t size, std::vector<uint8_t>* storeAt = nullptr);
+void patchBytes(uint32_t addr, void* bytes, uint32_t size, std::vector<uint8_t>* storeAt = nullptr, bool useNops = false);
 
 void removeHooks();
 

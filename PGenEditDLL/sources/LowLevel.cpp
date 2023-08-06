@@ -244,7 +244,7 @@ int getRealHookSize(uint32_t addr, uint32_t size)
 	{
 		n = n + getInstructionSize(addr + n);
 	}
-	assert(n >= 5);
+	// assert(n >= 5); // now also supports NOP-ing when patching data, so this assert can't execute
 	return n;
 }
 
@@ -354,13 +354,22 @@ void eraseCode(uint32_t addr, uint32_t size, std::vector<uint8_t>* storeAt)
 	VirtualProtect((void*)addr, size, tmp, &tmp);
 }
 
-void patchBytes(uint32_t addr, void* bytes, uint32_t size, std::vector<uint8_t>* storeAt)
+void patchBytes(uint32_t addr, void* bytes, uint32_t size, std::vector<uint8_t>* storeAt, bool useNops)
 {
-	storeBytes(storeAt, addr, size);
+	int realSize = size, dataSize = size;
+	if (useNops)
+	{
+		realSize = getRealHookSize(addr, dataSize);
+	}
+	storeBytes(storeAt, addr, realSize);
 	DWORD tmp;
-	VirtualProtect((void*)addr, size, PAGE_EXECUTE_READWRITE, &tmp);
-	memcpy((void*)addr, bytes, size);
-	VirtualProtect((void*)addr, size, tmp, &tmp);
+	VirtualProtect((void*)addr, realSize, PAGE_EXECUTE_READWRITE, &tmp);
+	memcpy((void*)addr, bytes, dataSize);
+	if (useNops && realSize - dataSize > 0)
+	{
+		memset(reinterpret_cast<void*>(addr + dataSize), 0x90, realSize - dataSize);
+	}
+	VirtualProtect((void*)addr, realSize, tmp, &tmp);
 }
 
 void removeHooks()
@@ -447,7 +456,7 @@ int getInstructionSize(void* addr)
 	}
 	else
 	{
-		wxLogInfo("Instruction at address 0x%X has length of %d", (uint32_t)addr, (uint32_t)instr.info.length);
+		//wxLogInfo("Instruction at address 0x%X has length of %d", (uint32_t)addr, (uint32_t)instr.info.length);
 		return instr.info.length;
 	}
 }
