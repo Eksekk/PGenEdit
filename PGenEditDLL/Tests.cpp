@@ -78,7 +78,7 @@ std::vector<wxString> Tests::testJson()
 	try
 	{
 		const size_t playerJsonSize = existingJson.size();
-		for (size_t pl = 0; pl < MAX_PLAYERS; ++pl)
+		for (size_t pl = 0; pl < (size_t)MAX_PLAYERS; ++pl)
 		{
 			if (!existed || playerJsonSize <= pl)
 			{
@@ -437,7 +437,7 @@ std::vector<wxString> Tests::testPlayerStructAccessor()
 		auto oldSkills = playerAccessor->getSkills();
 		playerAccessor->setSkills(skillsToSet);
 		auto newSkills = playerAccessor->getSkills();
-		for (int skillId = 0; skillId < skillsVector.size(); ++skillId)
+		for (int skillId = 0; skillId < (int)skillsVector.size(); ++skillId)
 		{
 			const wxString iterationStr = wxString::Format("Iteration %d, skill name: %s, old value: %s, new value: %s", skillId,
 				skillsMap.at(skillId).name, oldSkills[skillId].value.toString(), newSkills[skillId].value.toString());
@@ -1098,7 +1098,7 @@ Tests::testHookPlacingAndSize()
 						wxString::Format("%sData after patching is different from intended", basicInfoStr)
 					);
 				}
-				auto oldCodeVec = codeBackup.at(funcId);
+				auto& oldCodeVec = codeBackup.at(funcId);
 				uint32_t oldCode = reinterpret_cast<uint32_t>(oldCodeVec.data());
                 uint32_t newCode = addr;
                 // check that all required bytes are NOP-ed

@@ -239,7 +239,7 @@ Hook::~Hook()
 
 int getRealHookSize(uint32_t addr, uint32_t size)
 {
-	int n = 0;
+	uint32_t n = 0;
 	while (n < size)
 	{
 		n = n + getInstructionSize(addr + n);

@@ -55,7 +55,7 @@ template<template<typename, typename...> typename Container, typename... Extra>
 wxString concatWxStrings(const Container<wxString, Extra...>& container, const wxString& separator = "\n")
 {
 	wxString s;
-	const size_t size = container.size();
+	const int size = container.size();
 	int i = 0;
 	for (const auto& val : container)
 	{
@@ -212,32 +212,5 @@ wxString my_to_string(const T& t)
 	// taking advantage that it returns modified string (intended to allow chaining,
 	// like str << "x" << "y" << 5)
 }
-
-class Profiler
-{
-	std::chrono::time_point<std::chrono::steady_clock> profilingStart;
-	std::chrono::time_point<std::chrono::steady_clock> profilingEnd;
-	std::string action;
-
-	std::chrono::time_point<std::chrono::steady_clock> aggregateStart;
-	std::chrono::time_point<std::chrono::steady_clock> aggregateEnd;
-	std::chrono::nanoseconds aggregateTime;
-	std::chrono::nanoseconds aggregateMaxDuration;
-	int aggregateMaxDurationIndex;
-	std::string aggregateAction;
-	int aggregateCount;
-public:
-	bool profilingNow;
-	void start(const std::string& action);
-	void end();
-	wxString getDurationStr();
-	void startAggregate(const std::string& action);
-	void endAggregate();
-	void startAggregatePart();
-	void endAggregatePart();
-	wxString getAggregateDurationStr();
-
-	Profiler();
-};
 
 void redBlackGreenTextThreshold(wxWindow* win, int value, int threshold);

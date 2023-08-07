@@ -17,6 +17,7 @@ wxDEFINE_EVENT(SKILL_VALUE_CHANGE_BY_USER, wxCommandEvent);
 EditorSkillValueChooser::EditorSkillValueChooser(wxWindow* parent, const wxString& labelText, int playerIndex, PlayerSkill* skill, PlayerStructAccessor::SkillOptions& options)
     : wxPanel(parent), playerIndex(playerIndex), skill(skill), options(options)
 {
+    Freeze();
     wxBoxSizer* mainSizer = new wxBoxSizer(wxHORIZONTAL);
 	SetSizer(mainSizer);
 	wxBoxSizer* innerSizer = new wxBoxSizer(wxHORIZONTAL); // to allow sizer "border" to have color
@@ -49,10 +50,16 @@ EditorSkillValueChooser::EditorSkillValueChooser(wxWindow* parent, const wxStrin
     {
         skillLevelBonusLabel = nullptr;
     }
+    //Profiler profiler;
+    //profiler.startAggregate("creating choices");
+    //profiler.startAggregatePart();
     skillMastery = new wxChoice(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, static_cast<int>(MAX_MASTERY) + 1, masteryNames.data());
+    //profiler.endAggregatePart();
+    //profiler.logResults();
 
 	skillMastery->Bind(wxEVT_CHOICE, &EditorSkillValueChooser::onValueChange, this);
 	innerSizer->Add(skillMastery);
+    Thaw();
 }
 
 SkillValue EditorSkillValueChooser::getValue()

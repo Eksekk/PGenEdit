@@ -85,6 +85,7 @@
     <ClInclude Include="PlayerPanel.h" />
     <ClInclude Include="PlayerPrimaryStat.h" />
     <ClInclude Include="PrimaryStatWidget.h" />
+    <ClInclude Include="Profiler.h" />
     <ClInclude Include="ResistanceWidget.h" />
     <ClInclude Include="SpecificClassChooserPanel.h" />
     <ClInclude Include="Tests.h" />
@@ -126,6 +127,7 @@
     <ClCompile Include="PlayerPanel.cpp" />
     <ClCompile Include="PlayerPrimaryStat.cpp" />
     <ClCompile Include="PrimaryStatWidget.cpp" />
+    <ClCompile Include="Profiler.cpp" />
     <ClCompile Include="ResistanceWidget.cpp" />
     <ClCompile Include="sources\GuiApplication.cpp" />
     <ClCompile Include="sources\dllApi.cpp" />

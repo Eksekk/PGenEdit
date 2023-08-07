@@ -67,7 +67,7 @@ void updatePartySizeAndPlayerPtrs()
 	{
 		players = new void* [MAX_PLAYERS];
 	}
-    assert(ptrs.size() <= MAX_PLAYERS);
+    assert((int)ptrs.size() <= MAX_PLAYERS);
     for (size_t i = 0; i < ptrs.size(); ++i)
     {
         players[i] = ptrs[i];

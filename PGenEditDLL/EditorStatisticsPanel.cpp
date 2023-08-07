@@ -9,11 +9,14 @@
 #include "AlignmentRadioBox.h"
 #include "PrimaryStatWidget.h"
 #include "PlayerStructAccessor.h"
+#include "Profiler.h"
 
 //, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize(723, 817),
 //	long style = wxTAB_TRAVERSAL | wxHSCROLL | wxVSCROLL, const wxString& name = wxEmptyString)
 EditorStatisticsPanel::EditorStatisticsPanel(wxWindow* parent, int playerIndex) : playerIndex(playerIndex), wxScrolledWindow(parent)
 {
+    Profiler profiler;
+    //profiler.start("Creating statistics panel");
 	this->SetScrollRate(15, 15);
 	mainSizer = new wxBoxSizer(wxVERTICAL);
 
@@ -32,6 +35,7 @@ EditorStatisticsPanel::EditorStatisticsPanel(wxWindow* parent, int playerIndex) 
 	mainSizer->Fit(this);
 	this->SetSizer(mainSizer);
 	this->Layout();
+	//profiler.logResults();
 }
 
 void EditorStatisticsPanel::onMinimumStatisticsPress(wxCommandEvent& event)

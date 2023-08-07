@@ -7,34 +7,45 @@
 #include "PlayerStructAccessor.h"
 #include <globals.h>
 #include "PartyStructAccessor.h"
+#include "Profiler.h"
 extern wxTimer* mainUpdateTimer;
 
 EditorSkillsPanel::EditorSkillsPanel(wxWindow* parent, int playerIndex) : wxScrolledWindow(parent), playerIndex(playerIndex)
 {
+	Profiler profiler;
+	//profiler.start("Creating skills panel");
 	SetScrollRate(10, 10);
 	SetSizeHints(1024, 768);
 
 	mainSizer = new wxBoxSizer(wxVERTICAL);
 
+	//profiler.start("creating skill points options");
 	createSkillPointsOptionsPanel();
+	//profiler.logResults();
 
 	m_staticline29 = new wxStaticLine(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL);
 	mainSizer->Add(m_staticline29, 0, wxEXPAND | wxALL, 5);
 
+	// 1165 MS!
+	//profiler.start("creating skills panel");
 	createSkillsPanel();
+	//profiler.logResults();
 
 	m_staticline28 = new wxStaticLine(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL);
 	mainSizer->Add(m_staticline28, 0, wxEXPAND | wxALL, 5);
 
-
+	//profiler.start("creating actions panel");
 	createActionsPanel();
+	//profiler.logResults();
 
 	// DOESN'T WORK ON WXNOTEBOOK / WXPANEL
 // 	Bind(wxEVT_SET_FOCUS, &EditorSkillsPanel::onSetFocus, this);
 // 	Bind(wxEVT_ACTIVATE, &EditorSkillsPanel::onActivate, this);
 
+	profiler.start("skills panel layout");
 	this->SetSizer(mainSizer);
 	this->Layout();
+	//profiler.logResults();
 }
 
 void EditorSkillsPanel::updateFromPlayerData()
@@ -466,7 +477,7 @@ void EditorSkillsPanel::createSkillsPanel()
 		}
 	}
 	const int firstNewIndex = i;
-	while (i < skillsInOrder.size())
+	while (i < (int)skillsInOrder.size())
 	{
 		skillsInOrder[i] = doNotGenerateSkills[i - firstNewIndex];
 		++i;
@@ -476,7 +487,8 @@ void EditorSkillsPanel::createSkillsPanel()
 	for (PlayerSkill* skillPtr : skillsInOrder)
 	{
 		profiler.startAggregatePart();
-		EditorSkillValueChooser* chooser = new EditorSkillValueChooser(this, skillPtr->name, playerIndex, skillPtr, options);
+        EditorSkillValueChooser* chooser = new EditorSkillValueChooser(this, skillPtr->name, playerIndex, skillPtr, options);
+        profiler.endAggregatePart();
 		widgetToSkillMap[skillPtr] = chooser;
 		int id = chooser->GetId();
 		widgetToWidgetIdMap[id] = chooser;
@@ -504,10 +516,10 @@ void EditorSkillsPanel::createSkillsPanel()
 		{
 			chooser->Hide();
 		}
-		profiler.endAggregatePart();
 	}
 
 	profiler.endAggregate();
+	profiler.logResults();
 	Thaw();
 	//wxLogMessage(profiler.getAggregateDurationStr());
 	skillToWidgetMap = invertMap(widgetToSkillMap);
