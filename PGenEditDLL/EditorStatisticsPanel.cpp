@@ -10,6 +10,7 @@
 #include "PrimaryStatWidget.h"
 #include "PlayerStructAccessor.h"
 #include "Profiler.h"
+#include "HookParams.h"
 
 //, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize(723, 817),
 //	long style = wxTAB_TRAVERSAL | wxHSCROLL | wxVSCROLL, const wxString& name = wxEmptyString)
@@ -259,6 +260,13 @@ void EditorStatisticsPanel::createImmediateStatSettings()
 
 
 	mainRecoveryDelaySizer->Add(30, 0, 0, wxEXPAND, 5);
+	wxCheckBox* noRecovery = new wxCheckBox(recoveryDelaySizer->GetStaticBox(), wxID_ANY, "No recovery");
+	noRecovery->Bind(wxEVT_CHECKBOX, [this](wxCommandEvent& event)
+		{
+			wxASSERT_MSG(playerIndex >= 0 && playerIndex <= MAX_PLAYERS, wxString::Format("Invalid player index %d", playerIndex));
+			HookParams::noRecoveryEnabled[playerIndex] = event.IsChecked();
+		});
+    mainRecoveryDelaySizer->Add(noRecovery, 0, wxALL, 5);
 
 	recoverFullyButton = new wxButton(recoveryDelaySizer->GetStaticBox(), wxID_ANY, _("Recover fully right now"));
 	recoverFullyButton->Bind(wxEVT_BUTTON, &EditorStatisticsPanel::onRecoverFullyPress, this);
@@ -664,6 +672,7 @@ void EditorStatisticsPanel::onRecoveryDelayMultiplierChange(wxCommandEvent& even
 
 void EditorStatisticsPanel::onRecoverFullyPress(wxCommandEvent& event)
 {
+	playerAccessor->forPlayer(playerIndex)->setRecoveryDelay(0);
 }
 
 void EditorStatisticsPanel::onReduceBuffSpellRecoveryCheck(wxCommandEvent& event)

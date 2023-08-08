@@ -201,7 +201,7 @@ extern "C"
         //MSGBOX((std::string("window: ") + std::to_string((int)app->mainWindow)).c_str());
     }
 
-    DLL_EXPORT bool __stdcall setHook(int id, bool on)
+    DLL_EXPORT int __stdcall setHook(int id, bool on)
     {
         try
         {

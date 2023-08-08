@@ -7,7 +7,6 @@
 
 std::unordered_map<int, Hook> hooks;
 std::unordered_map<uint32_t, HookFunc> hookFuncMap;
-std::unordered_map<uint32_t, std::vector<uint8_t>> hookRestoreList;
 
 void checkOverlap(uint32_t address, uint32_t size = 5)
 {

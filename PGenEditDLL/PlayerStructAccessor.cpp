@@ -618,6 +618,18 @@ int TemplatedPlayerStructAccessor<Player>::getConditionEffectOnStat(int statId)
 }
 
 template<typename Player>
+void TemplatedPlayerStructAccessor<Player>::setRecoveryDelay(int val)
+{
+	getPlayerToAffect()->recoveryDelay = std::max(val, 0);
+}
+
+template<typename Player>
+int TemplatedPlayerStructAccessor<Player>::getRecoveryDelay()
+{
+	return getPlayerToAffect()->recoveryDelay;
+}
+
+template<typename Player>
 int TemplatedPlayerStructAccessor<Player>::getResistanceSpellEffect(int resId)
 {
 	wxASSERT_MSG(existsInVector(STATS_RESISTANCES, resId), wxString::Format("Invalid resistance %d", resId));

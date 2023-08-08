@@ -134,6 +134,9 @@ public:
 	[[nodiscard]] virtual int getConditionEffectOnStat(int statId) = 0;
 	[[nodiscard]] virtual int getResistanceSpellEffect(int resId) = 0;
 
+	[[nodiscard]] virtual int getRecoveryDelay() = 0;
+	[[nodiscard]] virtual void setRecoveryDelay(int val) = 0;
+
 	// TODO: unlearn skills, spells
 	virtual void setClass(PlayerClass* clas) = 0;
 	virtual void setClass(int classId) = 0;
@@ -343,7 +346,11 @@ public:
 
 	void setClass(PlayerClass* clas) override;
 	void setClass(int classId) override;
+
+	virtual int getRecoveryDelay() override;
+	virtual void setRecoveryDelay(int val) override;
 };
+
 using PlayerStructAccessor_6 = TemplatedPlayerStructAccessor<mm6::Player>;
 using PlayerStructAccessor_7 = TemplatedPlayerStructAccessor<mm7::Player>;
 using PlayerStructAccessor_8 = TemplatedPlayerStructAccessor<mm8::Player>;

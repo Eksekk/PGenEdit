@@ -324,6 +324,9 @@
     <ClInclude Include="PersistablePlayerPanel.h">
       <Filter>Pliki nagłówkowe</Filter>
     </ClInclude>
+    <ClInclude Include="HookParams.h">
+      <Filter>Pliki nagłówkowe\Misc\Low level</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="sources\MainWindow.cpp">
@@ -502,6 +505,9 @@
     </ClCompile>
     <ClCompile Include="PersistablePlayerPanel.cpp">
       <Filter>Pliki źródłowe</Filter>
+    </ClCompile>
+    <ClCompile Include="HookParams.cpp">
+      <Filter>Pliki źródłowe\Misc\Low level</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
