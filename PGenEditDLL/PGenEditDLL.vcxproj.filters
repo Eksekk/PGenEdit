@@ -321,6 +321,9 @@
     <ClInclude Include="Profiler.h">
       <Filter>Pliki nagłówkowe\Misc\Utils</Filter>
     </ClInclude>
+    <ClInclude Include="PersistablePlayerPanel.h">
+      <Filter>Pliki nagłówkowe</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="sources\MainWindow.cpp">
@@ -496,6 +499,9 @@
     </ClCompile>
     <ClCompile Include="Profiler.cpp">
       <Filter>Pliki źródłowe\Misc\Utils</Filter>
+    </ClCompile>
+    <ClCompile Include="PersistablePlayerPanel.cpp">
+      <Filter>Pliki źródłowe</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

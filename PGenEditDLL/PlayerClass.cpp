@@ -131,8 +131,8 @@ wxString PlayerClass::getFormattedAlignment()
 
 PlayerClass* PlayerClass::getStarterClass()
 {
-	PlayerClass* clas = baseClass;
-	while (clas != nullptr)
+	PlayerClass* clas = this;
+	while (clas->baseClass != nullptr)
 	{
 		clas = clas->baseClass;
 	}

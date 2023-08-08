@@ -4,6 +4,7 @@
 #include <wx/collpane.h>
 #include "ResistanceWidget.h"
 #include "Enum_const.h"
+#include "PersistablePlayerPanel.h"
 
 class wxSpinCtrl;
 class wxSpinCtrlDouble;
@@ -13,7 +14,7 @@ class PrimaryStatWidget;
 class PlayerClass;
 class AlignmentRadioBox;
 
-class EditorStatisticsPanel : public wxScrolledWindow
+class EditorStatisticsPanel : public wxScrolledWindow, public PersistablePlayerPanel
 {
 private:
 	void createImmediateStatSettings();
@@ -50,7 +51,6 @@ protected:
 	void onBaseClassChoiceChange(wxCommandEvent& event);
 	void onClassTierRadio(wxCommandEvent& event);
 	void onClassAlignmentRadio(wxCommandEvent& event);
-	std::tuple<PlayerClass*, bool, bool, bool> pickClassByAlignment(const std::vector<PlayerClass*>& tree, int newTier, Alignment al);
 	enum ClassChangeWhat
 	{
 		CLASS_CHANGE_ALL, CLASS_CHANGE_BASE, CLASS_CHANGE_TIER, CLASS_CHANGE_ALIGNMENT
@@ -139,9 +139,6 @@ protected:
 
 	wxBoxSizer* mainSizer;
 
-	void saveData();
-	void loadData();
-
 	void onActivateWindow(wxActivateEvent& event);
 public:
 	const int playerIndex;
@@ -153,5 +150,9 @@ public:
 	~EditorStatisticsPanel();
 
 	friend class GUI_tests;
+
+	// Inherited via PersistablePlayerPanel
+	virtual bool persist(Json& json) override;
+	virtual bool unpersist(Json& json) override;
 };
 

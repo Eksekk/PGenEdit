@@ -99,14 +99,6 @@ void EditorStatisticsPanel::updateFromPlayerData()
 	experience->SetValue(expVal);
 }
 
-void EditorStatisticsPanel::saveData()
-{
-}
-
-void EditorStatisticsPanel::loadData()
-{
-}
-
 void EditorStatisticsPanel::onActivateWindow(wxActivateEvent& event)
 {
 	if (event.GetActive())
@@ -521,6 +513,16 @@ EditorStatisticsPanel::~EditorStatisticsPanel()
 {
 }
 
+bool EditorStatisticsPanel::persist(Json& json)
+{
+	return false;
+}
+
+bool EditorStatisticsPanel::unpersist(Json& json)
+{
+	return false;
+}
+
 void EditorStatisticsPanel::onCurrentHpChange(wxCommandEvent& event)
 {
 	redBlackGreenTextThreshold(currentHpValue, currentHpValue->GetValue(), playerAccessor->forPlayer(playerIndex)->getFullHp());
@@ -560,40 +562,40 @@ void EditorStatisticsPanel::onClassAlignmentRadio(wxCommandEvent& event)
 	processClassControlsChange(CLASS_CHANGE_ALIGNMENT, false);
 }
 
-std::tuple<PlayerClass*, bool, bool, bool> EditorStatisticsPanel::pickClassByAlignment(const std::vector<PlayerClass*>& tree, int newTier, Alignment al)
+std::tuple<PlayerClass*, bool, bool, bool> pickNewClass(PlayerClass* const currentClass, const std::vector<PlayerClass*>& tree, int newTier, Alignment al)
 {
-	PlayerClass* finalClass = nullptr;
+	PlayerClass* finalClass = nullptr, *differentAlignmentClass = nullptr;
 	bool hasNeutral = false, hasLight = false, hasDark = false; // is neutral alignment available for this class tree? etc.
-	if (newTier == 2) // actually choose alignment, if possible specified, otherwise first one (with smallest id)
-	{
-		for (PlayerClass* classPtr : tree)
-		{
+    for (PlayerClass* classPtr : tree)
+    {
+		// TODO: use new "alignment is available" variable in player class
+        if (classPtr->tier == newTier)
+        {
 			if (classPtr->alignment == al)
-			{
-				finalClass = classPtr;
+            {
+                finalClass = classPtr;
 			}
-			switch (classPtr->alignment)
+			else if (!differentAlignmentClass/* && classPtr->id != currentClass->id*/)
 			{
+				differentAlignmentClass = classPtr;
+            }
 
-			case ALIGNMENT_NEUTRAL: hasNeutral = true; break;
-			case ALIGNMENT_LIGHT: hasLight = true; break;
-			case ALIGNMENT_DARK: hasDark = true; break;
-			default:
-			{
-				wxFAIL_MSG(wxString::Format("Unknown alignment %d", (int)classPtr->alignment));
-			}
+            switch (classPtr->alignment)
+            {
 
-			}
-		}
-	}
-	else if (tree.size() > 0) // just pick any class, alignment doesn't matter
-	{
-		finalClass = tree.front();
-	}
-	else
-	{
-		wxFAIL;
-	}
+            case ALIGNMENT_NEUTRAL: hasNeutral = true; break;
+            case ALIGNMENT_LIGHT: hasLight = true; break;
+            case ALIGNMENT_DARK: hasDark = true; break;
+            default:
+            {
+                wxFAIL_MSG(wxString::Format("Unknown alignment %d", (int)classPtr->alignment));
+            }
+
+            }
+        }
+    }
+	finalClass = finalClass ? finalClass : differentAlignmentClass;
+	wxASSERT_MSG(finalClass != nullptr, "Final class is null");
 	return { finalClass, hasNeutral, hasLight, hasDark };
 };
 
@@ -612,9 +614,9 @@ void EditorStatisticsPanel::processClassControlsChange(ClassChangeWhat what, boo
 	if (what == CLASS_CHANGE_BASE)
 	{
 		PlayerClass* newBaseClass = classPtrToBaseClassChoiceIdMap.at(baseClassChoice->GetSelection());
-		auto tree = newBaseClass->getClassTree(PlayerClass::TreeOptions(false, true, false));
+		auto tree = newBaseClass->getClassTree(PlayerClass::TreeOptions(true, true, true));
 		sort(tree);
-		std::tie(clas, hasNeutral, hasLight, hasDark) = pickClassByAlignment(tree, currClass->tier, currClass->alignment);
+		std::tie(clas, hasNeutral, hasLight, hasDark) = pickNewClass(currClass, tree, currClass->tier, currClass->alignment);
 	}
 	else if (what == CLASS_CHANGE_TIER)
 	{
@@ -622,32 +624,32 @@ void EditorStatisticsPanel::processClassControlsChange(ClassChangeWhat what, boo
 		// 0 -> 2, 1 -> 2 = change tier, enable alignment selectively, pick first enabled
 		// 2 -> 0, 2 -> 1 = change tier, disable alignment
 		int newTier = tierRadioBox->GetSelection(), oldTier = currClass->tier;
-		auto tree = oldClas->getClassTree(PlayerClass::TreeOptions(newTier < oldTier, newTier == oldTier, newTier > oldTier));
+		auto tree = oldClas->getClassTree(PlayerClass::TreeOptions(true, true, true));
 		sort(tree);
-		std::tie(clas, hasNeutral, hasLight, hasDark) = pickClassByAlignment(tree, newTier, ALIGNMENT_NEUTRAL);
-		alignmentRadioBox->Enable(newTier == 2);
+		std::tie(clas, hasNeutral, hasLight, hasDark) = pickNewClass(currClass, tree, newTier, ALIGNMENT_NEUTRAL);
 	}
 	else if (what == CLASS_CHANGE_ALIGNMENT)
 	{
-		auto tree = oldClas->getClassTree(PlayerClass::TreeOptions(false, true, false));
+		auto tree = oldClas->getClassTree(PlayerClass::TreeOptions(true, true, true));
 		sort(tree);
-		std::tie(clas, hasNeutral, hasLight, hasDark) = pickClassByAlignment(tree, currClass->tier, ALIGNMENT_NEUTRAL);
+		std::tie(clas, hasNeutral, hasLight, hasDark) = pickNewClass(currClass, tree, currClass->tier, alignmentRadioBox->getSelectedAlignment());
 	}
 	else if (what == CLASS_CHANGE_ALL) // class is given in class combo box or need update from player data
 	{
 		clas = fromPlayerData ? playerAccessor->getClassPtr() : classToFullChoiceIdMap.at(fullClassChoice->GetSelection());
 		// calling this function here to have consistent hasXXX calculation, even though main result is not used
-		std::tie(std::ignore, hasNeutral, hasLight, hasDark) = pickClassByAlignment(clas->getEntireClassTree(), clas->tier, clas->alignment);
-		baseClassChoice->SetSelection(baseClassChoiceIdToClassPtrMap.at(clas));
+		std::tie(std::ignore, hasNeutral, hasLight, hasDark) = pickNewClass(currClass, clas->getEntireClassTree(), clas->tier, clas->alignment);
+		baseClassChoice->SetSelection(baseClassChoiceIdToClassPtrMap.at(clas->getStarterClass()));
 		tierRadioBox->SetSelection(clas->tier);
-		alignmentRadioBox->setSelection(clas->alignment);
-		alignmentRadioBox->Enable(clas->tier == 2);
 	}
 	else
 	{
 		wxFAIL;
-	}
+    }
+    alignmentRadioBox->setSelection(clas->alignment);
+    alignmentRadioBox->Enable(hasLight || hasDark);
 	playerAccessor->setClass(clas);
+	fullClassChoice->SetSelection(fullChoiceIdToClassMap.at(clas));
 	for (std::pair<Alignment, bool> pairs[]{ {ALIGNMENT_NEUTRAL, hasNeutral}, {ALIGNMENT_LIGHT, hasLight }, {ALIGNMENT_DARK, hasDark} };
 		auto [al, enabled] : pairs)
 	{

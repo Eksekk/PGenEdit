@@ -15,6 +15,7 @@ public:
 	int tier; // 0-2
 	PlayerClass* baseClass; // goes towards lower tier, i.e. the class you start with
 	Alignment alignment; // light, dark, neutral
+	bool hasAlignment = false;
 	std::vector<PlayerClass*> promotionClasses; // higher tier
 	std::unordered_map<int, Mastery> maximumSkillMasteries;
 	std::unordered_map<int, double> playerTypeAffinity; // how appropriate is this class for given player type
