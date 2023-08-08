@@ -39,7 +39,7 @@ void HookElement::enable(bool enable)
 		{
 			void* target = patchDataStr ? (void*)patchDataStr : (void*)this->target;
 			int dataSize = patchDataStr ? strlen(patchDataStr) : this->dataSize;
-			patchBytes(address, target, dataSize, &restoreData);
+			patchBytes(address, target, dataSize, &restoreData, this->patchUseNops);
 		}
 		break;
 		case HOOK_ELEM_TYPE_CALL_RAW:
@@ -50,7 +50,8 @@ void HookElement::enable(bool enable)
 		break;
 		case HOOK_ELEM_TYPE_CALL:
 		{
-			hookCall(address, reinterpret_cast<HookFunc>(target), &restoreData, hookSize);
+			// here overlap is checked automatically, TODO: add to all other hook functions
+			hookCall(address, func, &restoreData, hookSize);
 		}
 		break;
 		case HOOK_ELEM_TYPE_JUMP:
@@ -93,7 +94,8 @@ inline bool HookElement::isActive() const
 	return _active;
 }
 
-HookElement::HookElement() : _active(false), type(HOOK_ELEM_TYPE_CALL_RAW), address(0), target(0), hookSize(5), dataSize(0), func(0), patchDataStr(0), needUnprotect(false)
+HookElement::HookElement() : _active(false), type(HOOK_ELEM_TYPE_CALL_RAW), address(0), target(0), hookSize(5), dataSize(0), func(0), patchDataStr(0),
+	needUnprotect(false), description(""), patchUseNops(false)
 {
 }
 
@@ -141,15 +143,33 @@ HookElementBuilder& HookElementBuilder::func(HookFunc func)
     return *this;
 }
 
+HookElementBuilder& HookElementBuilder::patchDataStr(const char* patchDataStr)
+{
+	elem.patchDataStr = patchDataStr;
+	return *this;
+}
+
 HookElementBuilder& HookElementBuilder::needUnprotect(bool needUnprotect)
 {
     elem.needUnprotect = needUnprotect;
     return *this;
 }
 
+HookElementBuilder& HookElementBuilder::description(const std::string& desc)
+{
+	elem.description = desc;
+	return *this;
+}
+
+HookElementBuilder& HookElementBuilder::patchUseNops(bool on)
+{
+	elem.patchUseNops = on;
+	return *this;
+}
+
 HookElement HookElementBuilder::build()
 {
-    // hook properties: type, address, dataSize, hookSize, target, func, needUnprotect
+    // hook properties: type, address, dataSize, hookSize, target, func, needUnprotect, description, patchUseNops (only for patch data)
     // hook types: jump, call raw, call, patch data
     
     // all need address
@@ -157,7 +177,7 @@ HookElement HookElementBuilder::build()
     {
         wxFAIL_MSG("Hook address not set");
     }
-    // patch data needs data size and target
+    // patch data needs data ptr, data size and target
 	if (elem.type == HOOK_ELEM_TYPE_PATCH_DATA)
 	{
         if (elem.dataSize <= 0 && elem.patchDataStr == nullptr)
@@ -224,7 +244,12 @@ bool Hook::isFullyActive() const
     return yes;
 }
 
-Hook::Hook(std::initializer_list<HookElement> elements) : elements(elements), _active(false)
+Hook::Hook(std::initializer_list<HookElement> elements, const std::string& description) : elements(elements), _active(false), description(description)
+{
+
+}
+
+Hook::Hook(HookElement element, const std::string& description) : elements({element}), _active(false), description(description)
 {
 
 }
@@ -237,6 +262,7 @@ Hook::~Hook()
 	}
 }
 
+// returns address of next instruction after [size] bytes
 int getRealHookSize(uint32_t addr, uint32_t size)
 {
 	uint32_t n = 0;
@@ -290,7 +316,6 @@ void hookCall(uint32_t addr, HookFunc func, std::vector<uint8_t>* storeAt, uint3
 {
 	size = getRealHookSize(addr, size);
     checkOverlap(addr, size);
-    // for now potentially break instructions, need to add hook size detection
     hookCallRaw(addr, reinterpret_cast<void*>(myHookProc), storeAt, size);
     hookFuncMap[addr] = func;
 }

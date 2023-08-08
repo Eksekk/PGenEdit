@@ -20,6 +20,10 @@ enum HookElementType
 	HOOK_ELEM_TYPE_PATCH_DATA
 };
 
+// different games may need some extra elements for a particular hook, or less
+// also can have same element, but just a bit different
+// and can simply have same elements
+
 class HookElement
 {
 	bool _active;
@@ -33,6 +37,8 @@ public:
 	std::vector<uint8_t> restoreData;
 	HookFunc func;
 	bool needUnprotect;
+	std::string description;
+	bool patchUseNops;
 
 	void enable(bool enable = true);
 	void disable();
@@ -53,8 +59,10 @@ public:
 	HookElementBuilder& dataSize(uint32_t dataSize);
     HookElementBuilder& func(HookFunc func);
     HookElementBuilder& patchDataStr(const char* patchDataStr);
-	HookElementBuilder& needUnprotect(bool needUnprotect);
-	HookElement build();
+    HookElementBuilder& needUnprotect(bool needUnprotect);
+	HookElementBuilder& description(const std::string& desc);
+	HookElementBuilder& patchUseNops(bool on);
+    HookElement build();
 };
 
 class Hook
@@ -62,23 +70,24 @@ class Hook
 	bool _active;
 public:
 	std::vector<HookElement> elements;
+	std::string description;
 	void enable(bool enable = true);
 	void disable();
 	void toggle();
 	inline bool isActive() const;
 	bool isFullyActive() const; // every element is _active
 
-	Hook(std::initializer_list<HookElement> elements);
+	Hook(std::initializer_list<HookElement> elements, const std::string& description = "");
+	Hook(HookElement element, const std::string& description = "");
 
 	Hook() = delete;
 	Hook(const Hook&) = delete;
+	Hook(Hook&&) = default;
 	~Hook();
 	Hook& operator=(const Hook&) = delete;
 };
 
 extern std::unordered_map<int, Hook> hooks;
-
-extern std::unordered_map<uint32_t, std::vector<uint8_t> > hookRestoreList;
 extern std::unordered_map<uint32_t, HookFunc> hookFuncMap;
 
 void __fastcall dispatchHook(uint32_t esp);

@@ -21,6 +21,7 @@
 
 extern bool inMM;
 extern void setMaxSkillLevel();
+extern void setupHooks();
 
 std::vector<void*> getPlayerPointersMm8()
 {
@@ -173,6 +174,9 @@ extern "C"
             gameAccessor = new GameStructAccessor_8;
 		}
 		generator = new Generator();
+
+        setupHooks();
+
         //run_wx_gui_from_dll();
         // wxWidgets init
         HINSTANCE hinstExe = GetModuleHandleA(nullptr); // HMODULE is convertible to HINSTANCE
@@ -195,6 +199,20 @@ extern "C"
         
         //MSGBOX((std::string("app: ") + std::to_string((int)app)).c_str());
         //MSGBOX((std::string("window: ") + std::to_string((int)app->mainWindow)).c_str());
+    }
+
+    DLL_EXPORT bool __stdcall setHook(int id, bool on)
+    {
+        try
+        {
+            hooks.at(id).enable(on);
+            return true;
+        }
+        catch (const std::exception& e)
+        {
+            wxLogError("Received exception: %s", e.what());
+            return false;
+        }
     }
 
     DLL_EXPORT void __stdcall runEventLoopOnce()
@@ -242,6 +260,7 @@ extern "C"
 	{
 		if (checkBeforeShowingWindows())
 		{
+
 			wxGetApp().editorMainWindow->Show(visible);
 		}
 	}

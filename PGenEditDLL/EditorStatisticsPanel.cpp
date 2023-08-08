@@ -610,7 +610,7 @@ void EditorStatisticsPanel::processClassControlsChange(ClassChangeWhat what, boo
 	};
 	auto currClass = playerAccessor->forPlayer(playerIndex)->getClassPtr();
 	PlayerClass* clas = nullptr;
-	bool hasNeutral, hasLight, hasDark;
+	bool hasNeutral = false, hasLight = false, hasDark = false;
 	if (what == CLASS_CHANGE_BASE)
 	{
 		PlayerClass* newBaseClass = classPtrToBaseClassChoiceIdMap.at(baseClassChoice->GetSelection());
