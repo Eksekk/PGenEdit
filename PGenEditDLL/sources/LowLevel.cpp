@@ -333,11 +333,21 @@ void hookCall(uint32_t addr, HookFunc func, std::vector<uint8_t>* storeAt, uint3
     hookFuncMap[addr] = func;
 }
 
-uint32_t autohookCall(uint32_t addr, HookFunc func, std::vector<uint8_t>* storeAt, uint32_t size = 5)
+uint32_t autohookCall(uint32_t addr, HookFunc func, std::vector<uint8_t>* storeAt, uint32_t size)
 {
 	// copy code with jump back
 	// setup call hook
 	// pass our own function which will change return address to copied code
+	
+	// PROBLEMS WITH FREEING ALLOCATED MEMORY?
+	size = getRealHookSize(addr, size);
+
+	uint32_t code = copyCode(addr, size, true);
+	auto wrapperFunc = [](HookData* d) {
+
+	};
+	hookCall(addr, wrapperFunc, storeAt, size);
+	return 0;
 }
 
 // TODO: generic function to generate all four without repeating code?
@@ -430,18 +440,17 @@ uint32_t codeMemoryAlloc(uint32_t size)
 	return reinterpret_cast<uint32_t>(mem);
 }
 
-uint32_t copyCode(uint32_t source, uint32_t target, uint32_t size, bool writeJumpBack /*= true*/)
+uint32_t copyCode(uint32_t source, uint32_t size, bool writeJumpBack)
 {
 	size = getRealHookSize(source, size);
 	// check short jumps
     ZyanU64 runtimeAddr = (ZyanU64)source;
     ZydisDisassembledInstruction instr;
+	std::vector<int> rel32Positions; // to fix calls/jumps
 	int n = 0;
-	bool hasShort = false;
-	while (n < size && ZydisDisassembleIntel(ZYDIS_MACHINE_MODE_LEGACY_32, source + n, reinterpret_cast<void*>(source + n), 20, &instr))
+    bool hasShort = false;
+	while (n < size && ZYAN_SUCCESS(ZydisDisassembleIntel(ZYDIS_MACHINE_MODE_LEGACY_32, source + n, reinterpret_cast<void*>(source + n), 20, &instr)))
 	{
-		n = n + instr.info.length;
-
         if (instr.info.meta.branch_type == ZYDIS_BRANCH_TYPE_SHORT)
         {
 			uint32_t dest = n + 2 + byte(source + n + 1);
@@ -450,6 +459,15 @@ uint32_t copyCode(uint32_t source, uint32_t target, uint32_t size, bool writeJum
 				hasShort = true;
 			}
         }
+		else if ((instr.info.meta.branch_type == ZYDIS_BRANCH_TYPE_NEAR || instr.info.meta.category == ZYDIS_CATEGORY_CALL) && (instr.info.attributes & ZYDIS_ATTRIB_IS_RELATIVE))
+		{
+			// to check if call is included in "branch type"
+			wxASSERT_MSG((instr.info.meta.branch_type == ZYDIS_BRANCH_TYPE_NEAR) ^ (instr.info.meta.category == ZYDIS_CATEGORY_CALL), "Call instruction is considered as 'branch type'");
+			auto& disp = instr.info.raw.disp;
+			wxASSERT_MSG(disp.size == 4, wxString::Format("Expected size 4 (DWORD) immediate, got %d", disp.size));
+			rel32Positions.push_back(n + disp.offset);
+		}
+        n += instr.info.length;
 	}
 
 	if (n < size) // Zydis error
@@ -464,12 +482,27 @@ uint32_t copyCode(uint32_t source, uint32_t target, uint32_t size, bool writeJum
 		wxLog::FlushActive();
 		return 0;
 	}
-	
-	// copy code to newly allocated memory
-	uint32_t mem = codeMemoryAlloc(size + (writeJumpBack ? 5 : 0));
+
+	uint32_t newCodeSize = size + (writeJumpBack ? 5 : 0);
+    uint32_t mem = codeMemoryAlloc(newCodeSize);
+    // copy code to newly allocated memory
 	memcpy((void*)mem, (void*)source, size);
 	// write jump back
-	hookJumpRaw(mem + size, reinterpret_cast<void*>(source + size), nullptr);
+	if (writeJumpBack)
+	{
+        hookJumpRaw(mem + size, reinterpret_cast<void*>(source + size), nullptr);
+	}
+	// fix calls/jumps
+	if (rel32Positions.size() > 0)
+    {
+		DWORD tmp;
+		VirtualProtect((void*)mem, newCodeSize, PAGE_EXECUTE_READWRITE, &tmp);
+        for (int fix : rel32Positions)
+        {
+            sdword(mem + fix) += (mem - source);
+        }
+		VirtualProtect((void*)mem, newCodeSize, tmp, &tmp);
+	}
 	return mem;
 }
 
@@ -550,7 +583,7 @@ int getInstructionSize(void* addr)
 {
 	ZyanU64 runtimeAddr = (ZyanU64)addr;
     ZydisDisassembledInstruction instr;
-	if (!ZydisDisassembleIntel(ZydisMachineMode::ZYDIS_MACHINE_MODE_LEGACY_32, runtimeAddr, addr, 20, &instr))
+	if (!ZYAN_SUCCESS(ZydisDisassembleIntel(ZydisMachineMode::ZYDIS_MACHINE_MODE_LEGACY_32, runtimeAddr, addr, 20, &instr)))
 	{
 		wxMessageBox(wxString::Format("Couldn't get instruction length at address 0x%X", (uint32_t)addr), "Error", wxCENTER | wxOK | wxICON_ERROR);
 		return 1; // so no infinite loops happen

@@ -14,6 +14,7 @@
 
 struct HookData;
 typedef void(__stdcall* HookFunc)(HookData*);
+//typedef std::function<void(HookData*)> HookFunc;
 
 // BASE FUNCTIONS
 
@@ -61,7 +62,7 @@ void patchBytes(uint32_t addr, void* bytes, uint32_t size, std::vector<uint8_t>*
 uint32_t codeMemoryAlloc(uint32_t size);
 
 // copies code
-uint32_t copyCode(uint32_t source, uint32_t target, uint32_t size, bool writeJumpBack = true);
+uint32_t copyCode(uint32_t source, uint32_t size, bool writeJumpBack = true);
 
 template<typename ReturnType, typename Address, typename... Args>
 ReturnType callMemoryAddress(Address address, int registerParamsNum, Args... args) // NO rvalue reference, because it passes arguments by address
