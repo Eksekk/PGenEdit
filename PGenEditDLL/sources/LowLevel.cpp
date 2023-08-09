@@ -59,6 +59,12 @@ void HookElement::enable(bool enable)
 			hookJumpRaw(address, reinterpret_cast<void*>(target), &restoreData, hookSize);
 		}
 		break;
+		case HOOK_ELEM_TYPE_ERASE_CODE:
+		{
+			// TODO: check overlap
+			eraseCode(address, hookSize, &restoreData);
+		}
+		break;
 		default:
 		{
 			wxFAIL_MSG(wxString::Format("Unknown hook type %d", (int)type));
@@ -169,7 +175,7 @@ HookElementBuilder& HookElementBuilder::patchUseNops(bool on)
 HookElement HookElementBuilder::build()
 {
     // hook properties: type, address, dataSize, hookSize, target, func, needUnprotect, description, patchUseNops (only for patch data)
-    // hook types: jump, call raw, call, patch data
+    // hook types: jump, call raw, call, patch data, erase code
     
     // all need address
     if (elem.address == 0)
@@ -192,7 +198,15 @@ HookElement HookElementBuilder::build()
             wxFAIL_MSG("Patch data hook: target and patch str can't both be set");
         }
 	}
-    // call needs func (call raw jumps to any code, skipping hook proc)
+	// erase code needs size
+	if (elem.type == HOOK_ELEM_TYPE_ERASE_CODE)
+	{
+        if (elem.dataSize <= 0)
+        {
+            wxFAIL_MSG("Erase code hook: size not set or <= 0");
+        }
+	}
+    // call needs func (call raw jumps to any code, not using hook proc)
     if (elem.type == HOOK_ELEM_TYPE_CALL && elem.func == 0)
     {
         wxFAIL_MSG("Call hook: function not set");
@@ -319,6 +333,14 @@ void hookCall(uint32_t addr, HookFunc func, std::vector<uint8_t>* storeAt, uint3
     hookFuncMap[addr] = func;
 }
 
+uint32_t autohookCall(uint32_t addr, HookFunc func, std::vector<uint8_t>* storeAt, uint32_t size = 5)
+{
+	// copy code with jump back
+	// setup call hook
+	// pass our own function which will change return address to copied code
+}
+
+// TODO: generic function to generate all four without repeating code?
 void patchByte(uint32_t addr, uint8_t val, std::vector<uint8_t>* storeAt)
 {
 	storeBytes(storeAt, addr, 1);
@@ -366,6 +388,7 @@ void patchSDword(uint32_t addr, int32_t val, std::vector<uint8_t>* storeAt)
 
 void eraseCode(uint32_t addr, uint32_t size, std::vector<uint8_t>* storeAt)
 {
+	size = getRealHookSize(addr, size);
 	storeBytes(storeAt, addr, size);
 	DWORD tmp;
 	VirtualProtect((void*)addr, size, PAGE_EXECUTE_READWRITE, &tmp);
@@ -394,6 +417,60 @@ void patchBytes(uint32_t addr, void* bytes, uint32_t size, std::vector<uint8_t>*
 		memset(reinterpret_cast<void*>(addr + dataSize), 0x90, realSize - dataSize);
 	}
 	VirtualProtect((void*)addr, realSize, tmp, &tmp);
+}
+
+uint32_t codeMemoryAlloc(uint32_t size)
+{
+	// TODO: memory leak when reloading dll?
+	void* mem = malloc(size);
+	assert(mem);
+	DWORD tmp;
+	VirtualProtect(mem, size, PAGE_EXECUTE_READ, &tmp);
+	memset(mem, 0x90, size);
+	return reinterpret_cast<uint32_t>(mem);
+}
+
+uint32_t copyCode(uint32_t source, uint32_t target, uint32_t size, bool writeJumpBack /*= true*/)
+{
+	size = getRealHookSize(source, size);
+	// check short jumps
+    ZyanU64 runtimeAddr = (ZyanU64)source;
+    ZydisDisassembledInstruction instr;
+	int n = 0;
+	bool hasShort = false;
+	while (n < size && ZydisDisassembleIntel(ZYDIS_MACHINE_MODE_LEGACY_32, source + n, reinterpret_cast<void*>(source + n), 20, &instr))
+	{
+		n = n + instr.info.length;
+
+        if (instr.info.meta.branch_type == ZYDIS_BRANCH_TYPE_SHORT)
+        {
+			uint32_t dest = n + 2 + byte(source + n + 1);
+			if (dest > source + size) // jump outside code
+			{
+				hasShort = true;
+			}
+        }
+	}
+
+	if (n < size) // Zydis error
+	{
+		wxLogError("Couldn't copy code from address 0x%X + 0x%X - zydis error", source, n);
+		wxLog::FlushActive();
+		return 0;
+	}
+	else if (hasShort)
+	{
+		wxLogError("Code at 0x%X of size 0x%X has short jump leading outside", source, size);
+		wxLog::FlushActive();
+		return 0;
+	}
+	
+	// copy code to newly allocated memory
+	uint32_t mem = codeMemoryAlloc(size + (writeJumpBack ? 5 : 0));
+	memcpy((void*)mem, (void*)source, size);
+	// write jump back
+	hookJumpRaw(mem + size, reinterpret_cast<void*>(source + size), nullptr);
+	return mem;
 }
 
 void removeHooks()
@@ -472,7 +549,7 @@ void __declspec(naked) myHookProc()
 int getInstructionSize(void* addr)
 {
 	ZyanU64 runtimeAddr = (ZyanU64)addr;
-	ZydisDisassembledInstruction instr;
+    ZydisDisassembledInstruction instr;
 	if (!ZydisDisassembleIntel(ZydisMachineMode::ZYDIS_MACHINE_MODE_LEGACY_32, runtimeAddr, addr, 20, &instr))
 	{
 		wxMessageBox(wxString::Format("Couldn't get instruction length at address 0x%X", (uint32_t)addr), "Error", wxCENTER | wxOK | wxICON_ERROR);

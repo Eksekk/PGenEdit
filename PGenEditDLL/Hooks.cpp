@@ -20,9 +20,9 @@ static __declspec(naked) void noRecovery_7()
     {
         ; player index
         push ecx
-        sub ecx, dword ptr[partyOffset]
+        sub ecx, partyOffset
         mov eax, ecx
-        mov ecx, [playerSize]
+        mov ecx, playerSize
         push edx
         cdq
         idiv ecx
