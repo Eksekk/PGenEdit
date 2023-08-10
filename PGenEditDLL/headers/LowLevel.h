@@ -13,8 +13,8 @@
 // many functions taken/adapted from Tomsod's elemental mod
 
 struct HookData;
-//typedef void(__stdcall* HookFunc)(HookData*);
-typedef std::function<void(HookData*)> HookFunc;
+typedef int(__stdcall* HookFuncPtr)(HookData*);
+typedef std::function<int(HookData*)> HookFunc; // any function callable with HookData parameter and returning int is hook function
 
 // BASE FUNCTIONS
 
@@ -109,6 +109,13 @@ enum HookElementType
 	HOOK_ELEM_TYPE_JUMP,
 	HOOK_ELEM_TYPE_PATCH_DATA,
 	HOOK_ELEM_TYPE_ERASE_CODE,
+	HOOK_ELEM_TYPE_AUTOHOOK,
+};
+
+enum HookReturnCode
+{
+	HOOK_RETURN_SUCCESS,
+	HOOK_RETURN_AUTOHOOK_NO_PUSH
 };
 
 // different games may need some extra elements for a particular hook, or less
@@ -130,6 +137,7 @@ public:
 	bool needUnprotect;
 	std::string description;
 	bool patchUseNops;
+	void* extraData; // like copied code for autohook
 
 	void enable(bool enable = true);
 	void disable();
@@ -267,6 +275,8 @@ struct HookData
 			uint8_t ah;
 		};
 	};
+
+	void push(uint32_t val);
 };
 
 #pragma pack(pop)

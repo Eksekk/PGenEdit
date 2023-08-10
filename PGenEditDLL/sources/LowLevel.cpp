@@ -53,6 +53,13 @@ void HookElement::enable(bool enable)
 			hookCall(address, func, &restoreData, hookSize);
 		}
 		break;
+		case HOOK_ELEM_TYPE_AUTOHOOK:
+		{
+			checkOverlap(address, hookSize);
+			// TODO: probably inefficient? somehow pass copied code to autohookCall?
+			extraData = (void*)autohookCall(address, func, &restoreData, hookSize);
+		}
+		break;
 		case HOOK_ELEM_TYPE_JUMP:
         {
             checkOverlap(address, hookSize);
@@ -77,9 +84,14 @@ void HookElement::enable(bool enable)
 		_active = false;
 		patchBytes(address, restoreData.data(), restoreData.size(), nullptr);
 		restoreData.clear();
-		if (type == HOOK_ELEM_TYPE_CALL)
+		if (type == HOOK_ELEM_TYPE_CALL || type == HOOK_ELEM_TYPE_AUTOHOOK)
 		{
 			hookFuncMap.erase(address);
+		}
+		if (type == HOOK_ELEM_TYPE_AUTOHOOK)
+		{
+			wxASSERT(extraData);
+			free(extraData);
 		}
 	}
 }
@@ -100,7 +112,7 @@ inline bool HookElement::isActive() const
 }
 
 HookElement::HookElement() : _active(false), type(HOOK_ELEM_TYPE_CALL_RAW), address(0), target(0), hookSize(5), dataSize(0), func(0), patchDataStr(0),
-	needUnprotect(false), description(""), patchUseNops(false)
+	needUnprotect(false), description(""), patchUseNops(false), extraData(nullptr)
 {
 }
 
@@ -201,20 +213,20 @@ HookElement HookElementBuilder::build()
 	// erase code needs size
 	if (elem.type == HOOK_ELEM_TYPE_ERASE_CODE)
 	{
-        if (elem.dataSize <= 0)
+        if (elem.hookSize <= 0)
         {
             wxFAIL_MSG("Erase code hook: size not set or <= 0");
         }
 	}
-    // call needs func (call raw jumps to any code, not using hook proc)
-    if (elem.type == HOOK_ELEM_TYPE_CALL && elem.func == 0)
+    // call and autohook needs func (call raw jumps to any code, not using hook proc)
+    if ((elem.type == HOOK_ELEM_TYPE_CALL || elem.type == HOOK_ELEM_TYPE_AUTOHOOK) && elem.func == 0)
     {
-        wxFAIL_MSG("Call hook: function not set");
+        wxFAIL_MSG("Call hook/autohook: function not set");
     }
-    // call/call raw/jump need hook size >= 5
-    if ((elem.type == HOOK_ELEM_TYPE_JUMP || elem.type == HOOK_ELEM_TYPE_CALL || elem.type == HOOK_ELEM_TYPE_CALL_RAW) && elem.hookSize < 5)
+    // call/call raw/jump/autohook need hook size >= 5
+    if ((elem.type == HOOK_ELEM_TYPE_JUMP || elem.type == HOOK_ELEM_TYPE_CALL || elem.type == HOOK_ELEM_TYPE_CALL_RAW || elem.type == HOOK_ELEM_TYPE_AUTOHOOK) && elem.hookSize < 5)
     {
-        wxFAIL_MSG("Call/jump hook size can't be less than 5");
+        wxFAIL_MSG("Call/jump hook/autohook size can't be less than 5");
     }
     // jump/call raw need target (intended to jump/call simple asm functions)
     if ((elem.type == HOOK_ELEM_TYPE_JUMP || elem.type == HOOK_ELEM_TYPE_CALL_RAW) && elem.target <= 0)
@@ -343,11 +355,16 @@ uint32_t autohookCall(uint32_t addr, HookFunc func, std::vector<uint8_t>* storeA
 	size = getRealHookSize(addr, size);
 
 	uint32_t code = copyCode(addr, size, true);
-	auto wrapperFunc = [](HookData* d) {
-
+	auto wrapperFunc = [addr, size, func](HookData* d) -> int {
+		d->esp = d->esp + 4;
+		if (func(d) != HOOK_RETURN_AUTOHOOK_NO_PUSH)
+		{
+			d->push(addr + size);
+		}
+		return HOOK_RETURN_SUCCESS;
 	};
 	hookCall(addr, wrapperFunc, storeAt, size);
-	return 0;
+	return code;
 }
 
 // TODO: generic function to generate all four without repeating code?
@@ -598,4 +615,10 @@ int getInstructionSize(void* addr)
 int getInstructionSize(uint32_t addr)
 {
 	return getInstructionSize((void*)addr);
+}
+
+void HookData::push(uint32_t val)
+{
+	esp = esp - 4;
+	dword(esp) = val;
 }
