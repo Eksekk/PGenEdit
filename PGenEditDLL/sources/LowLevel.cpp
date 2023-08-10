@@ -622,3 +622,10 @@ void HookData::push(uint32_t val)
 	esp = esp - 4;
 	dword(esp) = val;
 }
+
+std::function<short(int, char*, bool)> f = reinterpret_cast<short(*)(int, char*, bool)>(0x55555555);
+
+void g()
+{
+	hookReplaceCall<short, 1, int, char*, bool>(0xFEDECEBE, 2, f);
+}

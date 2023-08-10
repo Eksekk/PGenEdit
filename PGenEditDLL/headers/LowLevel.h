@@ -12,7 +12,92 @@
 // for me to understand such low level stuff
 // many functions taken/adapted from Tomsod's elemental mod
 
-struct HookData;
+#pragma pack(push, 1)
+struct HookData
+{
+    union
+    {
+        uint32_t eflags;
+        uint16_t flags;
+        struct
+        {
+            bool CF : 1; // carry
+            SKIPBITS(1);
+            bool PF : 1; // parity
+            SKIPBITS(3);
+            bool ZF : 1; // zero
+            bool SF : 1; // sign
+            bool TF : 1; // trap
+            bool IF : 1; // interrupt
+            bool DF : 1; // direction
+            bool OF : 1; // overflow
+        };
+    };
+    union
+    {
+        uint32_t edi;
+        uint16_t di;
+    };
+    union
+    {
+        uint32_t esi;
+        uint16_t si;
+    };
+    union
+    {
+        uint32_t ebp;
+        uint16_t bp;
+    };
+    union
+    {
+        uint32_t esp; // change this to change return address from hook proc
+        uint16_t sp;
+    };
+    union
+    {
+        uint32_t edx;
+        uint16_t dx;
+        struct
+        {
+            uint8_t dl;
+            uint8_t dh;
+        };
+    };
+    union
+    {
+        uint32_t ecx;
+        uint16_t cx;
+        struct
+        {
+            uint8_t cl;
+            uint8_t ch;
+        };
+    };
+    union
+    {
+        uint32_t ebx;
+        uint16_t bx;
+        struct
+        {
+            uint8_t bl;
+            uint8_t bh;
+        };
+    };
+    union
+    {
+        uint32_t eax;
+        uint16_t ax;
+        struct
+        {
+            uint8_t al;
+            uint8_t ah;
+        };
+    };
+
+    void push(uint32_t val);
+};
+#pragma pack(pop)
+
 typedef int(__stdcall* HookFuncPtr)(HookData*);
 typedef std::function<int(HookData*)> HookFunc; // any function callable with HookData parameter and returning int is hook function
 
@@ -63,6 +148,43 @@ uint32_t codeMemoryAlloc(uint32_t size);
 
 // copies code
 uint32_t copyCode(uint32_t source, uint32_t size, bool writeJumpBack = true);
+
+// type of object representing replaced function call
+template<typename ReturnType, typename... Args>
+using HookReplaceCallOrigFuncType = typename std::function<ReturnType(Args...)>;
+
+// type representing hook function
+template<typename ReturnType, typename... Args>
+using HookReplaceCallFunc = typename std::function<uint32_t(HookData* d, HookReplaceCallOrigFuncType<ReturnType, Args...> func, Args... args)>;
+
+template<typename ReturnType, int cc, typename... Args>
+uint32_t hookReplaceCall(uint32_t addr, uint32_t stackNum, HookReplaceCallFunc<ReturnType, Args...> func, std::vector<uint8_t>* storeAt = nullptr, uint32_t size = 5)
+{
+	wxASSERT_MSG(byte(addr) == 0xE8, wxString::Format("Instruction at 0x%X is not call instruction", addr));
+	uint32_t dest = addr + 1 + sdword(addr + 1) + 5;
+	HookReplaceCallFunc<ReturnType, Args...> def = [addr, cc](HookData* d, Args... args) -> ReturnType {
+		return callMemoryAddress<ReturnType>(addr, cc, args...);
+	};
+	size = getRealHookSize(addr, size);
+    hookCall(addr, [func, cc, def](HookData* d) {
+        std::tuple<Args...> args;
+        constexpr int tupleIndex = 0;
+        if constexpr (cc >= 1)
+        {
+			args.get<tupleIndex++> = static_cast<std::tuple_element_t<0, Args...>>(d->ecx);
+		}
+        if constexpr (cc >= 2)
+        {
+            args.get<tupleIndex++> = static_cast<std::tuple_element_t<1, Args...>>(d->edx);
+        }
+        constexpr int num = 0;
+        while (num < stackNum)
+        {
+            args.get<tupleIndex++> = static_cast<std::tuple_element_t<tupleIndex + num, Args...>>(dword(d->esp + 4 + num * 4));
+        }
+		func(d, def, args...);
+	}, storeAt, size);
+}
 
 template<typename ReturnType, typename Address, typename... Args>
 ReturnType callMemoryAddress(Address address, int registerParamsNum, Args... args) // NO rvalue reference, because it passes arguments by address
@@ -192,93 +314,5 @@ extern std::unordered_map<uint32_t, HookFunc> hookFuncMap;
 void __fastcall dispatchHook(uint32_t esp);
 
 void removeHooks();
-
-#pragma pack(push, 1)
-
-struct HookData
-{
-	union
-	{
-		uint32_t eflags;
-		uint16_t flags;
-		struct
-		{
-			bool CF : 1; // carry
-			SKIPBITS(1);
-			bool PF : 1; // parity
-			SKIPBITS(3);
-			bool ZF : 1; // zero
-			bool SF : 1; // sign
-			bool TF : 1; // trap
-			bool IF : 1; // interrupt
-			bool DF : 1; // direction
-			bool OF : 1; // overflow
-		};
-	};
-	union
-	{
-		uint32_t edi;
-		uint16_t di;
-	};
-	union
-	{
-		uint32_t esi;
-		uint16_t si;
-	};
-	union
-	{
-		uint32_t ebp;
-		uint16_t bp;
-	};
-	union
-	{
-		uint32_t esp; // change this to change return address from hook proc
-		uint16_t sp;
-	};
-	union
-	{
-		uint32_t edx;
-		uint16_t dx;
-		struct
-		{
-			uint8_t dl;
-			uint8_t dh;
-		};
-	};
-	union
-	{
-		uint32_t ecx;
-		uint16_t cx;
-		struct
-		{
-			uint8_t cl;
-			uint8_t ch;
-		};
-	};
-	union
-	{
-		uint32_t ebx;
-		uint16_t bx;
-		struct
-		{
-			uint8_t bl;
-			uint8_t bh;
-		};
-	};
-	union
-	{
-		uint32_t eax;
-		uint16_t ax;
-		struct
-		{
-			uint8_t al;
-			uint8_t ah;
-		};
-	};
-
-	void push(uint32_t val);
-};
-
-#pragma pack(pop)
 
 void myHookProc();
