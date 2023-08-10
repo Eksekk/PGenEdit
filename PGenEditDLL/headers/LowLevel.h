@@ -149,43 +149,6 @@ uint32_t codeMemoryAlloc(uint32_t size);
 // copies code
 uint32_t copyCode(uint32_t source, uint32_t size, bool writeJumpBack = true);
 
-// type of object representing replaced function call
-template<typename ReturnType, typename... Args>
-using HookReplaceCallOrigFuncType = typename std::function<ReturnType(Args...)>;
-
-// type representing hook function
-template<typename ReturnType, typename... Args>
-using HookReplaceCallFunc = typename std::function<uint32_t(HookData* d, HookReplaceCallOrigFuncType<ReturnType, Args...> func, Args... args)>;
-
-template<typename ReturnType, int cc, typename... Args>
-uint32_t hookReplaceCall(uint32_t addr, uint32_t stackNum, HookReplaceCallFunc<ReturnType, Args...> func, std::vector<uint8_t>* storeAt = nullptr, uint32_t size = 5)
-{
-	wxASSERT_MSG(byte(addr) == 0xE8, wxString::Format("Instruction at 0x%X is not call instruction", addr));
-	uint32_t dest = addr + 1 + sdword(addr + 1) + 5;
-	HookReplaceCallFunc<ReturnType, Args...> def = [addr, cc](HookData* d, Args... args) -> ReturnType {
-		return callMemoryAddress<ReturnType>(addr, cc, args...);
-	};
-	size = getRealHookSize(addr, size);
-    hookCall(addr, [func, cc, def](HookData* d) {
-        std::tuple<Args...> args;
-        constexpr int tupleIndex = 0;
-        if constexpr (cc >= 1)
-        {
-			args.get<tupleIndex++> = static_cast<std::tuple_element_t<0, Args...>>(d->ecx);
-		}
-        if constexpr (cc >= 2)
-        {
-            args.get<tupleIndex++> = static_cast<std::tuple_element_t<1, Args...>>(d->edx);
-        }
-        constexpr int num = 0;
-        while (num < stackNum)
-        {
-            args.get<tupleIndex++> = static_cast<std::tuple_element_t<tupleIndex + num, Args...>>(dword(d->esp + 4 + num * 4));
-        }
-		func(d, def, args...);
-	}, storeAt, size);
-}
-
 template<typename ReturnType, typename Address, typename... Args>
 ReturnType callMemoryAddress(Address address, int registerParamsNum, Args... args) // NO rvalue reference, because it passes arguments by address
 {
@@ -220,6 +183,64 @@ ReturnType callMemoryAddress(Address address, int registerParamsNum, Args... arg
         typedef ReturnType(__fastcall* Function)(Args...);
         return reinterpret_cast<Function>(ptr)(args...);
     }
+}
+
+template<typename Type, typename... Types>
+
+
+// type of object representing replaced function call
+template<typename ReturnType, typename... Args>
+using HookReplaceCallOrigFuncType = typename std::function<ReturnType(Args...)>;
+
+// type representing hook function
+template<typename ReturnType, typename... Args>
+using HookReplaceCallFunc = typename std::function<uint32_t(HookData* d, HookReplaceCallOrigFuncType<ReturnType, Args...> func, Args... args)>;
+
+template<typename... Types>
+constexpr std::tuple<Types...> getArgsAsTuple(HookData* d, int cc)
+{
+    //if (cc >)
+}
+
+template<typename ReturnType, int cc, typename... Args>
+uint32_t hookReplaceCall(uint32_t addr, uint32_t stackNum, HookReplaceCallFunc<ReturnType, Args...> func, std::vector<uint8_t>* storeAt = nullptr, uint32_t size = 5)
+{
+	wxASSERT_MSG(byte(addr) == 0xE8, wxString::Format("Instruction at 0x%X is not call instruction", addr));
+	uint32_t dest = addr + 1 + sdword(addr + 1) + 5;
+	HookReplaceCallOrigFuncType<ReturnType, Args...> def = [=](Args... args) -> ReturnType {
+		return callMemoryAddress<ReturnType>(addr, cc, args...);
+	};
+	size = getRealHookSize(addr, size);
+    hookCall(addr, [=](HookData* d) -> uint32_t {
+        std::tuple<HookData*, HookReplaceCallOrigFuncType<ReturnType, Args...>, Args...> args;
+        constexpr int tupleIndex = 0;
+        std::get<0>(args) = d;
+        std::get<1>(args) = def;
+        using ArgsTuple = std::tuple<Args...>;
+        if constexpr (cc >= 1)
+        {
+            std::get<2>(args) = static_cast<std::tuple_element_t<0, ArgsTuple>>(d->ecx);
+            constexpr int num = 0;
+            while (num < stackNum)
+            {
+                std::get<3 + num>(args) = (std::tuple_element_t<1 + num, ArgsTuple>)(dword(d->esp + 4 + num * 4));
+            }
+		}
+        else if constexpr (cc >= 2)
+        {
+            std::get<2>(args) = static_cast<std::tuple_element_t<0, ArgsTuple>>(d->ecx);
+            std::get<3>(args) = static_cast<std::tuple_element_t<1, ArgsTuple>>(d->edx);
+            constexpr int num = 0;
+            while (num < stackNum)
+            {
+                std::get<4 + num>(args) = static_cast<std::tuple_element_t<2 + num, ArgsTuple>>(dword(d->esp + 4 + num * 4));
+                ++num;
+            }
+        }
+		std::apply(func, args);
+        return 0;
+	}, storeAt, size);
+    return 0;
 }
 
 // HOOK SYSTEM

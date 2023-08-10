@@ -623,7 +623,7 @@ void HookData::push(uint32_t val)
 	dword(esp) = val;
 }
 
-std::function<short(int, char*, bool)> f = reinterpret_cast<short(*)(int, char*, bool)>(0x55555555);
+std::function<uint32_t(HookData* d, std::function<short(int, char*, bool)>, int, char*, bool)> f = reinterpret_cast<uint32_t(*)(HookData * d, std::function<short(int, char*, bool)>, int, char*, bool)>(0x55555555);
 
 void g()
 {
