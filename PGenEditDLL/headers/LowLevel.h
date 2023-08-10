@@ -13,8 +13,8 @@
 // many functions taken/adapted from Tomsod's elemental mod
 
 struct HookData;
-typedef void(__stdcall* HookFunc)(HookData*);
-//typedef std::function<void(HookData*)> HookFunc;
+//typedef void(__stdcall* HookFunc)(HookData*);
+typedef std::function<void(HookData*)> HookFunc;
 
 // BASE FUNCTIONS
 

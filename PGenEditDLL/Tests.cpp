@@ -1048,7 +1048,7 @@ Tests::testHookPlacingAndSize()
                     break;
                 case HOOK_ELEM_TYPE_CALL:
 					hookSize = 5 + hookSizeId * 2;
-                    hookCall(addr, (HookFunc)0xFEFEFEFE, &autoCodeCopy, hookSize);
+                    hookCall(addr, (HookFunc)reinterpret_cast<void(*)(HookData*)>(0xFEFEFEFE), &autoCodeCopy, hookSize);
                     break;
                 case HOOK_ELEM_TYPE_JUMP:
 					hookSize = 5 + hookSizeId * 2;
