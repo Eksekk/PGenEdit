@@ -36,7 +36,7 @@ void HookElement::enable(bool enable)
 
 		case HOOK_ELEM_TYPE_PATCH_DATA:
 		{
-			void* target = patchDataStr ? (void*)patchDataStr : (void*)this->target;
+			const void* target = patchDataStr ? (const void*)patchDataStr : (void*)this->target;
 			int dataSize = patchDataStr ? strlen(patchDataStr) : this->dataSize;
 			patchBytes(address, target, dataSize, &restoreData, this->patchUseNops);
 		}
@@ -56,7 +56,6 @@ void HookElement::enable(bool enable)
 		case HOOK_ELEM_TYPE_AUTOHOOK:
 		{
 			checkOverlap(address, hookSize);
-			// TODO: probably inefficient? somehow pass copied code to autohookCall?
 			extraData = (void*)autohookCall(address, func, &restoreData, hookSize);
 		}
 		break;
@@ -72,6 +71,12 @@ void HookElement::enable(bool enable)
 			eraseCode(address, hookSize, &restoreData);
 		}
 		break;
+		case HOOK_ELEM_TYPE_REPLACE_CALL:
+		{
+			wxASSERT_MSG(setReplaceCallHook, "Function to set hook is unavailable");
+			setReplaceCallHook();
+		}
+		break;
 		default:
 		{
 			wxFAIL_MSG(wxString::Format("Unknown hook type %d", (int)type));
@@ -82,16 +87,16 @@ void HookElement::enable(bool enable)
 	else if (!enable && _active)
 	{
 		_active = false;
-		patchBytes(address, restoreData.data(), restoreData.size(), nullptr);
-		restoreData.clear();
-		if (type == HOOK_ELEM_TYPE_CALL || type == HOOK_ELEM_TYPE_AUTOHOOK)
+		switch (type)
 		{
-			hookFuncMap.erase(address);
-		}
-		if (type == HOOK_ELEM_TYPE_AUTOHOOK)
-		{
-			wxASSERT(extraData);
-			free(extraData);
+		case HOOK_ELEM_TYPE_CALL_RAW: unhookCallRaw(address, restoreData); break;
+		case HOOK_ELEM_TYPE_CALL: unhookCall(address, restoreData); break;
+		case HOOK_ELEM_TYPE_JUMP: unhookJumpRaw(address, restoreData); break;
+		case HOOK_ELEM_TYPE_ERASE_CODE:
+		case HOOK_ELEM_TYPE_PATCH_DATA:
+			patchBytes(address, restoreData.data(), restoreData.size(), nullptr, this->patchUseNops); break;
+		case HOOK_ELEM_TYPE_AUTOHOOK: unhookAutohookCall(address, restoreData, extraData); break;
+		case HOOK_ELEM_TYPE_REPLACE_CALL: unsetReplaceCallHook(); break;
 		}
 	}
 }
@@ -121,6 +126,10 @@ HookElement::~HookElement()
 	if (_active)
 	{
 		disable();
+	}
+	if (extraData)
+	{
+		codeMemoryFree((uint32_t)extraData);
 	}
 }
 
@@ -322,6 +331,12 @@ void hookCallRaw(uint32_t addr, void* func, std::vector<uint8_t>* storeAt, uint3
 	VirtualProtect((void*)addr, size, tmp, &tmp);
 }
 
+void unhookCallRaw(uint32_t addr, std::vector<uint8_t>& restoreData)
+{
+    patchBytes(addr, restoreData.data(), restoreData.size(), nullptr);
+    restoreData.clear();
+}
+
 void hookJumpRaw(uint32_t addr, void* func, std::vector<uint8_t>* storeAt, uint32_t size)
 {
 	size = getRealHookSize(addr, size);
@@ -337,12 +352,24 @@ void hookJumpRaw(uint32_t addr, void* func, std::vector<uint8_t>* storeAt, uint3
 	VirtualProtect((void*)addr, size, tmp, &tmp);
 }
 
+void unhookJumpRaw(uint32_t addr, std::vector<uint8_t>& restoreData)
+{
+	patchBytes(addr, restoreData.data(), restoreData.size(), nullptr);
+}
+
 void hookCall(uint32_t addr, HookFunc func, std::vector<uint8_t>* storeAt, uint32_t size /*= 5*/)
 {
 	size = getRealHookSize(addr, size);
     checkOverlap(addr, size);
     hookCallRaw(addr, reinterpret_cast<void*>(myHookProc), storeAt, size);
     hookFuncMap[addr] = func;
+}
+
+void unhookCall(uint32_t addr, std::vector<uint8_t>& restoreData)
+{
+	unhookCallRaw(addr, restoreData);
+    wxASSERT(hookFuncMap.contains(addr));
+    hookFuncMap.erase(addr);
 }
 
 uint32_t autohookCall(uint32_t addr, HookFunc func, std::vector<uint8_t>* storeAt, uint32_t size)
@@ -365,6 +392,13 @@ uint32_t autohookCall(uint32_t addr, HookFunc func, std::vector<uint8_t>* storeA
 	};
 	hookCall(addr, wrapperFunc, storeAt, size);
 	return code;
+}
+
+// TODO: all unhooks could also store all required data by themselves, to not require passing unnecessary arguments
+void unhookAutohookCall(uint32_t addr, std::vector<uint8_t>& restoreData, void* allocatedCode)
+{
+	unhookCall(addr, restoreData);
+	codeMemoryFree((uint32_t)allocatedCode);
 }
 
 // TODO: generic function to generate all four without repeating code?
@@ -428,7 +462,7 @@ void eraseCode(uint32_t addr, uint32_t size, std::vector<uint8_t>* storeAt)
 	VirtualProtect((void*)addr, size, tmp, &tmp);
 }
 
-void patchBytes(uint32_t addr, void* bytes, uint32_t size, std::vector<uint8_t>* storeAt, bool useNops)
+void patchBytes(uint32_t addr, const void* bytes, uint32_t size, std::vector<uint8_t>* storeAt, bool useNops)
 {
 	int realSize = size, dataSize = size;
 	if (useNops)
@@ -455,6 +489,11 @@ uint32_t codeMemoryAlloc(uint32_t size)
 	VirtualProtect(mem, size, PAGE_EXECUTE_READ, &tmp);
 	memset(mem, 0x90, size);
 	return reinterpret_cast<uint32_t>(mem);
+}
+
+void codeMemoryFree(uint32_t addr)
+{
+	free(reinterpret_cast<void*>(addr));
 }
 
 uint32_t copyCode(uint32_t source, uint32_t size, bool writeJumpBack)
@@ -523,12 +562,18 @@ uint32_t copyCode(uint32_t source, uint32_t size, bool writeJumpBack)
 	return mem;
 }
 
+void unhookReplaceCall(uint32_t addr, std::vector<uint8_t>& restoreData)
+{
+	unhookCall(addr, restoreData);
+}
+
 void removeHooks()
 {
 	for (auto& [id, hook]: hooks)
 	{
 		hook.disable();
 	}
+	// destructors (to free memory in some cases) will run automatically when map is destroyed on exit
 }
 
 void __fastcall dispatchHook(uint32_t esp)
@@ -621,6 +666,13 @@ void HookData::push(uint32_t val)
 {
 	esp = esp - 4;
 	dword(esp) = val;
+}
+
+void HookData::ret(int stackNum)
+{
+    uint32_t ret = dword(esp);
+    esp += stackNum * 4;
+    dword(esp) = ret;
 }
 
 std::function<uint32_t(HookData* d, std::function<short(int, char*, bool)>, int, char*, bool)> f = reinterpret_cast<uint32_t(*)(HookData * d, std::function<short(int, char*, bool)>, int, char*, bool)>(0x55555555);

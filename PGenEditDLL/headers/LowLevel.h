@@ -95,6 +95,7 @@ struct HookData
     };
 
     void push(uint32_t val);
+    void ret(int stackNum);
 };
 #pragma pack(pop)
 
@@ -124,10 +125,28 @@ void storeBytes(std::vector<uint8_t>* storeAt, uint32_t addr, uint32_t size);
 // sets a call/jump hook (5-byte instruction) at given address transferring
 // control into given func, hook size can be given or omitted (5 assumed)
 void hookCallRaw(uint32_t addr, void* func, std::vector<uint8_t>* storeAt, uint32_t size = 5);
-void hookJumpRaw(uint32_t addr, void* func, std::vector<uint8_t>* storeAt, uint32_t size = 5);
+void unhookCallRaw(uint32_t addr, std::vector<uint8_t>& restoreData);
 
+void hookJumpRaw(uint32_t addr, void* func, std::vector<uint8_t>* storeAt, uint32_t size = 5);
+void unhookJumpRaw(uint32_t addr, std::vector<uint8_t>& restoreData);
+
+// mmext-like call hook (dispatch, HookData param etc.)
 void hookCall(uint32_t addr, HookFunc func, std::vector<uint8_t>* storeAt, uint32_t size = 5);
+void unhookCall(uint32_t addr, std::vector<uint8_t>& restoreData);
+
+// mmext-like autohook
 uint32_t autohookCall(uint32_t addr, HookFunc func, std::vector<uint8_t>* storeAt, uint32_t size = 5);
+void unhookAutohookCall(uint32_t addr, std::vector<uint8_t>& restoreData, void* allocatedCode);
+/*
+struct f
+{
+    static int(*test)(bool, char*);
+};
+void t()
+{
+f::test = reinterpret_cast<decltype(f::test)>(0x45458943);
+}
+}*/
 
 // data patching functions which unprotect before/protect after (essential for patching code etc.)
 void patchByte(uint32_t addr, uint8_t val, std::vector<uint8_t>* storeAt);
@@ -141,10 +160,12 @@ void patchSDword(uint32_t addr, int32_t val, std::vector<uint8_t>* storeAt);
 void eraseCode(uint32_t addr, uint32_t size, std::vector<uint8_t>* storeAt);
 
 // patches sequence of bytes (unprotect/protect)
-void patchBytes(uint32_t addr, void* bytes, uint32_t size, std::vector<uint8_t>* storeAt = nullptr, bool useNops = false);
+void patchBytes(uint32_t addr, const void* bytes, uint32_t size, std::vector<uint8_t>* storeAt = nullptr, bool useNops = false);
 
 // allocates memory for code
 uint32_t codeMemoryAlloc(uint32_t size);
+// frees memory allocated with codeMemoryAlloc
+void codeMemoryFree(uint32_t addr);
 
 // copies code
 uint32_t copyCode(uint32_t source, uint32_t size, bool writeJumpBack = true);
@@ -153,6 +174,8 @@ template<typename ReturnType, typename Address, typename... Args>
 ReturnType callMemoryAddress(Address address, int registerParamsNum, Args... args) // NO rvalue reference, because it passes arguments by address
 {
     wxASSERT_MSG(registerParamsNum >= -1 && registerParamsNum <= 2, "Invalid number of register parameters");
+    // fold expression??? kinda weird syntax
+    static_assert(((std::is_standard_layout_v<Args>) && ...) && std::is_standard_layout_v<ReturnType>, "Arguments are non-POD");
     void* ptr;
     if constexpr (std::is_pointer_v<Address>)
     {
@@ -185,9 +208,6 @@ ReturnType callMemoryAddress(Address address, int registerParamsNum, Args... arg
     }
 }
 
-template<typename Type, typename... Types>
-
-
 // type of object representing replaced function call
 template<typename ReturnType, typename... Args>
 using HookReplaceCallOrigFuncType = typename std::function<ReturnType(Args...)>;
@@ -196,23 +216,20 @@ using HookReplaceCallOrigFuncType = typename std::function<ReturnType(Args...)>;
 template<typename ReturnType, typename... Args>
 using HookReplaceCallFunc = typename std::function<uint32_t(HookData* d, HookReplaceCallOrigFuncType<ReturnType, Args...> func, Args... args)>;
 
-template<typename... Types>
-constexpr std::tuple<Types...> getArgsAsTuple(HookData* d, int cc)
-{
-    //if (cc >)
-}
-
 template<typename ReturnType, int cc, typename... Args>
 uint32_t hookReplaceCall(uint32_t addr, uint32_t stackNum, HookReplaceCallFunc<ReturnType, Args...> func, std::vector<uint8_t>* storeAt = nullptr, uint32_t size = 5)
 {
+    static_assert(cc >= -1 && cc <= 2, "Invalid calling convention");
+    static_assert(((std::is_standard_layout_v<Args>) && ...) && std::is_standard_layout_v<ReturnType>, "Arguments are non-POD");
 	wxASSERT_MSG(byte(addr) == 0xE8, wxString::Format("Instruction at 0x%X is not call instruction", addr));
 	uint32_t dest = addr + 1 + sdword(addr + 1) + 5;
-	HookReplaceCallOrigFuncType<ReturnType, Args...> def = [=](Args... args) -> ReturnType {
+    using OrigType = HookReplaceCallOrigFuncType<ReturnType, Args...>;
+	OrigType def = [=](Args... args) -> ReturnType {
 		return callMemoryAddress<ReturnType>(addr, cc, args...);
 	};
 	size = getRealHookSize(addr, size);
     hookCall(addr, [=](HookData* d) -> uint32_t {
-        std::tuple<HookData*, HookReplaceCallOrigFuncType<ReturnType, Args...>, Args...> args;
+        std::tuple<HookData*, OrigType, Args...> args;
         constexpr int tupleIndex = 0;
         std::get<0>(args) = d;
         std::get<1>(args) = def;
@@ -220,28 +237,25 @@ uint32_t hookReplaceCall(uint32_t addr, uint32_t stackNum, HookReplaceCallFunc<R
         if constexpr (cc >= 1)
         {
             std::get<2>(args) = static_cast<std::tuple_element_t<0, ArgsTuple>>(d->ecx);
-            constexpr int num = 0;
-            while (num < stackNum)
+            if constexpr (cc >= 2)
             {
-                std::get<3 + num>(args) = (std::tuple_element_t<1 + num, ArgsTuple>)(dword(d->esp + 4 + num * 4));
-            }
-		}
-        else if constexpr (cc >= 2)
-        {
-            std::get<2>(args) = static_cast<std::tuple_element_t<0, ArgsTuple>>(d->ecx);
-            std::get<3>(args) = static_cast<std::tuple_element_t<1, ArgsTuple>>(d->edx);
-            constexpr int num = 0;
-            while (num < stackNum)
-            {
-                std::get<4 + num>(args) = static_cast<std::tuple_element_t<2 + num, ArgsTuple>>(dword(d->esp + 4 + num * 4));
-                ++num;
+                std::get<3>(args) = static_cast<std::tuple_element_t<1, ArgsTuple>>(d->edx);
             }
         }
+        constexpr int num = 0;
+        while (num < stackNum)
+        {
+            std::get<std::max(cc, 0) + 2 + num>(args) = (std::tuple_element_t<1 + num, ArgsTuple>)(dword(d->esp + 4 + num * 4));
+        }
 		std::apply(func, args);
+        // return from function (pop args and move return address)
+        d->ret(stackNum);
         return 0;
 	}, storeAt, size);
     return 0;
 }
+
+void unhookReplaceCall(uint32_t addr, std::vector<uint8_t>& restoreData);
 
 // HOOK SYSTEM
 
@@ -253,11 +267,13 @@ enum HookElementType
 	HOOK_ELEM_TYPE_PATCH_DATA,
 	HOOK_ELEM_TYPE_ERASE_CODE,
 	HOOK_ELEM_TYPE_AUTOHOOK,
+    HOOK_ELEM_TYPE_REPLACE_CALL
 };
 
 enum HookReturnCode
 {
 	HOOK_RETURN_SUCCESS,
+    HOOK_RETURN_FAIL,
 	HOOK_RETURN_AUTOHOOK_NO_PUSH
 };
 
@@ -282,6 +298,12 @@ public:
 	bool patchUseNops;
 	void* extraData; // like copied code for autohook
 
+    // required for hooks where function receives multiple arguments with various types, can't store templated data member
+    std::function<void()> setReplaceCallHook = nullptr, unsetReplaceCallHook = nullptr;
+    // store types in tuple and function addr in void* field, then when placing hook extract them (tuple_element_t??), cast function to correct type and hook?
+    template<typename ReturnType, int cc, typename... Args>
+    void setAdvancedHookFunction(HookReplaceCallFunc<ReturnType, Args...> func);
+
 	void enable(bool enable = true);
 	void disable();
 	void toggle();
@@ -289,6 +311,19 @@ public:
 	HookElement();
 	~HookElement();
 };
+
+template<typename ReturnType, int cc, typename... Args>
+void HookElement::setAdvancedHookFunction(HookReplaceCallFunc<ReturnType, Args...> func)
+{
+    wxASSERT_MSG(!setReplaceCallHook, "Advanced hook function is already stored");
+    setReplaceCallHook = []() {
+        // to consider: supplying number of stack parameters manually?
+        hookReplaceCall<ReturnType, cc, Args...>(address, sizeof...(Args) - std::max(cc, 0), func, restoreData, hookSize);
+    };
+    unsetReplaceCallHook = []() {
+        unhookReplaceCall(address, restoreData);
+    };
+}
 
 class HookElementBuilder
 {
@@ -304,8 +339,19 @@ public:
     HookElementBuilder& needUnprotect(bool needUnprotect);
 	HookElementBuilder& description(const std::string& desc);
 	HookElementBuilder& patchUseNops(bool on);
+    template<typename ReturnType, int cc, typename... Args>
+    HookElementBuilder& replaceCallHookFunc(HookReplaceCallFunc<ReturnType, Args...> func);
     HookElement build();
 };
+
+template<typename ReturnType, int cc, typename... Args>
+HookElementBuilder& HookElementBuilder::replaceCallHookFunc(HookReplaceCallFunc<ReturnType, Args...> func)
+{
+    wxASSERT_MSG(func, "No function passed");
+    // wxASSERT_MSG(!elem.funcReplaceCall, "Call replace hook function is already set"); // hook element itself will test it
+    elem.setAdvancedHookFunction<ReturnType, cc, Args...>(func);
+    return *this;
+}
 
 class Hook
 {
