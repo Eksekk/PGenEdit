@@ -327,6 +327,9 @@
     <ClInclude Include="HookParams.h">
       <Filter>Pliki nagłówkowe\Misc\Low level</Filter>
     </ClInclude>
+    <ClInclude Include="HookTests.h">
+      <Filter>Pliki nagłówkowe\Misc\Low level</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="sources\MainWindow.cpp">
@@ -507,6 +510,9 @@
       <Filter>Pliki źródłowe</Filter>
     </ClCompile>
     <ClCompile Include="HookParams.cpp">
+      <Filter>Pliki źródłowe\Misc\Low level</Filter>
+    </ClCompile>
+    <ClCompile Include="HookTests.cpp">
       <Filter>Pliki źródłowe\Misc\Low level</Filter>
     </ClCompile>
   </ItemGroup>

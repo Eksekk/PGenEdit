@@ -6,6 +6,7 @@
 #include "Utility.h"
 #include "Asserter.h"
 #include "GUI_tests.h"
+#include "HookTests.h"
 
 extern Generator* generator;
 
@@ -31,12 +32,6 @@ public:
 
 	template<typename Player, typename Game>
 	static std::vector<wxString> testMisc();
-
-    template<typename Player, typename Game>
-    static std::vector<wxString> testHooks();
-
-    template<typename Player, typename Game>
-    static std::vector<wxString> testHookPlacingAndSize();
 };
 
 template<typename Player, typename Game>
@@ -44,7 +39,7 @@ std::vector<wxString> Tests::run()
 {
 	testingNow = true;
 	auto ret = mergeVectors({ testMisc<Player, Game>(), testSkillFunctions()/*, testJson()*//*, GUI_tests::testGui<Player, Game>()*/
-		/*, testPlayerStructAccessor<Player, Game>()*/, testHooks<Player, Game>()
+		/*, testPlayerStructAccessor<Player, Game>()*/, HookTests::run<Player, Game>()
 	});
 	testingNow = false;
 	return ret;

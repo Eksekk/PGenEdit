@@ -5,3 +5,6 @@
 # Misc
 * Tooltips don't show
 * Very long loading time for editor windows
+
+# Code
+* Auto convert structure parameters in hookFunction and hookReplaceCall to their addresses

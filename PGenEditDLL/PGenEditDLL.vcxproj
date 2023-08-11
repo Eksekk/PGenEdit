@@ -58,6 +58,7 @@
     <ClInclude Include="headers\structs\TxtFileItems.h" />
     <ClInclude Include="HookParams.h" />
     <ClInclude Include="Hooks.h" />
+    <ClInclude Include="HookTests.h" />
     <ClInclude Include="LuaFunctions.h" />
     <ClInclude Include="PartyStructAccessor.h" />
     <ClInclude Include="PersistablePlayerPanel.h" />
@@ -118,6 +119,7 @@
     <ClCompile Include="GUI_tests.cpp" />
     <ClCompile Include="HookParams.cpp" />
     <ClCompile Include="Hooks.cpp" />
+    <ClCompile Include="HookTests.cpp" />
     <ClCompile Include="LuaFunctions.cpp" />
     <ClCompile Include="PartyStructAccessor.cpp" />
     <ClCompile Include="PersistablePlayerPanel.cpp" />

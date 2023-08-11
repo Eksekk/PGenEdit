@@ -72,9 +72,10 @@ void HookElement::enable(bool enable)
 		}
 		break;
 		case HOOK_ELEM_TYPE_REPLACE_CALL:
+		case HOOK_ELEM_TYPE_HOOKFUNCTION:
 		{
-			wxASSERT_MSG(setReplaceCallHook, "Function to set hook is unavailable");
-			setReplaceCallHook();
+			wxASSERT_MSG(setCallableFunctionHook, "Function to set hook is unavailable");
+			setCallableFunctionHook();
 		}
 		break;
 		default:
@@ -89,14 +90,21 @@ void HookElement::enable(bool enable)
 		_active = false;
 		switch (type)
 		{
-		case HOOK_ELEM_TYPE_CALL_RAW: unhookCallRaw(address, restoreData); break;
-		case HOOK_ELEM_TYPE_CALL: unhookCall(address, restoreData); break;
-		case HOOK_ELEM_TYPE_JUMP: unhookJumpRaw(address, restoreData); break;
+		case HOOK_ELEM_TYPE_CALL_RAW: unhookCallRaw(address, restoreData);
+			break;
+		case HOOK_ELEM_TYPE_CALL: unhookCall(address, restoreData);
+			break;
+		case HOOK_ELEM_TYPE_JUMP: unhookJumpRaw(address, restoreData);
+			break;
 		case HOOK_ELEM_TYPE_ERASE_CODE:
 		case HOOK_ELEM_TYPE_PATCH_DATA:
-			patchBytes(address, restoreData.data(), restoreData.size(), nullptr, this->patchUseNops); break;
-		case HOOK_ELEM_TYPE_AUTOHOOK: unhookAutohookCall(address, restoreData, extraData); break;
-		case HOOK_ELEM_TYPE_REPLACE_CALL: unsetReplaceCallHook(); break;
+			patchBytes(address, restoreData.data(), restoreData.size(), nullptr, this->patchUseNops);
+			break;
+		case HOOK_ELEM_TYPE_AUTOHOOK: unhookAutohookCall(address, restoreData, extraData);
+			break;
+		case HOOK_ELEM_TYPE_REPLACE_CALL:
+		case HOOK_ELEM_TYPE_HOOKFUNCTION:
+			unsetCallableFunctionHook(); break;
 		}
 	}
 }
@@ -232,16 +240,23 @@ HookElement HookElementBuilder::build()
     {
         wxFAIL_MSG("Call hook/autohook: function not set");
     }
-    // call/call raw/jump/autohook need hook size >= 5
-    if ((elem.type == HOOK_ELEM_TYPE_JUMP || elem.type == HOOK_ELEM_TYPE_CALL || elem.type == HOOK_ELEM_TYPE_CALL_RAW || elem.type == HOOK_ELEM_TYPE_AUTOHOOK) && elem.hookSize < 5)
+    // call/call raw/jump/autohook/callable function hooks need hook size >= 5
+	static const std::vector<HookElementType> minimumSize5 = { HOOK_ELEM_TYPE_JUMP, HOOK_ELEM_TYPE_CALL, HOOK_ELEM_TYPE_CALL_RAW, HOOK_ELEM_TYPE_AUTOHOOK, HOOK_ELEM_TYPE_REPLACE_CALL, HOOK_ELEM_TYPE_HOOKFUNCTION };
+    if (existsInVector(minimumSize5, elem.type) && elem.hookSize < 5)
     {
-        wxFAIL_MSG("Call/jump hook/autohook size can't be less than 5");
+        wxFAIL_MSG("Hook size can't be less than 5");
     }
     // jump/call raw need target (intended to jump/call simple asm functions)
     if ((elem.type == HOOK_ELEM_TYPE_JUMP || elem.type == HOOK_ELEM_TYPE_CALL_RAW) && elem.target <= 0)
     {
         wxFAIL_MSG("Jump/call raw hook: target to jump to not set or <= 0");
     }
+	// callable function hooks need function
+	if ((elem.type == HOOK_ELEM_TYPE_HOOKFUNCTION || elem.type == HOOK_ELEM_TYPE_REPLACE_CALL) && !elem.setCallableFunctionHook)
+	{
+		wxFAIL_MSG("Callable function hook: hook function not provided");
+	}
+
     return elem;
 }
 
@@ -314,6 +329,38 @@ void storeBytes(std::vector<uint8_t>* storeAt, uint32_t addr, uint32_t size)
 	{
 		*storeAt = std::vector<uint8_t>((uint8_t*)addr, (uint8_t*)(addr + size));
 	}
+}
+
+uint32_t findCode(uint32_t addr, const char* code)
+{
+    ZydisDisassembledInstruction instr;
+	int codeLen = strlen(code);
+	while (true)
+	{
+		if (!ZYAN_SUCCESS(ZydisDisassembleIntel(ZYDIS_MACHINE_MODE_LEGACY_32, addr, (void*)addr, 20, &instr))) // invalid code
+		{
+			++addr;
+			continue;
+		}
+
+		if (instr.info.length != codeLen)
+        {
+            addr += instr.info.length;
+			continue;
+		}
+
+		if (memcmp((void*)addr, code, codeLen) == 0)
+		{
+			break;
+		}
+		addr += instr.info.length;
+	}
+	return addr;
+}
+
+uint32_t findCode(uint32_t addr, const std::string& code)
+{
+	return findCode(addr, code.c_str());
 }
 
 void hookCallRaw(uint32_t addr, void* func, std::vector<uint8_t>* storeAt, uint32_t size)
@@ -565,6 +612,12 @@ uint32_t copyCode(uint32_t source, uint32_t size, bool writeJumpBack)
 void unhookReplaceCall(uint32_t addr, std::vector<uint8_t>& restoreData)
 {
 	unhookCall(addr, restoreData);
+}
+
+void unhookHookFunction(uint32_t addr, std::vector<uint8_t>& restoreData, void* copiedCode)
+{
+	unhookCall(addr, restoreData);
+	codeMemoryFree((uint32_t)copiedCode);
 }
 
 void removeHooks()

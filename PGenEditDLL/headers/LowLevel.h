@@ -2,6 +2,7 @@
 #include "pch.h"
 #include "main.h"
 #include "Zydis/Zydis.h"
+#include "Utility.h"
 
 // REMAINING TO IMITATE MMEXT
 // - assembler (fasm? it's already loaded)
@@ -102,6 +103,13 @@ struct HookData
 typedef int(__stdcall* HookFuncPtr)(HookData*);
 typedef std::function<int(HookData*)> HookFunc; // any function callable with HookData parameter and returning int is hook function
 
+enum HookReturnCode
+{
+    HOOK_RETURN_SUCCESS,
+    HOOK_RETURN_FAIL,
+    HOOK_RETURN_AUTOHOOK_NO_PUSH
+};
+
 // BASE FUNCTIONS
 
 int getInstructionSize(void* addr);
@@ -109,6 +117,9 @@ int getInstructionSize(uint32_t addr);
 
 int getRealHookSize(uint32_t addr, uint32_t size);
 void storeBytes(std::vector<uint8_t>* storeAt, uint32_t addr, uint32_t size);
+
+uint32_t findCode(uint32_t addr, const char* code);
+uint32_t findCode(uint32_t addr, const std::string& code);
 
 // get or set either byte/word/dword/qword (unsigned 1/2/4/8 byte integer)
 #define byte(addr) (*(uint8_t*)(addr))
@@ -214,23 +225,18 @@ using HookReplaceCallOrigFuncType = typename std::function<ReturnType(Args...)>;
 
 // type representing hook function
 template<typename ReturnType, typename... Args>
-using HookReplaceCallFunc = typename std::function<uint32_t(HookData* d, HookReplaceCallOrigFuncType<ReturnType, Args...> func, Args... args)>;
+using CallableFunctionHookFunc = typename std::function<uint32_t(HookData* d, HookReplaceCallOrigFuncType<ReturnType, Args...> func, Args... args)>;
 
 template<typename ReturnType, int cc, typename... Args>
-uint32_t hookReplaceCall(uint32_t addr, uint32_t stackNum, HookReplaceCallFunc<ReturnType, Args...> func, std::vector<uint8_t>* storeAt = nullptr, uint32_t size = 5)
+uint32_t callableHookCommon(uint32_t addr, uint32_t stackNum, CallableFunctionHookFunc<ReturnType, Args...> func, std::vector<uint8_t>* storeAt, uint32_t size, uint32_t code)
 {
-    static_assert(cc >= -1 && cc <= 2, "Invalid calling convention");
-    static_assert(((std::is_standard_layout_v<Args>) && ...) && std::is_standard_layout_v<ReturnType>, "Arguments are non-POD");
-	wxASSERT_MSG(byte(addr) == 0xE8, wxString::Format("Instruction at 0x%X is not call instruction", addr));
-	uint32_t dest = addr + 1 + sdword(addr + 1) + 5;
     using OrigType = HookReplaceCallOrigFuncType<ReturnType, Args...>;
-	OrigType def = [=](Args... args) -> ReturnType {
-		return callMemoryAddress<ReturnType>(addr, cc, args...);
-	};
-	size = getRealHookSize(addr, size);
+    OrigType def = [=](Args... args) -> ReturnType {
+        return callMemoryAddress<ReturnType>(code, cc, args...);
+    };
+    size = getRealHookSize(addr, size);
     hookCall(addr, [=](HookData* d) -> uint32_t {
         std::tuple<HookData*, OrigType, Args...> args;
-        constexpr int tupleIndex = 0;
         std::get<0>(args) = d;
         std::get<1>(args) = def;
         using ArgsTuple = std::tuple<Args...>;
@@ -242,20 +248,42 @@ uint32_t hookReplaceCall(uint32_t addr, uint32_t stackNum, HookReplaceCallFunc<R
                 std::get<3>(args) = static_cast<std::tuple_element_t<1, ArgsTuple>>(d->edx);
             }
         }
+        // if won't work, change stackNum to std::max(0, sizeof...(Args) - std::max(cc, 0))
         constexpr int num = 0;
         while (num < stackNum)
         {
             std::get<std::max(cc, 0) + 2 + num>(args) = (std::tuple_element_t<1 + num, ArgsTuple>)(dword(d->esp + 4 + num * 4));
         }
-		std::apply(func, args);
+        std::apply(func, args);
         // return from function (pop args and move return address)
         d->ret(stackNum);
         return 0;
-	}, storeAt, size);
-    return 0;
+    }, storeAt, size);
+    return HOOK_RETURN_SUCCESS;
+}
+
+template<typename ReturnType, int cc, typename... Args>
+void hookReplaceCall(uint32_t addr, uint32_t stackNum, CallableFunctionHookFunc<ReturnType, Args...> func, std::vector<uint8_t>* storeAt = nullptr, uint32_t size = 5)
+{
+    static_assert(cc >= -1 && cc <= 2, "Invalid calling convention");
+    static_assert(((std::is_standard_layout_v<Args>) && ...) && std::is_standard_layout_v<ReturnType>, "Arguments are non-POD");
+	wxASSERT_MSG(byte(addr) == 0xE8, wxString::Format("Instruction at 0x%X is not call instruction", addr));
+	uint32_t dest = addr + 1 + sdword(addr + 1) + 5;
+    callableHookCommon<ReturnType, cc, Args...>(addr, stackNum, func, storeAt, size, dest);
+}
+
+template<typename ReturnType, int cc, typename... Args>
+uint32_t hookFunction(uint32_t addr, uint32_t stackNum, CallableFunctionHookFunc<ReturnType, Args...> func, std::vector<uint8_t>* storeAt = nullptr, uint32_t size = 5)
+{
+    static_assert(cc >= -1 && cc <= 2, "Invalid calling convention");
+    static_assert(((std::is_standard_layout_v<Args>) && ...) && std::is_standard_layout_v<ReturnType>, "Arguments are non-POD");
+    uint32_t dest = copyCode(addr, size, true);
+    callableHookCommon<ReturnType, cc, Args...>(addr, stackNum, func, storeAt, size, dest);
+    return dest;
 }
 
 void unhookReplaceCall(uint32_t addr, std::vector<uint8_t>& restoreData);
+void unhookHookFunction(uint32_t addr, std::vector<uint8_t>& restoreData, void* copiedCode);
 
 // HOOK SYSTEM
 
@@ -267,20 +295,15 @@ enum HookElementType
 	HOOK_ELEM_TYPE_PATCH_DATA,
 	HOOK_ELEM_TYPE_ERASE_CODE,
 	HOOK_ELEM_TYPE_AUTOHOOK,
-    HOOK_ELEM_TYPE_REPLACE_CALL
-};
-
-enum HookReturnCode
-{
-	HOOK_RETURN_SUCCESS,
-    HOOK_RETURN_FAIL,
-	HOOK_RETURN_AUTOHOOK_NO_PUSH
+    HOOK_ELEM_TYPE_REPLACE_CALL,
+    HOOK_ELEM_TYPE_HOOKFUNCTION,
 };
 
 // different games may need some extra elements for a particular hook, or less
 // also can have same element, but just a bit different
 // and can simply have same elements
 
+// TODO: redo into virtual inheritance to have each hook type store only data it needs
 class HookElement
 {
 	bool _active;
@@ -297,12 +320,13 @@ public:
 	std::string description;
 	bool patchUseNops;
 	void* extraData; // like copied code for autohook
+    // int stackParamNum; // for callable function hooks; number is automatically deduced from argument count and calling convention
 
     // required for hooks where function receives multiple arguments with various types, can't store templated data member
-    std::function<void()> setReplaceCallHook = nullptr, unsetReplaceCallHook = nullptr;
+    void (*setCallableFunctionHook)() = nullptr, (*unsetCallableFunctionHook)() = nullptr;
     // store types in tuple and function addr in void* field, then when placing hook extract them (tuple_element_t??), cast function to correct type and hook?
     template<typename ReturnType, int cc, typename... Args>
-    void setAdvancedHookFunction(HookReplaceCallFunc<ReturnType, Args...> func);
+    void setAdvancedHookFunction(CallableFunctionHookFunc<ReturnType, Args...> func);
 
 	void enable(bool enable = true);
 	void disable();
@@ -312,15 +336,45 @@ public:
 	~HookElement();
 };
 
-template<typename ReturnType, int cc, typename... Args>
-void HookElement::setAdvancedHookFunction(HookReplaceCallFunc<ReturnType, Args...> func)
-{
-    wxASSERT_MSG(!setReplaceCallHook, "Advanced hook function is already stored");
-    setReplaceCallHook = []() {
-        // to consider: supplying number of stack parameters manually?
-        hookReplaceCall<ReturnType, cc, Args...>(address, sizeof...(Args) - std::max(cc, 0), func, restoreData, hookSize);
+/*
+    template<typename T>
+    auto transform_param(T&& t)
+    {
+        if constexpr (std::is_class_v<T>)
+        {
+            return (uint32_t) & t;
+        }
+        else
+        {
+            return t;
+        }
+    }
+
+    template<typename T, std::enable_if_t<std::is_class_v<T>, bool> = true>
+    struct transform_param_type
+    {
+        typedef uint32_t type;
     };
-    unsetReplaceCallHook = []() {
+
+    template<typename T, std::enable_if_t<!std::is_class_v<T>, bool> = true>
+    struct transform_param_type
+    {
+        typedef T type;
+    };
+
+    template<typename T>
+    using transform_param_type_t = typename transform_param_type<T>::type;
+*/
+
+template<typename ReturnType, int cc, typename... Args>
+void HookElement::setAdvancedHookFunction(CallableFunctionHookFunc<ReturnType, Args...> func)
+{
+    wxASSERT_MSG(!setCallableFunctionHook, "Advanced hook function is already stored");
+    setCallableFunctionHook = []() {
+        // to consider: supplying number of stack parameters manually?
+        hookReplaceCall<ReturnType, cc, Args...>(address, std::max(0, sizeof...(Args) - std::max(cc, 0)), func, restoreData, hookSize);
+    };
+    unsetCallableFunctionHook = []() {
         unhookReplaceCall(address, restoreData);
     };
 }
@@ -340,12 +394,12 @@ public:
 	HookElementBuilder& description(const std::string& desc);
 	HookElementBuilder& patchUseNops(bool on);
     template<typename ReturnType, int cc, typename... Args>
-    HookElementBuilder& replaceCallHookFunc(HookReplaceCallFunc<ReturnType, Args...> func);
+    HookElementBuilder& callableFunctionHookFunc(CallableFunctionHookFunc<ReturnType, Args...> func);
     HookElement build();
 };
 
 template<typename ReturnType, int cc, typename... Args>
-HookElementBuilder& HookElementBuilder::replaceCallHookFunc(HookReplaceCallFunc<ReturnType, Args...> func)
+HookElementBuilder& HookElementBuilder::callableFunctionHookFunc(CallableFunctionHookFunc<ReturnType, Args...> func)
 {
     wxASSERT_MSG(func, "No function passed");
     // wxASSERT_MSG(!elem.funcReplaceCall, "Call replace hook function is already set"); // hook element itself will test it
