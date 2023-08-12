@@ -190,7 +190,7 @@ ReturnType callMemoryAddress(Address address, int registerParamsNum, Args... arg
 {
     wxASSERT_MSG(registerParamsNum >= -1 && registerParamsNum <= 2, "Invalid number of register parameters");
     // fold expression??? kinda weird syntax
-    static_assert(((std::is_standard_layout_v<Args>) && ...) && std::is_standard_layout_v<ReturnType>, "Arguments are non-POD");
+    static_assert(((std::is_scalar_v<Args>) && ...) && (std::is_scalar_v<ReturnType> || std::is_void_v<ReturnType>), "Argument types or return type are invalid");
     void* ptr;
     if constexpr (std::is_pointer_v<Address>)
     {
@@ -231,6 +231,31 @@ using CallableFunctionHookOrigFunc = typename std::function<ReturnType(Args...)>
 template<typename ReturnType, typename... Args>
 using CallableFunctionHookFunc = typename std::function<uint32_t(HookData* d, CallableFunctionHookOrigFunc<ReturnType, Args...> func, Args... args)>;
 
+template<int index, int cc, typename... Args>
+struct PackParams
+{
+    static constexpr int ArgCount = (int)sizeof...(Args);
+    static constexpr int StackNum = std::max(0, ArgCount - std::max(cc, 0));
+    static constexpr int RegNum = ArgCount - StackNum;
+    static constexpr int StackIndex = index - RegNum;
+    using ParamType = std::tuple_element_t<index, std::tuple<Args...>>;
+    static void pack(std::tuple<Args...>& tup, HookData* d)
+    {
+        if constexpr (StackIndex < 0) // register parameter
+        {
+            std::get<index>(tup) = (ParamType)dword(index == 0 ? d->ecx : d->edx);
+        }
+        else
+        {
+            std::get<index>(tup) = (ParamType)dword(d->esp + 4 + StackIndex * 4);
+        }
+        if constexpr (index < ArgCount - 1) // not last one
+        {
+            PackParams<index + 1, cc, Args...>::pack(tup, d);
+        }
+    }
+};
+
 template<typename ReturnType, int cc, typename... Args>
 uint32_t callableHookCommon(uint32_t addr, uint32_t stackNum, CallableFunctionHookFunc<ReturnType, Args...> func, std::vector<uint8_t>* storeAt, uint32_t size, uint32_t code)
 {
@@ -240,29 +265,24 @@ uint32_t callableHookCommon(uint32_t addr, uint32_t stackNum, CallableFunctionHo
     };
     size = getRealHookSize(addr, size);
     hookCall(addr, [=](HookData* d) -> uint32_t {
-        std::tuple<HookData*, OrigType, Args...> args;
-        std::get<0>(args) = d;
-        std::get<1>(args) = def;
-        using ArgsTuple = std::tuple<Args...>;
-        // pack all arguments into tuple with conversion: optional from ecx, optional from edx, then all from stack
-        if constexpr (cc >= 1)
+        std::tuple<HookData*, OrigType> basicParams;
+        std::get<0>(basicParams) = d;
+        std::get<1>(basicParams) = def;
+        std::tuple<HookData*, OrigType, Args...> fullArgs;
+        if constexpr (sizeof...(Args) > 0)
         {
-            std::get<2>(args) = static_cast<std::tuple_element_t<0, ArgsTuple>>(d->ecx);
-            if constexpr (cc >= 2)
-            {
-                std::get<3>(args) = static_cast<std::tuple_element_t<1, ArgsTuple>>(d->edx);
-            }
+            std::tuple<Args...> args;
+            // pack all arguments into tuple with conversion: optional from ecx, optional from edx, then all from stack
+            PackParams<0, cc, Args...>::pack(args, d);
+            fullArgs = std::tuple_cat(basicParams, args);
         }
-        // if won't work, change stackNum to std::max(0, sizeof...(Args) - std::max(cc, 0))
-        constexpr int num = 0;
-        while (num < stackNum)
+        else
         {
-            std::get<(size_t)(std::max(cc, 0) + 2 + num)>(args) = (std::tuple_element_t<num, ArgsTuple>)(dword(d->esp + 4 + num * 4));
-            ++num;
+            fullArgs = basicParams;
         }
-        // int result = bitwiseUnsignedToInt(std::apply(func, args));
-        int result = std::apply(func, args);
-        // return from function (pop args and move return address)
+        // int result = bitwiseUnsignedToInt(std::apply(func, basicParams));
+        int result = std::apply(func, fullArgs);
+        // return from function (pop basicParams and move return address)
         d->ret(stackNum);
         d->eax = result;
         return HOOK_RETURN_SUCCESS;
