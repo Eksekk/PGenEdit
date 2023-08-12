@@ -262,6 +262,11 @@ HookElement HookElementBuilder::build()
 
 void Hook::enable(bool enable)
 {
+	if (elements.empty())
+	{
+		wxLogWarning("Enabled hook '%s' with no elements", description);
+	}
+
     for (auto& elem : elements)
     {
         elem.enable(enable);
@@ -298,6 +303,11 @@ Hook::Hook(std::initializer_list<HookElement> elements, const std::string& descr
 
 }
 
+Hook::Hook(const std::vector<HookElement>& elements, const std::string description /*= ""*/) : elements(elements), _active(false), description(description)
+{
+
+}
+
 Hook::Hook(HookElement element, const std::string& description) : elements({element}), _active(false), description(description)
 {
 
@@ -309,6 +319,11 @@ Hook::~Hook()
 	{
 		disable();
 	}
+}
+
+void Hook::addElement(HookElement element)
+{
+	elements.push_back(element);
 }
 
 // returns address of next instruction after [size] bytes
@@ -361,6 +376,27 @@ uint32_t findCode(uint32_t addr, const char* code)
 uint32_t findCode(uint32_t addr, const std::string& code)
 {
 	return findCode(addr, code.c_str());
+}
+
+uint32_t findCode(void* addr, const char* code)
+{
+	return findCode((uint32_t)addr, code);
+}
+
+uint32_t findCode(void* addr, const std::string& code)
+{
+	return findCode((uint32_t)addr, code);
+}
+
+uint32_t intMax = std::numeric_limits<int>::max();
+int bitwiseUnsignedToInt(uint32_t val)
+{
+	int res = val;
+	if (val > intMax)
+	{
+		res = intMax - val;
+	}
+	return res;
 }
 
 void hookCallRaw(uint32_t addr, void* func, std::vector<uint8_t>* storeAt, uint32_t size)

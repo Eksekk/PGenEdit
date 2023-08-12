@@ -17,5 +17,5 @@ public:
     static std::vector<wxString> testHookFunctionAndHookManager();
 
     template<typename Player, typename Game>
-    static std::vector<wxString> testMiscFunctions();
+    static std::vector<wxString> testMiscFunctions(); // findCode, getInstructionSize, 
 };

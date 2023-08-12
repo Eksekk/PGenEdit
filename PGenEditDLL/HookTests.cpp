@@ -2,6 +2,13 @@
 #include "HookTests.h"
 #include "LowLevel.h"
 
+#define INSTANTIATE_TEMPLATES_SINGLE_GAME(game, ret, identifier) template ret identifier<mm##game::Player, mm##game::Game>()
+
+#define INSTANTIATE_TEMPLATES_MM_GAMES(ret, identifier) \
+INSTANTIATE_TEMPLATES_SINGLE_GAME(6, ret, identifier); \
+INSTANTIATE_TEMPLATES_SINGLE_GAME(7, ret, identifier); \
+INSTANTIATE_TEMPLATES_SINGLE_GAME(8, ret, identifier)
+
 // dst, src, size
 std::vector<uint8_t> memcpyVector(void* src, uint32_t size)
 {
@@ -124,6 +131,7 @@ static std::vector<wxString> HookTests::testHookPlacingAndSize()
                 int funcSize = funcSizes[funcId];
                 int hookSize;
                 std::vector<uint8_t> autoCodeCopy;
+                // FIXME: add more
                 switch (type)
                 {
                 case HOOK_ELEM_TYPE_CALL_RAW:
@@ -223,12 +231,39 @@ template std::vector<wxString> HookTests::testHookPlacingAndSize<mm6::Player, mm
 template std::vector<wxString> HookTests::testHookPlacingAndSize<mm7::Player, mm7::Game>();
 template std::vector<wxString> HookTests::testHookPlacingAndSize<mm8::Player, mm8::Game>();
 
-uint32_t $eax, $edx, $esi, $ebp;
-bool autohookTestPassed = false;
-static __declspec(naked) int __stdcall expectRegisterValues(bool autohook)
+static __declspec(naked) void jumpDoNothing()
 {
     _asm
     {
+        push 0x12345678 // to be replaced
+        ret
+    }
+}
+
+static __declspec(naked) void callDoNothing()
+{
+    _asm
+    {
+        ret
+    }
+}
+
+// TODO: versions of above functions actually generating required data?
+
+uint32_t $eax, $edx, $esi, $ebp;
+bool autohookTestPassed = false;
+int failReasonId;
+// RETURNS FALSE (0) IF NO ERROR, otherwise 1-based index of check that failed
+static __declspec(naked) int __stdcall expectRegisterValues()
+{
+    _asm
+    {
+        /*jmp start
+        call $+5
+        pop ecx
+        jmp getSize
+        start:*/
+        mov dword ptr [failReasonId], 0
         push ebx
         push esi
         push edi
@@ -245,6 +280,7 @@ static __declspec(naked) int __stdcall expectRegisterValues(bool autohook)
         mov $esi, esi
         mov ebp, 0x90909090
         mov $ebp, ebp
+        mov dword ptr[failReasonId], 1
         // hook that does nothing, check that stuff is not changed
         nop
         nop
@@ -255,56 +291,64 @@ static __declspec(naked) int __stdcall expectRegisterValues(bool autohook)
         jne fail
 
         // registers need to not be touched
+        mov dword ptr[failReasonId], 2
         cmp eax, dword ptr[$eax]
         jne fail
+        mov dword ptr[failReasonId], 3
         cmp edx, dword ptr[$edx]
         jne fail
+        mov dword ptr[failReasonId], 4
         cmp esi, dword ptr[$esi]
         jne fail
+        mov dword ptr[failReasonId], 5
         cmp ebp, dword ptr[$ebp]
         jne fail
 
         // second hook, changes values
         push ds // 0x1E
         push ds
-        push ds
-        push ds
-        push ds
+        add esp, 0x8
 
+        mov dword ptr[failReasonId], 6
         ; // need ecx == 0x54874343
         cmp ecx, 0x54874343
         jne fail
         
+        mov dword ptr[failReasonId], 7
         sub ecx, esi; // need edx == (ecx - esi)
         cmp edx, ecx
         jne fail
 
+        mov dword ptr[failReasonId], 8
         add ah, 0x34; // need ax == 0xA329
         cmp ax, 0xA329 + 0x3400
         jne fail
 
-        // need (0x43764523 % 20) <= 7
-        mov eax, 0x43764523
+        mov dword ptr[failReasonId], 9
+        // need (edi % 20) <= 7
+        mov eax, edi
         mov ecx, 20
         cdq
         idiv ecx
         cmp edi, 7
         jae fail
 
+        mov dword ptr[failReasonId], 10
         // need (0xA0000310 ^ 0x80100010) & dword(esp) != 0
         mov eax, 0xA0000310
         xor dword ptr[esp], 0x80100010
         test eax, dword PTR [esp]
         jne fail
-
+        
+        mov dword ptr[failReasonId], 11
         // need bx >= di + 0x1111
         sub bx, 0x1111
         cmp bx, di
         jl fail
 
-        // need di % 4 == 3
-
-        mov ax, di
+        mov dword ptr[failReasonId], 12
+        // need si % 4 == 3
+        mov ax, si
         mov di, 4
         cwd
         idiv di
@@ -312,11 +356,10 @@ static __declspec(naked) int __stdcall expectRegisterValues(bool autohook)
         jne fail
 
         xor eax, eax
-        inc eax
         jmp end
 
         fail:
-        xor eax, eax
+        mov eax, dword ptr [failReasonId]
 
         end:
         add esp, 4
@@ -324,6 +367,12 @@ static __declspec(naked) int __stdcall expectRegisterValues(bool autohook)
         pop esi
         pop ebx
         ret
+
+        /*getSize:
+        call $+5
+        pop eax
+        sub eax, ecx
+        ret*/
     }
 }
 
@@ -349,12 +398,115 @@ static __declspec(naked) bool expectComputation()
 template<typename Player, typename Game>
 static std::vector<wxString> HookTests::testHookFunctionAndHookManager()
 {
+    static std::mt19937 gen(std::random_device{}());
+    static std::uniform_int_distribution genEsi(100, 1000000);
+    std::vector<uint8_t> copy((uint8_t*)expectRegisterValues, (uint8_t*)expectRegisterValues + 0x140);
+    auto myHookFunc = [](HookData* d) -> int
+    {
+        // need ecx == 0x54874343
+        d->ecx = 0x54874343;
+
+        // need edx == (ecx - esi)
+        // need si % 4 == 3
+        d->esi = genEsi(gen);
+        int r = d->esi % 4;
+        d->esi += 3 - r;
+        d->edx = d->ecx - d->esi;
+
+        // need ax == 0xA329
+        d->al = 0x29;
+        d->ah = 0xA3;
+
+        // need (edi % 20) <= 7
+        d->edi = std::uniform_int_distribution(0x37, 0x4023)(gen);
+        r = d->edi % 20;
+        if (r > 7)
+        {
+            d->edi += std::uniform_int_distribution(20 - r, 20 - r + 7)(gen);
+        }
+
+        // need (0xA0000310 ^ 0x80100010) & dword(esp) != 0
+        unsigned int andWhat = 0x20100300;
+        std::vector<int> randPositions = { 9, 10, 21, 29 };
+        dword(d->esp) = randPositions.at(std::uniform_int_distribution(0, (int)randPositions.size())(gen));
+
+        // need bx >= di + 0x1111
+        d->bx = d->di + std::uniform_int_distribution(0x1111, 0x4444)(gen);
+        return HOOK_RETURN_SUCCESS;
+    };
+
+    auto doNothing = [](HookData* d) -> int {return HOOK_RETURN_SUCCESS; };
+
+    uint32_t firstHookPos = findCode(expectRegisterValues, "\x90"), secondHookPos = findCode(expectRegisterValues, "\x1E"); // nop, push ds
+    char patch1[] = "\x03\xC3\x2B\xC3\x90"; // add eax, ebx; sub eax, ebx; nop
+    char patch2[] = "\x0F\x18\x20\x90\x90"; // nop dword ptr [eax]; nop; nop
+    std::vector<HookElement> elems;
+    CallableFunctionHookFunc<void> hookfunctionFunc = [=](HookData* d, CallableFunctionHookOrigFunc<void> def) -> uint32_t
+    {
+        myHookFunc(d);
+        def();
+        return d->eax;
+    };
+    auto doTest = [&](HookElementType type) {
+        elems.clear();
+        switch (type)
+        {
+        case HOOK_ELEM_TYPE_CALL_RAW:
+            elems.push_back(HookElementBuilder().address(firstHookPos).type(HOOK_ELEM_TYPE_CALL_RAW).target((uint32_t)callDoNothing).build());
+            elems.push_back(HookElementBuilder().address(secondHookPos).type(HOOK_ELEM_TYPE_ERASE_CODE).size(5).build());
+            break;
+        case HOOK_ELEM_TYPE_CALL:
+        case HOOK_ELEM_TYPE_AUTOHOOK:
+            elems.push_back(HookElementBuilder().address(firstHookPos).type(type).func(doNothing).build());
+            elems.push_back(HookElementBuilder().address(secondHookPos).type(type).func(myHookFunc).build());
+            //hookCall(firstHookPos, doNothing);
+            //hookCall(secondHookPos, myHookFunc);
+            break;
+        case HOOK_ELEM_TYPE_JUMP:
+            elems.push_back(HookElementBuilder().address(firstHookPos).type(HOOK_ELEM_TYPE_JUMP).target((uint32_t)jumpDoNothing).build());
+            elems.push_back(HookElementBuilder().address(secondHookPos).type(HOOK_ELEM_TYPE_ERASE_CODE).size(5).build());
+            break;
+        case HOOK_ELEM_TYPE_PATCH_DATA:
+            elems.push_back(HookElementBuilder().address(firstHookPos).type(HOOK_ELEM_TYPE_PATCH_DATA).target((uint32_t)patch1).dataSize(5).build());
+            elems.push_back(HookElementBuilder().address(secondHookPos).type(HOOK_ELEM_TYPE_PATCH_DATA).target((uint32_t)patch2).dataSize(5).build());
+            break;
+        case HOOK_ELEM_TYPE_ERASE_CODE:
+            elems.push_back(HookElementBuilder().address(firstHookPos).type(HOOK_ELEM_TYPE_ERASE_CODE).size(5).build());
+            elems.push_back(HookElementBuilder().address(secondHookPos).type(HOOK_ELEM_TYPE_ERASE_CODE).size(5).build());
+            break;
+        case HOOK_ELEM_TYPE_REPLACE_CALL:
+            // ignore
+            break;
+        case HOOK_ELEM_TYPE_HOOKFUNCTION:
+            elems.push_back(HookElementBuilder().address(firstHookPos).type(HOOK_ELEM_TYPE_HOOKFUNCTION).callableFunctionHookFunc<void, 0>(hookfunctionFunc).build());
+            elems.push_back(HookElementBuilder().address(secondHookPos).type(HOOK_ELEM_TYPE_HOOKFUNCTION).callableFunctionHookFunc<void, 0>(hookfunctionFunc).build());
+            break;
+        default:
+            break;
+        }
+    };
+    Hook hook(elems);
+    hook.enable();
+    // ......
+    hook.disable();
     return std::vector<wxString>();
 }
 
+INSTANTIATE_TEMPLATES_MM_GAMES(std::vector<wxString>, HookTests::testHookFunctionAndHookManager);
+
+template<typename Player, typename Game>
+static std::vector<wxString>
+HookTests::testMiscFunctions()
+{
+    return std::vector<wxString>();
+}
+
+INSTANTIATE_TEMPLATES_MM_GAMES(std::vector<wxString>, HookTests::testMiscFunctions);
+
+/*
 template std::vector<wxString> HookTests::testHookFunctionAndHookManager<mm6::Player, mm6::Game>();
 template std::vector<wxString> HookTests::testHookFunctionAndHookManager<mm7::Player, mm7::Game>();
-template std::vector<wxString> HookTests::testHookFunctionAndHookManager<mm8::Player, mm8::Game>();
+template std::vector<wxString> HookTests::testHookFunctionAndHookManager<mm8::Player, mm8::Game>();*/
 
 template<typename Player, typename Game>
 static std::vector<wxString> HookTests::run()
