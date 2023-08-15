@@ -571,6 +571,7 @@ INSTANTIATE_TEMPLATES_MM_GAMES(std::vector<wxString>, HookTests::testBasicHookFu
 struct HookSizeTest
 {
     int startOffset, hookSize, desiredResultSize;
+    int minHookSize = 5;
 };
 
 struct FunctionInfo
@@ -641,7 +642,15 @@ static void __declspec(naked) func4()
 {
     _asm
     {
-        
+        cmp DWORD PTR[eax * 8 + 0x0], ecx
+        aaa
+        cmovge ax, bx
+        je $+0x10
+        test BYTE PTR[esp + 0x50], ah
+        test WORD PTR[eax + ecx * 8], 0x3030
+        btr eax, 0x4
+        movzx dx, BYTE PTR[eax + 0x50]
+        cbw
     }
 }
 
@@ -693,16 +702,42 @@ std::map<void(*)(), FunctionInfo> testData({
     },
     {
         func2,
-        {.name = "func2", .instructionSizes = {3, 6, 7, 7, 5, 7, 1, 1, 2}}
+        {.name = "func2", .instructionSizes = {3, 6, 7, 7, 5, 7, 1, 1, 2}, .hookSizeTests =
+            {
+                {.startOffset = 0, .hookSize = 5, .desiredResultSize = 9},
+                {.startOffset = 0, .hookSize = 10, .desiredResultSize = 16},
+                {.startOffset = 0, .hookSize = 20, .desiredResultSize = 23},
+                {.startOffset = 3, .hookSize = 13, .desiredResultSize = 13},
+                {.startOffset = 10, .hookSize = 10, .desiredResultSize = 13},
+                {.startOffset = 16, .hookSize = 5, .desiredResultSize = 7},
+            }
+        }
     },
     {
         func3,
-        {.name = "func3", .instructionSizes = {8, 9, 2, 2, 2, 9, 1, 1, 2, 3}}
+        {.name = "func3", .instructionSizes = {8, 9, 2, 2, 2, 9, 1, 1, 2, 3}, .hookSizeTests =
+            {
+                {.startOffset = 0, .hookSize = 5, .desiredResultSize = 8},
+                {.startOffset = 0, .hookSize = 15, .desiredResultSize = 17},
+                {.startOffset = 17, .hookSize = 3, .desiredResultSize = 4, .minHookSize = 3},
+                {.startOffset = 8, .hookSize = 1, .desiredResultSize = 9, .minHookSize = 1},
+                {.startOffset = 19, .hookSize = 6, .desiredResultSize = 13},
+            }
+        }
     },
-    /*{
+    {
         func4,
-        {.name = "func4", .instructionSizes = {3, 2, 2, 2, 6}}
+        {.name = "func4", .instructionSizes = {7, 1, 4, 6, 4, 6, 4, 5, 2}, .hookSizeTests =
+            {
+                {.startOffset = 0, .hookSize = 9, .desiredResultSize = 12},
+                {.startOffset = 0, .hookSize = 5, .desiredResultSize = 7},
+                {.startOffset = 7, .hookSize = 6, .desiredResultSize = 11},
+                {.startOffset = 12, .hookSize = 1, .desiredResultSize = 6, .minHookSize = 1},
+                {.startOffset = 22, .hookSize = 10, .desiredResultSize = 10},
+            }
+        }
     },
+    /*
     {
         func5,
         {.name = "func5", .instructionSizes = {3, 2, 2, 2, 6}}
@@ -725,7 +760,7 @@ template<typename Player, typename Game>
 static std::vector<wxString>
 HookTests::testMiscFunctions()
 {
-    // getinstructionsize, copyCode
+    // getinstructionsize, getRealHookSize, copyCode
     Asserter myasserter;
     for (const auto& [func, data] : testData)
     {
@@ -744,7 +779,7 @@ HookTests::testMiscFunctions()
         i = 0;
         for (const HookSizeTest& test : data.hookSizeTests)
         {
-            int size = getRealHookSize(funcPtr + test.startOffset, test.hookSize);
+            int size = getRealHookSize(funcPtr + test.startOffset, test.hookSize, test.minHookSize);
             myassert(size == test.desiredResultSize,
                 wxString::Format("[%s] hook size test %d failed (offset: %d, initial size: %d, expected size: %d, current size: %d",
                     data.name, i, test.startOffset, test.hookSize, test.desiredResultSize, size

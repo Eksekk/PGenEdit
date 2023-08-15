@@ -115,7 +115,9 @@ enum HookReturnCode
 int getInstructionSize(void* addr);
 int getInstructionSize(uint32_t addr);
 
-int getRealHookSize(uint32_t addr, uint32_t size);
+// returns address of next instruction after max(size, minSize) bytes
+// minSize parameter intended to allow correct behavior for call hooks (min 5) and something like erase code (min 1)
+int getRealHookSize(uint32_t addr, uint32_t size, uint32_t minSize = 0);
 void storeBytes(std::vector<uint8_t>* storeAt, uint32_t addr, uint32_t size);
 
 uint32_t findCode(uint32_t addr, const char* code);

@@ -327,15 +327,15 @@ void Hook::addElement(HookElement element)
 	elements.push_back(element);
 }
 
-// returns address of next instruction after [size] bytes
-int getRealHookSize(uint32_t addr, uint32_t size)
+int getRealHookSize(uint32_t addr, uint32_t size, uint32_t minSize)
 {
 	uint32_t n = 0;
-	while (n < size)
+	uint32_t max = std::max(size, minSize);
+	while (n < max)
 	{
 		n = n + getInstructionSize(addr + n);
 	}
-	// assert(n >= 5); // now also supports NOP-ing when patching data, so this assert can't execute
+	assert(n >= minSize);
 	return n;
 }
 
@@ -403,7 +403,7 @@ int bitwiseUnsignedToInt(uint32_t val)
 
 void hookCallRaw(uint32_t addr, void* func, std::vector<uint8_t>* storeAt, uint32_t size)
 {
-	size = getRealHookSize(addr, size);
+	size = getRealHookSize(addr, size, 5);
 	storeBytes(storeAt, addr, size);
 	DWORD tmp;
 	VirtualProtect((void*)addr, size, PAGE_EXECUTE_READWRITE, &tmp);
@@ -424,7 +424,7 @@ void unhookCallRaw(uint32_t addr, std::vector<uint8_t>& restoreData)
 
 void hookJumpRaw(uint32_t addr, void* func, std::vector<uint8_t>* storeAt, uint32_t size)
 {
-	size = getRealHookSize(addr, size);
+	size = getRealHookSize(addr, size, 5);
 	storeBytes(storeAt, addr, size);
 	DWORD tmp;
 	VirtualProtect((void*)addr, size, PAGE_EXECUTE_READWRITE, &tmp);
@@ -444,7 +444,7 @@ void unhookJumpRaw(uint32_t addr, std::vector<uint8_t>& restoreData)
 
 void hookCall(uint32_t addr, HookFunc func, std::vector<uint8_t>* storeAt, uint32_t size /*= 5*/)
 {
-	size = getRealHookSize(addr, size);
+	size = getRealHookSize(addr, size, 5);
     checkOverlap(addr, size);
     hookCallRaw(addr, reinterpret_cast<void*>(myHookProc), storeAt, size);
     hookFuncMap[addr] = func;
@@ -463,8 +463,7 @@ uint32_t autohookCall(uint32_t addr, HookFunc func, std::vector<uint8_t>* storeA
 	// setup call hook
 	// pass our own function which will change return address to copied code
 	
-	// PROBLEMS WITH FREEING ALLOCATED MEMORY?
-	size = getRealHookSize(addr, size);
+	size = getRealHookSize(addr, size, 5);
 
 	uint32_t code = copyCode(addr, size, true);
 	auto wrapperFunc = [code, func](HookData* d) -> int {
@@ -588,6 +587,11 @@ uint32_t codeMemoryAlloc(uint32_t size)
         allocatedBlockSize = (size + systemInfo.dwPageSize) & (systemInfo.dwPageSize - 1); // rounded up to page size
         wxASSERT(allocatedBlockSize >= size);
 		allocatedBlock = VirtualAlloc(nullptr, allocatedBlockSize, MEM_COMMIT, PAGE_EXECUTE_READWRITE);
+		if (!allocatedBlock)
+		{
+			wxLogFatalError("Couldn't allocate memory for code");
+			return 0;
+		}
 		allAllocatedBlocks[allocatedBlock] = allocatedBlockSize;
 	}
 	allocatedBlockSize -= size;
@@ -606,16 +610,21 @@ void codeMemoryFree(void* addr)
 
 void codeMemoryFullFree()
 {
-	for (auto [addr, size] : allAllocatedBlocks)
+	for (auto& [addr, size] : allAllocatedBlocks)
 	{
-		wxASSERT_MSG(VirtualFree(addr, size, MEM_RELEASE), wxString::Format("Couldn't free memory at 0x%X", addr));
+		wxASSERT_MSG(VirtualFree(addr, 0, MEM_RELEASE), wxString::Format("Couldn't free memory at 0x%X", addr));
 	}
 }
 
 uint32_t copyCode(uint32_t source, uint32_t size, bool writeJumpBack)
 {
     std::vector<int> rel32Positions; // to fix calls/jumps
-	size = getRealHookSize(source, size); // TODO: skip this call and use below loop to compute effective size?
+	int sizeReal = getRealHookSize(source, size); // TODO: skip this call and use below loop to compute effective size?
+	if (sizeReal != size)
+    {
+		wxLogWarning("Tried to copy 0x%X code bytes at 0x%X, breaking an instruction due to too small code size (computed minimum is 0x%X)", size, source, sizeReal);
+		wxLog::FlushActive();
+	}
 	// check short jumps
     ZyanU64 runtimeAddr = (ZyanU64)source;
     ZydisDisassembledInstruction instr;
@@ -654,7 +663,6 @@ uint32_t copyCode(uint32_t source, uint32_t size, bool writeJumpBack)
 		wxLog::FlushActive();
 		return 0;
 	}
-	// crash is beacause of writing to memory without write rights
 	uint32_t newCodeSize = size + (writeJumpBack ? 5 : 0);
     uint32_t mem = codeMemoryAlloc(newCodeSize);
     // copy code to newly allocated memory
