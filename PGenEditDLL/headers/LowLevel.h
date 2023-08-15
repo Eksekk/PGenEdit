@@ -281,7 +281,7 @@ uint32_t callableHookCommon(uint32_t addr, uint32_t stackNum, CallableFunctionHo
             fullArgs = basicParams;
         }
         // int result = bitwiseUnsignedToInt(std::apply(func, basicParams));
-        int result = std::apply(func, fullArgs);
+        uint32_t result = std::apply(func, fullArgs);
         // return from function (pop basicParams and move return address)
         d->ret(stackNum);
         d->eax = result;

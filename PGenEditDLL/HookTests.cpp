@@ -265,6 +265,7 @@ static __declspec(naked) int __stdcall expectRegisterValues()
         start:*/
         mov dword ptr [failReasonId], 0
         push ebx
+        push ebp
         push esi
         push edi
         sub esp, 4
@@ -330,7 +331,7 @@ static __declspec(naked) int __stdcall expectRegisterValues()
         mov ecx, 20
         cdq
         idiv ecx
-        cmp edi, 7
+        cmp edx, 7
         jae fail
 
         mov dword ptr[failReasonId], 10
@@ -358,13 +359,14 @@ static __declspec(naked) int __stdcall expectRegisterValues()
         xor eax, eax
         jmp end
 
-        fail:
+    fail:
         mov eax, dword ptr [failReasonId]
 
-        end:
+    end:
         add esp, 4
         pop edi
         pop esi
+        pop ebp
         pop ebx
         ret
 
@@ -398,6 +400,7 @@ static __declspec(naked) bool expectComputation()
 template<typename Player, typename Game>
 static std::vector<wxString> HookTests::testHookFunctionAndHookManager()
 {
+    Asserter myasserter;
     static std::mt19937 gen(std::random_device{}());
     static std::uniform_int_distribution genEsi(100, 1000000);
     std::vector<uint8_t> copy((uint8_t*)expectRegisterValues, (uint8_t*)expectRegisterValues + 0x140);
@@ -428,7 +431,8 @@ static std::vector<wxString> HookTests::testHookFunctionAndHookManager()
         // need (0xA0000310 ^ 0x80100010) & dword(esp) != 0
         unsigned int andWhat = 0x20100300;
         std::vector<int> randPositions = { 9, 10, 21, 29 };
-        dword(d->esp) = randPositions.at(std::uniform_int_distribution(0, (int)randPositions.size())(gen));
+        // FIXME: will break with autohook
+        dword(d->esp + 4) = randPositions.at(std::uniform_int_distribution(0, (int)randPositions.size() - 1)(gen));
 
         // need bx >= di + 0x1111
         d->bx = d->di + std::uniform_int_distribution(0x1111, 0x4444)(gen);
@@ -437,6 +441,7 @@ static std::vector<wxString> HookTests::testHookFunctionAndHookManager()
 
     auto doNothing = [](HookData* d) -> int {return HOOK_RETURN_SUCCESS; };
 
+    //__debugbreak();
     uint32_t firstHookPos = findCode(expectRegisterValues, "\x90"), secondHookPos = findCode(expectRegisterValues, "\x1E"); // nop, push ds
     char patch1[] = "\x03\xC3\x2B\xC3\x90"; // add eax, ebx; sub eax, ebx; nop
     char patch2[] = "\x0F\x18\x20\x90\x90"; // nop dword ptr [eax]; nop; nop
@@ -447,8 +452,15 @@ static std::vector<wxString> HookTests::testHookFunctionAndHookManager()
         def();
         return d->eax;
     };
+    CallableFunctionHookFunc<void> hookfunctionFuncDoNothing = [=](HookData* d, CallableFunctionHookOrigFunc<void> def) -> uint32_t
+    {
+        def();
+        return d->eax;
+    };
     auto doTest = [&](HookElementType type) {
         elems.clear();
+        uint8_t firstHookByteBefore = byte(firstHookPos - 1), firstHookByteAfter = byte(firstHookPos + 5);
+        uint8_t secondHookByteBefore = byte(secondHookPos - 1), secondHookByteAfter = byte(secondHookPos + 5);
         switch (type)
         {
         case HOOK_ELEM_TYPE_CALL_RAW:
@@ -478,18 +490,68 @@ static std::vector<wxString> HookTests::testHookFunctionAndHookManager()
             // ignore
             break;
         case HOOK_ELEM_TYPE_HOOKFUNCTION:
-            elems.push_back(HookElementBuilder().address(firstHookPos).type(HOOK_ELEM_TYPE_HOOKFUNCTION).callableFunctionHookFunc<void, 0>(hookfunctionFunc).build());
+            elems.push_back(HookElementBuilder().address(firstHookPos).type(HOOK_ELEM_TYPE_HOOKFUNCTION).callableFunctionHookFunc<void, 0>(hookfunctionFuncDoNothing).build());
             elems.push_back(HookElementBuilder().address(secondHookPos).type(HOOK_ELEM_TYPE_HOOKFUNCTION).callableFunctionHookFunc<void, 0>(hookfunctionFunc).build());
             break;
         default:
             break;
         }
+
+        Hook hook(elems);
+        hook.enable();
+        if (type == HOOK_ELEM_TYPE_JUMP)
+        {
+            // need to correct "return address" for jump
+            patchSDword((uint32_t)jumpDoNothing + 1, firstHookPos + 5, nullptr);
+        }
+
+        int result;
+        switch (type)
+        {
+        case HOOK_ELEM_TYPE_CALL_RAW:
+            result = expectRegisterValues();
+            // no code to set register values - must fail, but after "nothing changed" check
+            myassert(result >= 6, wxString::Format("[call raw hook] received invalid fail reason %d", result));
+            break;
+        case HOOK_ELEM_TYPE_CALL:
+        case HOOK_ELEM_TYPE_HOOKFUNCTION:
+        case HOOK_ELEM_TYPE_AUTOHOOK:
+            result = expectRegisterValues();
+            myassert(result == 0, wxString::Format("[call/hookfunction/autohook] received fail reason %d", result));
+            break;
+        case HOOK_ELEM_TYPE_JUMP:
+            result = expectRegisterValues();
+            // like raw call hook
+            myassert(result >= 6, wxString::Format("[jump hook] received invalid fail reason %d", result));
+            break;
+        case HOOK_ELEM_TYPE_PATCH_DATA:
+            myassert(memcmp((void*)firstHookPos, patch1, 5) == 0,
+                wxString::Format("[patch data] first memory compare failed (expected: '%s', actual: '%s')", getCodeString((uint32_t)patch1, 5), getCodeString(firstHookPos, 5)));
+            myassert(memcmp((void*)secondHookPos, patch2, 5) == 0,
+                wxString::Format("[patch data] second memory compare failed (expected: '%s', actual: '%s')", getCodeString((uint32_t)patch2, 5), getCodeString(secondHookPos, 5)));
+            break;
+        case HOOK_ELEM_TYPE_ERASE_CODE:
+            for (auto data = { std::make_pair(firstHookPos, "erase code; first hook"), std::make_pair(secondHookPos, "erase code; second hook") };
+                auto [addr, str] : data)
+            {
+                myassert(readCodeAsString(addr, 5) == "\x90\x90\x90\x90\x90", wxString::Format("[%s] erased code ('%s') contains other bytes than NOPs", str, getCodeString(addr, 5)));
+            }
+            break;
+        case HOOK_ELEM_TYPE_REPLACE_CALL:
+            break;
+        default:
+            break;
+        }
+        
+        hook.disable();
+        myassert(memcmp(expectRegisterValues, copy.data(), copy.size()) == 0, "Memory comparison after disabling hook failed");
     };
-    Hook hook(elems);
-    hook.enable();
-    // ......
-    hook.disable();
-    return std::vector<wxString>();
+
+    for (auto type : { HOOK_ELEM_TYPE_CALL_RAW, HOOK_ELEM_TYPE_CALL, HOOK_ELEM_TYPE_AUTOHOOK, HOOK_ELEM_TYPE_JUMP, HOOK_ELEM_TYPE_PATCH_DATA, HOOK_ELEM_TYPE_ERASE_CODE, HOOK_ELEM_TYPE_HOOKFUNCTION })
+    {
+        doTest(type);
+    }
+    return myasserter.errors;
 }
 
 INSTANTIATE_TEMPLATES_MM_GAMES(std::vector<wxString>, HookTests::testHookFunctionAndHookManager);
@@ -498,6 +560,8 @@ template<typename Player, typename Game>
 static std::vector<wxString>
 HookTests::testMiscFunctions()
 {
+    // getinstructionsize, copyCode
+    
     return std::vector<wxString>();
 }
 

@@ -138,6 +138,7 @@ HookElement::~HookElement()
 	if (extraData)
 	{
 		codeMemoryFree((uint32_t)extraData);
+		extraData = nullptr;
 	}
 }
 
@@ -349,11 +350,12 @@ void storeBytes(std::vector<uint8_t>* storeAt, uint32_t addr, uint32_t size)
 uint32_t findCode(uint32_t addr, const char* code)
 {
     ZydisDisassembledInstruction instr;
-	int codeLen = strlen(code);
+	int codeLen = strlen(code); // FIXME: will fail with embedded zeros
 	while (true)
 	{
 		if (!ZYAN_SUCCESS(ZydisDisassembleIntel(ZYDIS_MACHINE_MODE_LEGACY_32, addr, (void*)addr, 20, &instr))) // invalid code
 		{
+			__debugbreak();
 			++addr;
 			continue;
 		}
@@ -465,11 +467,11 @@ uint32_t autohookCall(uint32_t addr, HookFunc func, std::vector<uint8_t>* storeA
 	size = getRealHookSize(addr, size);
 
 	uint32_t code = copyCode(addr, size, true);
-	auto wrapperFunc = [addr, size, func](HookData* d) -> int {
+	auto wrapperFunc = [code, func](HookData* d) -> int {
 		d->esp = d->esp + 4;
 		if (func(d) != HOOK_RETURN_AUTOHOOK_NO_PUSH)
 		{
-			d->push(addr + size);
+			d->push(code);
 		}
 		return HOOK_RETURN_SUCCESS;
 	};
@@ -568,9 +570,9 @@ uint32_t codeMemoryAlloc(uint32_t size)
 	// TODO: memory leak when reloading dll?
 	void* mem = malloc(size);
 	assert(mem);
-	DWORD tmp;
+    DWORD tmp;
+    memset(mem, 0x90, size);
 	VirtualProtect(mem, size, PAGE_EXECUTE_READ, &tmp);
-	memset(mem, 0x90, size);
 	return reinterpret_cast<uint32_t>(mem);
 }
 
@@ -581,11 +583,11 @@ void codeMemoryFree(uint32_t addr)
 
 uint32_t copyCode(uint32_t source, uint32_t size, bool writeJumpBack)
 {
-	size = getRealHookSize(source, size);
+    std::vector<int> rel32Positions; // to fix calls/jumps
+	size = getRealHookSize(source, size); // TODO: skip this call and use below loop to compute effective size?
 	// check short jumps
     ZyanU64 runtimeAddr = (ZyanU64)source;
     ZydisDisassembledInstruction instr;
-	std::vector<int> rel32Positions; // to fix calls/jumps
 	int n = 0;
     bool hasShort = false;
 	while (n < size && ZYAN_SUCCESS(ZydisDisassembleIntel(ZYDIS_MACHINE_MODE_LEGACY_32, source + n, reinterpret_cast<void*>(source + n), 20, &instr)))
@@ -593,7 +595,7 @@ uint32_t copyCode(uint32_t source, uint32_t size, bool writeJumpBack)
         if (instr.info.meta.branch_type == ZYDIS_BRANCH_TYPE_SHORT)
         {
 			uint32_t dest = n + 2 + byte(source + n + 1);
-			if (dest > source + size) // jump outside code
+			if (dest > source + size || dest < source) // jump outside code
 			{
 				hasShort = true;
 			}
@@ -625,6 +627,8 @@ uint32_t copyCode(uint32_t source, uint32_t size, bool writeJumpBack)
 	uint32_t newCodeSize = size + (writeJumpBack ? 5 : 0);
     uint32_t mem = codeMemoryAlloc(newCodeSize);
     // copy code to newly allocated memory
+    DWORD tmp;
+    VirtualProtect((void*)mem, newCodeSize, PAGE_EXECUTE_READWRITE, &tmp);
 	memcpy((void*)mem, (void*)source, size);
 	// write jump back
 	if (writeJumpBack)
@@ -632,16 +636,11 @@ uint32_t copyCode(uint32_t source, uint32_t size, bool writeJumpBack)
         hookJumpRaw(mem + size, reinterpret_cast<void*>(source + size), nullptr);
 	}
 	// fix calls/jumps
-	if (rel32Positions.size() > 0)
+    for (int i = 0; i < rel32Positions.size(); ++i)
     {
-		DWORD tmp;
-		VirtualProtect((void*)mem, newCodeSize, PAGE_EXECUTE_READWRITE, &tmp);
-        for (int fix : rel32Positions)
-        {
-            sdword(mem + fix) += (mem - source);
-        }
-		VirtualProtect((void*)mem, newCodeSize, tmp, &tmp);
-	}
+        sdword(mem + rel32Positions[i]) += (mem - source);
+    }
+    VirtualProtect((void*)mem, newCodeSize, tmp, &tmp);
 	return mem;
 }
 
