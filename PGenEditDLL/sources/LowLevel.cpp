@@ -137,7 +137,7 @@ HookElement::~HookElement()
 	}
 	if (extraData)
 	{
-		codeMemoryFree((uint32_t)extraData);
+		codeMemoryFree(extraData);
 		extraData = nullptr;
 	}
 }
@@ -483,7 +483,7 @@ uint32_t autohookCall(uint32_t addr, HookFunc func, std::vector<uint8_t>* storeA
 void unhookAutohookCall(uint32_t addr, std::vector<uint8_t>& restoreData, void* allocatedCode)
 {
 	unhookCall(addr, restoreData);
-	codeMemoryFree((uint32_t)allocatedCode);
+	codeMemoryFree(allocatedCode);
 }
 
 // TODO: generic function to generate all four without repeating code?
@@ -565,20 +565,51 @@ void patchBytes(uint32_t addr, const void* bytes, uint32_t size, std::vector<uin
 	VirtualProtect((void*)addr, realSize, tmp, &tmp);
 }
 
+uint32_t allocatedBlockSize = 0;
+void* allocatedBlock = nullptr;
+std::map<uint32_t, std::vector<void*>> freeAddressesBySize;
+std::map<void*, uint32_t> sizesByAddress; // all allocated "micro-blocks" (parts of single VirtualAlloc call reserved in multiple codeMemoryAlloc calls)
+std::map<void*, uint32_t> allAllocatedBlocks; // <address, size>
+SYSTEM_INFO systemInfo;
+
 uint32_t codeMemoryAlloc(uint32_t size)
 {
-	// TODO: memory leak when reloading dll?
-	void* mem = malloc(size);
-	assert(mem);
-    DWORD tmp;
-    memset(mem, 0x90, size);
-	VirtualProtect(mem, size, PAGE_EXECUTE_READ, &tmp);
-	return reinterpret_cast<uint32_t>(mem);
+	auto itr = freeAddressesBySize.find(size);
+	if (itr != freeAddressesBySize.end() && itr->second.size() > 0)
+	{
+		void* addr = itr->second.front();
+		itr->second.erase(itr->second.begin());
+		memset(addr, 0x90, size);
+		return (uint32_t)addr;
+	}
+	if (!allocatedBlock || allocatedBlockSize < size)
+	{
+		// should have been initialized by now
+        allocatedBlockSize = (size + systemInfo.dwPageSize) & (systemInfo.dwPageSize - 1); // rounded up to page size
+        wxASSERT(allocatedBlockSize >= size);
+		allocatedBlock = VirtualAlloc(nullptr, allocatedBlockSize, MEM_COMMIT, PAGE_EXECUTE_READWRITE);
+		allAllocatedBlocks[allocatedBlock] = allocatedBlockSize;
+	}
+	allocatedBlockSize -= size;
+	void* ret = allocatedBlock;
+	sizesByAddress[ret] = size;
+	allocatedBlock = (void*)((uint32_t)allocatedBlock + size);
+    memset(ret, 0x90, size);
+	return reinterpret_cast<uint32_t>(ret);
 }
 
-void codeMemoryFree(uint32_t addr)
+void codeMemoryFree(void* addr)
 {
-	free(reinterpret_cast<void*>(addr));
+	wxASSERT_MSG(sizesByAddress.contains(addr), wxString::Format("Allocated for code address 0x%X doesn't have defined size"));
+	freeAddressesBySize[sizesByAddress.at(addr)].push_back(addr);
+}
+
+void codeMemoryFullFree()
+{
+	for (auto [addr, size] : allAllocatedBlocks)
+	{
+		wxASSERT_MSG(VirtualFree(addr, size, MEM_RELEASE), wxString::Format("Couldn't free memory at 0x%X", addr));
+	}
 }
 
 uint32_t copyCode(uint32_t source, uint32_t size, bool writeJumpBack)
@@ -623,7 +654,7 @@ uint32_t copyCode(uint32_t source, uint32_t size, bool writeJumpBack)
 		wxLog::FlushActive();
 		return 0;
 	}
-
+	// crash is beacause of writing to memory without write rights
 	uint32_t newCodeSize = size + (writeJumpBack ? 5 : 0);
     uint32_t mem = codeMemoryAlloc(newCodeSize);
     // copy code to newly allocated memory
@@ -652,7 +683,7 @@ void unhookReplaceCall(uint32_t addr, std::vector<uint8_t>& restoreData)
 void unhookHookFunction(uint32_t addr, std::vector<uint8_t>& restoreData, void* copiedCode)
 {
 	unhookCall(addr, restoreData);
-	codeMemoryFree((uint32_t)copiedCode);
+	codeMemoryFree(copiedCode);
 }
 
 void removeHooks()

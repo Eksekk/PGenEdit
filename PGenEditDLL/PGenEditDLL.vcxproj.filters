@@ -321,14 +321,14 @@
     <ClInclude Include="Profiler.h">
       <Filter>Pliki nagłówkowe\Misc\Utils</Filter>
     </ClInclude>
-    <ClInclude Include="PersistablePlayerPanel.h">
-      <Filter>Pliki nagłówkowe</Filter>
-    </ClInclude>
     <ClInclude Include="HookParams.h">
       <Filter>Pliki nagłówkowe\Misc\Low level</Filter>
     </ClInclude>
     <ClInclude Include="HookTests.h">
       <Filter>Pliki nagłówkowe\Misc\Low level</Filter>
+    </ClInclude>
+    <ClInclude Include="PersistablePlayerPanel.h">
+      <Filter>Pliki nagłówkowe\Shared GUI</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -506,14 +506,14 @@
     <ClCompile Include="Profiler.cpp">
       <Filter>Pliki źródłowe\Misc\Utils</Filter>
     </ClCompile>
-    <ClCompile Include="PersistablePlayerPanel.cpp">
-      <Filter>Pliki źródłowe</Filter>
-    </ClCompile>
     <ClCompile Include="HookParams.cpp">
       <Filter>Pliki źródłowe\Misc\Low level</Filter>
     </ClCompile>
     <ClCompile Include="HookTests.cpp">
       <Filter>Pliki źródłowe\Misc\Low level</Filter>
+    </ClCompile>
+    <ClCompile Include="PersistablePlayerPanel.cpp">
+      <Filter>Pliki źródłowe\Shared GUI</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

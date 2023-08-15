@@ -143,14 +143,12 @@ extern "C"
     
     DLL_EXPORT void __stdcall init()
     {
+        GetNativeSystemInfo(&systemInfo);
         if (MMVER == 6)
         {
             PlayerStructAccessor_6::_initMaps();
-            // new scope so compiler doesn't complain
-            {
-                void* ptrs[]{ (void*)0x908F34, (void*)0x90A550, (void*)0x90BB6C, (void*)0x90D188 };
-                setPlayerPointers(ptrs);
-            }
+            void* ptrs[]{ (void*)0x908F34, (void*)0x90A550, (void*)0x90BB6C, (void*)0x90D188 };
+            setPlayerPointers(ptrs);
             playerAccessor = new PlayerStructAccessor_6;
             partyAccessor = new PartyStructAccessor_6;
             gameAccessor = new GameStructAccessor_6;
@@ -158,10 +156,8 @@ extern "C"
         else if (MMVER == 7)
         {
             PlayerStructAccessor_7::_initMaps();
-            {
-                void* ptrs[]{ (void*)0xACD804, (void*)0xACF340, (void*)0xAD0E7C, (void*)0xAD29B8 };
-                setPlayerPointers(ptrs);
-            }
+            void* ptrs[]{ (void*)0xACD804, (void*)0xACF340, (void*)0xAD0E7C, (void*)0xAD29B8 };
+            setPlayerPointers(ptrs);
             playerAccessor = new PlayerStructAccessor_7;
             partyAccessor = new PartyStructAccessor_7;
             gameAccessor = new GameStructAccessor_7;
@@ -284,6 +280,7 @@ extern "C"
         removeHooks();
         wxLog::FlushActive();
         wxEntryCleanup();
+        codeMemoryFullFree();
     }
 
     DLL_EXPORT void __stdcall setLuaState(void* ptr)
@@ -340,7 +337,7 @@ extern "C"
         return runScript(str);
     }
 
-    DLL_EXPORT void __stdcall runTests()
+    DLL_EXPORT int __stdcall runTests()
     {
         try
         {
@@ -365,12 +362,15 @@ extern "C"
 				file.close();
 				wxLogError("%d tests failed. Error messages:\n\n%s", errors.size(), str);
 				wxLog::FlushActive();
+                return 0;
             }
         }
         catch (const std::exception& ex)
         {
             wxLogError(ex.what());
             wxLog::FlushActive();
+            return 0;
         }
+        return 1;
     }
 }

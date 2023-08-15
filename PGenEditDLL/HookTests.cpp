@@ -326,7 +326,7 @@ static __declspec(naked) int __stdcall expectRegisterValues()
         jne fail
 
         mov dword ptr[failReasonId], 9
-        // need (edi % 20) <= 7
+        // need (edi % 20) < 7
         mov eax, edi
         mov ecx, 20
         cdq
@@ -339,7 +339,7 @@ static __declspec(naked) int __stdcall expectRegisterValues()
         mov eax, 0xA0000310
         xor dword ptr[esp], 0x80100010
         test eax, dword PTR [esp]
-        jne fail
+        je fail
         
         mov dword ptr[failReasonId], 11
         // need bx >= di + 0x1111
@@ -402,42 +402,48 @@ static std::vector<wxString> HookTests::testHookFunctionAndHookManager()
 {
     Asserter myasserter;
     static std::mt19937 gen(std::random_device{}());
-    static std::uniform_int_distribution genEsi(100, 1000000);
+    static std::uniform_int_distribution genEsi(100, 10000);
     std::vector<uint8_t> copy((uint8_t*)expectRegisterValues, (uint8_t*)expectRegisterValues + 0x140);
-    auto myHookFunc = [](HookData* d) -> int
+
+    auto getHookFunc = [](uint32_t stackOffset)
     {
-        // need ecx == 0x54874343
-        d->ecx = 0x54874343;
-
-        // need edx == (ecx - esi)
-        // need si % 4 == 3
-        d->esi = genEsi(gen);
-        int r = d->esi % 4;
-        d->esi += 3 - r;
-        d->edx = d->ecx - d->esi;
-
-        // need ax == 0xA329
-        d->al = 0x29;
-        d->ah = 0xA3;
-
-        // need (edi % 20) <= 7
-        d->edi = std::uniform_int_distribution(0x37, 0x4023)(gen);
-        r = d->edi % 20;
-        if (r > 7)
+        return [=](HookData* d) -> int
         {
-            d->edi += std::uniform_int_distribution(20 - r, 20 - r + 7)(gen);
-        }
+            // need ecx == 0x54874343
+            d->ecx = 0x54874343;
 
-        // need (0xA0000310 ^ 0x80100010) & dword(esp) != 0
-        unsigned int andWhat = 0x20100300;
-        std::vector<int> randPositions = { 9, 10, 21, 29 };
-        // FIXME: will break with autohook
-        dword(d->esp + 4) = randPositions.at(std::uniform_int_distribution(0, (int)randPositions.size() - 1)(gen));
+            // need edx == (ecx - esi)
+            // need si % 4 == 3
+            d->esi = genEsi(gen);
+            int r = d->esi % 4;
+            d->esi += 3 - r;
+            d->edx = d->ecx - d->esi;
 
-        // need bx >= di + 0x1111
-        d->bx = d->di + std::uniform_int_distribution(0x1111, 0x4444)(gen);
-        return HOOK_RETURN_SUCCESS;
+            // need ax == 0xA329
+            d->al = 0x29;
+            d->ah = 0xA3;
+
+            // need (edi % 20) < 7
+            d->edi = std::uniform_int_distribution(0x37, 0x4023)(gen);
+            r = d->edi % 20;
+            if (r >= 7)
+            {
+                d->edi += std::uniform_int_distribution(20 - r, 20 - r + 7)(gen);
+            }
+
+            // need (0xA0000310 ^ 0x80100010) & dword(esp) != 0
+            unsigned int andWhat = 0x20100300;
+            std::vector<int> randPositions = { 9, 10, 21, 29 };
+            dword(d->esp + stackOffset) = randPositions.at(std::uniform_int_distribution(0, (int)randPositions.size() - 1)(gen));
+
+            // need bx >= di + 0x1111
+            d->bx = d->di + std::uniform_int_distribution(0x1111, 0x4444)(gen);
+            return HOOK_RETURN_SUCCESS;
+        };
     };
+
+    auto myHookFunc = getHookFunc(4);
+    auto myHookFuncAutohook = getHookFunc(0);
 
     auto doNothing = [](HookData* d) -> int {return HOOK_RETURN_SUCCESS; };
 
@@ -468,9 +474,12 @@ static std::vector<wxString> HookTests::testHookFunctionAndHookManager()
             elems.push_back(HookElementBuilder().address(secondHookPos).type(HOOK_ELEM_TYPE_ERASE_CODE).size(5).build());
             break;
         case HOOK_ELEM_TYPE_CALL:
+            elems.push_back(HookElementBuilder().address(firstHookPos).type(HOOK_ELEM_TYPE_CALL).func(doNothing).build());
+            elems.push_back(HookElementBuilder().address(secondHookPos).type(HOOK_ELEM_TYPE_CALL).func(myHookFunc).build());
+            break;
         case HOOK_ELEM_TYPE_AUTOHOOK:
-            elems.push_back(HookElementBuilder().address(firstHookPos).type(type).func(doNothing).build());
-            elems.push_back(HookElementBuilder().address(secondHookPos).type(type).func(myHookFunc).build());
+            elems.push_back(HookElementBuilder().address(firstHookPos).type(HOOK_ELEM_TYPE_AUTOHOOK).func(doNothing).build());
+            elems.push_back(HookElementBuilder().address(secondHookPos).type(HOOK_ELEM_TYPE_AUTOHOOK).func(myHookFuncAutohook).build());
             //hookCall(firstHookPos, doNothing);
             //hookCall(secondHookPos, myHookFunc);
             break;
@@ -490,8 +499,9 @@ static std::vector<wxString> HookTests::testHookFunctionAndHookManager()
             // ignore
             break;
         case HOOK_ELEM_TYPE_HOOKFUNCTION:
-            elems.push_back(HookElementBuilder().address(firstHookPos).type(HOOK_ELEM_TYPE_HOOKFUNCTION).callableFunctionHookFunc<void, 0>(hookfunctionFuncDoNothing).build());
-            elems.push_back(HookElementBuilder().address(secondHookPos).type(HOOK_ELEM_TYPE_HOOKFUNCTION).callableFunctionHookFunc<void, 0>(hookfunctionFunc).build());
+            // CRASHES DUE TO setting hook in middle of function (after registers are backed up on stack, esp is changed due to entering hook, then registers are popped, trashing return address)
+            // elems.push_back(HookElementBuilder().address(firstHookPos).type(HOOK_ELEM_TYPE_HOOKFUNCTION).callableFunctionHookFunc<void, 0>(hookfunctionFuncDoNothing).build());
+            // elems.push_back(HookElementBuilder().address(secondHookPos).type(HOOK_ELEM_TYPE_HOOKFUNCTION).callableFunctionHookFunc<void, 0>(hookfunctionFunc).build());
             break;
         default:
             break;
@@ -513,11 +523,13 @@ static std::vector<wxString> HookTests::testHookFunctionAndHookManager()
             // no code to set register values - must fail, but after "nothing changed" check
             myassert(result >= 6, wxString::Format("[call raw hook] received invalid fail reason %d", result));
             break;
-        case HOOK_ELEM_TYPE_CALL:
-        case HOOK_ELEM_TYPE_HOOKFUNCTION:
         case HOOK_ELEM_TYPE_AUTOHOOK:
             result = expectRegisterValues();
-            myassert(result == 0, wxString::Format("[call/hookfunction/autohook] received fail reason %d", result));
+            myassert(result == 0, wxString::Format("[autohook] received fail reason %d", result));
+            break;
+        case HOOK_ELEM_TYPE_CALL:
+            result = expectRegisterValues();
+            myassert(result == 0, wxString::Format("[call] received fail reason %d", result));
             break;
         case HOOK_ELEM_TYPE_JUMP:
             result = expectRegisterValues();

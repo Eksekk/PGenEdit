@@ -177,10 +177,15 @@ void eraseCode(uint32_t addr, uint32_t size, std::vector<uint8_t>* storeAt);
 // patches sequence of bytes (unprotect/protect)
 void patchBytes(uint32_t addr, const void* bytes, uint32_t size, std::vector<uint8_t>* storeAt = nullptr, bool useNops = false);
 
+extern SYSTEM_INFO systemInfo;
+
 // allocates memory for code
 uint32_t codeMemoryAlloc(uint32_t size);
 // frees memory allocated with codeMemoryAlloc
-void codeMemoryFree(uint32_t addr);
+void codeMemoryFree(void* addr);
+
+// unallocates all memory allocated for code
+void codeMemoryFullFree();
 
 // copies code
 uint32_t copyCode(uint32_t source, uint32_t size, bool writeJumpBack = true);
@@ -260,7 +265,7 @@ template<typename ReturnType, int cc, typename... Args>
 uint32_t callableHookCommon(uint32_t addr, uint32_t stackNum, CallableFunctionHookFunc<ReturnType, Args...> func, std::vector<uint8_t>* storeAt, uint32_t size, uint32_t code)
 {
     using OrigType = CallableFunctionHookOrigFunc<ReturnType, Args...>;
-    OrigType def = [=](Args... args) -> ReturnType {
+    OrigType def = [=](Args... args) -> ReturnType { // CRASH HERE
         return callMemoryAddress<ReturnType>(code, cc, args...);
     };
     size = getRealHookSize(addr, size);
@@ -398,12 +403,36 @@ template<typename ReturnType, int cc, typename... Args>
 void HookElement::setAdvancedHookFunction(CallableFunctionHookFunc<ReturnType, Args...> func)
 {
     wxASSERT_MSG(!setCallableFunctionHook, "Advanced hook function is already stored");
+    constexpr int stackArgs = std::max(0, (int)sizeof...(Args) - std::max(cc, 0));
     setCallableFunctionHook = [=]() {
         // to consider: supplying number of stack parameters manually?
-        hookReplaceCall<ReturnType, cc, Args...>(address, std::max(0, (int)sizeof...(Args) - std::max(cc, 0)), func, &restoreData, hookSize);
+        if (type == HOOK_ELEM_TYPE_REPLACE_CALL)
+        {
+            hookReplaceCall<ReturnType, cc, Args...>(address, stackArgs, func, &restoreData, hookSize);
+        }
+        else if (type == HOOK_ELEM_TYPE_HOOKFUNCTION)
+        {
+            extraData = (void*)hookFunction<ReturnType, cc, Args...>(address, stackArgs, func, &restoreData, hookSize);
+        }
+        else
+        {
+            wxFAIL_MSG(wxString::Format("Setting advanced hook function with invalid hook type (%d)", type));
+        }
     };
+
     unsetCallableFunctionHook = [=]() {
-        unhookReplaceCall(address, restoreData);
+        if (type == HOOK_ELEM_TYPE_REPLACE_CALL)
+        {
+            unhookReplaceCall(address, restoreData);
+        }
+        else if (type == HOOK_ELEM_TYPE_HOOKFUNCTION)
+        {
+            unhookHookFunction(address, restoreData, extraData);
+        }
+        else
+        {
+            wxFAIL_MSG(wxString::Format("Unsetting advanced hook function with invalid hook type (%d)", type));
+        }
     };
 }
 
