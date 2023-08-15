@@ -398,7 +398,7 @@ static __declspec(naked) bool expectComputation()
 }
 
 template<typename Player, typename Game>
-static std::vector<wxString> HookTests::testHookFunctionAndHookManager()
+static std::vector<wxString> HookTests::testBasicHookFunctionalityAndHookManager()
 {
     Asserter myasserter;
     static std::mt19937 gen(std::random_device{}());
@@ -566,28 +566,208 @@ static std::vector<wxString> HookTests::testHookFunctionAndHookManager()
     return myasserter.errors;
 }
 
-INSTANTIATE_TEMPLATES_MM_GAMES(std::vector<wxString>, HookTests::testHookFunctionAndHookManager);
+INSTANTIATE_TEMPLATES_MM_GAMES(std::vector<wxString>, HookTests::testBasicHookFunctionalityAndHookManager);
+
+struct HookSizeTest
+{
+    int startOffset, hookSize, desiredResultSize;
+};
+
+struct FunctionInfo
+{
+    std::string name;
+    std::vector<int> instructionSizes;
+    std::vector<HookSizeTest> hookSizeTests;
+};
+
+// IF STATIC KEYWORD IS OMITTED, function "addresses" will be of a jump to it instead of its address
+
+static void __declspec(naked) func1()
+{
+    _asm
+    {
+        add edx, 4
+        cmp esp, eax
+        fild dword ptr[eax]
+        bswap eax
+        inc dword ptr ds:[0x43432583]
+    }
+}
+
+static void __declspec(naked) func2()
+{
+    _asm
+    {
+        imul edi, eax
+        imul esp, esp, 0x348
+        test dword ptr[eax + 0x50], 3
+        call cs : 0x5984753
+        movzx eax, byte ptr[esp + 8]
+
+        // far jump
+        // jmp 0x33:54938594
+        _emit 0xEA
+        _emit 0xE2
+        _emit 0x4B
+        _emit 0x46
+        _emit 0x03
+        _emit 0x33
+        _emit 0x0
+
+        sti
+        stosd
+        rep movsb
+    }
+}
+
+static void __declspec(naked) func3()
+{
+    _asm
+    {
+        sete byte ptr ds:[0x54358]
+        lock cmpxchg dword ptr ds:[0x45354], eax
+        repne scasb
+        cpuid
+        add cl, dh
+        movsx dx, byte ptr[eax + ecx * 8 + 0x5438754]
+        hlt
+        int 3
+        fld1
+        sbb ax, dx
+    }
+}
+
+static void __declspec(naked) func4()
+{
+    _asm
+    {
+        
+    }
+}
+
+static void __declspec(naked) func5()
+{
+    _asm
+    {
+        
+    }
+}
+
+static void __declspec(naked) func6()
+{
+    _asm
+    {
+        
+    }
+}
+
+static void __declspec(naked) func7()
+{
+    _asm
+    {
+        
+    }
+}
+
+static void __declspec(naked) func8()
+{
+    _asm
+    {
+        
+    }
+}
+
+std::map<void(*)(), FunctionInfo> testData({
+    {
+        func1,
+        {.name = "func1", .instructionSizes = {3, 2, 2, 2, 7}, .hookSizeTests = 
+            {
+                {.startOffset = 0, .hookSize = 5, .desiredResultSize = 5},
+                {.startOffset = 0, .hookSize = 6, .desiredResultSize = 7},
+                {.startOffset = 0, .hookSize = 7, .desiredResultSize = 7},
+                {.startOffset = 0, .hookSize = 12, .desiredResultSize = 16},
+                {.startOffset = 3, .hookSize = 6, .desiredResultSize = 6},
+                {.startOffset = 5, .hookSize = 6, .desiredResultSize = 11},
+            }
+        }
+    },
+    {
+        func2,
+        {.name = "func2", .instructionSizes = {3, 6, 7, 7, 5, 7, 1, 1, 2}}
+    },
+    {
+        func3,
+        {.name = "func3", .instructionSizes = {8, 9, 2, 2, 2, 9, 1, 1, 2, 3}}
+    },
+    /*{
+        func4,
+        {.name = "func4", .instructionSizes = {3, 2, 2, 2, 6}}
+    },
+    {
+        func5,
+        {.name = "func5", .instructionSizes = {3, 2, 2, 2, 6}}
+    },
+    {
+        func6,
+        {.name = "func6", .instructionSizes = {3, 2, 2, 2, 6}}
+    },
+    {
+        func7,
+        {.name = "func7", .instructionSizes = {3, 2, 2, 2, 6}}
+    },
+    {
+        func8,
+        {.name = "func8", .instructionSizes = {3, 2, 2, 2, 6}}
+    },*/
+});
 
 template<typename Player, typename Game>
 static std::vector<wxString>
 HookTests::testMiscFunctions()
 {
     // getinstructionsize, copyCode
+    Asserter myasserter;
+    for (const auto& [func, data] : testData)
+    {
+        uint32_t funcPtr = (uint32_t)func;
+        int off = 0, i = 0;
+        for (int instrSize : data.instructionSizes)
+        {
+            int s = getInstructionSize(funcPtr + off);
+            myassert(s == instrSize,
+                wxString::Format("[%s] instruction index %d has invalid size (current: %d, expected: %d)", data.name, i, s, instrSize)
+            );
+            ++i;
+            off += s;
+        }
+
+        i = 0;
+        for (const HookSizeTest& test : data.hookSizeTests)
+        {
+            int size = getRealHookSize(funcPtr + test.startOffset, test.hookSize);
+            myassert(size == test.desiredResultSize,
+                wxString::Format("[%s] hook size test %d failed (offset: %d, initial size: %d, expected size: %d, current size: %d",
+                    data.name, i, test.startOffset, test.hookSize, test.desiredResultSize, size
+                )
+            );
+            ++i;
+        }
+    }
     
-    return std::vector<wxString>();
+    return myasserter.errors;
 }
 
 INSTANTIATE_TEMPLATES_MM_GAMES(std::vector<wxString>, HookTests::testMiscFunctions);
 
 /*
-template std::vector<wxString> HookTests::testHookFunctionAndHookManager<mm6::Player, mm6::Game>();
-template std::vector<wxString> HookTests::testHookFunctionAndHookManager<mm7::Player, mm7::Game>();
-template std::vector<wxString> HookTests::testHookFunctionAndHookManager<mm8::Player, mm8::Game>();*/
+template std::vector<wxString> HookTests::testBasicHookFunctionalityAndHookManager<mm6::Player, mm6::Game>();
+template std::vector<wxString> HookTests::testBasicHookFunctionalityAndHookManager<mm7::Player, mm7::Game>();
+template std::vector<wxString> HookTests::testBasicHookFunctionalityAndHookManager<mm8::Player, mm8::Game>();*/
 
 template<typename Player, typename Game>
 static std::vector<wxString> HookTests::run()
 {
-    return mergeVectors({ testHookPlacingAndSize<Player, Game>(), testHookFunctionAndHookManager<Player, Game>() });
+    return mergeVectors({ testHookPlacingAndSize<Player, Game>(), testMiscFunctions<Player, Game>(), testBasicHookFunctionalityAndHookManager<Player, Game>() });
 }
 
 template std::vector<wxString> HookTests::run<mm6::Player, mm6::Game>();
