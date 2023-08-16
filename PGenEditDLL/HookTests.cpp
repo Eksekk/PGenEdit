@@ -66,11 +66,11 @@ static __declspec(naked) int hook10Bytes()
 std::string codeToSemiReadableString(const std::string& input)
 {
     std::string out;
-    out.resize(input.size() * 4);
+    out.reserve(input.size() * 4);
     char buf[8];
-    for (unsigned char c : input)
+    for (char c : input)
     {
-        sprintf_s(buf, 8, "%X", c);
+        sprintf_s(buf, 8, "%X", (unsigned char)c);
         out += "\\x";
         out += buf;
     }
@@ -429,7 +429,7 @@ static std::vector<wxString> HookTests::testBasicHookFunctionalityAndHookManager
             r = d->edi % 20;
             if (r >= 7)
             {
-                d->edi += std::uniform_int_distribution(20 - r, 20 - r + 7)(gen);
+                d->edi += std::uniform_int_distribution(20 - r, 20 - r + 7 - 1)(gen);
             }
 
             // need (0xA0000310 ^ 0x80100010) & dword(esp) != 0
@@ -584,7 +584,7 @@ struct FunctionInfo
 
 // IF STATIC KEYWORD IS OMITTED, function "addresses" will be of a jump to it instead of its address
 
-static void __declspec(naked) func1()
+static void __declspec(naked) getRealHookSizeTest1()
 {
     _asm
     {
@@ -596,7 +596,7 @@ static void __declspec(naked) func1()
     }
 }
 
-static void __declspec(naked) func2()
+static void __declspec(naked) getRealHookSizeTest2()
 {
     _asm
     {
@@ -622,7 +622,7 @@ static void __declspec(naked) func2()
     }
 }
 
-static void __declspec(naked) func3()
+static void __declspec(naked) getRealHookSizeTest3()
 {
     _asm
     {
@@ -639,7 +639,7 @@ static void __declspec(naked) func3()
     }
 }
 
-static void __declspec(naked) func4()
+static void __declspec(naked) getRealHookSizeTest4()
 {
     _asm
     {
@@ -655,10 +655,10 @@ static void __declspec(naked) func4()
     }
 }
 
-std::map<void(*)(), FunctionInfo> testData({
+const std::map<void(*)(), FunctionInfo> testData({
     {
-        func1,
-        {.name = "func1", .instructionSizes = {3, 2, 2, 2, 7}, .hookSizeTests = 
+        getRealHookSizeTest1,
+        {.name = "getRealHookSizeTest1", .instructionSizes = {3, 2, 2, 2, 7}, .hookSizeTests = 
             {
                 {.startOffset = 0, .hookSize = 5, .desiredResultSize = 5},
                 {.startOffset = 0, .hookSize = 6, .desiredResultSize = 7},
@@ -670,8 +670,8 @@ std::map<void(*)(), FunctionInfo> testData({
         }
     },
     {
-        func2,
-        {.name = "func2", .instructionSizes = {3, 6, 7, 7, 5, 7, 1, 1, 2}, .hookSizeTests =
+        getRealHookSizeTest2,
+        {.name = "getRealHookSizeTest2", .instructionSizes = {3, 6, 7, 7, 5, 7, 1, 1, 2}, .hookSizeTests =
             {
                 {.startOffset = 0, .hookSize = 5, .desiredResultSize = 9},
                 {.startOffset = 0, .hookSize = 10, .desiredResultSize = 16},
@@ -683,8 +683,8 @@ std::map<void(*)(), FunctionInfo> testData({
         }
     },
     {
-        func3,
-        {.name = "func3", .instructionSizes = {8, 9, 2, 2, 2, 9, 1, 1, 2, 3}, .hookSizeTests =
+        getRealHookSizeTest3,
+        {.name = "getRealHookSizeTest3", .instructionSizes = {8, 9, 2, 2, 2, 9, 1, 1, 2, 3}, .hookSizeTests =
             {
                 {.startOffset = 0, .hookSize = 5, .desiredResultSize = 8},
                 {.startOffset = 0, .hookSize = 15, .desiredResultSize = 17},
@@ -695,8 +695,8 @@ std::map<void(*)(), FunctionInfo> testData({
         }
     },
     {
-        func4,
-        {.name = "func4", .instructionSizes = {7, 1, 4, 6, 4, 6, 4, 5, 2}, .hookSizeTests =
+        getRealHookSizeTest4,
+        {.name = "getRealHookSizeTest4", .instructionSizes = {7, 1, 4, 6, 4, 6, 4, 5, 2}, .hookSizeTests =
             {
                 {.startOffset = 0, .hookSize = 9, .desiredResultSize = 12},
                 {.startOffset = 0, .hookSize = 5, .desiredResultSize = 7},
@@ -747,7 +747,22 @@ static __declspec(naked) void copyCodeTest2()
     }
 }
 
-std::map<void(*)(), CopyCodeTestData> ccTests = 
+static __declspec(naked) void copyCodeTest3()
+{
+    _asm
+    {
+        cmovnc eax, dword ptr[ebx + ecx + 0x50]
+        setne al
+        jmp $+0x123
+        aas
+        movzx ecx, bx
+        call $+0x5555
+        cmp ecx, dword ptr[esp]
+        jne $+0x88888888
+    }
+}
+
+const std::map<void(*)(), CopyCodeTestData> copyCodeTests = 
 { // initializer list call
     { // initializer list element
         copyCodeTest1,
@@ -760,9 +775,9 @@ std::map<void(*)(), CopyCodeTestData> ccTests =
             },
         }
     },
-    { // initializer list element
+    {
         copyCodeTest2,
-        { // test struct
+        {
             .name = "CopyCodeTest2", .instructionSizes = {3, 5, 6, 5, 4, 6}, .tests = 
             {
                 {.startOffset = 0, .instrOffset = 0, .copySize = 29, .rel32ToFix = {10, 15, 25}},
@@ -771,15 +786,74 @@ std::map<void(*)(), CopyCodeTestData> ccTests =
                 {.startOffset = 3, .instrOffset = 1, .copySize = 11, .rel32ToFix = {10}},
                 {.startOffset = 8, .instrOffset = 2, .copySize = 21, .rel32ToFix = {10, 15, 25}},
             },
-        }
+        },
     },
+    {
+        copyCodeTest3,
+        {
+            .name = "CopyCodeTest3", .instructionSizes = {5, 3, 5, 1, 3, 5, 3, 6}, .tests =
+            {
+                {.startOffset = 0, .instrOffset = 0, .copySize = 31, .rel32ToFix = {9, 18, 27}},
+                {.startOffset = 0, .instrOffset = 0, .copySize = 13, .rel32ToFix = {9}},
+                {.startOffset = 0, .instrOffset = 0, .copySize = 5, .rel32ToFix = {}},
+                {.startOffset = 5, .instrOffset = 1, .copySize = 0x1A, .rel32ToFix = {9, 18}},
+                {.startOffset = 17, .instrOffset = 5, .copySize = 14, .rel32ToFix = {18, 27}},
+            },
+        },
+    },
+};
+
+struct FindCodeTestItem
+{
+    int offset;
+    std::string code;
+    int desiredOffset;
+};
+
+struct FindCodeTestStruct
+{
+    std::string name;
+    std::vector<FindCodeTestItem> tests;
+};
+
+// reuse previous functions
+const std::map<void(*)(), FindCodeTestStruct> findCodeTests =
+{ // initializer list
+    { // list element
+        getRealHookSizeTest1,
+        { // struct
+            .name = "getRealHookSizeTest1", .tests = 
+            {
+                // vector list elements
+                {.offset = 0, .code = "\x83\xC2\x04", .desiredOffset = 0 }, // add
+                {.offset = 0, .code = "\x0F\xC8", .desiredOffset = 7 }, // bswap
+                {.offset = 5, .code = "\x0F\xC8", .desiredOffset = 7 }, // bswap
+                {.offset = 0, .code = ">\xFF\x05\x83%CC", .desiredOffset = 9 }, // inc
+            }
+        },
+    },
+    {
+        getRealHookSizeTest4,
+        { // vector initializer list
+             // vector list elements
+            .name = "getRealHookSizeTest4", .tests =
+            {
+                {.offset = 0, .code = "f\x0FM\xC3", .desiredOffset = 8 }, // cmovge
+                {.offset = 0, .code = "f\xF7\x04\xC8" "00", .desiredOffset = 0x16 }, // test (second)
+                {.offset = 8, .code = "f\xF7\x04\xC8" "00", .desiredOffset = 0x16 }, // test (second)
+                {.offset = 0, .code = "\x0F\xBA\xF0\x04", .desiredOffset = 0x1C }, // btr
+                {.offset = 0, .code = "f\x98", .desiredOffset = 0x25 }, // cbw
+                {.offset = 0x12, .code = "f\x98", .desiredOffset = 0x25 }, // cbw
+            }
+        },
+    }
 };
 
 template<typename Player, typename Game>
 static std::vector<wxString>
 HookTests::testMiscFunctions()
 {
-    // getinstructionsize, getRealHookSize, copyCode
+    
     Asserter myasserter("Misc low level functions");
     auto checkInstructionSizes = [&](uint32_t addr, const std::string& name, const std::vector<int>& instructionSizes, int instrOffset = 0, int copySize = 0)
     {
@@ -799,20 +873,12 @@ HookTests::testMiscFunctions()
             }
         }
     };
+
+    // getInstructionSize, getRealHookSize
     for (const auto& [func, data] : testData)
     {
         uint32_t funcPtr = (uint32_t)func;
         checkInstructionSizes(funcPtr, data.name, data.instructionSizes);
-        /*int off = 0, i = 0;
-        for (int instrSize : data.instructionSizes)
-        {
-            int s = getInstructionSize(funcPtr + off);
-            myassert(s == instrSize,
-                wxString::Format("[%s] instruction index %d has invalid size (current: %d, expected: %d)", data.name, i, s, instrSize)
-            );
-            ++i;
-            off += s;
-        }*/
 
         int i = 0;
         for (const HookSizeTest& test : data.hookSizeTests)
@@ -827,7 +893,8 @@ HookTests::testMiscFunctions()
         }
     }
 
-    for (const auto& [func, data] : ccTests)
+    // copyCode
+    for (const auto& [func, data] : copyCodeTests)
     {
         uint32_t funcPtr = (uint32_t)func;
         checkInstructionSizes(funcPtr, data.name + " (old)", data.instructionSizes);
@@ -875,6 +942,22 @@ HookTests::testMiscFunctions()
             }
 
             codeMemoryFree((void*)newCode);
+        }
+    }
+
+    // findCode
+    for (const auto& [func, data] : findCodeTests)
+    {
+        const uint32_t funcPtr = (const uint32_t)func;
+        for (const FindCodeTestItem& test : data.tests)
+        {
+            const uint32_t fullTestOffset = funcPtr + test.offset, fullDesiredOffset = funcPtr + test.desiredOffset;
+            const uint32_t fullFoundOffset = findCode(fullTestOffset, test.code);
+            myassert(fullFoundOffset == fullDesiredOffset,
+                wxString::Format("[findCode test '%s'] Tried to find code '%s' at 0x%X, desired offset is 0x%X, got 0x%X",
+                    data.name, codeToSemiReadableString(test.code), fullTestOffset, fullDesiredOffset, fullFoundOffset
+                )
+            );
         }
     }
     
