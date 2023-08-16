@@ -26,7 +26,7 @@ std::vector<wxString> GUI_tests::testAlignmentRadioBox()
 	// need to pass nullptr!!! otherwise children of frame will be created as top level windows
 	// and NtUserCreateWindowEx will fail with code 1406 (0x57E)
 	wxFrame* w = new wxFrame(nullptr, wxID_ANY, "testFrame");
-	Asserter myasserter;
+	Asserter myasserter("Alignment radio box");
 	AlignmentRadioBox* b1 = new AlignmentRadioBox(w, "a"), * b2 = new AlignmentRadioBox(w, "b");
 	myassert(b1->getSelectedAlignment() == b2->getSelectedAlignment());
 	b1->setSelection(ALIGNMENT_LIGHT);
@@ -59,7 +59,7 @@ std::vector<wxString> GUI_tests::testEditorSkillsPanel()
 	auto party = Game::party;
 	GameData::updateIsInGameAndPartySize();
 	auto eWindow = wxGetApp().editorMainWindow;
-	Asserter myasserter;
+	Asserter myasserter("editor skills panel");
 
 	int index = 2;
 	Player* pl = reinterpret_cast<Player*>(players[index]);
@@ -232,7 +232,7 @@ template std::vector<wxString> GUI_tests::testEditorSkillsPanel<mm8::Player, mm8
 template<typename Player, typename Game>
 std::vector<wxString> GUI_tests::testGui()
 {
-	Asserter myasserter;
+	Asserter myasserter("GUI");
 	// LATER (party generator window not created yet)
 // 	auto tabs = wxGetApp().mainWindow->tabs;
 // 	myassert(tabs->GetPageCount() == MainWindow::FIRST_PLAYER_PAGE + MAX_PLAYERS);
@@ -329,7 +329,7 @@ std::vector<wxString> GUI_tests::testEditorStatisticsPanel()
 	memset(pl, 0, sizeof(Player));
 	(void)playerAccessor->setPlayerOverride(pl);
 	auto eWindow = wxGetApp().editorMainWindow;
-	Asserter myasserter;
+	Asserter myasserter("Statistics panel");
 	EditorPlayerWindow* win = eWindow->createPlayerWindow(index);
 	win->Show();
 	EditorStatisticsPanel* panel = win->statisticsPanel;

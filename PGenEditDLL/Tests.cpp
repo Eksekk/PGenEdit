@@ -50,7 +50,7 @@ std::vector<wxString> Tests::testJson()
 		wxLog::FlushActive();
 	}
 	jsonErrors.clear();
-	Asserter myasserter;
+	Asserter myasserter("JSON");
 	std::fstream testFile;
 	bool existed = true;
 	Json testOut = Json::array(), existingJson;
@@ -150,7 +150,7 @@ std::vector<wxString> Tests::testJson()
 template<typename Player, typename Game>
 std::vector<wxString> Tests::testPlayerStructAccessor()
 {
-	Asserter myasserter;
+	Asserter myasserter("Player struct accessor");
 
 	//static_assert(SAME(Player, mm7::Player), "Tests for other games not implemented yet");
 
@@ -691,7 +691,7 @@ template std::vector<wxString> Tests::testPlayerStructAccessor<mm8::Player, mm8:
 template<typename Player, typename Game>
 std::vector<wxString> Tests::testMisc()
 {
-	Asserter myasserter;
+	Asserter myasserter("Misc");
 	Player** playersConverted = (Player**)players;
 	for (int i = 0; i < MAX_PLAYERS; ++i) // TODO: player count can be different in mm8
 	{
@@ -810,7 +810,7 @@ template std::vector<wxString> Tests::testMisc<mm8::Player, mm8::Game>();
 
 std::vector<wxString> Tests::testSkillFunctions()
 {
-	Asserter myasserter;
+	Asserter myasserter("Skill functions");
 	auto old1 = SKILL_COMBINE_MODE;
 	auto old2 = MASTERY_BITS;
 	auto old3 = SKILL_BITS;

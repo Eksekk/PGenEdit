@@ -114,7 +114,7 @@ static std::vector<wxString> HookTests::testHookPlacingAndSize()
 
     void* funcs[3] = { (void*)hook2Bytes, (void*)hook5Bytes, (void*)hook10Bytes };
     int funcStartSizes[3] = { 2, 5, 10 };
-    Asserter myasserter;
+    Asserter myasserter("Hook placing and size");
 
     auto doTest = [&](HookElementType type)
     {
@@ -195,11 +195,12 @@ static std::vector<wxString> HookTests::testHookPlacingAndSize()
                 uint32_t newCode = addr;
                 // check that all required bytes are NOP-ed
                 int firstNopIndex = type == HOOK_ELEM_TYPE_PATCH_DATA ? hookSize : 5;
-                int realSize = getRealHookSize(oldCode, hookSize);
-                myassert(realSize == autoCodeCopy.size(), wxString::Format("%sReal hook size (%d) and auto code backup size (%d) don't match", realSize, autoCodeCopy.size()));
+                int minSize = firstNopIndex;
+                int realSize = getRealHookSize(oldCode, hookSize, minSize);
+                myassert(realSize == autoCodeCopy.size(), wxString::Format("%sReal hook size (%d) and auto code backup size (%d) don't match", basicInfoStr, realSize, autoCodeCopy.size()));
                 myassert(memcmp((void*)oldCodeVec.data(), (void*)autoCodeCopy.data(), realSize) == 0,
                     wxString::Format("%sBackup memory and backup memory done by hook functions don't match: %s\t\t%s",
-                        getCodeString((uint32_t)codeBackup[funcId].data(), realSize), getCodeString((uint32_t)autoCodeCopy.data(), realSize)
+                        basicInfoStr, getCodeString((uint32_t)codeBackup[funcId].data(), realSize), getCodeString((uint32_t)autoCodeCopy.data(), realSize)
                     )
                 );
                 for (int i = firstNopIndex; i < realSize; ++i)
@@ -400,7 +401,7 @@ static __declspec(naked) bool expectComputation()
 template<typename Player, typename Game>
 static std::vector<wxString> HookTests::testBasicHookFunctionalityAndHookManager()
 {
-    Asserter myasserter;
+    Asserter myasserter("Basic hook functionality");
     static std::mt19937 gen(std::random_device{}());
     static std::uniform_int_distribution genEsi(100, 10000);
     std::vector<uint8_t> copy((uint8_t*)expectRegisterValues, (uint8_t*)expectRegisterValues + 0x140);
@@ -654,38 +655,6 @@ static void __declspec(naked) func4()
     }
 }
 
-static void __declspec(naked) func5()
-{
-    _asm
-    {
-        
-    }
-}
-
-static void __declspec(naked) func6()
-{
-    _asm
-    {
-        
-    }
-}
-
-static void __declspec(naked) func7()
-{
-    _asm
-    {
-        
-    }
-}
-
-static void __declspec(naked) func8()
-{
-    _asm
-    {
-        
-    }
-}
-
 std::map<void(*)(), FunctionInfo> testData({
     {
         func1,
@@ -737,35 +706,104 @@ std::map<void(*)(), FunctionInfo> testData({
             }
         }
     },
-    /*
+ });
+
+struct CopyCodeTestDataItem
+{
+    int startOffset, instrOffset, copySize;
+    std::vector<int> rel32ToFix;
+};
+
+struct CopyCodeTestData
+{
+    std::string name;
+    std::vector<int> instructionSizes;
+    std::vector<CopyCodeTestDataItem> tests;
+    bool writeJumpBack = true;
+};
+
+static __declspec(naked) void copyCodeTest1()
+{
+    _asm
     {
-        func5,
-        {.name = "func5", .instructionSizes = {3, 2, 2, 2, 6}}
+        call $ + 0x438732 // to force rel32
+        cmp eax, ebx
+        add ecx, eax
+        je $ + 0x3854
+        ret
+    }
+}
+
+static __declspec(naked) void copyCodeTest2()
+{
+    _asm
+    {
+        ret 0x4555
+        bt ax, 2
+        jc $+0xAAAAAAAA
+        call $+0xFFFF
+        test byte ptr[esp + 0x40], cl
+        jne $+0x43258439
+    }
+}
+
+std::map<void(*)(), CopyCodeTestData> ccTests = 
+{ // initializer list call
+    { // initializer list element
+        copyCodeTest1,
+        { // test struct
+            .name = "CopyCodeTest1", .instructionSizes = {5, 2, 2, 6, 1}, .tests = 
+            {
+                {.startOffset = 0, .instrOffset = 0, .copySize = 5, .rel32ToFix = {1}},
+                {.startOffset = 0, .instrOffset = 0, .copySize = 15, .rel32ToFix = {1, 11}},
+                {.startOffset = 7, .instrOffset = 2, .copySize = 8, .rel32ToFix = {11}}, // rel32ToFix is relative to data begin, not startOffset
+            },
+        }
     },
-    {
-        func6,
-        {.name = "func6", .instructionSizes = {3, 2, 2, 2, 6}}
+    { // initializer list element
+        copyCodeTest2,
+        { // test struct
+            .name = "CopyCodeTest2", .instructionSizes = {3, 5, 6, 5, 4, 6}, .tests = 
+            {
+                {.startOffset = 0, .instrOffset = 0, .copySize = 29, .rel32ToFix = {10, 15, 25}},
+                {.startOffset = 0, .instrOffset = 0, .copySize = 19, .rel32ToFix = {10, 15}},
+                {.startOffset = 0, .instrOffset = 0, .copySize = 14, .rel32ToFix = {}},
+                {.startOffset = 3, .instrOffset = 1, .copySize = 11, .rel32ToFix = {10}},
+                {.startOffset = 8, .instrOffset = 2, .copySize = 21, .rel32ToFix = {10, 15, 25}},
+            },
+        }
     },
-    {
-        func7,
-        {.name = "func7", .instructionSizes = {3, 2, 2, 2, 6}}
-    },
-    {
-        func8,
-        {.name = "func8", .instructionSizes = {3, 2, 2, 2, 6}}
-    },*/
-});
+};
 
 template<typename Player, typename Game>
 static std::vector<wxString>
 HookTests::testMiscFunctions()
 {
     // getinstructionsize, getRealHookSize, copyCode
-    Asserter myasserter;
+    Asserter myasserter("Misc low level functions");
+    auto checkInstructionSizes = [&](uint32_t addr, const std::string& name, const std::vector<int>& instructionSizes, int instrOffset = 0, int copySize = 0)
+    {
+        int off = 0, i = 0;
+        for (size_t instrId = instrOffset; instrId < instructionSizes.size(); ++instrId)
+        {
+            int instrSize = instructionSizes[instrId];
+            int s = getInstructionSize(addr + off);
+            myassert(s == instrSize,
+                wxString::Format("[%s] instruction index %d (offset: %d) has invalid size (current: %d, expected: %d)", name, i, instrOffset, s, instrSize)
+            );
+            ++i;
+            off += s;
+            if (copySize > 0 && off == copySize)
+            {
+                break;
+            }
+        }
+    };
     for (const auto& [func, data] : testData)
     {
         uint32_t funcPtr = (uint32_t)func;
-        int off = 0, i = 0;
+        checkInstructionSizes(funcPtr, data.name, data.instructionSizes);
+        /*int off = 0, i = 0;
         for (int instrSize : data.instructionSizes)
         {
             int s = getInstructionSize(funcPtr + off);
@@ -774,9 +812,9 @@ HookTests::testMiscFunctions()
             );
             ++i;
             off += s;
-        }
+        }*/
 
-        i = 0;
+        int i = 0;
         for (const HookSizeTest& test : data.hookSizeTests)
         {
             int size = getRealHookSize(funcPtr + test.startOffset, test.hookSize, test.minHookSize);
@@ -786,6 +824,57 @@ HookTests::testMiscFunctions()
                 )
             );
             ++i;
+        }
+    }
+
+    for (const auto& [func, data] : ccTests)
+    {
+        uint32_t funcPtr = (uint32_t)func;
+        checkInstructionSizes(funcPtr, data.name + " (old)", data.instructionSizes);
+        for (const auto& test : data.tests)
+        {
+            uint32_t newCode = copyCode(funcPtr + test.startOffset, test.copySize, data.writeJumpBack);
+            uint32_t change = newCode - funcPtr;
+
+            checkInstructionSizes(newCode, data.name + " (new)", data.instructionSizes, test.instrOffset, test.copySize);
+            std::vector<int> instructionSizeByOffset(test.copySize + test.startOffset);
+            std::vector<int> instructionFirstByteOffset(test.copySize + test.startOffset);
+
+            {
+                int index = 0;
+                for (int size : data.instructionSizes)
+                {
+                    for (int i = 0; i < size; ++i)
+                    {
+                        instructionSizeByOffset.at(index + i) = size;
+                        instructionFirstByteOffset.at(index + i) = index;
+                    }
+                    index += size;
+                    if (index >= test.copySize)
+                    {
+                        break;
+                    }
+                }
+            }
+
+            for (int off : test.rel32ToFix)
+            {
+                // off is relative to function begin, not start of copying
+                uint32_t oldNumOff = funcPtr + off;
+                uint32_t newNumOff = newCode + off - test.startOffset;
+                // we need: instruction end (instruction address and size), instruction  and immediate value
+                
+                int first = instructionFirstByteOffset.at(off), size = instructionSizeByOffset.at(off);
+                uint32_t oldDest = sdword(oldNumOff) + first + funcPtr + size;
+                uint32_t newDest = sdword(newNumOff) + first - test.startOffset + newCode + size;
+                myassert(oldDest == newDest,
+                    wxString::Format("[copy code test '%s'] code at 0x%X (copied from 0x%X) has invalid rel32 destination at position %d (old: 0x%X, new: 0x%X)",
+                        data.name, newCode, funcPtr, off, oldDest, newDest
+                    )
+                );
+            }
+
+            codeMemoryFree((void*)newCode);
         }
     }
     

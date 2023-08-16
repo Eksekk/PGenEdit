@@ -69,7 +69,7 @@ void updatePartySizeAndPlayerPtrs()
 		players = new void* [MAX_PLAYERS];
 	}
     assert((int)ptrs.size() <= MAX_PLAYERS);
-    for (size_t i = 0; i < ptrs.size(); ++i)
+    for (size_t i = 0; i < std::min(ptrs.size(), (size_t)MAX_PLAYERS); ++i)
     {
         players[i] = ptrs[i];
     }
@@ -360,8 +360,11 @@ extern "C"
 				std::fstream file("pgen_errors.txt", std::ios::out | std::ios::trunc);
 				file << str;
 				file.close();
-				wxLogError("%d tests failed. Error messages:\n\n%s", errors.size(), str);
-				wxLog::FlushActive();
+                if (!Asserter::logAutomatically)
+                {
+                    wxLogError("%d tests failed. Error messages:\n\n%s", errors.size(), str);
+                    wxLog::FlushActive();
+                }
                 return 0;
             }
         }

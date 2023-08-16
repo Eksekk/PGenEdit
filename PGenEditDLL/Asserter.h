@@ -9,10 +9,12 @@ class Asserter
 {
 public:
 	std::vector<wxString> errors;
+	std::string category;
 	template<typename... Args>
 	bool operator()(const char* func, const char* file, int line, const wxString& rawErrorMsg, Args&&... args);
+	static bool logAutomatically;
 
-	Asserter();
+	Asserter(const std::string& category);
 
 	Asserter(const Asserter&) = delete;
 	Asserter(Asserter&&) = delete;
@@ -36,6 +38,11 @@ bool Asserter::operator()(const char* func, const char* file, int line, const wx
 		errorMsg << ("\nExtra data:" + rep("\n%s", sizeof...(args)));
 		errorMsg = wxString::Format(errorMsg, my_to_string(std::forward<Args>(args))...);
 	}
-	errors.push_back(wxString::Format(errorFormat, func, file2, line, errorMsg));
+	wxString str = wxString::Format(errorFormat, func, file2, line, errorMsg);
+	if (logAutomatically)
+	{
+		wxLogError("[%s] %s", category, str);
+	}
+	errors.push_back(str);
 	return false;
 }

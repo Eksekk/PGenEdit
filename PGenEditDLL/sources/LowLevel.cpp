@@ -533,7 +533,7 @@ void patchSDword(uint32_t addr, int32_t val, std::vector<uint8_t>* storeAt)
 
 void eraseCode(uint32_t addr, uint32_t size, std::vector<uint8_t>* storeAt)
 {
-	size = getRealHookSize(addr, size);
+	size = getRealHookSize(addr, size, 1);
 	storeBytes(storeAt, addr, size);
 	DWORD tmp;
 	VirtualProtect((void*)addr, size, PAGE_EXECUTE_READWRITE, &tmp);
@@ -551,7 +551,7 @@ void patchBytes(uint32_t addr, const void* bytes, uint32_t size, std::vector<uin
 	int realSize = size, dataSize = size;
 	if (useNops)
 	{
-		realSize = getRealHookSize(addr, dataSize);
+		realSize = getRealHookSize(addr, dataSize, 1);
 	}
 	storeBytes(storeAt, addr, realSize);
 	DWORD tmp;
@@ -623,12 +623,12 @@ uint32_t copyCode(uint32_t source, uint32_t size, bool writeJumpBack)
 	if (sizeReal != size)
     {
 		wxLogWarning("Tried to copy 0x%X code bytes at 0x%X, breaking an instruction due to too small code size (computed minimum is 0x%X)", size, source, sizeReal);
-		wxLog::FlushActive();
+		//wxLog::FlushActive();
 	}
 	// check short jumps
     ZyanU64 runtimeAddr = (ZyanU64)source;
     ZydisDisassembledInstruction instr;
-	int n = 0;
+	size_t n = 0;
     bool hasShort = false;
 	while (n < size && ZYAN_SUCCESS(ZydisDisassembleIntel(ZYDIS_MACHINE_MODE_LEGACY_32, source + n, reinterpret_cast<void*>(source + n), 20, &instr)))
 	{
@@ -643,10 +643,13 @@ uint32_t copyCode(uint32_t source, uint32_t size, bool writeJumpBack)
 		else if ((instr.info.meta.branch_type == ZYDIS_BRANCH_TYPE_NEAR || instr.info.meta.category == ZYDIS_CATEGORY_CALL) && (instr.info.attributes & ZYDIS_ATTRIB_IS_RELATIVE))
 		{
 			// to check if call is included in "branch type"
-			wxASSERT_MSG((instr.info.meta.branch_type == ZYDIS_BRANCH_TYPE_NEAR) ^ (instr.info.meta.category == ZYDIS_CATEGORY_CALL), "Call instruction is considered as 'branch type'");
-			auto& disp = instr.info.raw.disp;
-			wxASSERT_MSG(disp.size == 4, wxString::Format("Expected size 4 (DWORD) immediate, got %d", disp.size));
-			rel32Positions.push_back(n + disp.offset);
+			
+			// FIRES
+			//wxASSERT_MSG((instr.info.meta.branch_type == ZYDIS_BRANCH_TYPE_NEAR) ^ (instr.info.meta.category == ZYDIS_CATEGORY_CALL), "Call instruction is considered as 'branch type'");
+			
+            auto& imm = instr.info.raw.imm;
+            wxASSERT_MSG(imm[0].size == 4 * 8, wxString::Format("Expected size 4 (DWORD) immediate, got %d", imm[0].size));
+            rel32Positions.push_back(n + imm[0].offset);
 		}
         n += instr.info.length;
 	}
@@ -655,13 +658,13 @@ uint32_t copyCode(uint32_t source, uint32_t size, bool writeJumpBack)
 	{
 		wxLogError("Couldn't copy code from address 0x%X + 0x%X - zydis error", source, n);
 		wxLog::FlushActive();
-		return 0;
+		throw std::logic_error("Zydis error");
 	}
 	else if (hasShort)
 	{
 		wxLogError("Code at 0x%X of size 0x%X has short jump leading outside", source, size);
 		wxLog::FlushActive();
-		return 0;
+		throw std::logic_error("Short jump outside in code");
 	}
 	uint32_t newCodeSize = size + (writeJumpBack ? 5 : 0);
     uint32_t mem = codeMemoryAlloc(newCodeSize);
@@ -675,9 +678,9 @@ uint32_t copyCode(uint32_t source, uint32_t size, bool writeJumpBack)
         hookJumpRaw(mem + size, reinterpret_cast<void*>(source + size), nullptr);
 	}
 	// fix calls/jumps
-    for (int i = 0; i < rel32Positions.size(); ++i)
+    for (size_t i = 0; i < rel32Positions.size(); ++i)
     {
-        sdword(mem + rel32Positions[i]) += (mem - source);
+        sdword(mem + rel32Positions[i]) -= (mem - source);
     }
     VirtualProtect((void*)mem, newCodeSize, tmp, &tmp);
 	return mem;
