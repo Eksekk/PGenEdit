@@ -264,7 +264,7 @@ struct PackParams
 };
 
 template<typename ReturnType, int cc, typename... Args>
-uint32_t callableHookCommon(uint32_t addr, uint32_t stackNum, CallableFunctionHookFunc<ReturnType, Args...> func, std::vector<uint8_t>* storeAt, uint32_t size, uint32_t code)
+uint32_t callableHookCommon(uint32_t addr, uint32_t stackNum, CallableFunctionHookFunc<ReturnType, Args...> func, std::vector<uint8_t>* storeAt, uint32_t size, uint32_t code, bool hookfunction)
 {
     using OrigType = CallableFunctionHookOrigFunc<ReturnType, Args...>;
     OrigType def = [=](Args... args) -> ReturnType { // CRASH HERE
@@ -288,6 +288,11 @@ uint32_t callableHookCommon(uint32_t addr, uint32_t stackNum, CallableFunctionHo
             fullArgs = basicParams;
         }
         // int result = bitwiseUnsignedToInt(std::apply(func, basicParams));
+        if (hookfunction)
+        {
+            d->esp += 4; // pop return address from hookCall (esp now points to return address to the code that called hooked function)
+            // note that if it's not hookfunction, but replaceCall, no adjustment is needed, because function isn't entered by default code
+        }
         uint32_t result = std::apply(func, fullArgs);
         // return from function (pop basicParams and move return address)
         d->ret(stackNum);
@@ -305,7 +310,7 @@ void hookReplaceCall(uint32_t addr, uint32_t stackNum, CallableFunctionHookFunc<
 	wxASSERT_MSG(byte(addr) == 0xE8, wxString::Format("Instruction at 0x%X is not call instruction", addr));
     size = getRealHookSize(addr, size);
 	uint32_t dest = addr + sdword(addr + 1) + 5;
-    callableHookCommon<ReturnType, cc, Args...>(addr, stackNum, func, storeAt, size, dest);
+    callableHookCommon<ReturnType, cc, Args...>(addr, stackNum, func, storeAt, size, dest, false);
 }
 
 template<typename ReturnType, int cc, typename... Args>
@@ -315,7 +320,7 @@ uint32_t hookFunction(uint32_t addr, uint32_t stackNum, CallableFunctionHookFunc
     static_assert(((std::is_standard_layout_v<Args>) && ...) && (std::is_standard_layout_v<ReturnType> || std::is_void_v<ReturnType>), "Arguments are non-POD");
     size = getRealHookSize(addr, size);
     uint32_t dest = copyCode(addr, size, true);
-    callableHookCommon<ReturnType, cc, Args...>(addr, stackNum, func, storeAt, size, dest);
+    callableHookCommon<ReturnType, cc, Args...>(addr, stackNum, func, storeAt, size, dest, true);
     return dest;
 }
 

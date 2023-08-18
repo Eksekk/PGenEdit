@@ -825,7 +825,6 @@ void HookData::push(uint32_t val)
 
 void HookData::ret(int stackNum)
 {
-	esp += 4; // pop return address from hookCall
     uint32_t ret = dword(esp); // backup return address
     esp += stackNum * 4; // pop stack args
     dword(esp) = ret; // restore backed up return address
