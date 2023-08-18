@@ -250,7 +250,7 @@ struct PackParams
     {
         if constexpr (StackIndex < 0) // register parameter
         {
-            std::get<index>(tup) = (ParamType)dword(index == 0 ? d->ecx : d->edx);
+            std::get<index>(tup) = (ParamType) (index == 0 ? d->ecx : d->edx);
         }
         else
         {
@@ -303,7 +303,8 @@ void hookReplaceCall(uint32_t addr, uint32_t stackNum, CallableFunctionHookFunc<
     static_assert(cc >= -1 && cc <= 2, "Invalid calling convention");
     static_assert(((std::is_standard_layout_v<Args>) && ...) && (std::is_standard_layout_v<ReturnType> || std::is_void_v<ReturnType>), "Arguments are non-POD");
 	wxASSERT_MSG(byte(addr) == 0xE8, wxString::Format("Instruction at 0x%X is not call instruction", addr));
-	uint32_t dest = addr + 1 + sdword(addr + 1) + 5;
+    size = getRealHookSize(addr, size);
+	uint32_t dest = addr + sdword(addr + 1) + 5;
     callableHookCommon<ReturnType, cc, Args...>(addr, stackNum, func, storeAt, size, dest);
 }
 
@@ -312,6 +313,7 @@ uint32_t hookFunction(uint32_t addr, uint32_t stackNum, CallableFunctionHookFunc
 {
     static_assert(cc >= -1 && cc <= 2, "Invalid calling convention");
     static_assert(((std::is_standard_layout_v<Args>) && ...) && (std::is_standard_layout_v<ReturnType> || std::is_void_v<ReturnType>), "Arguments are non-POD");
+    size = getRealHookSize(addr, size);
     uint32_t dest = copyCode(addr, size, true);
     callableHookCommon<ReturnType, cc, Args...>(addr, stackNum, func, storeAt, size, dest);
     return dest;

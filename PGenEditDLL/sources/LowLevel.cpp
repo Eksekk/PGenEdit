@@ -26,6 +26,20 @@ void checkOverlap(uint32_t address, uint32_t size = 5)
 	}
 }
 
+void testMemberFunctions()
+{
+	struct Player
+	{
+		bool wearsItem(int id, int slot)
+		{
+			if (MMVER == 7)
+			{
+				return callMemoryAddress<bool>(0x48D6EF, 1, this, id, slot);
+			}
+		}
+	};
+}
+
 void HookElement::enable(bool enable)
 {
 	if (enable && !_active)
@@ -104,7 +118,8 @@ void HookElement::enable(bool enable)
 			break;
 		case HOOK_ELEM_TYPE_REPLACE_CALL:
 		case HOOK_ELEM_TYPE_HOOKFUNCTION:
-			unsetCallableFunctionHook(); break;
+			unsetCallableFunctionHook();
+			break;
 		}
 	}
 }
@@ -583,7 +598,11 @@ uint32_t codeMemoryAlloc(uint32_t size)
 	}
 	if (!allocatedBlock || allocatedBlockSize < size)
 	{
-		// should have been initialized by now
+		if (allocatedBlock)
+        {
+            // remaining free space - put inside appropriate "available addresses" vector
+			freeAddressesBySize[allocatedBlockSize].push_back(allocatedBlock);
+		}
         allocatedBlockSize = (size + systemInfo.dwPageSize) & (systemInfo.dwPageSize - 1); // rounded up to page size
         wxASSERT(allocatedBlockSize >= size);
 		allocatedBlock = VirtualAlloc(nullptr, allocatedBlockSize, MEM_COMMIT, PAGE_EXECUTE_READWRITE);
@@ -624,6 +643,7 @@ uint32_t copyCode(uint32_t source, uint32_t size, bool writeJumpBack)
     {
 		wxLogWarning("Tried to copy 0x%X code bytes at 0x%X, breaking an instruction due to too small code size (computed minimum is 0x%X)", size, source, sizeReal);
 		//wxLog::FlushActive();
+		size = sizeReal;
 	}
 	// check short jumps
     ZyanU64 runtimeAddr = (ZyanU64)source;
@@ -716,7 +736,12 @@ void __fastcall dispatchHook(uint32_t esp)
 		HookFunc f = itr->second;
 		try
 		{
-			f(d);
+			int ret = f(d);
+			if (ret == HOOK_RETURN_FAIL)
+			{
+				wxLogError("Hook at 0x%X failed", hookAddr);
+				wxLog::FlushActive();
+			}
 		}
 		catch (const std::exception& ex)
 		{
@@ -800,9 +825,10 @@ void HookData::push(uint32_t val)
 
 void HookData::ret(int stackNum)
 {
-    uint32_t ret = dword(esp);
-    esp += stackNum * 4;
-    dword(esp) = ret;
+	esp += 4; // pop return address from hookCall
+    uint32_t ret = dword(esp); // backup return address
+    esp += stackNum * 4; // pop stack args
+    dword(esp) = ret; // restore backed up return address
 }
 
 std::function<uint32_t(HookData* d, std::function<short(int, char*, bool)>, int, char*, bool)> f = reinterpret_cast<uint32_t(*)(HookData * d, std::function<short(int, char*, bool)>, int, char*, bool)>(0x55555555);

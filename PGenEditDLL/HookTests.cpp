@@ -404,7 +404,7 @@ static std::vector<wxString> HookTests::testBasicHookFunctionalityAndHookManager
     Asserter myasserter("Basic hook functionality");
     static std::mt19937 gen(std::random_device{}());
     static std::uniform_int_distribution genEsi(100, 10000);
-    std::vector<uint8_t> copy((uint8_t*)expectRegisterValues, (uint8_t*)expectRegisterValues + 0x140);
+    std::vector<uint8_t> copy((uint8_t*)expectRegisterValues, (uint8_t*)expectRegisterValues + 0x140); // range end randomly chosen, no way to reliably check generated function size iirc
 
     auto getHookFunc = [](uint32_t stackOffset)
     {
@@ -568,6 +568,90 @@ static std::vector<wxString> HookTests::testBasicHookFunctionalityAndHookManager
 }
 
 INSTANTIATE_TEMPLATES_MM_GAMES(std::vector<wxString>, HookTests::testBasicHookFunctionalityAndHookManager);
+
+int advancedHooksTestFailReasonId;
+static int __declspec(naked) __fastcall hookFunctionTest1(int val1, int val2, unsigned char val3)
+{
+    _asm
+    {
+        push ebp
+        mov ebp, esp
+        sub esp, 8
+        push ebx
+        // from now on code probably won't be moved
+        push esi
+        push edi
+        mov dword ptr [ebp - 4], ecx
+        mov dword ptr [ebp - 8], edx
+        // 1. first argument needs to be greater than 0x9348
+        mov eax, dword ptr[ebp - 4]
+        cmp eax, 0x9348
+        mov advancedHooksTestFailReasonId, 1
+        jbe fail
+        
+        mov advancedHooksTestFailReasonId, 2
+        // 2. second argument needs to have 56 remainder in division by 123
+        mov eax, dword ptr[ebp - 8]
+        cdq
+        mov ecx, 123
+        idiv ecx
+        cmp edx, 56
+    jne fail
+        mov advancedHooksTestFailReasonId, 3
+        // 3. third argument needs to be zero-extended and bigger than 170
+        mov eax, dword ptr[ebp + 8]
+        cmp eax, 170
+    jbe fail
+
+        // returns first arg + second arg
+        mov advancedHooksTestFailReasonId, 0
+        fail:
+        mov eax, dword ptr[ebp - 4]
+        add eax, dword ptr[ebp - 8]
+        pop edi
+        pop esi
+        pop ebx
+        leave
+        ret 4
+    }
+}
+
+template<typename Player, typename Game>
+static std::vector<wxString> HookTests::testAdvancedHookFunctionality()
+{
+    Asserter myasserter("Advanced hook functionality");
+    using HookFunctionType = CallableFunctionHookOrigFunc<int, int, int, unsigned char>;
+    static std::mt19937 gen(std::random_device{}());
+    auto hookFunctionFunc = [&](HookData* d, HookFunctionType def, int val1, int val2, unsigned char val3) -> int
+    {
+        myassert(val1 == 0x5555, wxString::Format("val1 has value of 0x%X", val1));
+        myassert(val2 == 0x2, wxString::Format("val2 has value of 0x%X", val2));
+        myassert(val3 == 0x44, wxString::Format("val3 has value of 0x%X", val3));
+        // 1. first argument needs to be greater than 0x9348
+        // 2. second argument needs to have 56 remainder in division by 123
+        // 3. third argument needs to be zero-extended and bigger than 170
+        // 4. return value must be sum of first two args
+        
+        int first = std::uniform_int_distribution(0x9349, 0x23854)(gen);
+        int second = std::uniform_int_distribution(345, 43238)(gen);
+        int r = second % 123;
+        second += 123 + 56 - r; // 123 to avoid potential negative int unexpected behavior
+        unsigned char third = std::uniform_int_distribution(180, 220)(gen);
+        int result = def(first, second, third);
+        myassert(result == first + second, wxString::Format("[hookfunction test] result value is invalid (expected 0x%X, got 0x%X)", first + second, result));
+        myassert(advancedHooksTestFailReasonId == 0, wxString::Format("[hookfunction test] got invalid fail reason %d", advancedHooksTestFailReasonId));
+        return HOOK_RETURN_SUCCESS;
+    };
+
+    Hook hook(HookElementBuilder().address((uint32_t)hookFunctionTest1).size(5).type(HOOK_ELEM_TYPE_HOOKFUNCTION).callableFunctionHookFunc<int, 2, int, int, unsigned char>(hookFunctionFunc).build());
+    hook.enable();
+    int r = hookFunctionTest1(0x5555, 0x2, 0x44);
+    myassert(r == HOOK_RETURN_SUCCESS, wxString::Format("Function call returned %d", r));
+
+    return myasserter.errors;
+}
+
+INSTANTIATE_TEMPLATES_MM_GAMES(std::vector<wxString>, HookTests::testAdvancedHookFunctionality);
 
 struct HookSizeTest
 {
@@ -974,7 +1058,7 @@ template std::vector<wxString> HookTests::testBasicHookFunctionalityAndHookManag
 template<typename Player, typename Game>
 static std::vector<wxString> HookTests::run()
 {
-    return mergeVectors({ testHookPlacingAndSize<Player, Game>(), testMiscFunctions<Player, Game>(), testBasicHookFunctionalityAndHookManager<Player, Game>() });
+    return mergeVectors({ testHookPlacingAndSize<Player, Game>(), testMiscFunctions<Player, Game>(), testBasicHookFunctionalityAndHookManager<Player, Game>(), testAdvancedHookFunctionality<Player, Game>()});
 }
 
 template std::vector<wxString> HookTests::run<mm6::Player, mm6::Game>();

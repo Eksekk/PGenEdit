@@ -229,6 +229,11 @@ public:
 };
 
 // ENTER CONFIRMS TEMPLATE FOR INTELLISENSE
+/*
+template<typename Player>
+concept isValidPlayer = std::is_same_v<Player, mm6::Player> || std::is_same_v<Player, mm7::Player> || std::is_same_v<Player, mm8::Player>;
+
+template<isValidPlayer Player>*/
 template<typename Player>
 class TemplatedPlayerStructAccessor : public PlayerStructAccessor
 {
