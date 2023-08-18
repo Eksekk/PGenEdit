@@ -272,6 +272,11 @@ uint32_t callableHookCommon(uint32_t addr, uint32_t stackNum, CallableFunctionHo
     };
     size = getRealHookSize(addr, size);
     hookCall(addr, [=](HookData* d) -> uint32_t {
+        if (hookfunction)
+        {
+            d->esp += 4; // pop return address from hookCall (esp now points to return address to the code that called hooked function)
+            // note that if it's not hookfunction, but replaceCall, no adjustment is needed, because function isn't entered by default code
+        }
         std::tuple<HookData*, OrigType> basicParams;
         std::get<0>(basicParams) = d;
         std::get<1>(basicParams) = def;
@@ -288,11 +293,6 @@ uint32_t callableHookCommon(uint32_t addr, uint32_t stackNum, CallableFunctionHo
             fullArgs = basicParams;
         }
         // int result = bitwiseUnsignedToInt(std::apply(func, basicParams));
-        if (hookfunction)
-        {
-            d->esp += 4; // pop return address from hookCall (esp now points to return address to the code that called hooked function)
-            // note that if it's not hookfunction, but replaceCall, no adjustment is needed, because function isn't entered by default code
-        }
         uint32_t result = std::apply(func, fullArgs);
         // return from function (pop basicParams and move return address)
         d->ret(stackNum);
