@@ -5,6 +5,9 @@
 
 #define myassert(cond, ...) (!!(cond) || myasserter(__FUNCTION__, __FILE__, __LINE__, "Assertion failed! (" #cond ")" __VA_OPT__(,) __VA_ARGS__))
 
+// could also be simply macro invoking directly format function
+#define myassertf(cond, fmt, ...) (!!(cond) || myasserter.assertFormat(__FUNCTION__, __FILE__, __LINE__, wxString("Assertion failed! (" #cond "): ") + fmt __VA_OPT__(,) __VA_ARGS__))
+
 class Asserter
 {
 public:
@@ -12,6 +15,8 @@ public:
 	std::string category;
 	template<typename... Args>
 	bool operator()(const char* func, const char* file, int line, const wxString& rawErrorMsg, Args&&... args);
+	template<typename... Args>
+	bool assertFormat(const char* func, const char* file, int line, Args&&... args);
 	static bool logAutomatically;
 
 	Asserter(const std::string& category);
@@ -45,4 +50,10 @@ bool Asserter::operator()(const char* func, const char* file, int line, const wx
 	}
 	errors.push_back(str);
 	return false;
+}
+
+template<typename... Args>
+bool Asserter::assertFormat(const char* func, const char* file, int line, Args&&... args)
+{
+	return operator()(func, file, line, wxString::Format(args...));
 }

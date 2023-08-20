@@ -9,6 +9,8 @@ INSTANTIATE_TEMPLATES_SINGLE_GAME(6, ret, identifier); \
 INSTANTIATE_TEMPLATES_SINGLE_GAME(7, ret, identifier); \
 INSTANTIATE_TEMPLATES_SINGLE_GAME(8, ret, identifier)
 
+static const char NOP[] = "\x90";
+
 // dst, src, size
 std::vector<uint8_t> memcpyVector(void* src, uint32_t size)
 {
@@ -569,9 +571,18 @@ static std::vector<wxString> HookTests::testBasicHookFunctionalityAndHookManager
 
 INSTANTIATE_TEMPLATES_MM_GAMES(std::vector<wxString>, HookTests::testBasicHookFunctionalityAndHookManager);
 
-int advancedHooksTestFailReasonId;
+namespace // make vars file scoped
+{
+    namespace advancedHooksTestData // make vars non-conflicting with later code in this file
+    {
+        int setInt1, setInt2;
+        int hookFunctionTestFailReasonId, replaceCallFailReasonInner, replaceCallFailReasonOuter;
+    }
+}
+
 static int __declspec(naked) __fastcall hookFunctionTest1(int val1, int val2, unsigned char val3)
 {
+    using namespace advancedHooksTestData;
     _asm
     {
         push ebp
@@ -586,10 +597,10 @@ static int __declspec(naked) __fastcall hookFunctionTest1(int val1, int val2, un
         // 1. first argument needs to be greater than 0x9348
         mov eax, dword ptr[ebp - 4]
         cmp eax, 0x9348
-        mov advancedHooksTestFailReasonId, 1
+        mov hookFunctionTestFailReasonId, 1
         jbe fail
         
-        mov advancedHooksTestFailReasonId, 2
+        mov hookFunctionTestFailReasonId, 2
         // 2. second argument needs to have 56 remainder in division by 123
         mov eax, dword ptr[ebp - 8]
         cdq
@@ -597,14 +608,14 @@ static int __declspec(naked) __fastcall hookFunctionTest1(int val1, int val2, un
         idiv ecx
         cmp edx, 56
     jne fail
-        mov advancedHooksTestFailReasonId, 3
+        mov hookFunctionTestFailReasonId, 3
         // 3. third argument needs to be zero-extended and bigger than 170
         mov eax, dword ptr[ebp + 8]
         cmp eax, 170
     jbe fail
 
         // returns first arg + second arg
-        mov advancedHooksTestFailReasonId, 0
+        mov hookFunctionTestFailReasonId, 0
         fail:
         mov eax, dword ptr[ebp - 4]
         add eax, dword ptr[ebp - 8]
@@ -613,6 +624,88 @@ static int __declspec(naked) __fastcall hookFunctionTest1(int val1, int val2, un
         pop ebx
         leave
         ret 4
+    }
+}
+
+static int __declspec(naked) __stdcall replaceCallHookTestInner(char arg)
+{
+    using namespace advancedHooksTestData;
+    _asm
+    {
+        // expect some values to be set
+        // 1. need SF ~= OF
+       /* mov replaceCallFailReasonInner, 1
+        jl fail
+
+        // 2. ax has to be 0x3333
+        mov replaceCallFailReasonInner, 2
+        cmp ax, 0x3333
+        jne fail
+
+        // 3. esi has to be 0x1234
+        mov replaceCallFailReasonInner, 3
+        cmp esi, 0x1234
+        jne fail
+        */
+
+        // byte [esp + 4] has to be 0x13
+
+        mov replaceCallFailReasonInner, 1
+        cmp byte ptr[esp + 4], 0x13
+        jne fail
+
+        mov setInt1, 0x33
+
+        mov setInt2, 0xFFFFFFFF
+
+        xor eax, eax
+        jmp doExit
+    fail:
+        mov eax, replaceCallFailReasonInner
+    doExit:
+        ret 4
+    }
+}
+
+static int __declspec(naked) __stdcall replaceCallHookTestOuter()
+{
+    using namespace advancedHooksTestData;
+    _asm
+    {
+        mov setInt1, 13
+        mov setInt2, 0
+        push 0x88888888
+        call replaceCallHookTestInner
+
+        // 1. need SF ~= OF
+        mov replaceCallFailReasonOuter, 1
+        jl fail
+
+        // 2. ax has to be 0x3333
+        mov replaceCallFailReasonOuter, 2
+        cmp ax, 0x3333
+        jne fail
+
+        // 3. esi has to be 0x1234
+        mov replaceCallFailReasonOuter, 3
+        cmp esi, 0x1234
+        jne fail
+
+        mov replaceCallFailReasonOuter, 5
+        cmp setInt1, 0x33
+        jne fail
+        mov replaceCallFailReasonOuter, 6
+        cmp setInt2, 0xFFFFFFFF
+        jne fail
+
+        xor eax, eax
+        jmp success
+
+    fail:
+        mov eax, replaceCallFailReasonOuter
+
+    success:
+        ret
     }
 }
 
@@ -639,14 +732,41 @@ static std::vector<wxString> HookTests::testAdvancedHookFunctionality()
         unsigned char third = std::uniform_int_distribution(180, 220)(gen);
         int result = def(first, second, third);
         myassert(result == first + second, wxString::Format("[hookfunction test] result value is invalid (expected 0x%X, got 0x%X)", first + second, result));
-        myassert(advancedHooksTestFailReasonId == 0, wxString::Format("[hookfunction test] got invalid fail reason %d", advancedHooksTestFailReasonId));
+        r = advancedHooksTestData::hookFunctionTestFailReasonId;
+        myassert(r == 0, wxString::Format("[hookfunction test] got invalid fail reason %d", r));
         return HOOK_RETURN_SUCCESS;
     };
 
-    Hook hook(HookElementBuilder().address((uint32_t)hookFunctionTest1).size(5).type(HOOK_ELEM_TYPE_HOOKFUNCTION).callableFunctionHookFunc<int, 2, int, int, unsigned char>(hookFunctionFunc).build());
+
+
+    using ReplaceCallType = CallableFunctionHookOrigFunc<int, char>;
+    auto replaceCallFunc = [&](HookData* d, ReplaceCallType def, char arg) -> int
+    {
+        myassertf(arg == 0x88, "[replace call, inner] received arg 0x%X instead of expected 0x88", (uint32_t)arg);
+        // 1. need SF ~= OF
+        // 2. ax has to be 0x3333
+        // 3. esi has to be 0x1234
+        // 4. byte [esp + 4] has to be 0x13
+        d->SF = d->OF;
+        //d->ax = 0x3333; // eax is assigned result of this function call
+        d->esi = 0x1234;
+        //byte(d->esp + 4) = 0x13;
+        int errorId = def(0x13);
+        myassertf(errorId == 0, "[replace call, inner] Received error id %d", errorId);
+        return 0x00003333;
+    };
+
+    Hook hook
+    ({
+        HookElementBuilder().address((uint32_t)hookFunctionTest1).size(5).type(HOOK_ELEM_TYPE_HOOKFUNCTION).callableFunctionHookFunc<int, 2, int, int, unsigned char>(hookFunctionFunc).build(),
+        HookElementBuilder().address(findCall(replaceCallHookTestOuter, replaceCallHookTestInner)).size(5).type(HOOK_ELEM_TYPE_REPLACE_CALL).callableFunctionHookFunc<int, 0, char>(replaceCallFunc).build()
+    });
     hook.enable();
     int r = hookFunctionTest1(0x5555, 0x2, 0x44);
     myassert(r == HOOK_RETURN_SUCCESS, wxString::Format("Function call returned %d", r));
+
+    r = replaceCallHookTestOuter();
+    myassertf(r == 0, "[replace call, outer] received error id %d", r);
 
     return myasserter.errors;
 }
@@ -933,6 +1053,111 @@ const std::map<void(*)(), FindCodeTestStruct> findCodeTests =
     }
 };
 
+static void __declspec(naked) findCallFunc1()
+{
+
+}
+
+static void __declspec(naked) findCallFunc2()
+{
+
+}
+
+static void __declspec(naked) findCallFunc3()
+{
+
+}
+
+static void __declspec(naked) findCallTest1()
+{
+    _asm
+    {
+        cmp ebx, ecx
+        call findCallFunc1
+        call findCallFunc2
+        call findCallFunc3
+        jmp $+0xFFFF
+        sete byte PTR [esp + 20]
+        imul ecx, ebx, 20
+        call findCallFunc3
+        add eax, ebx
+        call $+0xFFFF
+        ret
+    }
+}
+
+static void __declspec(naked) findCallTest2()
+{
+    _asm
+    {
+        fld qword ptr[esp]
+        inc al
+        call $+0x4325
+        call $+0x28452
+        jmp $+0x85437
+        sbb dx, bx
+        aaa
+        popcnt eax, ebx
+        outsd
+        call findCallFunc2
+        repne cmpsw
+        add dword ptr [eax + 0x40], edx
+        call findCallFunc3
+        call $+0x323832
+        idiv dx
+        rep movsd
+        call findCallFunc1
+    }
+}
+
+struct FindCallTestItem
+{
+    uint32_t findOffset;
+    void* address;
+    uint32_t desiredOffset;
+};
+
+struct FindCallTest
+{
+    std::string name;
+    std::vector<FindCallTestItem> tests;
+};
+
+// STDCALL function has incompatible type
+const std::map<void(*)(), FindCallTest> findCallTests =
+{ // init list
+    { // init list item
+        findCallTest1,
+        { // struct
+            .name = "findCallTest1", .tests = 
+            {
+                {.findOffset = 0, .address = findCallFunc1, .desiredOffset = 2},
+                {.findOffset = 0, .address = findCallFunc2, .desiredOffset = 7},
+                {.findOffset = 0, .address = findCallFunc3, .desiredOffset = 0xC},
+                {.findOffset = 0x11, .address = findCallFunc3, .desiredOffset = 0x1E},
+                {.findOffset = 0, .address = nullptr, .desiredOffset = 2},
+                {.findOffset = 0x16, .address = nullptr, .desiredOffset = 0x1E},
+                {.findOffset = 0x23, .address = nullptr, .desiredOffset = 0x25},
+            }
+        }
+    },
+    { // init list item
+        findCallTest2,
+        { // struct
+            .name = "findCallTest2", .tests = 
+            {
+                {.findOffset = 0, .address = nullptr, .desiredOffset = 5},
+                {.findOffset = 0, .address = findCallFunc2, .desiredOffset = 0x1D},
+                {.findOffset = 0, .address = findCallFunc1, .desiredOffset = 0x37},
+                {.findOffset = 0xF, .address = nullptr, .desiredOffset = 0x1D},
+                {.findOffset = 0x22, .address = nullptr, .desiredOffset = 0x28},
+                {.findOffset = 0x28, .address = findCallFunc3, .desiredOffset = 0x28},
+                {.findOffset = 0x2D, .address = nullptr, .desiredOffset = 0x2D},
+            }
+        }
+    },
+};
+
 template<typename Player, typename Game>
 static std::vector<wxString>
 HookTests::testMiscFunctions()
@@ -1042,6 +1267,20 @@ HookTests::testMiscFunctions()
                     data.name, codeToSemiReadableString(test.code), fullTestOffset, fullDesiredOffset, fullFoundOffset
                 )
             );
+        }
+    }
+
+    // findCall
+    for (const auto& [func, data] : findCallTests)
+    {
+        uint32_t funcPtr = (uint32_t)func;
+        int i = 0;
+        for (const FindCallTestItem& test : data.tests)
+        {
+            uint32_t findFull = test.findOffset + funcPtr, desiredFull = test.desiredOffset + funcPtr;
+            uint32_t result = findCall(findFull, test.address);
+            myassertf(result == desiredFull, "[find call, %s, test id %d] Tried to find address 0x%X at 0x%X, received 0x%X", data.name, i, findFull, test.address, desiredFull);
+            ++i;
         }
     }
     

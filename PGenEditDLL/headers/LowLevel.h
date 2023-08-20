@@ -125,6 +125,35 @@ uint32_t findCode(uint32_t addr, const std::string& code);
 uint32_t findCode(void* addr, const char* code);
 uint32_t findCode(void* addr, const std::string& code);
 
+// finds nearest call to address findAddr beginning at beginAddr
+// if address is 0, finds any nearest call
+template<typename Address, typename Address2 = uint32_t>
+uint32_t findCall(Address beginAddr, Address2 findAddr = 0)
+{
+    // TODO: reinterpret cast + constexpr
+    uint32_t addr = (uint32_t)beginAddr, find = (uint32_t)findAddr;
+    ZydisDisassembledInstruction instr;
+    while (true)
+    {
+        ZyanStatus status = ZydisDisassembleIntel(ZYDIS_MACHINE_MODE_LEGACY_32, addr, (void*)addr, 20, &instr);
+        if (!ZYAN_SUCCESS(status))
+        {
+            ++addr;
+            continue;
+        }
+        if (instr.info.meta.branch_type == ZYDIS_BRANCH_TYPE_NEAR && instr.info.meta.category == ZYDIS_CATEGORY_CALL)
+        {
+            uint32_t dest = (int64_t)addr + (int64_t)instr.info.length + (int64_t)instr.info.raw.imm[0].value.s;
+            if (!findAddr || dest == find)
+            {
+                return addr;
+            }
+        }
+        addr += instr.info.length;
+    }
+    return 0;
+}
+
 int bitwiseUnsignedToInt(uint32_t val);
 
 // get or set either byte/word/dword/qword (unsigned 1/2/4/8 byte integer)
@@ -192,6 +221,7 @@ void codeMemoryFullFree();
 // copies code
 uint32_t copyCode(uint32_t source, uint32_t size, bool writeJumpBack = true);
 
+// TODO: a version that uses registers from stack (for use in hookfunction or hookcall)
 template<typename ReturnType, typename Address, typename... Args>
 ReturnType callMemoryAddress(Address address, int registerParamsNum, Args... args) // NO rvalue reference, because it passes arguments by address
 {
