@@ -14,7 +14,7 @@
 
 //, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize(723, 817),
 //	long style = wxTAB_TRAVERSAL | wxHSCROLL | wxVSCROLL, const wxString& name = wxEmptyString)
-EditorStatisticsPanel::EditorStatisticsPanel(wxWindow* parent, int playerIndex) : playerIndex(playerIndex), wxScrolledWindow(parent)
+EditorStatisticsPanel::EditorStatisticsPanel(wxWindow* parent, int playerIndex, int rosterIndex) : EditorPlayerPanel(playerIndex, rosterIndex), wxScrolledWindow(parent)
 {
     Profiler profiler;
     //profiler.start("Creating statistics panel");
@@ -521,12 +521,21 @@ EditorStatisticsPanel::~EditorStatisticsPanel()
 {
 }
 
+int EditorStatisticsPanel::setRosterIndex()
+{
+    throw std::logic_error("The method or operation is not implemented.");
+}
+void EditorStatisticsPanel::setDefaultCustomSettings()
+{
+    throw std::logic_error("The method or operation is not implemented.");
+}
+
 bool EditorStatisticsPanel::persist(Json& json)
 {
 	return false;
 }
 
-bool EditorStatisticsPanel::unpersist(Json& json)
+bool EditorStatisticsPanel::unpersist(const Json& json)
 {
 	return false;
 }

@@ -77,7 +77,7 @@ std::vector<wxString> GUI_tests::testEditorSkillsPanel()
 	EditorSkillsPanel* panel = window->skillsPanel;
 	GuiTestHelper helper(*panel, sim, myasserter);
 	window->Show();
-	window->tabs->SetSelection(EditorPlayerWindow::SKILLS_PANEL_INDEX);
+	window->tabs->SetSelection(PlayerWindowPanelType::SKILLS_PANEL_INDEX);
 	helper.autoClick(panel->affectAvailableSkillpointsCheckbox);
 	myassert(panel->options.affectSkillpoints);
 	myassert(panel->allowNegativeSkillpointsRadio->IsEnabled());
@@ -333,7 +333,7 @@ std::vector<wxString> GUI_tests::testEditorStatisticsPanel()
 	EditorPlayerWindow* win = eWindow->createPlayerWindow(index);
 	win->Show();
 	EditorStatisticsPanel* panel = win->statisticsPanel;
-	win->tabs->SetSelection(EditorPlayerWindow::STATISTICS_PANEL_INDEX);
+	win->tabs->SetSelection(PlayerWindowPanelType::STATISTICS_PANEL_INDEX);
 	wxUIActionSimulator sim;
 	GuiTestHelper helper(*panel, sim, myasserter);
 	wxASSERT(win->IsShown() && win->IsVisible());

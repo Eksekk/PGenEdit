@@ -7,3 +7,8 @@ Asserter::Asserter(const std::string& category)
 }
 
 bool Asserter::logAutomatically = true;
+
+void Asserter::flush()
+{
+    wxLog::FlushActive();
+}

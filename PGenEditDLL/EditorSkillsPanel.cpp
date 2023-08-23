@@ -10,7 +10,7 @@
 #include "Profiler.h"
 extern wxTimer* mainUpdateTimer;
 
-EditorSkillsPanel::EditorSkillsPanel(wxWindow* parent, int playerIndex) : wxScrolledWindow(parent), playerIndex(playerIndex)
+EditorSkillsPanel::EditorSkillsPanel(wxWindow* parent, int playerIndex, int rosterIndex) : wxScrolledWindow(parent), EditorPlayerPanel(playerIndex, rosterIndex)
 {
 	Profiler profiler;
 	//profiler.start("Creating skills panel");
@@ -60,6 +60,11 @@ void EditorSkillsPanel::updateFromPlayerData()
 	Layout();
 }
 
+int EditorSkillsPanel::setRosterIndex()
+{
+    throw std::logic_error("The method or operation is not implemented.");
+}
+
 void EditorSkillsPanel::skillConstraintErrorMsgBox(bool multiple)
 {
 	const wxString error = multiple ? "Some skills could not be set due to constraints." : "Skill could not be set due to constraints.";
@@ -67,6 +72,18 @@ void EditorSkillsPanel::skillConstraintErrorMsgBox(bool multiple)
 	wxMessageBox(error, caption, wxOK | wxICON_INFORMATION, this);
 }
 
+void EditorSkillsPanel::setDefaultCustomSettings()
+{
+    throw std::logic_error("The method or operation is not implemented.");
+}
+bool EditorSkillsPanel::persist(Json& json)
+{
+    throw std::logic_error("The method or operation is not implemented.");
+}
+bool EditorSkillsPanel::unpersist(const Json& json)
+{
+    throw std::logic_error("The method or operation is not implemented.");
+}
 void EditorSkillsPanel::onSkillValueChange(wxCommandEvent& event)
 {
 	auto* chooser = dynamic_cast<EditorSkillValueChooser*>(event.GetEventObject());

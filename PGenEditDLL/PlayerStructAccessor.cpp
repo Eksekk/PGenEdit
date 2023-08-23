@@ -5,6 +5,7 @@
 #include "PartyStructAccessor.h"
 #include "GameData.h"
 #include "Enum_const.h"
+#include "GameStructAccessor.h"
 
 const bool MALE = true, FEMALE = false; // TODO: check
 const int PLAYER_ACTIVE = 6, PLAYER_RANDOM = 7;
@@ -24,6 +25,49 @@ template<typename Player>
 TemplatedPlayerStructAccessor<Player>::~TemplatedPlayerStructAccessor() noexcept
 {
 
+}
+
+template<typename Player>
+int TemplatedPlayerStructAccessor<Player>::getRosterIndex()
+{
+	uint32_t playersAddr, playerSize = sizeof(Player);
+	if constexpr (SAME(Player, mm6::Player))
+	{
+		playersAddr = offsetof(mm6::GameParty, playersArray);
+	}
+	else if constexpr (SAME(Player, mm7::Player))
+	{
+        playersAddr = offsetof(mm7::GameParty, playersArray);
+	}
+	else
+	{
+		playersAddr = offsetof(mm8::GameParty, playersArray);
+	}
+
+	if (playerOverride)
+	{
+        double index = ((uint32_t)playerOverride - playersAddr) / (double)playerSize;
+		wxASSERT_MSG((int)index == index, wxString::Format("Invalid player override 0x%X - result index is %lf", playerOverride, index));
+		return (int)index;
+	}
+	else
+	{
+		wxASSERT(playerIndex != PLAYER_RANDOM && (playerIndex != PLAYER_ACTIVE || gameAccessor->getCurrentPlayer() != -1));
+		if constexpr (SAME(Player, mm8::Player))
+		{
+			int count = dword(0xB7CA60);
+			wxASSERT_MSG(playerIndex < count, wxString::Format("Player index (%d) is >= party size (%d)", playerIndex, count));
+			return dword(0xB7CA4C + playerIndex * 4);
+			/*mov edi, 0xB7CA60 // address of count
+				mov edi, dword ptr[edi]
+				// mov count, edi
+				mov ebx, 0xB7CA4C // players roster txt indexes, or FFFFFFFF if player not in party*/
+		}
+		else
+		{
+			return playerIndex; // no [roster id/player index] division in mm6/7
+		}
+	}
 }
 
 template<typename Player>

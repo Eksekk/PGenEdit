@@ -4,7 +4,8 @@
 
 class PersistablePlayerPanel
 {
+public:
     virtual bool persist(Json& json) = 0;
-    virtual bool unpersist(Json& json) = 0;
+    virtual bool unpersist(const Json& json) = 0;
 };
 

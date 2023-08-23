@@ -4,7 +4,7 @@
 #include <wx/collpane.h>
 #include "ResistanceWidget.h"
 #include "Enum_const.h"
-#include "PersistablePlayerPanel.h"
+#include "EditorPlayerPanel.h"
 
 class wxSpinCtrl;
 class wxSpinCtrlDouble;
@@ -14,7 +14,7 @@ class PrimaryStatWidget;
 class PlayerClass;
 class AlignmentRadioBox;
 
-class EditorStatisticsPanel : public wxScrolledWindow, public PersistablePlayerPanel
+class EditorStatisticsPanel : public wxScrolledWindow, public EditorPlayerPanel
 {
 private:
 	void createImmediateStatSettings();
@@ -141,9 +141,7 @@ protected:
 
 	void onActivateWindow(wxActivateEvent& event);
 public:
-	const int playerIndex;
-
-	EditorStatisticsPanel(wxWindow* parent, int playerIndex);
+	EditorStatisticsPanel(wxWindow* parent, int playerIndex, int rosterIndex);
 	EditorStatisticsPanel() = delete;
 
 	void updateFromPlayerData();
@@ -151,8 +149,13 @@ public:
 
 	friend class GUI_tests;
 
-	// Inherited via PersistablePlayerPanel
-	virtual bool persist(Json& json) override;
-	virtual bool unpersist(Json& json) override;
+	bool persist(Json& json) override;
+	bool unpersist(const Json& json) override;
+
+	int setRosterIndex() override;
+
+
+	void setDefaultCustomSettings() override;
+
 };
 

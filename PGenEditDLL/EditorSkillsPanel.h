@@ -5,9 +5,10 @@
 #include <wx/spinctrl.h>
 #include "EditorSkillValueChooser.h"
 #include "PlayerStructAccessor.h"
+#include "EditorPlayerPanel.h"
 
 class wxGridBagSizer;
-class EditorSkillsPanel : public wxScrolledWindow
+class EditorSkillsPanel : public EditorPlayerPanel, public wxScrolledWindow
 {
 private:
 	// divide constructor into few methods for readability
@@ -48,11 +49,18 @@ private:
 	void skillConstraintErrorMsgBox(bool multiple);
 	wxStaticLine* armorMagicLine;
 	wxStaticLine* magicMiscLine;
+
+	void setDefaultCustomSettings() override;
+
+
+	bool persist(Json& json) override;
+
+
+	bool unpersist(const Json& json) override;
+
 protected:
 
 public:
-	const int playerIndex;
-
 	wxStaticText* skillPointsAndOptionsHeader;
 	wxStaticText* availableSkillPointsLabel;
 	wxSpinCtrl* availableSkillPointsAmount;
@@ -93,7 +101,7 @@ public:
 
 	wxBoxSizer* mainSizer;
 
-	EditorSkillsPanel(wxWindow* parent, int playerIndex);
+	EditorSkillsPanel(wxWindow* parent, int playerIndex, int rosterIndex);
 	EditorSkillsPanel() = delete;
 
 	~EditorSkillsPanel();
@@ -101,4 +109,7 @@ public:
 	void updateFromPlayerData();
 
 	friend class GUI_tests;
+
+	int setRosterIndex() override;
+
 };

@@ -330,6 +330,12 @@
     <ClInclude Include="PersistablePlayerPanel.h">
       <Filter>Pliki nagłówkowe\Shared GUI</Filter>
     </ClInclude>
+    <ClInclude Include="SaveGameData.h">
+      <Filter>Pliki nagłówkowe\GameData</Filter>
+    </ClInclude>
+    <ClInclude Include="EditorPlayerPanel.h">
+      <Filter>Pliki nagłówkowe\Editor GUI</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="sources\MainWindow.cpp">
@@ -514,6 +520,12 @@
     </ClCompile>
     <ClCompile Include="PersistablePlayerPanel.cpp">
       <Filter>Pliki źródłowe\Shared GUI</Filter>
+    </ClCompile>
+    <ClCompile Include="SaveGameData.cpp">
+      <Filter>Pliki źródłowe\GameData</Filter>
+    </ClCompile>
+    <ClCompile Include="EditorPlayerPanel.cpp">
+      <Filter>Pliki źródłowe\Editor GUI</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

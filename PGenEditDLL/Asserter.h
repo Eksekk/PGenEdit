@@ -18,6 +18,7 @@ public:
 	template<typename... Args>
 	bool assertFormat(const char* func, const char* file, int line, Args&&... args);
 	static bool logAutomatically;
+	void flush();
 
 	Asserter(const std::string& category);
 

@@ -161,7 +161,7 @@ void EditorMainWindow::setupMenusAndStatusBar()
 EditorPlayerWindow* EditorMainWindow::createPlayerWindow(int index)
 {
 	wxASSERT(index < MAX_PLAYERS);
-	playerWindows[index] = new EditorPlayerWindow(this, index);
+	playerWindows[index] = new EditorPlayerWindow(this, index, playerAccessor->forPlayer(index)->getRosterIndex());
 	return playerWindows[index];
 }
 
@@ -182,7 +182,7 @@ void EditorMainWindow::onPlayerButtonClick(wxCommandEvent& event)
 			{
 				Profiler profiler;
 				profiler.start("Creating player window");
-				playerWindows[i] = new EditorPlayerWindow(this, i);
+				playerWindows[i] = new EditorPlayerWindow(this, i, playerAccessor->forPlayer(i)->getRosterIndex());
 				wxToolTip::Enable(true);
 				profiler.end();
 				//wxLogMessage(profiler.getDurationStr());

@@ -8,6 +8,7 @@ class GameStructAccessor
 {
 public:
 	virtual HWND getWindowHandle() = 0;
+	virtual int getCurrentPlayer() = 0;
 
 	virtual ~GameStructAccessor();
 };
@@ -19,8 +20,8 @@ class TemplatedGameStructAccessor : public GameStructAccessor
 	static inline GameType* const game = reinterpret_cast<GameType*>(0);
 public:
 	HWND getWindowHandle() override;
+	int getCurrentPlayer() override;
 };
-
 using GameStructAccessor_6 = TemplatedGameStructAccessor<mm6::Game>;
 using GameStructAccessor_7 = TemplatedGameStructAccessor<mm7::Game>;
 using GameStructAccessor_8 = TemplatedGameStructAccessor<mm8::Game>;

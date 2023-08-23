@@ -28,6 +28,7 @@
     <ClInclude Include="ControlPanel.h" />
     <ClInclude Include="DefaultPlayerPanel.h" />
     <ClInclude Include="EditorMainWindow.h" />
+    <ClInclude Include="EditorPlayerPanel.h" />
     <ClInclude Include="EditorPlayerWindow.h" />
     <ClInclude Include="EditorSkillsPanel.h" />
     <ClInclude Include="EditorSkillValueChooser.h" />
@@ -90,6 +91,7 @@
     <ClInclude Include="PrimaryStatWidget.h" />
     <ClInclude Include="Profiler.h" />
     <ClInclude Include="ResistanceWidget.h" />
+    <ClInclude Include="SaveGameData.h" />
     <ClInclude Include="SpecificClassChooserPanel.h" />
     <ClInclude Include="Tests.h" />
     <ClInclude Include="CommandManager.h" />
@@ -106,6 +108,7 @@
     <ClCompile Include="ControlPanel.cpp" />
     <ClCompile Include="DefaultPlayerPanel.cpp" />
     <ClCompile Include="EditorMainWindow.cpp" />
+    <ClCompile Include="EditorPlayerPanel.cpp" />
     <ClCompile Include="EditorPlayerWindow.cpp" />
     <ClCompile Include="EditorSkillsPanel.cpp" />
     <ClCompile Include="EditorSkillValueChooser.cpp" />
@@ -135,6 +138,7 @@
     <ClCompile Include="PrimaryStatWidget.cpp" />
     <ClCompile Include="Profiler.cpp" />
     <ClCompile Include="ResistanceWidget.cpp" />
+    <ClCompile Include="SaveGameData.cpp" />
     <ClCompile Include="sources\GuiApplication.cpp" />
     <ClCompile Include="sources\dllApi.cpp" />
     <ClCompile Include="sources\Enum_const.cpp" />

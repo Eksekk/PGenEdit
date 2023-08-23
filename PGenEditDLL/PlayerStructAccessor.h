@@ -48,6 +48,8 @@ public:
 	PlayerStructAccessor* forPlayer(int index);
 	PlayerStructAccessor* forPlayer(void* player);
 
+	[[nodiscard]] virtual int getRosterIndex() = 0;
+
 	[[nodiscard]] virtual int getStatBase(int stat) = 0;
 	virtual void setStatBase(int stat, int value) = 0;
 
@@ -259,6 +261,8 @@ public:
 	// C++ limitation, no static initializers for template classes (almost sure)
 	static void _initMaps();;
 
+	int getRosterIndex();
+
 	int getStatBase(int stat) override;
 
 	void setStatBase(int stat, int value) override;
@@ -355,7 +359,6 @@ public:
 	virtual int getRecoveryDelay() override;
 	virtual void setRecoveryDelay(int val) override;
 };
-
 using PlayerStructAccessor_6 = TemplatedPlayerStructAccessor<mm6::Player>;
 using PlayerStructAccessor_7 = TemplatedPlayerStructAccessor<mm7::Player>;
 using PlayerStructAccessor_8 = TemplatedPlayerStructAccessor<mm8::Player>;
