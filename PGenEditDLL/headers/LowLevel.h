@@ -118,6 +118,7 @@ int getInstructionSize(uint32_t addr);
 // returns address of next instruction after max(size, minSize) bytes
 // minSize parameter intended to allow correct behavior for call hooks (min 5) and something like erase code (min 1)
 int getRealHookSize(uint32_t addr, uint32_t size, uint32_t minSize = 5);
+void checkOverlap(uint32_t address, uint32_t size = 5);
 void storeBytes(std::vector<uint8_t>* storeAt, uint32_t addr, uint32_t size);
 
 uint32_t findCode(uint32_t addr, const char* code);
@@ -339,7 +340,8 @@ void hookReplaceCall(uint32_t addr, uint32_t stackNum, CallableFunctionHookFunc<
     static_assert(((std::is_standard_layout_v<Args>) && ...) && (std::is_standard_layout_v<ReturnType> || std::is_void_v<ReturnType>), "Arguments are non-POD");
 	wxASSERT_MSG(byte(addr) == 0xE8, wxString::Format("Instruction at 0x%X is not call instruction", addr));
     size = getRealHookSize(addr, size);
-	uint32_t dest = addr + sdword(addr + 1) + 5;
+    checkOverlap(addr, size);
+    uint32_t dest = addr + sdword(addr + 1) + 5;
     callableHookCommon<ReturnType, cc, Args...>(addr, stackNum, func, storeAt, size, dest, false);
 }
 
@@ -349,6 +351,7 @@ uint32_t hookFunction(uint32_t addr, uint32_t stackNum, CallableFunctionHookFunc
     static_assert(cc >= -1 && cc <= 2, "Invalid calling convention");
     static_assert(((std::is_standard_layout_v<Args>) && ...) && (std::is_standard_layout_v<ReturnType> || std::is_void_v<ReturnType>), "Arguments are non-POD");
     size = getRealHookSize(addr, size);
+    checkOverlap(addr, size);
     uint32_t dest = copyCode(addr, size, true);
     callableHookCommon<ReturnType, cc, Args...>(addr, stackNum, func, storeAt, size, dest, true);
     return dest;

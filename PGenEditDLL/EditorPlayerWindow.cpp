@@ -11,6 +11,7 @@
 EditorPlayerWindow::EditorPlayerWindow(wxWindow* parent, int playerIndex) : wxFrame(parent, wxID_ANY, "Edit " + playerAccessor->getNameOrDefault(playerIndex),
 	wxDefaultPosition, wxSize(1100, 950), wxDEFAULT_FRAME_STYLE | wxTAB_TRAVERSAL), playerIndex(playerIndex), myIsBeingDestroyed(false)
 {
+	Freeze();
 	windowDisabler = nullptr;
 	loop = nullptr;
 	mainWindow = dynamic_cast<EditorMainWindow*>(parent);
@@ -57,6 +58,7 @@ EditorPlayerWindow::EditorPlayerWindow(wxWindow* parent, int playerIndex) : wxFr
 
 	Bind(wxEVT_CLOSE_WINDOW, &EditorPlayerWindow::onCloseWindow, this);
 	Bind(wxEVT_ACTIVATE, &EditorPlayerWindow::onActivate, this);
+	Thaw();
 }
 
 void EditorPlayerWindow::showModal()

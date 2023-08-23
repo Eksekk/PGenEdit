@@ -8,7 +8,7 @@
 std::unordered_map<int, Hook> hooks;
 std::unordered_map<uint32_t, HookFunc> hookFuncMap;
 
-void checkOverlap(uint32_t address, uint32_t size = 5)
+void checkOverlap(uint32_t address, uint32_t size)
 {
 	if (hookFuncMap.contains(address))
 	{
@@ -57,25 +57,21 @@ void HookElement::enable(bool enable)
 		break;
 		case HOOK_ELEM_TYPE_CALL_RAW:
 		{
-			checkOverlap(address, hookSize);
 			hookCallRaw(address, reinterpret_cast<void*>(target), &restoreData, hookSize);
 		}
 		break;
 		case HOOK_ELEM_TYPE_CALL:
 		{
-			// here overlap is checked automatically, TODO: add to all other hook functions
 			hookCall(address, func, &restoreData, hookSize);
 		}
 		break;
 		case HOOK_ELEM_TYPE_AUTOHOOK:
 		{
-			checkOverlap(address, hookSize);
 			extraData = (void*)autohookCall(address, func, &restoreData, hookSize);
 		}
 		break;
 		case HOOK_ELEM_TYPE_JUMP:
         {
-            checkOverlap(address, hookSize);
 			hookJumpRaw(address, reinterpret_cast<void*>(target), &restoreData, hookSize);
 		}
 		break;
@@ -419,6 +415,7 @@ int bitwiseUnsignedToInt(uint32_t val)
 void hookCallRaw(uint32_t addr, void* func, std::vector<uint8_t>* storeAt, uint32_t size)
 {
 	size = getRealHookSize(addr, size, 5);
+	checkOverlap(addr, size);
 	storeBytes(storeAt, addr, size);
 	DWORD tmp;
 	VirtualProtect((void*)addr, size, PAGE_EXECUTE_READWRITE, &tmp);
@@ -440,7 +437,8 @@ void unhookCallRaw(uint32_t addr, std::vector<uint8_t>& restoreData)
 void hookJumpRaw(uint32_t addr, void* func, std::vector<uint8_t>* storeAt, uint32_t size)
 {
 	size = getRealHookSize(addr, size, 5);
-	storeBytes(storeAt, addr, size);
+    checkOverlap(addr, size);
+    storeBytes(storeAt, addr, size);
 	DWORD tmp;
 	VirtualProtect((void*)addr, size, PAGE_EXECUTE_READWRITE, &tmp);
 	byte(addr) = 0xE9; // jmp rel32
@@ -478,7 +476,8 @@ uint32_t autohookCall(uint32_t addr, HookFunc func, std::vector<uint8_t>* storeA
 	// setup call hook
 	// pass our own function which will change return address to copied code
 	
-	size = getRealHookSize(addr, size, 5);
+    size = getRealHookSize(addr, size, 5);
+    checkOverlap(addr, size);
 
 	uint32_t code = copyCode(addr, size, true);
 	auto wrapperFunc = [code, func](HookData* d) -> int {
@@ -549,6 +548,7 @@ void patchSDword(uint32_t addr, int32_t val, std::vector<uint8_t>* storeAt)
 void eraseCode(uint32_t addr, uint32_t size, std::vector<uint8_t>* storeAt)
 {
 	size = getRealHookSize(addr, size, 1);
+    checkOverlap(addr, size);
 	storeBytes(storeAt, addr, size);
 	DWORD tmp;
 	VirtualProtect((void*)addr, size, PAGE_EXECUTE_READWRITE, &tmp);

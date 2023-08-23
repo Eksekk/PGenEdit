@@ -13,6 +13,7 @@ static void recoveryMultiplier_7(HookData* d)
 // USING REFERENCE actually adds a layer of indirection you need to handle (dereference alias to get proper value)
 int partyOffset = offsetof(mm7::GameParty, playersArray);
 int playerSize = sizeof(mm7::Player);
+int recoveryOffset = offsetof(mm7::Player, recoveryDelay);
 auto& rec = HookParams::noRecoveryEnabled;
 static __declspec(naked) void noRecovery_7()
 {
@@ -32,8 +33,9 @@ static __declspec(naked) void noRecovery_7()
         test al, al
         pop ecx
         je standard
-            
-        ;// TODO: also zero recovery?
+        
+        mov eax, dword ptr [recoveryOffset]
+        and word ptr [ecx + eax], 0
         xor eax, eax
         inc eax; success
         ret 4

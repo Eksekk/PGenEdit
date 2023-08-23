@@ -458,8 +458,8 @@ void EditorSkillsPanel::createSkillsPanel()
 // 	widgetToSkillMap.reserve(GameData::skills.size()); // INCREASES LOAD TIME ???
 // 	widgetToWidgetIdMap.reserve(GameData::skills.size());
 	Freeze();
-	Profiler profiler;
-	profiler.startAggregate("Creating skill value choosers");
+	//Profiler profiler;
+	//profiler.startAggregate("Creating skill value choosers");
 	// unobtainable skills are at the end to not cause problems with every-row-is-other-color system
 	std::vector<PlayerSkill*> skillsInOrder;
 	skillsInOrder.resize(GameData::skills.size());
@@ -486,9 +486,9 @@ void EditorSkillsPanel::createSkillsPanel()
 	const wxSizerFlags chooserFlags = wxSizerFlags().Expand(); // Expand is important; no border here - set in chooser in inner panel
 	for (PlayerSkill* skillPtr : skillsInOrder)
 	{
-		profiler.startAggregatePart();
+		//profiler.startAggregatePart();
         EditorSkillValueChooser* chooser = new EditorSkillValueChooser(this, skillPtr->name, playerIndex, skillPtr, options);
-        profiler.endAggregatePart();
+        //profiler.endAggregatePart();
 		widgetToSkillMap[skillPtr] = chooser;
 		int id = chooser->GetId();
 		widgetToWidgetIdMap[id] = chooser;
@@ -518,8 +518,8 @@ void EditorSkillsPanel::createSkillsPanel()
 		}
 	}
 
-	profiler.endAggregate();
-	profiler.logResults();
+	//profiler.endAggregate();
+	//profiler.logResults();
 	Thaw();
 	//wxLogMessage(profiler.getAggregateDurationStr());
 	skillToWidgetMap = invertMap(widgetToSkillMap);

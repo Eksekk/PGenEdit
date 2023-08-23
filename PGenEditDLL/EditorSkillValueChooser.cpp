@@ -53,7 +53,18 @@ EditorSkillValueChooser::EditorSkillValueChooser(wxWindow* parent, const wxStrin
     //Profiler profiler;
     //profiler.startAggregate("creating choices");
     //profiler.startAggregatePart();
-    skillMastery = new wxChoice(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, static_cast<int>(MAX_MASTERY) + 1, masteryNames.data());
+    //skillMastery = new wxChoice(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, static_cast<int>(MAX_MASTERY) + 1, masteryNames.data());
+    //!!!! internal.EnterDebug() to make my windows not glitch game window
+
+    ///* NOT FASTER
+        skillMastery = new wxChoice();
+        skillMastery->Hide();
+        skillMastery->Freeze();
+        skillMastery->Create(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, static_cast<int>(MAX_MASTERY) + 1, masteryNames.data());
+        skillMastery->Thaw();
+        skillMastery->Show();
+    //*/
+
     //profiler.endAggregatePart();
     //profiler.logResults();
 

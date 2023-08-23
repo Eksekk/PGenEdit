@@ -627,7 +627,7 @@ static int __declspec(naked) __fastcall hookFunctionTest1(int val1, int val2, un
     }
 }
 
-static int __declspec(naked) __stdcall replaceCallHookTestInner(char arg)
+static int __declspec(naked) __stdcall replaceCallHookTestInner(unsigned char arg)
 {
     using namespace advancedHooksTestData;
     _asm
@@ -739,10 +739,11 @@ static std::vector<wxString> HookTests::testAdvancedHookFunctionality()
 
 
 
-    using ReplaceCallType = CallableFunctionHookOrigFunc<int, char>;
-    auto replaceCallFunc = [&](HookData* d, ReplaceCallType def, char arg) -> int
+    using ReplaceCallType = CallableFunctionHookOrigFunc<int, unsigned char>;
+    auto replaceCallFunc = [&](HookData* d, ReplaceCallType def, unsigned char arg) -> int
     {
-        myassertf(arg == 0x88, "[replace call, inner] received arg 0x%X instead of expected 0x88", (uint32_t)arg);
+        // SIGNED CHAR is sign-extended here, failing this check
+        myassertf(arg == 0x88, "[replace call, inner] received arg 0x%X instead of expected 0x88",  arg);
         // 1. need SF ~= OF
         // 2. ax has to be 0x3333
         // 3. esi has to be 0x1234
@@ -759,7 +760,7 @@ static std::vector<wxString> HookTests::testAdvancedHookFunctionality()
     Hook hook
     ({
         HookElementBuilder().address((uint32_t)hookFunctionTest1).size(5).type(HOOK_ELEM_TYPE_HOOKFUNCTION).callableFunctionHookFunc<int, 2, int, int, unsigned char>(hookFunctionFunc).build(),
-        HookElementBuilder().address(findCall(replaceCallHookTestOuter, replaceCallHookTestInner)).size(5).type(HOOK_ELEM_TYPE_REPLACE_CALL).callableFunctionHookFunc<int, 0, char>(replaceCallFunc).build()
+        HookElementBuilder().address(findCall(replaceCallHookTestOuter, replaceCallHookTestInner)).size(5).type(HOOK_ELEM_TYPE_REPLACE_CALL).callableFunctionHookFunc<int, 0, unsigned char>(replaceCallFunc).build()
     });
     hook.enable();
     int r = hookFunctionTest1(0x5555, 0x2, 0x44);
@@ -767,6 +768,8 @@ static std::vector<wxString> HookTests::testAdvancedHookFunctionality()
 
     r = replaceCallHookTestOuter();
     myassertf(r == 0, "[replace call, outer] received error id %d", r);
+
+    // TODO: autohook
 
     return myasserter.errors;
 }
