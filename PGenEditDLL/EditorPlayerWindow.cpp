@@ -41,13 +41,17 @@ void EditorPlayerWindow::setDefaultCustomSettings()
 {
     throw std::logic_error("The method or operation is not implemented.");
 }
-bool EditorPlayerWindow::persist(Json& json)
+bool EditorPlayerWindow::persist(Json& json) const
 {
     throw std::logic_error("The method or operation is not implemented.");
 }
 bool EditorPlayerWindow::unpersist(const Json& json)
 {
     throw std::logic_error("The method or operation is not implemented.");
+}
+std::string EditorPlayerWindow::getJsonPersistKey() const
+{
+	return "playerWindow";
 }
 EditorPlayerWindow::EditorPlayerWindow(wxWindow* parent, int playerIndex, int rosterIndex) : wxFrame(parent, wxID_ANY, "Edit " + playerAccessor->getNameOrDefault(playerIndex),
 	wxDefaultPosition, wxSize(1100, 950), wxDEFAULT_FRAME_STYLE | wxTAB_TRAVERSAL), EditorPlayerPanel(playerIndex, rosterIndex), myIsBeingDestroyed(false)

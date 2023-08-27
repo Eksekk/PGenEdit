@@ -359,8 +359,6 @@ std::vector<wxString> GUI_tests::testEditorStatisticsPanel()
 
 	// checkboxes
 
-
-
 	eWindow->destroyPlayerWindow(index);
 	playerAccessor->clearPlayerOverride();
 

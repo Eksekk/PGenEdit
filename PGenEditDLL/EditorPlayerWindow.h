@@ -65,10 +65,10 @@ public:
 
     void setDefaultCustomSettings() override;
 
-    bool persist(Json& json) override;
+    bool persist(Json& json) const override;
 
     bool unpersist(const Json& json) override;
-
+	std::string getJsonPersistKey() const override;
 private:
 	wxBoxSizer* mainSizer;
 	wxTimer* updateTimer;

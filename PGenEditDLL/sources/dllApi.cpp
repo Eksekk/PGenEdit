@@ -281,6 +281,7 @@ extern "C"
         wxLog::FlushActive();
         wxEntryCleanup();
         codeMemoryFullFree();
+        luaDeInit();
     }
 
     DLL_EXPORT void __stdcall setLuaState(void* ptr)

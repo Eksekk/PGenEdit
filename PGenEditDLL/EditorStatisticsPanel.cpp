@@ -530,7 +530,12 @@ void EditorStatisticsPanel::setDefaultCustomSettings()
     throw std::logic_error("The method or operation is not implemented.");
 }
 
-bool EditorStatisticsPanel::persist(Json& json)
+std::string EditorStatisticsPanel::getJsonPersistKey() const
+{
+	return "statistics";
+}
+
+bool EditorStatisticsPanel::persist(Json& json) const
 {
 	return false;
 }

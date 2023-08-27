@@ -48,6 +48,7 @@ public:
 
 	GeneralPanel* generalPanel;
 	DefaultPlayerPanel* defaultSettings;
+	std::array<PlayerPanel*, 5> playerPanels;
 
 	wxTimer* updateTabsTimer;
 

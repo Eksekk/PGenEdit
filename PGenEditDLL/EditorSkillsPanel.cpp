@@ -65,6 +65,10 @@ int EditorSkillsPanel::setRosterIndex()
     throw std::logic_error("The method or operation is not implemented.");
 }
 
+std::string EditorSkillsPanel::getJsonPersistKey() const
+{
+	return "skills";
+}
 void EditorSkillsPanel::skillConstraintErrorMsgBox(bool multiple)
 {
 	const wxString error = multiple ? "Some skills could not be set due to constraints." : "Skill could not be set due to constraints.";
@@ -76,7 +80,7 @@ void EditorSkillsPanel::setDefaultCustomSettings()
 {
     throw std::logic_error("The method or operation is not implemented.");
 }
-bool EditorSkillsPanel::persist(Json& json)
+bool EditorSkillsPanel::persist(Json& json) const
 {
     throw std::logic_error("The method or operation is not implemented.");
 }

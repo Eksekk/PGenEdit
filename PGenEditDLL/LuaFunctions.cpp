@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "LuaFunctions.h"
 #include "Structs.h"
+#include "SaveGameData.h"
 
 extern "C"
 {
@@ -72,6 +73,8 @@ extern "C"
 		{
 			lua_pop(Lua, 1);
 		}*/
+		setupGameSaveHandler();
+		// fillGameStaticPointersAndSizes();
 	}
 
 	bool checkIsInGame()
@@ -140,6 +143,56 @@ void fillGameStaticPointersAndSizes()
 	}
 }
 
+extern "C" static int saveGameHandler(lua_State* L)
+{
+	// TODO: autoupdate from save data checkbox?
+	bool ret = true;
+	if (!saveGameData.loadAllFromSaveFile())
+	{
+		wxLogError("Couldn't load data from save file");
+		wxLog::FlushActive();
+		ret = false;
+	}
+	else if (!saveGameData.updateAllFromUpdatedData())
+	{
+        wxLogError("Couldn't update existing windows from new data from save file");
+        wxLog::FlushActive();
+		ret = false;
+	}
+	lua_pushboolean(L, ret);
+	return 1;
+}
+
+void setupGameSaveHandler()
+{
+	lua_getglobal(Lua, "events");
+	lua_pushcfunction(Lua, saveGameHandler);
+	lua_setfield(Lua, -2, "BeforeSaveGame");
+	lua_pop(Lua, 2);
+}
+
+void luaDeInit()
+{
+	removeGameSaveHandler();
+}
+
+void removeGameSaveHandler()
+{
+    lua_getglobal(Lua, "events");
+    lua_getfield(Lua, -1, "Remove");
+    lua_pushstring(Lua, "BeforeSaveGame");
+    lua_pushcfunction(Lua, saveGameHandler);
+    int result = lua_pcall(Lua, 2, 1, 0);
+	if (result != 0) // error
+	{
+		wxLogError("Lua pcall to remove save game handler failed (error code %d, message: '%s')", result, lua_tostring(Lua, -1));
+		wxLog::FlushActive();
+		lua_pop(Lua, 2); // error msg, events
+	}
+    int type = lua_type(Lua, -1); // if removed successfully, returns function, otherwise nothing (nil)
+    wxASSERT_MSG(type == LUA_TFUNCTION, wxString::Format("Couldn't remove save game handler, received lua type %d", type));
+    lua_pop(Lua, 3); // type, result, events
+}
 /*
 // struct "GameClasses", field name "StartingStats", pointer name: "StartingStats"
 // struct "GameClasses", field name "HPFactor", size field/pointer name: "HPFactor_size"

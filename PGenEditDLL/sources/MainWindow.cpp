@@ -179,7 +179,9 @@ MainWindow::MainWindow(wxWindow* parent, wxWindowID id, const wxString& title, c
 		tabs->AddPage(defaultSettings, _("Default"), false);
 		for (int i = 0; i < MAX_PLAYERS; ++i)
 		{
-			tabs->AddPage(new PlayerPanel(tabs, generator->playerData[i].get()), playerNames[i]);
+			// FIXME: create on demand like in editor
+			playerPanels[i] = new PlayerPanel(tabs, generator->playerData[i].get());
+			tabs->AddPage(playerPanels[i], playerNames[i]);
 		}
 
 		updateTabsTimer = new wxTimer(this);

@@ -62,7 +62,6 @@
     <ClInclude Include="HookTests.h" />
     <ClInclude Include="LuaFunctions.h" />
     <ClInclude Include="PartyStructAccessor.h" />
-    <ClInclude Include="PersistablePlayerPanel.h" />
     <ClInclude Include="PlayerClass.h" />
     <ClInclude Include="headers\GuiApplication.h" />
     <ClInclude Include="headers\Enum_const.h" />
@@ -125,7 +124,6 @@
     <ClCompile Include="HookTests.cpp" />
     <ClCompile Include="LuaFunctions.cpp" />
     <ClCompile Include="PartyStructAccessor.cpp" />
-    <ClCompile Include="PersistablePlayerPanel.cpp" />
     <ClCompile Include="PlayerClass.cpp" />
     <ClCompile Include="PlayerResistance.cpp" />
     <ClCompile Include="PlayerSpell.cpp" />

@@ -53,7 +53,7 @@ private:
 	void setDefaultCustomSettings() override;
 
 
-	bool persist(Json& json) override;
+	bool persist(Json& json) const override;
 
 
 	bool unpersist(const Json& json) override;
@@ -111,5 +111,5 @@ public:
 	friend class GUI_tests;
 
 	int setRosterIndex() override;
-
+	std::string getJsonPersistKey() const override;
 };

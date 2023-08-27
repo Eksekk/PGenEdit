@@ -2,7 +2,7 @@
 #include "EditorPlayerPanel.h"
 #include "PlayerStructAccessor.h"
 
-int EditorPlayerPanel::getRosterIndex()
+int EditorPlayerPanel::getRosterIndex() const
 {
     return rosterIndex;
 }
