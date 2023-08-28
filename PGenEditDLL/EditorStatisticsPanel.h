@@ -144,7 +144,6 @@ public:
 	EditorStatisticsPanel(wxWindow* parent, int playerIndex, int rosterIndex);
 	EditorStatisticsPanel() = delete;
 
-	void updateFromPlayerData();
 	~EditorStatisticsPanel();
 
 	friend class GUI_tests;
@@ -158,5 +157,6 @@ public:
 	void setDefaultCustomSettings() override;
 
 	std::string getJsonPersistKey() const override;
+    void updateFromPlayerData() override;
 };
 

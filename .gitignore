@@ -369,3 +369,6 @@ FodyWeavers.xsd
 
 # Don't know what it is, but probably unneeded
 JSON/
+
+# VSCode
+.vscode/

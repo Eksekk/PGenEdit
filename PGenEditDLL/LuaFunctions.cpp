@@ -166,8 +166,19 @@ extern "C" static int saveGameHandler(lua_State* L)
 void setupGameSaveHandler()
 {
 	lua_getglobal(Lua, "events");
+	lua_getglobal(Lua, "pgenedit");
+	if (lua_type(Lua, -1) != LUA_TTABLE)
+	{
+		lua_pop(Lua, 1);
+		// create table
+		lua_newtable(Lua);
+		lua_pushvalue(Lua, -1); // push twice to still have it on stack after setglobal
+		lua_setglobal(Lua, "pgenedit");
+	}
 	lua_pushcfunction(Lua, saveGameHandler);
-	lua_setfield(Lua, -2, "BeforeSaveGame");
+    lua_pushvalue(Lua, -1);
+    lua_setfield(Lua, -3, "saveGameHandler"); // pgenedit
+	lua_setfield(Lua, -3, "BeforeSaveGame"); // events; same index, because setfield pops value from stack
 	lua_pop(Lua, 2);
 }
 
@@ -176,22 +187,44 @@ void luaDeInit()
 	removeGameSaveHandler();
 }
 
+// TODO (fun!): lua wrappers? like tget wrapper which you call like pgenedit_lua_tget(Lua, "pgenedit", "saveGameData"), or lua_call/lua_pcall wrapper to do smth like
+// pgenedit_lua_pcall(Lua, []{pgenedit_lua_tget_field(Lua, "pgenedit", "saveGameHandler");}, []{pgenedit_lua_args(Lua, "myglobal.test", 4, 8, false, PGENEDIT_LUA_TNIL)});
+// (using lambdas to defer setting stack values to ensure they are pushed in order; also need to somehow take care of functions/userdata/etc.)
+
 void removeGameSaveHandler()
 {
-    lua_getglobal(Lua, "events");
-    lua_getfield(Lua, -1, "Remove");
+    lua_getglobal(Lua, "events"); // 1
+	lua_getglobal(Lua, "pgenedit"); // 2
+	if (lua_type(Lua, -1) != LUA_TTABLE)
+	{
+		wxLogError("Lua error: pgenedit global is missing or not a table");
+        wxLog::FlushActive();
+        lua_pop(Lua, 1);
+        lua_newtable(Lua);
+        lua_setglobal(Lua, "pgenedit");
+	}
+    lua_getfield(Lua, -2, "Remove");
     lua_pushstring(Lua, "BeforeSaveGame");
-    lua_pushcfunction(Lua, saveGameHandler);
+	
+	// get handler and clear it
+    lua_getfield(Lua, -3, "saveGameHandler");
+	lua_pushnil(Lua);
+	lua_setfield(Lua, -5, "saveGameHandler");
+	if (lua_type(Lua, -1) != LUA_TFUNCTION)
+	{
+		wxLogError("Lua error: pgenedit.saveGameHandler is missing or not a function");
+		wxLog::FlushActive();
+	}
     int result = lua_pcall(Lua, 2, 1, 0);
 	if (result != 0) // error
 	{
 		wxLogError("Lua pcall to remove save game handler failed (error code %d, message: '%s')", result, lua_tostring(Lua, -1));
 		wxLog::FlushActive();
-		lua_pop(Lua, 2); // error msg, events
+		lua_pop(Lua, 3); // error msg, pgenedit, events
 	}
     int type = lua_type(Lua, -1); // if removed successfully, returns function, otherwise nothing (nil)
     wxASSERT_MSG(type == LUA_TFUNCTION, wxString::Format("Couldn't remove save game handler, received lua type %d", type));
-    lua_pop(Lua, 3); // type, result, events
+    lua_pop(Lua, 4); // type, result, pgenedit, events
 }
 /*
 // struct "GameClasses", field name "StartingStats", pointer name: "StartingStats"

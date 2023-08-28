@@ -16,5 +16,6 @@ public:
     virtual std::string getJsonPersistKey() const = 0;
     virtual bool persist(Json& json) const = 0;
     virtual bool unpersist(const Json& json) = 0;
+    virtual void updateFromPlayerData() = 0;
 };
 

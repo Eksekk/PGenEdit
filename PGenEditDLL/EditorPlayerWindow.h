@@ -23,18 +23,13 @@ class EditorPlayerWindow : public wxFrame, public EditorPlayerPanel
 {
 private:
 	bool myIsBeingDestroyed; // because apparently IsBeingDeleted() doesn't work,
-
 	// and I'm too lazy to debug it
+	int changingToPageIndex; // needed, because EVT_NOTEBOOK_PAGE_CHANGING doesn't provide proper GetSelection() value on Windows (it's the same as GetOldSelection())
+	bool changingPage;
+
 protected:
 	wxPanel* mainPanel;
 	wxNotebook* tabs;
-	wxPanel* appearancePanel;
-	EditorStatisticsPanel* statisticsPanel;
-	EditorSkillsPanel* skillsPanel;
-	wxPanel* spellsPanel;
-	wxPanel* itemsPanel;
-	wxPanel* conditionsAndBuffsPanel;
-	wxPanel* awardsPanel;
 
 	EditorMainWindow* mainWindow;
 	wxWindowDisabler* windowDisabler;
@@ -69,6 +64,7 @@ public:
 
     bool unpersist(const Json& json) override;
 	std::string getJsonPersistKey() const override;
+	void updateFromPlayerData() override;
 private:
 	wxBoxSizer* mainSizer;
 	wxTimer* updateTimer;

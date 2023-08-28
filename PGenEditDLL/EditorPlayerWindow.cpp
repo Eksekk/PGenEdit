@@ -8,6 +8,7 @@
 #include <wx/evtloop.h>
 #include "EditorStatisticsPanel.h"
 #include "Asserter.h"
+#include "SaveGameData.h"
 
 const std::vector<std::pair<std::string, PlayerWindowPanelType>> EditorPlayerWindow::panelNamesWithIndexes =
 { {"Appearance", APPEARANCE_PANEL_INDEX}, { "Statistics", STATISTICS_PANEL_INDEX }, { "Skills", SKILLS_PANEL_INDEX },
@@ -53,8 +54,12 @@ std::string EditorPlayerWindow::getJsonPersistKey() const
 {
 	return "playerWindow";
 }
+void EditorPlayerWindow::updateFromPlayerData()
+{
+	wxFAIL; // shouldn't be called for now
+}
 EditorPlayerWindow::EditorPlayerWindow(wxWindow* parent, int playerIndex, int rosterIndex) : wxFrame(parent, wxID_ANY, "Edit " + playerAccessor->getNameOrDefault(playerIndex),
-	wxDefaultPosition, wxSize(1100, 950), wxDEFAULT_FRAME_STYLE | wxTAB_TRAVERSAL), EditorPlayerPanel(playerIndex, rosterIndex), myIsBeingDestroyed(false)
+	wxDefaultPosition, wxSize(1100, 950), wxDEFAULT_FRAME_STYLE | wxTAB_TRAVERSAL), EditorPlayerPanel(playerIndex, rosterIndex), myIsBeingDestroyed(false), changingToPageIndex(0), changingPage(false)
 {
 	Asserter myasserter("Editor player window");
 	Freeze();
@@ -84,23 +89,9 @@ EditorPlayerWindow::EditorPlayerWindow(wxWindow* parent, int playerIndex, int ro
 		tabs->AddPage(new wxPanel(tabs), str);
 		myassertf(tabs->GetPageCount() - 1 == requiredIndex, "Invalid index for panel '%s'", str);
 	}
-	/*appearancePanel = new wxPanel(tabs, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
-	tabs->AddPage(appearancePanel, _("Appearance"), false);
-	statisticsPanel = new EditorStatisticsPanel(tabs, playerIndex, rosterIndex);
-	tabs->AddPage(statisticsPanel, _("Statistics"), false);
-	skillsPanel = new EditorSkillsPanel(tabs, playerIndex);
-	tabs->AddPage(skillsPanel, _("Skills"), true);
-	spellsPanel = new wxPanel(tabs, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
-	tabs->AddPage(spellsPanel, _("Spells"), false);
-	itemsPanel = new wxPanel(tabs, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
-	tabs->AddPage(itemsPanel, _("Items"), false);
-	conditionsAndBuffsPanel = new wxPanel(tabs, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
-	tabs->AddPage(conditionsAndBuffsPanel, _("Conditions/buffs"), false);
-	awardsPanel = new wxPanel(tabs, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
-	tabs->AddPage(awardsPanel, _("Awards"), false);*/
 
 	mainSizer->Add(tabs, 1, wxEXPAND | wxALL, 5);
-	tabs->Bind(wxEVT_BOOKCTRL_PAGE_CHANGING, &EditorPlayerWindow::onTabChange, this);
+	tabs->Bind(wxEVT_BOOKCTRL_PAGE_CHANGED, &EditorPlayerWindow::onTabChange, this);
 
 	mainPanel->SetSizer(mainSizer);
 	mainPanel->Layout();
@@ -173,8 +164,12 @@ void EditorPlayerWindow::onActivate(wxActivateEvent& event)
 	event.Skip();
 	if (event.GetActive() && !IsBeingDeleted() && !myIsBeingDestroyed) // second and third condition important to prevent tests failed message triggering assert in accessor
 	{
-		skillsPanel->updateFromPlayerData();
-		statisticsPanel->updateFromPlayerData();
+        EditorPlayerPanel* panel = dynamic_cast<EditorPlayerPanel*>(tabs->GetCurrentPage());
+        if (panel)
+        {
+            panel->updateFromPlayerData();
+			// TODO: persist on deactivate and unpersist on activate?
+        }
 	}
 }
 bool EditorPlayerWindow::Destroy()
@@ -182,9 +177,20 @@ bool EditorPlayerWindow::Destroy()
 	myIsBeingDestroyed = true;
 	return wxFrame::Destroy();
 }
+
 void EditorPlayerWindow::onTabChange(wxBookCtrlEvent& event)
 {
-    int oldSelInt = event.GetOldSelection(), newSelInt = event.GetSelection();
+	// TODO!!!: RemovePage might allow to keep tab contents in memory, avoiding "a ton of controls" problem, since it's removed from the window?
+	if (changingPage)
+	{
+		//event.Veto();
+        event.Skip();
+		return;
+	}
+	changingPage = true;
+	wxON_BLOCK_EXIT0([&] {changingPage = false; });
+	// TODO: don't cast enum to int, use mapping table, more safety
+	int oldSelInt = event.GetOldSelection(), newSelInt = tabs->GetSelection();//event.GetSelection();
 	PlayerWindowPanelType oldSel = static_cast<PlayerWindowPanelType>(oldSelInt), newSel = static_cast<PlayerWindowPanelType>(newSelInt);
 
 	if (newSel == oldSel)
@@ -193,45 +199,47 @@ void EditorPlayerWindow::onTabChange(wxBookCtrlEvent& event)
 		return;
 	}
 
-	// replace old content page with dummy
-	tabs->DeletePage(oldSelInt);
-	tabs->InsertPage(oldSelInt, new wxPanel(tabs), getPanelNameByType(oldSel));
+	EditorPlayerPanel* panel = dynamic_cast<EditorPlayerPanel*>(tabs->GetPage(oldSelInt));
+	if (panel != nullptr) // can maybe be dummy?
+    {
+        saveGameData.saveEditorPlayerPanelData(*panel);
+	}
+    // replace old content page with dummy
+    tabs->InsertPage(oldSelInt, new wxPanel(tabs), getPanelNameByType(oldSel));
+	tabs->DeletePage(oldSelInt + 1);
 
 	// replace dummy page with newly created one
-	tabs->DeletePage(newSelInt);
+	// 
 	switch (newSel)
 	{
 	case SKILLS_PANEL_INDEX:
-		tabs->InsertPage(newSelInt, new EditorSkillsPanel(tabs, playerIndex, rosterIndex), getPanelNameByType(SKILLS_PANEL_INDEX));
+		tabs->InsertPage(newSelInt + 1, new EditorSkillsPanel(tabs, playerIndex, rosterIndex), getPanelNameByType(SKILLS_PANEL_INDEX));
 		break;
 	case APPEARANCE_PANEL_INDEX:
+		tabs->InsertPage(newSelInt + 1, new wxPanel(tabs, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL), getPanelNameByType(APPEARANCE_PANEL_INDEX));
 		break;
 	case STATISTICS_PANEL_INDEX:
-		break;
+        tabs->InsertPage(newSelInt + 1, new EditorStatisticsPanel(tabs, playerIndex, rosterIndex), getPanelNameByType(STATISTICS_PANEL_INDEX));
+        break;
 	case SPELLS_PANEL_INDEX:
-		break;
+        tabs->InsertPage(newSelInt + 1, new wxPanel(tabs, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL), getPanelNameByType(SPELLS_PANEL_INDEX));
+        break;
 	case ITEMS_PANEL_INDEX:
-		break;
+        tabs->InsertPage(newSelInt + 1, new wxPanel(tabs, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL), getPanelNameByType(ITEMS_PANEL_INDEX));
+        break;
 	case CONDITIONS_BUFFS_PANEL_INDEX:
-		break;
+        tabs->InsertPage(newSelInt + 1, new wxPanel(tabs, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL), getPanelNameByType(CONDITIONS_BUFFS_PANEL_INDEX));
+        break;
 	case AWARDS_PANEL_INDEX:
-		break;
+        tabs->InsertPage(newSelInt + 1, new wxPanel(tabs, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL), getPanelNameByType(AWARDS_PANEL_INDEX));
+        break;
 	default:
+		wxFAIL_MSG(wxString::Format("Unknown player panel type (%d)", (int)newSel));
 		break;
-	}
-
-	appearancePanel = new wxPanel(tabs, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
-	tabs->AddPage(appearancePanel, _("Appearance"), false);
-	statisticsPanel = new EditorStatisticsPanel(tabs, playerIndex, rosterIndex);
-	tabs->AddPage(statisticsPanel, _("Statistics"), false);
-	skillsPanel = new EditorSkillsPanel(tabs, playerIndex, rosterIndex);
-	tabs->AddPage(skillsPanel, _("Skills"), true);
-	spellsPanel = new wxPanel(tabs, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
-	tabs->AddPage(spellsPanel, _("Spells"), false);
-	itemsPanel = new wxPanel(tabs, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
-	tabs->AddPage(itemsPanel, _("Items"), false);
-	conditionsAndBuffsPanel = new wxPanel(tabs, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
-	tabs->AddPage(conditionsAndBuffsPanel, _("Conditions/buffs"), false);
-	awardsPanel = new wxPanel(tabs, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
-	tabs->AddPage(awardsPanel, _("Awards"), false);
+    }
+    tabs->DeletePage(newSelInt);
+	tabs->ChangeSelection(newSelInt);
+    panel = dynamic_cast<EditorPlayerPanel*>(tabs->GetPage(newSelInt));
+    wxASSERT(panel != nullptr);
+    saveGameData.loadEditorPlayerPanelData(*panel);
 }

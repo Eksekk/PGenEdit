@@ -72,12 +72,12 @@ std::vector<wxString> GUI_tests::testEditorSkillsPanel()
 	wxUIActionSimulator sim;
 
 	// actual test code
-	EditorPlayerWindow* window = eWindow->createPlayerWindow(index);
+    EditorPlayerWindow* window = eWindow->createPlayerWindow(index);
+    window->tabs->SetSelection(PlayerWindowPanelType::SKILLS_PANEL_INDEX);
 	myassert(window);
-	EditorSkillsPanel* panel = window->skillsPanel;
+	EditorSkillsPanel* panel = dynamic_cast<EditorSkillsPanel*>(window->tabs->GetCurrentPage());
 	GuiTestHelper helper(*panel, sim, myasserter);
 	window->Show();
-	window->tabs->SetSelection(PlayerWindowPanelType::SKILLS_PANEL_INDEX);
 	helper.autoClick(panel->affectAvailableSkillpointsCheckbox);
 	myassert(panel->options.affectSkillpoints);
 	myassert(panel->allowNegativeSkillpointsRadio->IsEnabled());
@@ -330,10 +330,10 @@ std::vector<wxString> GUI_tests::testEditorStatisticsPanel()
 	(void)playerAccessor->setPlayerOverride(pl);
 	auto eWindow = wxGetApp().editorMainWindow;
 	Asserter myasserter("Statistics panel");
-	EditorPlayerWindow* win = eWindow->createPlayerWindow(index);
-	win->Show();
-	EditorStatisticsPanel* panel = win->statisticsPanel;
-	win->tabs->SetSelection(PlayerWindowPanelType::STATISTICS_PANEL_INDEX);
+    EditorPlayerWindow* win = eWindow->createPlayerWindow(index);
+    win->tabs->SetSelection(PlayerWindowPanelType::STATISTICS_PANEL_INDEX);
+    EditorStatisticsPanel* panel = dynamic_cast<EditorStatisticsPanel*>(win->tabs->GetCurrentPage());
+    win->Show();
 	wxUIActionSimulator sim;
 	GuiTestHelper helper(*panel, sim, myasserter);
 	wxASSERT(win->IsShown() && win->IsVisible());

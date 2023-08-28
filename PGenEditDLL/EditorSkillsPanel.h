@@ -106,10 +106,9 @@ public:
 
 	~EditorSkillsPanel();
 
-	void updateFromPlayerData();
-
 	friend class GUI_tests;
 
 	int setRosterIndex() override;
 	std::string getJsonPersistKey() const override;
+    void updateFromPlayerData() override;
 };
