@@ -147,18 +147,18 @@ extern "C" static int saveGameHandler(lua_State* L)
 {
 	// TODO: autoupdate from save data checkbox?
 	bool ret = true;
-	if (!saveGameData.loadAllFromSaveFile())
+	if (!saveGameData.saveAllToSaveFile())
 	{
 		wxLogError("Couldn't load data from save file");
 		wxLog::FlushActive();
 		ret = false;
 	}
-	else if (!saveGameData.updateAllFromUpdatedData())
+	/*else if (!saveGameData.updateAllFromUpdatedData())
 	{
         wxLogError("Couldn't update existing windows from new data from save file");
         wxLog::FlushActive();
 		ret = false;
-	}
+	}*/
 	lua_pushboolean(L, ret);
 	return 1;
 }
