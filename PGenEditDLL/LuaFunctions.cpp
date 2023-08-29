@@ -149,7 +149,7 @@ extern "C" static int saveGameHandler(lua_State* L)
 	bool ret = true;
 	if (!saveGameData.saveAllToSaveFile())
 	{
-		wxLogError("Couldn't load data from save file");
+		wxLogError("Couldn't save data to save file");
 		wxLog::FlushActive();
 		ret = false;
 	}
@@ -221,6 +221,7 @@ void removeGameSaveHandler()
 		wxLogError("Lua pcall to remove save game handler failed (error code %d, message: '%s')", result, lua_tostring(Lua, -1));
 		wxLog::FlushActive();
 		lua_pop(Lua, 3); // error msg, pgenedit, events
+		return;
 	}
     int type = lua_type(Lua, -1); // if removed successfully, returns function, otherwise nothing (nil)
     wxASSERT_MSG(type == LUA_TFUNCTION, wxString::Format("Couldn't remove save game handler, received lua type %d", type));
