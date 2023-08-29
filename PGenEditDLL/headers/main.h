@@ -33,6 +33,13 @@ void MSGBOX(const char* text);
 
 #define wxUSE_RC_MANIFEST 1 // make controls look much better
 
+#define INSTANTIATE_TEMPLATES_SINGLE_GAME(game, ret, identifier) template ret identifier<mm##game::Player, mm##game::Game>()
+
+#define INSTANTIATE_TEMPLATES_MM_GAMES(ret, identifier) \
+INSTANTIATE_TEMPLATES_SINGLE_GAME(6, ret, identifier); \
+INSTANTIATE_TEMPLATES_SINGLE_GAME(7, ret, identifier); \
+INSTANTIATE_TEMPLATES_SINGLE_GAME(8, ret, identifier)
+
 /*#pragma comment( lib, "comctl32.lib")
 
 #pragma comment( linker, "/manifestdependency:\"type='win32' \

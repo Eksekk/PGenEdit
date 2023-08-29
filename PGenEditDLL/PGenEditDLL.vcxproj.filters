@@ -333,6 +333,9 @@
     <ClInclude Include="EditorPlayerPanel.h">
       <Filter>Pliki nagłówkowe\Editor GUI</Filter>
     </ClInclude>
+    <ClInclude Include="InventoryCtrl.h">
+      <Filter>Pliki nagłówkowe\Editor GUI</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="sources\MainWindow.cpp">
@@ -519,6 +522,9 @@
       <Filter>Pliki źródłowe\GameData</Filter>
     </ClCompile>
     <ClCompile Include="EditorPlayerPanel.cpp">
+      <Filter>Pliki źródłowe\Editor GUI</Filter>
+    </ClCompile>
+    <ClCompile Include="InventoryCtrl.cpp">
       <Filter>Pliki źródłowe\Editor GUI</Filter>
     </ClCompile>
   </ItemGroup>

@@ -2,13 +2,6 @@
 #include "HookTests.h"
 #include "LowLevel.h"
 
-#define INSTANTIATE_TEMPLATES_SINGLE_GAME(game, ret, identifier) template ret identifier<mm##game::Player, mm##game::Game>()
-
-#define INSTANTIATE_TEMPLATES_MM_GAMES(ret, identifier) \
-INSTANTIATE_TEMPLATES_SINGLE_GAME(6, ret, identifier); \
-INSTANTIATE_TEMPLATES_SINGLE_GAME(7, ret, identifier); \
-INSTANTIATE_TEMPLATES_SINGLE_GAME(8, ret, identifier)
-
 static const char NOP[] = "\x90";
 
 // dst, src, size
