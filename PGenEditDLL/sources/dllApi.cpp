@@ -182,7 +182,7 @@ extern "C"
 		}
         for (int i = 0; i < playerCount; ++i)
         {
-            players[i] = (void*)(playerStart + playerSize * i);
+            playersFullArray[i] = (void*)(playerStart + playerSize * i);
         }
 		generator = new Generator();
 

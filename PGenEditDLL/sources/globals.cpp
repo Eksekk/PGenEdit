@@ -12,7 +12,7 @@ const int DEFAULT_SETTINGS_INDEX = -2;
 int MMVER = INVALID_ID;
 
 void* game = 0;
-std::array<void*, 50> players{ 0 };
+std::array<void*, 50> playersFullArray{ 0 };
 std::array<void*, 5> playersInParty{ 0 }; // TODO: might need regular update
 bool inGame = false;
 wxTimer* mainUpdateTimer = nullptr;

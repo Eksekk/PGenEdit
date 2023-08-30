@@ -69,12 +69,12 @@ int TemplatedPlayerStructAccessor<Player>::getRosterIndexFromPtr(void* ptr)
 template<typename Player>
 int TemplatedPlayerStructAccessor<Player>::getRosterIndexFromPartyIndex(int idx)
 {
-	wxASSERT(playerIndex != PLAYER_RANDOM && (playerIndex != PLAYER_ACTIVE || gameAccessor->getCurrentPlayer() != -1));
+	wxASSERT(idx != PLAYER_RANDOM && (idx != PLAYER_ACTIVE || gameAccessor->getCurrentPlayer() != -1));
 	if constexpr (SAME(Player, mm8::Player))
 	{
 		int count = dword(0xB7CA60);
-		wxASSERT_MSG(playerIndex < count, wxString::Format("Player rosterId (%d) is >= party size (%d)", playerIndex, count));
-		return dword(0xB7CA4C + playerIndex * 4);
+		wxASSERT_MSG(idx < count, wxString::Format("Player rosterId (%d) is >= party size (%d)", idx, count));
+		return dword(0xB7CA4C + idx * 4);
 		/*mov edi, 0xB7CA60 // address of count
 			mov edi, dword ptr[edi]
 			// mov count, edi
@@ -82,7 +82,7 @@ int TemplatedPlayerStructAccessor<Player>::getRosterIndexFromPartyIndex(int idx)
 	}
 	else
 	{
-		return playerIndex; // no [roster id/player rosterId] division in mm6/7
+		return idx; // no [roster id/player rosterId] division in mm6/7
 	}
 }
 
@@ -110,8 +110,14 @@ Player* TemplatedPlayerStructAccessor<Player>::getPlayerToAffect()
 	}
 	else
 	{
-		int rosterId = playerRosterId != -1 ? playerRosterId : getRosterIndexFromPartyIndex(playerIndex);
-		return reinterpret_cast<Player*>(players[rosterId]);
+		if (playerRosterId != -1) // index full players array
+		{
+			return reinterpret_cast<Player*>(playersFullArray[playerRosterId]);
+		}
+		else // index array of players in party
+		{
+            return reinterpret_cast<Player*>(playersInParty[playerIndex]);
+		}
 	}
 }
 

@@ -7,7 +7,7 @@
 extern const bool MALE, FEMALE;
 
 extern const int PLAYER_ACTIVE, PLAYER_RANDOM;
-extern std::array<void*, 50> players;
+extern std::array<void*, 50> playersFullArray;
 extern std::array<void*, 5> playersInParty;
 
 class PlayerStructAccessor;

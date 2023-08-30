@@ -13,8 +13,8 @@ extern const int INVALID_ID;
 extern const int DEFAULT_SETTINGS_INDEX;
 
 extern void* game;
-extern std::array<void*, 50> players;
-extern std::array<void*, 5> playersInParty;
+extern std::array<void*, 50> playersFullArray; // all possible players, in mm6-7 just 4, but in mm8 it's 50
+extern std::array<void*, 5> playersInParty; // TODO: subclass this to check for out of bounds access
 extern bool inGame;
 extern wxTimer* mainUpdateTimer;
 void runUpdateTimerCallbacks(wxTimerEvent&);
