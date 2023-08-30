@@ -8,19 +8,35 @@ struct MapChestRef
 {
     std::string mapName;
     int chestId;
+
+    bool persist(Json& json) const;
+    bool unpersist(const Json& json);
 };
 
 struct PlayerInventoryRef
 {
     int rosterIndex;
+
+    bool persist(Json& json) const;
+    bool unpersist(const Json& json);
 };
+
+struct StoredItemRef
+{
+    bool persist(Json& json) const;
+    bool unpersist(const Json& json);
+};
+
+static bool operator==(const MapChestRef& lhs, const MapChestRef& rhs);
+static bool operator==(const PlayerInventoryRef& lhs, const PlayerInventoryRef& rhs);
+static bool operator==(const StoredItemRef& lhs, const StoredItemRef& rhs);
 
 struct InventoryPosition
 {
     int x, y;
 };
 
-using ItemLocationType = std::variant<std::monostate, MapChestRef, PlayerInventoryRef>;
+using ItemLocationType = std::variant<StoredItemRef, MapChestRef, PlayerInventoryRef>;
 using InventoryType = std::variant<MapChestRef, PlayerInventoryRef>;
 
 struct ItemStoreElement
@@ -30,8 +46,10 @@ struct ItemStoreElement
     // TODO: automatically calculate cell width
 
     ItemLocationType location; // first is when item is only stored (doesn't exist in any inventory)
+    ItemLocationType origin; // stores whether item was taken from player's inventory, chest or added artificially (to not duplicate inventory items when reloading)
 
     ItemStoreElement();
+    ItemStoreElement(const mm7::Item& item, InventoryPosition pos, const ItemLocationType& location, const ItemLocationType& origin);
 
     bool isSameExceptPos(const ItemStoreElement& other) const;
 };

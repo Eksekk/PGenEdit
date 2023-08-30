@@ -18,6 +18,7 @@
 #include "LuaFunctions.h"
 #include "PartyStructAccessor.h"
 #include "GameStructAccessor.h"
+#include <ItemStructAccessor.h>
 
 extern bool inMM;
 extern void setMaxSkillLevel();
@@ -152,6 +153,7 @@ extern "C"
             playerAccessor = new PlayerStructAccessor_6;
             partyAccessor = new PartyStructAccessor_6;
             gameAccessor = new GameStructAccessor_6;
+            itemAccessor = new ItemStructAccessor_6;
             playerSize = sizeof(mm6::Player);
             playerStart = offsetof(mm6::GameParty, playersArray);
             playerCount = 4;
@@ -164,6 +166,7 @@ extern "C"
             playerAccessor = new PlayerStructAccessor_7;
             partyAccessor = new PartyStructAccessor_7;
             gameAccessor = new GameStructAccessor_7;
+            itemAccessor = new ItemStructAccessor_7;
             playerSize = sizeof(mm7::Player);
             playerStart = offsetof(mm7::GameParty, playersArray);
             playerCount = 4;
@@ -176,11 +179,12 @@ extern "C"
 			playerAccessor = new PlayerStructAccessor_8;
             partyAccessor = new PartyStructAccessor_8;
             gameAccessor = new GameStructAccessor_8;
+            itemAccessor = new ItemStructAccessor_8;
             playerSize = sizeof(mm8::Player);
             playerStart = offsetof(mm8::GameParty, playersArray);
             playerCount = 50;
 		}
-        for (int i = 0; i < playerCount; ++i)
+        for (size_t i = 0; i < playerCount; ++i)
         {
             playersFullArray[i] = (void*)(playerStart + playerSize * i);
         }
@@ -288,6 +292,7 @@ extern "C"
 		delete playerAccessor;
         delete partyAccessor;
         delete gameAccessor;
+        delete itemAccessor;
         removeHooks();
         wxLog::FlushActive();
         wxEntryCleanup();

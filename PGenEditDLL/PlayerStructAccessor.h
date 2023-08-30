@@ -92,6 +92,7 @@ public:
 	virtual void setBiography(const std::string& biography) = 0;
 
 	[[nodiscard]] virtual void* getItemsPtr() = 0;
+	[[nodiscard]] virtual size_t getItemsSize() = 0;
 
 	enum ClassConstraint
 	{
@@ -327,6 +328,7 @@ public:
 
 	void setBiography(const std::string& biography) override;
 	void* getItemsPtr() override;
+	size_t getItemsSize() override;
 
 	SkillValue getSkill(int skillId) override;
 
@@ -369,6 +371,13 @@ public:
 
 	virtual int getRosterIndexFromPartyIndex(int idx) override;
 };
+
+template<typename Player>
+size_t TemplatedPlayerStructAccessor<Player>::getItemsSize()
+{
+	return getPlayerToAffect()->items.size();
+}
+
 using PlayerStructAccessor_6 = TemplatedPlayerStructAccessor<mm6::Player>;
 using PlayerStructAccessor_7 = TemplatedPlayerStructAccessor<mm7::Player>;
 using PlayerStructAccessor_8 = TemplatedPlayerStructAccessor<mm8::Player>;
