@@ -6,6 +6,7 @@
 #include "GameData.h"
 #include "Enum_const.h"
 #include "GameStructAccessor.h"
+#include "AutoBackup.h"
 
 const bool MALE = true, FEMALE = false; // TODO: check
 const int PLAYER_ACTIVE = 6, PLAYER_RANDOM = 7;
@@ -30,43 +31,58 @@ TemplatedPlayerStructAccessor<Player>::~TemplatedPlayerStructAccessor() noexcept
 template<typename Player>
 int TemplatedPlayerStructAccessor<Player>::getRosterIndex()
 {
-	uint32_t playersAddr, playerSize = sizeof(Player);
-	if constexpr (SAME(Player, mm6::Player))
+    if (playerOverride)
+    {
+        return getRosterIndexFromPtr(playerOverride);
+    }
+	else if (playerRosterId != -1)
 	{
-		playersAddr = offsetof(mm6::GameParty, playersArray);
-	}
-	else if constexpr (SAME(Player, mm7::Player))
-	{
-        playersAddr = offsetof(mm7::GameParty, playersArray);
+		return playerRosterId;
 	}
 	else
 	{
-		playersAddr = offsetof(mm8::GameParty, playersArray);
+		return getRosterIndexFromPartyIndex(playerIndex);
 	}
+}
 
-	if (playerOverride)
+template<typename Player>
+int TemplatedPlayerStructAccessor<Player>::getRosterIndexFromPtr(void* ptr)
+{
+    uint32_t playersAddr, playerSize = sizeof(Player);
+    if constexpr (SAME(Player, mm6::Player))
+    {
+        playersAddr = offsetof(mm6::GameParty, playersArray);
+    }
+    else if constexpr (SAME(Player, mm7::Player))
+    {
+        playersAddr = offsetof(mm7::GameParty, playersArray);
+    }
+    else
+    {
+        playersAddr = offsetof(mm8::GameParty, playersArray);
+    }
+    double index = ((uint32_t)ptr - playersAddr) / (double)playerSize;
+    wxASSERT_MSG((int)index == index, wxString::Format("Invalid player override 0x%X - result index is %lf", playerOverride, index));
+    return (int)index;
+}
+
+template<typename Player>
+int TemplatedPlayerStructAccessor<Player>::getRosterIndexFromPartyIndex(int idx)
+{
+	wxASSERT(playerIndex != PLAYER_RANDOM && (playerIndex != PLAYER_ACTIVE || gameAccessor->getCurrentPlayer() != -1));
+	if constexpr (SAME(Player, mm8::Player))
 	{
-        double index = ((uint32_t)playerOverride - playersAddr) / (double)playerSize;
-		wxASSERT_MSG((int)index == index, wxString::Format("Invalid player override 0x%X - result index is %lf", playerOverride, index));
-		return (int)index;
+		int count = dword(0xB7CA60);
+		wxASSERT_MSG(playerIndex < count, wxString::Format("Player rosterId (%d) is >= party size (%d)", playerIndex, count));
+		return dword(0xB7CA4C + playerIndex * 4);
+		/*mov edi, 0xB7CA60 // address of count
+			mov edi, dword ptr[edi]
+			// mov count, edi
+			mov ebx, 0xB7CA4C // players roster txt indexes, or FFFFFFFF if player not in party*/
 	}
 	else
 	{
-		wxASSERT(playerIndex != PLAYER_RANDOM && (playerIndex != PLAYER_ACTIVE || gameAccessor->getCurrentPlayer() != -1));
-		if constexpr (SAME(Player, mm8::Player))
-		{
-			int count = dword(0xB7CA60);
-			wxASSERT_MSG(playerIndex < count, wxString::Format("Player index (%d) is >= party size (%d)", playerIndex, count));
-			return dword(0xB7CA4C + playerIndex * 4);
-			/*mov edi, 0xB7CA60 // address of count
-				mov edi, dword ptr[edi]
-				// mov count, edi
-				mov ebx, 0xB7CA4C // players roster txt indexes, or FFFFFFFF if player not in party*/
-		}
-		else
-		{
-			return playerIndex; // no [roster id/player index] division in mm6/7
-		}
+		return playerIndex; // no [roster id/player rosterId] division in mm6/7
 	}
 }
 
@@ -86,12 +102,6 @@ int TemplatedPlayerStructAccessor<Player>::getSkillBonus(PlayerSkill* skill)
 }
 
 template<typename Player>
-Player** TemplatedPlayerStructAccessor<Player>::getPlayers()
-{
-	return (Player**)players;
-}
-
-template<typename Player>
 Player* TemplatedPlayerStructAccessor<Player>::getPlayerToAffect()
 {
 	if (playerOverride)
@@ -100,7 +110,8 @@ Player* TemplatedPlayerStructAccessor<Player>::getPlayerToAffect()
 	}
 	else
 	{
-		return getPlayers()[getPlayerIndex()];
+		int rosterId = playerRosterId != -1 ? playerRosterId : getRosterIndexFromPartyIndex(playerIndex);
+		return reinterpret_cast<Player*>(players[rosterId]);
 	}
 }
 
@@ -271,6 +282,12 @@ void TemplatedPlayerStructAccessor<Player>::setBiography(const std::string& biog
 		memcpy(pl->biography.data(), biographyToSet.data(), biographyToSet.size());
 		pl->biography[biographyToSet.size()] = 0;
 	}
+}
+
+template<typename Player>
+void* TemplatedPlayerStructAccessor<Player>::getItemsPtr()
+{
+	return &getPlayerToAffect()->items;
 }
 
 template<typename Player>
@@ -796,6 +813,7 @@ PlayerStructAccessor* PlayerStructAccessor::forPlayer(int index)
 {
 	wxASSERT_MSG(index < CURRENT_PARTY_SIZE || index == PLAYER_ACTIVE || index == PLAYER_RANDOM, wxString::Format("Invalid player index (%d) passed to PlayerStructAccessor.operator[]", index));
 	playerIndex = index;
+	playerRosterId = -1; // disable
 	return this;
 }
 
@@ -804,7 +822,7 @@ PlayerStructAccessor* PlayerStructAccessor::forPlayer(void* player)
 	bool found = false;
 	for (int i = 0; i < CURRENT_PARTY_SIZE; ++i)
 	{
-		if ((uint32_t)player == (uint32_t)players[i])
+		if ((uint32_t)player == (uint32_t)playersInParty[i])
 		{
 			found = true;
 			playerIndex = i;
@@ -812,6 +830,13 @@ PlayerStructAccessor* PlayerStructAccessor::forPlayer(void* player)
 		}
 	}
 	wxASSERT_MSG(found, wxString::Format("Invalid player pointer (%X) passed to PlayerStructAccessor.operator[]", (uint32_t)player));
+	playerRosterId = -1;
+	return this;
+}
+
+PlayerStructAccessor* PlayerStructAccessor::forPlayerRosterId(int id)
+{
+	playerRosterId = id;
 	return this;
 }
 
@@ -881,7 +906,7 @@ int PlayerStructAccessor::getPlayerIndex()
 	}
 	else
 	{
-		wxASSERT_MSG(playerIndex < CURRENT_PARTY_SIZE, wxString::Format("Invalid player index %d", playerIndex));
+		wxASSERT_MSG(playerIndex < CURRENT_PARTY_SIZE, wxString::Format("Invalid player rosterId %d", playerIndex));
 		return std::clamp(playerIndex, 0, CURRENT_PARTY_SIZE - 1);
 	}
 }
@@ -923,7 +948,7 @@ void PlayerStructAccessor::unrandomizeRandomPlayer()
 	}
 	else
 	{
-		wxLogWarning("Random player index expected, but current index is %d", playerIndex);
+		wxLogWarning("Random player rosterId expected, but current rosterId is %d", playerIndex);
 	}
 }
 

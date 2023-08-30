@@ -13,7 +13,8 @@ extern const int INVALID_ID;
 extern const int DEFAULT_SETTINGS_INDEX;
 
 extern void* game;
-extern void** players;
+extern std::array<void*, 50> players;
+extern std::array<void*, 5> playersInParty;
 extern bool inGame;
 extern wxTimer* mainUpdateTimer;
 void runUpdateTimerCallbacks(wxTimerEvent&);

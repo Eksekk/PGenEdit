@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "main.h"
 #include "InventoryCtrl.h"
+#include "PlayerStructAccessor.h"
 
 const std::string ITEM_LOC_STORED = "stored", ITEM_LOC_CHEST = "chest", ITEM_LOC_PLAYER = "player";
 
@@ -50,8 +51,11 @@ bool persistItem(const ItemStoreElement& elem, Json& json)
     };*/
     try
     {
-        json["x"] = elem.x;
-        json["y"] = elem.y;
+        json["pos"] =
+        {
+            {"x", elem.pos.x},
+            {"y", elem.pos.y}
+        };
         const mm7::Item& item = elem.item;
         Json& itemJson = json["item"];
         // don't care about SKIP-ped field?
@@ -78,8 +82,9 @@ bool unpersistItem(ItemStoreElement& elem, const Json& json)
 {
     try
     {
-        elem.x = json["x"];
-        elem.y = json["y"];
+        const Json& pos = json["pos"];
+        elem.pos.x = pos["x"];
+        elem.pos.y = pos["y"];
         mm7::Item& item = elem.item;
         const Json& itemJson = json["item"];
         // don't care about SKIP-ped field?
@@ -100,6 +105,11 @@ bool unpersistItem(ItemStoreElement& elem, const Json& json)
         wxLogError("Couldn't persist item: %s", ex.what());
         return false;
     }
+}
+
+const ElementsContainer& InventoryCtrl::getElements() const
+{
+    return elements;
 }
 
 bool InventoryCtrl::persistInventory(Json& json) const
@@ -225,9 +235,47 @@ bool InventoryCtrl::unpersistInventory(const Json& json)
     }
     return true;
 }
+template <int i>
+struct types {};
+
+template <>
+struct types<1>
+{
+    typedef int type;
+};
+
+template <>
+struct types<2>
+{
+    typedef long type;
+};
 
 bool InventoryCtrl::reloadReferencedItems()
 {
+    ElementsContainer storedOnly;
+    std::ranges::copy_if(elements, std::back_inserter(storedOnly), [=](const ItemStoreElement& elem)
+    {
+        return std::holds_alternative<std::monostate>(elem.location);
+    });
+
+    if (const MapChestRef* ref = std::get_if<MapChestRef>(&inventoryType))
+    {
+        // add items from chest
+        //auto addItems = [](auto& )
+    }
+    else if (const PlayerInventoryRef* ref = std::get_if<PlayerInventoryRef>(&inventoryType))
+    {
+        // add items from player
+        gameVersionDispatchItem(playerAccessor->forPlayerRosterId(ref->rosterIndex)->getItemsPtr(), [&](auto item)
+            {
+
+            });
+    }
+    else
+    {
+        wxFAIL;
+    }
+    elements = std::move(storedOnly);
     return false;
 }
 
@@ -254,18 +302,26 @@ ItemStoreElement* InventoryCtrl::getMouseoverItem()
     return nullptr;
 }
 
-ItemStoreElement* InventoryCtrl::chooseItemWithMouse(bool allowNull)
+ItemStoreElement* InventoryCtrl::chooseItemWithMouse(bool allowNone)
 {
     return nullptr;
 }
 
 bool InventoryCtrl::addItem(const ItemStoreElement& item)
 {
-    return false;
+    elements.push_back(item);
+    return true;
 }
 
 bool InventoryCtrl::removeItem(const ItemStoreElement& item)
 {
+    for (const auto& item2 : elements)
+    {
+        if (item.isSameExceptPos(item2))
+        {
+
+        }
+    }
     return false;
 }
 
@@ -274,7 +330,32 @@ bool InventoryCtrl::modifyItem(const ItemStoreElement& itemToModify, const ItemS
     return false;
 }
 
-InventoryCtrl::InventoryCtrl(wxWindow* parent, int CELLS_ROW, int CELLS_COL, const std::vector<ItemStoreElement>& elements)
-    : wxControl(parent, wxID_ANY), CELLS_ROW(CELLS_ROW), CELLS_COL(CELLS_COL)
+InventoryPosition InventoryCtrl::findFreePositionForItem(const ItemStoreElement& elem)
 {
+    return {-1, -1};
+}
+
+bool InventoryCtrl::canItemBePlacedAtPosition(const ItemStoreElement& elem, InventoryPosition pos)
+{
+    return true;
+}
+
+InventoryCtrl::InventoryCtrl(wxWindow* parent, int CELLS_ROW, int CELLS_COL, InventoryType&& inventoryType, const ElementsContainer& elements)
+    : wxControl(parent, wxID_ANY), CELLS_ROW(CELLS_ROW), CELLS_COL(CELLS_COL), inventoryType(inventoryType), elements(elements)
+{
+}
+
+ItemStoreElement::ItemStoreElement() : item{0}, pos{-1, -1}, location{std::monostate()}
+{
+
+}
+
+bool ItemStoreElement::isSameExceptPos(const ItemStoreElement& other) const
+{
+    // using memcmp, because I'm too lazy to write comparator function
+    //if (memcmp(&item, &other.item, sizeof(item)) == 0 && x)
+    {
+
+    }
+    return false;
 }

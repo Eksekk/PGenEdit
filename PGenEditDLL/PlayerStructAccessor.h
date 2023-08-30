@@ -7,7 +7,8 @@
 extern const bool MALE, FEMALE;
 
 extern const int PLAYER_ACTIVE, PLAYER_RANDOM;
-extern void** players;
+extern std::array<void*, 50> players;
+extern std::array<void*, 5> playersInParty;
 
 class PlayerStructAccessor;
 extern PlayerStructAccessor* playerAccessor;
@@ -23,10 +24,12 @@ extern void setFieldSizes_8();
 // having all accesses in one place simplifies preconditions checking and error handling
 // for now they display all errors directly for ease of development, later on I'll make them quieter ("There has been a problem about last operation." + 
 // "Check message window for details") or convert to exceptions
+
 class PlayerStructAccessor
 {
 protected:
 	int playerIndex = 0;
+	int playerRosterId = -1; // if it's not -1, is used instead of playerIndex
 	int getPlayerIndex();
 	void* playerOverride; // mainly for testing - if it's not null, will always be used instead of index
 public:
@@ -46,9 +49,12 @@ public:
 
 	// note that these functions set player for all future accesses! I think it's more comfortable this way
 	PlayerStructAccessor* forPlayer(int index);
-	PlayerStructAccessor* forPlayer(void* player);
+    PlayerStructAccessor* forPlayer(void* player);
+    PlayerStructAccessor* forPlayerRosterId(int id);
 
-	[[nodiscard]] virtual int getRosterIndex() = 0;
+	[[nodiscard]] virtual int getRosterIndex() = 0; // uses currently selected player
+	[[nodiscard]] virtual int getRosterIndexFromPtr(void* ptr) = 0;
+	[[nodiscard]] virtual int getRosterIndexFromPartyIndex(int idx) = 0;
 
 	[[nodiscard]] virtual int getStatBase(int stat) = 0;
 	virtual void setStatBase(int stat, int value) = 0;
@@ -84,6 +90,8 @@ public:
 
 	virtual void setName(const std::string& name) = 0;
 	virtual void setBiography(const std::string& biography) = 0;
+
+	[[nodiscard]] virtual void* getItemsPtr() = 0;
 
 	enum ClassConstraint
 	{
@@ -239,7 +247,6 @@ template<isValidPlayer Player>*/
 template<typename Player>
 class TemplatedPlayerStructAccessor : public PlayerStructAccessor
 {
-	Player** getPlayers();
 	Player* getPlayerToAffect();
 
 	template<typename FieldType>
@@ -319,6 +326,7 @@ public:
 	void setName(const std::string& name) override;
 
 	void setBiography(const std::string& biography) override;
+	void* getItemsPtr() override;
 
 	SkillValue getSkill(int skillId) override;
 
@@ -339,7 +347,6 @@ public:
 
 	void applyClassConstraints(const SkillOptions& options);
 
-	// Inherited via PlayerStructAccessor
 	virtual int getSkillBonus(PlayerSkill* skill) override;
 
 	virtual int getSkillBonus(int skillId) override;
@@ -348,7 +355,6 @@ public:
 
 	void setBlackPotionUsed(int statId, bool used) override;
 
-	// Inherited via PlayerStructAccessor
 	virtual int getConditionEffectOnStat(int statId) override;
 
 	int getResistanceSpellEffect(int resId) override;
@@ -358,6 +364,10 @@ public:
 
 	virtual int getRecoveryDelay() override;
 	virtual void setRecoveryDelay(int val) override;
+
+	virtual int getRosterIndexFromPtr(void* ptr) override;
+
+	virtual int getRosterIndexFromPartyIndex(int idx) override;
 };
 using PlayerStructAccessor_6 = TemplatedPlayerStructAccessor<mm6::Player>;
 using PlayerStructAccessor_7 = TemplatedPlayerStructAccessor<mm7::Player>;

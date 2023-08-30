@@ -64,20 +64,21 @@ void updatePartySizeAndPlayerPtrs()
 {
     std::vector<void*> ptrs = getPlayerPointersMm8();
     CURRENT_PARTY_SIZE = ptrs.size();
-	if (!players)
-	{
-		players = new void* [MAX_PLAYERS];
-	}
     assert((int)ptrs.size() <= MAX_PLAYERS);
-    for (size_t i = 0; i < std::min(ptrs.size(), (size_t)MAX_PLAYERS); ++i)
+    size_t i;
+    for (i = 0; i < std::min(ptrs.size(), (size_t)MAX_PLAYERS); ++i)
     {
-        players[i] = ptrs[i];
+        playersInParty.at(i) = ptrs[i];
+    }
+    for (; i < (size_t)MAX_PLAYERS; ++i)
+    {
+        playersInParty.at(i) = 0;
     }
 }
 
 extern "C"
 {
-	DLL_EXPORT void __stdcall setPlayerPointers(void** ptrs);
+	DLL_EXPORT void __stdcall setPlayerPointers(void** ptrs, int count);
 
     GuiApplication* app = nullptr;
     DLL_EXPORT BOOL __stdcall APIENTRY DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
@@ -143,24 +144,31 @@ extern "C"
     
     DLL_EXPORT void __stdcall init()
     {
+        uint32_t playerSize, playerStart, playerCount;
         GetNativeSystemInfo(&systemInfo);
         if (MMVER == 6)
         {
             PlayerStructAccessor_6::_initMaps();
-            void* ptrs[]{ (void*)0x908F34, (void*)0x90A550, (void*)0x90BB6C, (void*)0x90D188 };
-            setPlayerPointers(ptrs);
             playerAccessor = new PlayerStructAccessor_6;
             partyAccessor = new PartyStructAccessor_6;
             gameAccessor = new GameStructAccessor_6;
+            playerSize = sizeof(mm6::Player);
+            playerStart = offsetof(mm6::GameParty, playersArray);
+            playerCount = 4;
+            void* ptrs[]{ (void*)0x908F34, (void*)0x90A550, (void*)0x90BB6C, (void*)0x90D188 };
+            setPlayerPointers(ptrs, playerCount);
         }
         else if (MMVER == 7)
         {
             PlayerStructAccessor_7::_initMaps();
-            void* ptrs[]{ (void*)0xACD804, (void*)0xACF340, (void*)0xAD0E7C, (void*)0xAD29B8 };
-            setPlayerPointers(ptrs);
             playerAccessor = new PlayerStructAccessor_7;
             partyAccessor = new PartyStructAccessor_7;
             gameAccessor = new GameStructAccessor_7;
+            playerSize = sizeof(mm7::Player);
+            playerStart = offsetof(mm7::GameParty, playersArray);
+            playerCount = 4;
+            void* ptrs[]{ (void*)0xACD804, (void*)0xACF340, (void*)0xAD0E7C, (void*)0xAD29B8 };
+            setPlayerPointers(ptrs, playerCount);
         }
         else if (MMVER == 8)
         {
@@ -168,7 +176,14 @@ extern "C"
 			playerAccessor = new PlayerStructAccessor_8;
             partyAccessor = new PartyStructAccessor_8;
             gameAccessor = new GameStructAccessor_8;
+            playerSize = sizeof(mm8::Player);
+            playerStart = offsetof(mm8::GameParty, playersArray);
+            playerCount = 50;
 		}
+        for (int i = 0; i < playerCount; ++i)
+        {
+            players[i] = (void*)(playerStart + playerSize * i);
+        }
 		generator = new Generator();
 
         setupHooks();
@@ -273,10 +288,6 @@ extern "C"
 		delete playerAccessor;
         delete partyAccessor;
         delete gameAccessor;
-		if (players)
-		{
-			delete[] players; // deletes only stored player pointer array, not actual player structs
-		}
         removeHooks();
         wxLog::FlushActive();
         wxEntryCleanup();
@@ -321,15 +332,12 @@ extern "C"
         return true;
     }
 
-    DLL_EXPORT void __stdcall setPlayerPointers(void** ptrs)
+    DLL_EXPORT void __stdcall setPlayerPointers(void** ptrs, int count)
     {
-        if (!players)
+        wxASSERT_MSG(count <= MAX_PLAYERS, wxString::Format("Invalid player count (%d, max is %d)", count, MAX_PLAYERS));
+        for (int i = 0; i < count; ++i)
         {
-            players = new void* [MAX_PLAYERS];
-        }
-        for (int i = 0; i < MAX_PLAYERS; ++i)
-        {
-            players[i] = ptrs[i];
+            playersInParty[i] = ptrs[i];
         }
     }
 

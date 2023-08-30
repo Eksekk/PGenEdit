@@ -161,8 +161,8 @@ std::vector<wxString> Tests::testPlayerStructAccessor()
 
 	//wxLogNull noLog;
 
-	void* oldPlayerZero = players[0];
-	players[0] = pl;
+	void* oldPlayerZero = playersInParty[0];
+	playersInParty[0] = pl;
 	(void)playerAccessor->forPlayer(0); // switch to player 0
 	// full hp bonus, full sp bonus, ranged/melee attack/damage bonus
 	if constexpr (SAME(Player, mm6::Player) || SAME(Player, mm7::Player))
@@ -676,7 +676,7 @@ std::vector<wxString> Tests::testPlayerStructAccessor()
 	doTestSkillFunctions({ {15, 60, MASTERY_GM} });
 	doTestSkillFunctions({ {13, 10, MASTERY_GM}, {8, 15, MASTERY_EXPERT}, {3, 21, MASTERY_NOVICE} });
 
-	players[0] = oldPlayerZero;
+	playersInParty[0] = oldPlayerZero;
 	delete pl;
 	CURRENT_PARTY_SIZE = oldCURRENT_PARTY_SIZE;
 	return myasserter.errors;
@@ -692,8 +692,8 @@ template<typename Player, typename Game>
 std::vector<wxString> Tests::testMisc()
 {
 	Asserter myasserter("Misc");
-	Player** playersConverted = (Player**)players;
-	for (int i = 0; i < MAX_PLAYERS; ++i) // TODO: player count can be different in mm8
+	auto& playersConverted = reinterpret_cast<std::array<Player*, 5>&>(playersInParty);
+	for (int i = 0; i < CURRENT_PARTY_SIZE; ++i) // TODO: player count can be different in mm8
 	{
 
 	}

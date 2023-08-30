@@ -61,6 +61,7 @@
     <ClInclude Include="Hooks.h" />
     <ClInclude Include="HookTests.h" />
     <ClInclude Include="InventoryCtrl.h" />
+    <ClInclude Include="ItemStructAccessor.h" />
     <ClInclude Include="LuaFunctions.h" />
     <ClInclude Include="PartyStructAccessor.h" />
     <ClInclude Include="PlayerClass.h" />
@@ -124,6 +125,7 @@
     <ClCompile Include="Hooks.cpp" />
     <ClCompile Include="HookTests.cpp" />
     <ClCompile Include="InventoryCtrl.cpp" />
+    <ClCompile Include="ItemStructAccessor.cpp" />
     <ClCompile Include="LuaFunctions.cpp" />
     <ClCompile Include="PartyStructAccessor.cpp" />
     <ClCompile Include="PlayerClass.cpp" />

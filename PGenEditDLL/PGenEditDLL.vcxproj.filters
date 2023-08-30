@@ -336,6 +336,9 @@
     <ClInclude Include="InventoryCtrl.h">
       <Filter>Pliki nagłówkowe\Editor GUI</Filter>
     </ClInclude>
+    <ClInclude Include="ItemStructAccessor.h">
+      <Filter>Pliki nagłówkowe</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="sources\MainWindow.cpp">
@@ -526,6 +529,9 @@
     </ClCompile>
     <ClCompile Include="InventoryCtrl.cpp">
       <Filter>Pliki źródłowe\Editor GUI</Filter>
+    </ClCompile>
+    <ClCompile Include="ItemStructAccessor.cpp">
+      <Filter>Pliki źródłowe</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

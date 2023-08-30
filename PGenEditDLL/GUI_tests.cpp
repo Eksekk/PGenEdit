@@ -61,14 +61,15 @@ std::vector<wxString> GUI_tests::testEditorSkillsPanel()
 	auto eWindow = wxGetApp().editorMainWindow;
 	Asserter myasserter("editor skills panel");
 
-	int index = 2;
-	Player* pl = reinterpret_cast<Player*>(players[index]);
+	int index = std::min(2, CURRENT_PARTY_SIZE - 1);
+	Player* pl = reinterpret_cast<Player*>(playersInParty[index]);
 	// have to use original player addresses because changing them for mmextension is tricky
 	AutoBackup backup(CURRENT_PARTY_SIZE, *pl);
 	// PARTY SIZE IS 0 BEFORE
 	CURRENT_PARTY_SIZE = index + 1;
 	memset(pl, 0, sizeof(Player));
 	playerAccessor->setPlayerOverride(pl);
+	wxON_BLOCK_EXIT0([] {playerAccessor->clearPlayerOverride(); });
 	wxUIActionSimulator sim;
 
 	// actual test code
@@ -221,7 +222,6 @@ std::vector<wxString> GUI_tests::testEditorSkillsPanel()
 	// only already learned - skip (not using variable to keep track of it)
 
 	eWindow->destroyPlayerWindow(index);
-	playerAccessor->clearPlayerOverride();
 	return myasserter.errors;
 }
 
@@ -254,9 +254,6 @@ std::vector<wxString> GUI_tests::testGui()
 
 	// main editor window and player windows
 
-	int oldCURRENT_PARTY_SIZE = CURRENT_PARTY_SIZE;
-	CURRENT_PARTY_SIZE = MAX_PLAYERS;
-
 	auto eWindow = wxGetApp().editorMainWindow;
 	// DISABLED BECAUSE BLINKING WINDOWS ARE ANNOYING
 // 	for (int i = 0; i < MAX_PLAYERS; ++i)
@@ -286,14 +283,15 @@ std::vector<wxString> GUI_tests::testGui()
 
 	Player* player = new Player;
 	memset(player, 0, sizeof(Player));
-	void* oldPlayer = players[1];
-	players[1] = player;
+	int index = std::min(1, CURRENT_PARTY_SIZE - 1);
+	AutoBackup b(playersInParty[index]);
+	playersInParty[index] = player;
 
-	auto oldName = playerAccessor->forPlayer(1)->getName();
+	auto oldName = playerAccessor->forPlayer(index)->getName();
 	playerAccessor->setName("abcd");
 	wxTimerEvent event2(*(eWindow->updateTimer));
 	eWindow->ProcessEvent(event2);
-	myassert(eWindow->playerButtons[1]->GetLabel() == "abcd", eWindow->playerButtons[1]->GetLabel());
+	myassert(eWindow->playerButtons[index]->GetLabel() == "abcd", eWindow->playerButtons[index]->GetLabel());
 	playerAccessor->setName(oldName);
 	CURRENT_PARTY_SIZE = 3;
 	eWindow->ProcessEvent(event2);
@@ -308,10 +306,7 @@ std::vector<wxString> GUI_tests::testGui()
 
 	eWindow->ProcessEvent(event2);
 
-	auto playerWindow = eWindow->playerWindows[1];
-
-	players[1] = oldPlayer;
-	CURRENT_PARTY_SIZE = oldCURRENT_PARTY_SIZE;
+	auto playerWindow = eWindow->playerWindows[index];
 
 	delete player;
 
@@ -322,10 +317,9 @@ template<typename Player, typename Game>
 std::vector<wxString> GUI_tests::testEditorStatisticsPanel()
 {
 	GameData::updateIsInGameAndPartySize();
-	int index = 1;
-	AutoBackup backup(CURRENT_PARTY_SIZE, *reinterpret_cast<Player*>(players[index]));
-	CURRENT_PARTY_SIZE = index + 1;
-	Player* pl = reinterpret_cast<Player*>(players[index]);
+	int index = std::min(1, CURRENT_PARTY_SIZE - 1);
+	AutoBackup backup(*reinterpret_cast<Player*>(playersInParty[index]));
+	Player* pl = reinterpret_cast<Player*>(playersInParty[index]);
 	memset(pl, 0, sizeof(Player));
 	(void)playerAccessor->setPlayerOverride(pl);
 	auto eWindow = wxGetApp().editorMainWindow;

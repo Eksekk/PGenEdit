@@ -1,6 +1,7 @@
 #pragma once
 #include "pch.h"
 #include "main.h"
+#include "globals.h"
 
 template<size_t ver>
 struct GameSpecificStructs;
@@ -18,30 +19,42 @@ namespace mm8
 	using Game = mm8::GameStructure;
 }
 
-template<>
-struct GameSpecificStructs<6>
+enum GameStructType
 {
-	using Item = mm6::Item;
-	using Player = mm6::Player;
-	using Game = mm6::GameStructure;
-};
-
-template<>
-struct GameSpecificStructs<7>
-{
-	using Item = mm7::Item;
-	using Player = mm7::Player;
-	using Game = mm7::GameStructure;
-};
-
-template<>
-struct GameSpecificStructs<8>
-{
-	using Item = mm8::Item;
-	using Player = mm8::Player;
-	using Game = mm8::GameStructure;
+	GAME_STRUCT_TYPE_ITEM,
+	GAME_STRUCT_TYPE_PLAYER,
+	GAME_STRUCT_TYPE_GAME,
 };
 
 using MM6Structs = GameSpecificStructs<6>;
 using MM7Structs = GameSpecificStructs<7>;
 using MM8Structs = GameSpecificStructs<8>;
+
+#define GENERATE_DISPATCH_CODE(name, stru, func, what, whatEnum)\
+if (whatEnum == what)\
+{\
+	if (MMVER == 6)\
+	{\
+		func(reinterpret_cast<mm6::name*>(stru));\
+    }\
+	else if (MMVER == 7)\
+	{\
+		func(reinterpret_cast<mm7::name*>(stru));\
+    }\
+	else if (MMVER == 6)\
+	{\
+		func(reinterpret_cast<mm8::name*>(stru));\
+    }\
+}
+
+void gameVersionDispatch(void* stru, int what, auto func)
+{
+	GENERATE_DISPATCH_CODE(Item, stru, func, what, GAME_STRUCT_TYPE_ITEM);
+}
+
+inline void gameVersionDispatchItem(void* stru, auto func)
+{
+	gameVersionDispatch(stru, GAME_STRUCT_TYPE_ITEM, func);
+}
+
+#undef GENERATE_DISPATCH_CODE
