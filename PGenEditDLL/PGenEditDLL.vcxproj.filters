@@ -339,6 +339,12 @@
     <ClInclude Include="ItemStructAccessor.h">
       <Filter>Pliki nagłówkowe\GameStructs\Accessors</Filter>
     </ClInclude>
+    <ClInclude Include="InventoryManagerCtrl.h">
+      <Filter>Pliki nagłówkowe\Editor GUI</Filter>
+    </ClInclude>
+    <ClInclude Include="EditorItemsPanel.h">
+      <Filter>Pliki nagłówkowe</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="sources\MainWindow.cpp">
@@ -532,6 +538,12 @@
     </ClCompile>
     <ClCompile Include="ItemStructAccessor.cpp">
       <Filter>Pliki źródłowe\GameStructs\Accessors</Filter>
+    </ClCompile>
+    <ClCompile Include="InventoryManagerCtrl.cpp">
+      <Filter>Pliki źródłowe\Editor GUI</Filter>
+    </ClCompile>
+    <ClCompile Include="EditorItemsPanel.cpp">
+      <Filter>Pliki źródłowe</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

@@ -63,7 +63,7 @@ void TemplatedItemStructAccessor<Item>::forEachItemDo(Item* item, int n, Callbac
 {
     for (int i = 0; i < n; ++i)
     {
-        callback(*(item + i));
+        callback(item[i]);
     }
 }
 

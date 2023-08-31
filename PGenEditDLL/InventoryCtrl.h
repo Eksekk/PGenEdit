@@ -59,6 +59,7 @@ using ItemsVariant = std::variant<mm6::Item*, mm7::Item*, mm8::Item*>;
 
 class InventoryCtrl : public wxControl
 {
+    // FIXME: all these methods modify chest's or player's items array, but inventory positions are not modified
     static const int CELL_WIDTH, CELL_HEIGHT;
     ElementsContainer elements;
     
@@ -80,8 +81,8 @@ public:
     void onClick(wxMouseEvent& event);
     void onRightclick(wxMouseEvent& event);
 
-    bool moveStoredItemToInventory(const ItemStoreElement& item); // MODIFIES original inventory (chest's or player's)
-    bool moveInventoryItemToStore(const ItemStoreElement& item); // same as above
+    bool moveStoredItemToInventory(ItemStoreElement& item, InventoryPosition pos = { -1, -1 }); // MODIFIES original inventory (chest's or player's)
+    bool moveInventoryItemToStore(ItemStoreElement& item); // same as above
     ItemStoreElement* getMouseoverItem(); // pointer to allow null value (no item at mouse position) | FIXMEEEE: vector reallocation will cause problems if code holds valid pointer for long
     ItemStoreElement* chooseItemWithMouse(bool allowNone = true); // enters item selecting mode, after clicking returns clicked item
     bool addItem(const ItemStoreElement& item);
@@ -92,6 +93,7 @@ public:
     bool canItemBePlacedAtPosition(const ItemStoreElement& elem, InventoryPosition pos);
 
     InventoryCtrl(wxWindow* parent, int CELLS_ROW, int CELLS_COL, InventoryType&& inventoryType, const ElementsContainer& elements = ElementsContainer());
+    ~InventoryCtrl();
 
     InventoryCtrl() = delete;
     InventoryCtrl(const InventoryCtrl&) = delete;

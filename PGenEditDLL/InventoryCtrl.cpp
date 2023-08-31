@@ -17,6 +17,36 @@ wxSize InventoryCtrl::DoGetBestSize() const
 void InventoryCtrl::OnPaint(wxPaintEvent& event)
 {
     wxPaintDC dc(this);
+    // inventory border
+    wxSize size = DoGetBestSize();
+    static wxBrush cornerBrush(0x6b6868, wxBRUSHSTYLE_SOLID); // gray
+    static wxBrush edgeBrush(0x8c8685, wxBRUSHSTYLE_SOLID);
+    // background
+    dc.SetBrush(wxBrush(0xe6d0cf, wxBRUSHSTYLE_SOLID));
+    dc.DrawRectangle(wxPoint(0, 0), size);
+    for (int y = 0; y < CELL_HEIGHT + 1; ++y)
+    {
+        for (int x = 0; x < CELL_WIDTH + 1; ++x)
+        {
+            // important to draw lines before corners, so they get covered, but I think that's done here
+            if (y == 0) // draw top to bottom
+            {
+                dc.SetBrush(edgeBrush);
+                dc.DrawLine(wxPoint(CELL_WIDTH * x, 0), wxPoint(CELL_WIDTH * x, size.GetY()));
+            }
+            else if (x == 0) // draw left to right
+            {
+                dc.SetBrush(edgeBrush);
+                dc.DrawLine(wxPoint(0, CELL_HEIGHT * y), wxPoint(size.GetX(), CELL_HEIGHT * y));
+            }
+            dc.SetBrush(cornerBrush);
+            dc.DrawRectangle(wxPoint(x * CELL_WIDTH, y * CELL_HEIGHT), wxSize(10, 10));
+        }
+    }
+    /*
+     
+     
+     */
 }
 
 template<typename Variant>
@@ -34,8 +64,7 @@ bool unpersistItemLocationVariant(Variant& loc, const Json& json)
 {
     try
     {
-        std::string type = json["type"];
-        std::ranges::transform(type, type.begin(), [](char c) {return std::tolower(c); });
+        std::string type = tolowerStr(json["type"]);
         if (type == ITEM_LOC_CHEST)
         {
             MapChestRef ref;
@@ -341,14 +370,30 @@ void InventoryCtrl::onRightclick(wxMouseEvent& event)
 {
 }
 
-bool InventoryCtrl::moveStoredItemToInventory(const ItemStoreElement& item)
+bool InventoryCtrl::moveStoredItemToInventory(ItemStoreElement& item, InventoryPosition pos)
 {
+    wxASSERT_MSG(std::holds_alternative<StoredItemRef>(item.location), "Expected item in storage");
+    auto visitor = [&](const auto& ref) {item.location = ref; };
+    item.pos = findFreePositionForItem(item);
+    if (pos.x != -1 || item.pos.x != -1)
+    {
+        if (pos.x != -1)
+        {
+            wxASSERT(canItemBePlacedAtPosition(item, pos));
+            item.pos = pos;
+        }
+        std::visit(visitor, inventoryType);
+        return true;
+    }
     return false;
 }
 
-bool InventoryCtrl::moveInventoryItemToStore(const ItemStoreElement& item)
+bool InventoryCtrl::moveInventoryItemToStore(ItemStoreElement& item)
 {
-    return false;
+    wxASSERT_MSG(std::holds_alternative<PlayerInventoryRef>(item.location) || std::holds_alternative<MapChestRef>(item.location), "Expected item in player's or chest's inventory");
+    item.pos = { -1, -1 };
+    item.location = StoredItemRef{};
+    return true;
 }
 
 ItemStoreElement* InventoryCtrl::getMouseoverItem()
@@ -398,6 +443,12 @@ bool InventoryCtrl::canItemBePlacedAtPosition(const ItemStoreElement& elem, Inve
 InventoryCtrl::InventoryCtrl(wxWindow* parent, int CELLS_ROW, int CELLS_COL, InventoryType&& inventoryType, const ElementsContainer& elements)
     : wxControl(parent, wxID_ANY), CELLS_ROW(CELLS_ROW), CELLS_COL(CELLS_COL), inventoryType(inventoryType), elements(elements)
 {
+    // TODO: unpersist
+}
+
+InventoryCtrl::~InventoryCtrl()
+{
+    // TODO: persist
 }
 
 ItemStoreElement::ItemStoreElement() : item{ 0 }, pos{ -1, -1 }, location{ PlayerInventoryRef{} }
