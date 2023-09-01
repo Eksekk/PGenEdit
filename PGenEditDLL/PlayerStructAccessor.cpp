@@ -48,6 +48,7 @@ int TemplatedPlayerStructAccessor<Player>::getRosterIndex()
 template<typename Player>
 int TemplatedPlayerStructAccessor<Player>::getRosterIndexFromPtr(void* ptr)
 {
+	wxFAIL; // arbitrary player pointers break too much stuff
     uint32_t playersAddr, playerSize = sizeof(Player);
     if constexpr (SAME(Player, mm6::Player))
     {

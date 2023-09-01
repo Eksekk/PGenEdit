@@ -86,3 +86,13 @@ InventoryManagerCtrl::InventoryManagerCtrl(wxWindow* parent, int CELLS_ROW, int 
 InventoryManagerCtrl::~InventoryManagerCtrl()
 {
 }
+
+bool InventoryManagerCtrl::persist(Json& json) const
+{
+    return inventoryCtrl->persist(json);
+}
+
+bool InventoryManagerCtrl::unpersist(const Json& json)
+{
+    return inventoryCtrl->unpersist(json);
+}

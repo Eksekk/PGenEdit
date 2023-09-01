@@ -73,6 +73,8 @@ public:
 
     bool persistInventory(Json& json) const;
     bool unpersistInventory(const Json& json);
+    bool persist(Json& json) const;
+    bool unpersist(const Json& json);
 
     // delete all player inventory / map chest items, and readd them, if possible on old positions
     bool reloadReferencedItems();

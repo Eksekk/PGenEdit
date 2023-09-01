@@ -1,11 +1,15 @@
 #include "pch.h"
 #include "EditorItemsPanel.h"
-#include "InventoryManagerCtrl.h"
+#include "SaveGameData.h"
 
-EditorItemsPanel::EditorItemsPanel(wxWindow* parent, InventoryManagerCtrl* inventoryManagerCtrl, int playerIndex, int rosterIndex)
-    : wxPanel(parent), EditorPlayerPanel(playerIndex, rosterIndex), inventoryManagerCtrl(inventoryManagerCtrl)
+EditorItemsPanel::EditorItemsPanel(wxWindow* parent, int CELLS_ROW, int CELLS_COL, InventoryType&& inventoryType, const ElementsContainer& elements, int playerIndex, int rosterIndex)
+    : wxPanel(parent), EditorPlayerPanel(playerIndex, rosterIndex)
 {
+    Freeze();
+    Bind(wxEVT_ACTIVATE, &EditorItemsPanel::onActivateWindow, this);
+    inventoryManagerCtrl = new InventoryManagerCtrl(this, CELLS_ROW, CELLS_COL, std::forward<InventoryType>(inventoryType), elements);
     Layout();
+    Thaw();
 }
 
 EditorItemsPanel::~EditorItemsPanel()
@@ -23,19 +27,33 @@ void EditorItemsPanel::setDefaultCustomSettings()
 
 std::string EditorItemsPanel::getJsonPersistKey() const
 {
-    return std::string();
+    return "items";
 }
 
 bool EditorItemsPanel::persist(Json& json) const
 {
-    return false;
+    return inventoryManagerCtrl->persist(json);
 }
 
 bool EditorItemsPanel::unpersist(const Json& json)
 {
-    return false;
+    return inventoryManagerCtrl->unpersist(json);
 }
 
 void EditorItemsPanel::updateFromPlayerData()
 {
+    inventoryManagerCtrl->inventoryCtrl->reloadReferencedItems();
+}
+
+void EditorItemsPanel::onActivateWindow(wxActivateEvent& event)
+{
+    if (event.GetActive())
+    {
+        saveGameData.loadEditorPlayerPanelData(*this);
+        updateFromPlayerData();
+    }
+    else
+    {
+        saveGameData.saveEditorPlayerPanelData(*this);
+    }
 }

@@ -9,6 +9,7 @@
 #include "EditorStatisticsPanel.h"
 #include "Asserter.h"
 #include "SaveGameData.h"
+#include "EditorItemsPanel.h"
 
 const std::vector<std::pair<std::string, PlayerWindowPanelType>> EditorPlayerWindow::panelNamesWithIndexes =
 { {"Appearance", APPEARANCE_PANEL_INDEX}, { "Statistics", STATISTICS_PANEL_INDEX }, { "Skills", SKILLS_PANEL_INDEX },
@@ -186,9 +187,10 @@ void EditorPlayerWindow::onTabChange(wxBookCtrlEvent& event)
 		//event.Veto();
         event.Skip();
 		return;
-	}
+    }
+    Freeze();
 	changingPage = true;
-	wxON_BLOCK_EXIT0([&] {changingPage = false; });
+	wxON_BLOCK_EXIT0([&] {changingPage = false; Thaw(); });
 	// TODO: don't cast enum to int, use mapping table, more safety
 	int oldSelInt = event.GetOldSelection(), newSelInt = tabs->GetSelection();//event.GetSelection();
 	PlayerWindowPanelType oldSel = static_cast<PlayerWindowPanelType>(oldSelInt), newSel = static_cast<PlayerWindowPanelType>(newSelInt);
@@ -225,7 +227,7 @@ void EditorPlayerWindow::onTabChange(wxBookCtrlEvent& event)
         tabs->InsertPage(newSelInt + 1, new wxPanel(tabs, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL), getPanelNameByType(SPELLS_PANEL_INDEX));
         break;
 	case ITEMS_PANEL_INDEX:
-        tabs->InsertPage(newSelInt + 1, new wxPanel(tabs, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL), getPanelNameByType(ITEMS_PANEL_INDEX));
+        tabs->InsertPage(newSelInt + 1, new EditorItemsPanel(tabs, 14, 9, PlayerInventoryRef{.rosterIndex = rosterIndex}, {}, playerIndex, rosterIndex), getPanelNameByType(ITEMS_PANEL_INDEX));
         break;
 	case CONDITIONS_BUFFS_PANEL_INDEX:
         tabs->InsertPage(newSelInt + 1, new wxPanel(tabs, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL), getPanelNameByType(CONDITIONS_BUFFS_PANEL_INDEX));
@@ -240,6 +242,9 @@ void EditorPlayerWindow::onTabChange(wxBookCtrlEvent& event)
     tabs->DeletePage(newSelInt);
 	tabs->ChangeSelection(newSelInt);
     panel = dynamic_cast<EditorPlayerPanel*>(tabs->GetPage(newSelInt));
-    wxASSERT(panel != nullptr);
-    saveGameData.loadEditorPlayerPanelData(*panel);
+    if (panel) // TODO: remove condition when all panels are implemented (now they can be wxPanel as placeholder)
+    {
+        wxASSERT(panel != nullptr);
+        saveGameData.loadEditorPlayerPanelData(*panel);
+	}
 }

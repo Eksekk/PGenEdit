@@ -32,7 +32,7 @@ bool SaveGameData::saveEditorPlayerPanelData(const EditorPlayerPanel& panel)
             Json& panelsJson = playerJson[PLAYER_PANELS_KEY];
             if (!panel.persist(panelsJson[panel.getJsonPersistKey()]))
             {
-                wxLogError("Player panel %s unpersist error", playerKey);
+                wxLogError("Player panel %s persist error", playerKey);
                 return false;
             }
         }

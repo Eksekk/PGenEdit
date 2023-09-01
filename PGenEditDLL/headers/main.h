@@ -28,6 +28,7 @@
 #define JSON_DIAGNOSTICS 1
 #include <json.hpp>
 using Json = nlohmann::json;
+using JsonException = Json::exception;
 
 void MSGBOX(const char* text);
 

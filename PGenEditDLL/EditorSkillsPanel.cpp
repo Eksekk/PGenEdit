@@ -8,10 +8,13 @@
 #include <globals.h>
 #include "PartyStructAccessor.h"
 #include "Profiler.h"
+#include "SaveGameData.h"
 extern wxTimer* mainUpdateTimer;
 
 EditorSkillsPanel::EditorSkillsPanel(wxWindow* parent, int playerIndex, int rosterIndex) : wxScrolledWindow(parent), EditorPlayerPanel(playerIndex, rosterIndex)
 {
+	Freeze();
+    Bind(wxEVT_ACTIVATE, &EditorSkillsPanel::onActivateWindow, this);
 	Profiler profiler;
 	//profiler.start("Creating skills panel");
 	SetScrollRate(10, 10);
@@ -42,10 +45,24 @@ EditorSkillsPanel::EditorSkillsPanel(wxWindow* parent, int playerIndex, int rost
 // 	Bind(wxEVT_SET_FOCUS, &EditorSkillsPanel::onSetFocus, this);
 // 	Bind(wxEVT_ACTIVATE, &EditorSkillsPanel::onActivate, this);
 
-	profiler.start("skills panel layout");
+	//profiler.start("skills panel layout");
 	this->SetSizer(mainSizer);
 	this->Layout();
+	Thaw();
 	//profiler.logResults();
+}
+
+void EditorSkillsPanel::onActivateWindow(wxActivateEvent& event)
+{
+    if (event.GetActive())
+    {
+        saveGameData.loadEditorPlayerPanelData(*this);
+        updateFromPlayerData();
+    }
+    else
+    {
+        saveGameData.saveEditorPlayerPanelData(*this);
+    }
 }
 
 void EditorSkillsPanel::updateFromPlayerData()

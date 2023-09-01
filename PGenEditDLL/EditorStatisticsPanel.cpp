@@ -11,11 +11,14 @@
 #include "PlayerStructAccessor.h"
 #include "Profiler.h"
 #include "HookParams.h"
+#include "SaveGameData.h"
 
 //, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize(723, 817),
 //	long style = wxTAB_TRAVERSAL | wxHSCROLL | wxVSCROLL, const wxString& name = wxEmptyString)
 EditorStatisticsPanel::EditorStatisticsPanel(wxWindow* parent, int playerIndex, int rosterIndex) : EditorPlayerPanel(playerIndex, rosterIndex), wxScrolledWindow(parent)
 {
+	Freeze();
+    Bind(wxEVT_ACTIVATE, &EditorStatisticsPanel::onActivateWindow, this);
     Profiler profiler;
     //profiler.start("Creating statistics panel");
 	this->SetScrollRate(15, 15);
@@ -36,6 +39,8 @@ EditorStatisticsPanel::EditorStatisticsPanel(wxWindow* parent, int playerIndex, 
 	mainSizer->Fit(this);
 	this->SetSizer(mainSizer);
 	this->Layout();
+	updateFromPlayerData();
+	Thaw();
 	//profiler.logResults();
 }
 
@@ -104,7 +109,12 @@ void EditorStatisticsPanel::onActivateWindow(wxActivateEvent& event)
 {
 	if (event.GetActive())
 	{
+		saveGameData.loadEditorPlayerPanelData(*this);
 		updateFromPlayerData();
+	}
+	else
+	{
+		saveGameData.saveEditorPlayerPanelData(*this);
 	}
 }
 
@@ -297,6 +307,8 @@ void EditorStatisticsPanel::createImmediateStatSettings()
 
 void EditorStatisticsPanel::createStatisticsAdjuster()
 {
+	Profiler profiler; 
+	profiler.start("create statistics adjuster");
 	adjustStatisticsLabel = new wxStaticText(this, wxID_ANY, _("Adjust statistics"));
 	adjustStatisticsLabel->SetFont(wxFont(12, wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL));
 	mainSizer->Add(adjustStatisticsLabel, 0, wxALL | wxALIGN_CENTER_HORIZONTAL, 5);
@@ -460,6 +472,7 @@ void EditorStatisticsPanel::createStatisticsAdjuster()
 	statisticsAdjusterSizer->Add(resistanceExtraStatsSizer, 1, wxALL | wxEXPAND, 5);
 
 	mainSizer->Add(statisticsAdjusterSizer, 0, wxALL | wxEXPAND, 5);
+	//profiler.logResults();
 }
 
 void EditorStatisticsPanel::createActionsPanel()

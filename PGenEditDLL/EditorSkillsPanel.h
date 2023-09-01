@@ -57,6 +57,7 @@ private:
 
 
 	bool unpersist(const Json& json) override;
+	void onActivateWindow(wxActivateEvent& event);
 
 protected:
 

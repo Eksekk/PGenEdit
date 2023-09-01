@@ -61,15 +61,14 @@ std::vector<wxString> GUI_tests::testEditorSkillsPanel()
 	auto eWindow = wxGetApp().editorMainWindow;
 	Asserter myasserter("editor skills panel");
 
-	int index = std::min(2, CURRENT_PARTY_SIZE - 1);
+	int index = std::min(2, std::max(CURRENT_PARTY_SIZE - 1, 0));
 	Player* pl = reinterpret_cast<Player*>(playersInParty[index]);
 	// have to use original player addresses because changing them for mmextension is tricky
 	AutoBackup backup(CURRENT_PARTY_SIZE, *pl);
 	// PARTY SIZE IS 0 BEFORE
 	CURRENT_PARTY_SIZE = index + 1;
 	memset(pl, 0, sizeof(Player));
-	playerAccessor->setPlayerOverride(pl);
-	wxON_BLOCK_EXIT0([] {playerAccessor->clearPlayerOverride(); });
+	(void)playerAccessor->forPlayer(index);
 	wxUIActionSimulator sim;
 
 	// actual test code
@@ -283,7 +282,7 @@ std::vector<wxString> GUI_tests::testGui()
 
 	Player* player = new Player;
 	memset(player, 0, sizeof(Player));
-	int index = std::min(1, CURRENT_PARTY_SIZE - 1);
+	int index = std::min(1, std::max(CURRENT_PARTY_SIZE - 1, 0));
 	AutoBackup b(playersInParty[index]);
 	playersInParty[index] = player;
 
@@ -317,11 +316,11 @@ template<typename Player, typename Game>
 std::vector<wxString> GUI_tests::testEditorStatisticsPanel()
 {
 	GameData::updateIsInGameAndPartySize();
-	int index = std::min(1, CURRENT_PARTY_SIZE - 1);
+	int index = std::min(1, std::max(CURRENT_PARTY_SIZE - 1, 0));
 	AutoBackup backup(*reinterpret_cast<Player*>(playersInParty[index]));
 	Player* pl = reinterpret_cast<Player*>(playersInParty[index]);
 	memset(pl, 0, sizeof(Player));
-	(void)playerAccessor->setPlayerOverride(pl);
+	(void)playerAccessor->forPlayer(index);
 	auto eWindow = wxGetApp().editorMainWindow;
 	Asserter myasserter("Statistics panel");
     EditorPlayerWindow* win = eWindow->createPlayerWindow(index);
@@ -354,7 +353,6 @@ std::vector<wxString> GUI_tests::testEditorStatisticsPanel()
 	// checkboxes
 
 	eWindow->destroyPlayerWindow(index);
-	playerAccessor->clearPlayerOverride();
 
 	return myasserter.errors;
 }

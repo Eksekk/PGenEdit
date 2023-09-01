@@ -2,14 +2,17 @@
 #include "pch.h"
 #include "main.h"
 #include "EditorPlayerPanel.h"
+#include "InventoryManagerCtrl.h"
 
 class InventoryManagerCtrl;
 
 class EditorItemsPanel : public EditorPlayerPanel, public wxPanel
 {
+    void onActivateWindow(wxActivateEvent& event);
+public:
     InventoryManagerCtrl* inventoryManagerCtrl;
 
-    EditorItemsPanel(wxWindow* parent, InventoryManagerCtrl* inventoryManagerCtrl, int playerIndex, int rosterIndex);
+    EditorItemsPanel(wxWindow* parent, int CELLS_ROW, int CELLS_COL, InventoryType&& inventoryType, const ElementsContainer& elements, int playerIndex, int rosterIndex);
     ~EditorItemsPanel();
 
     // Inherited via EditorPlayerPanel

@@ -240,6 +240,11 @@ bool InventoryCtrl::persistInventory(Json& json) const
     return true;
 }
 
+bool InventoryCtrl::persist(Json& json) const
+{
+    return persistInventory(json["inventory"]);
+}
+
 bool InventoryCtrl::unpersistInventory(const Json& json)
 {
     bool hasChest = false, hasPlayerInventory = false;
@@ -249,8 +254,7 @@ bool InventoryCtrl::unpersistInventory(const Json& json)
         {
             ItemStoreElement elem;
             const Json& location = entry["location"];
-            std::string type = location["type"];
-            std::ranges::transform(type, type.begin(), [](char c) {return std::tolower(c); });
+            std::string type = tolowerStr(location["type"]);
             if (type == ITEM_LOC_CHEST)
             {
                 MapChestRef ref;
@@ -294,20 +298,15 @@ bool InventoryCtrl::unpersistInventory(const Json& json)
     }
     return true;
 }
-template <int i>
-struct types {};
 
-template <>
-struct types<1>
+bool InventoryCtrl::unpersist(const Json& json)
 {
-    typedef int type;
-};
-
-template <>
-struct types<2>
-{
-    typedef long type;
-};
+    if (json.contains("inventory"))
+    {
+        return unpersistInventory(json["inventory"]);
+    }
+    return false;
+}
 
 bool InventoryCtrl::reloadReferencedItems()
 {

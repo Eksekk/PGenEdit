@@ -343,7 +343,7 @@
       <Filter>Pliki nagłówkowe\Editor GUI</Filter>
     </ClInclude>
     <ClInclude Include="EditorItemsPanel.h">
-      <Filter>Pliki nagłówkowe</Filter>
+      <Filter>Pliki nagłówkowe\Editor GUI</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -543,7 +543,7 @@
       <Filter>Pliki źródłowe\Editor GUI</Filter>
     </ClCompile>
     <ClCompile Include="EditorItemsPanel.cpp">
-      <Filter>Pliki źródłowe</Filter>
+      <Filter>Pliki źródłowe\Editor GUI</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
