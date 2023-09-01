@@ -16,6 +16,14 @@ public:
     ItemStructAccessor* nextItem();
     [[nodiscard]] virtual mm7::Item convertToMM7Item() = 0;
     virtual ~ItemStructAccessor();
+
+    // pure virtual function forEachItemDo(void* items, Callback callback)
+    // template instantiations override it to cast to game version item type and execute callback
+    // callback (usually polymorphic lambda) receives correct type
+    // PROBLEM: can't have both virtual function and templated Callback
+    // if I added std::function<void(void*)>, callback wouldn't know what it received
+    
+    virtual void forEachItemDo2(void* items, int n, std::function<void(std::variant<mm6::Item*, mm7::Item*, mm8::Item*> variant)> callback) = 0;
 };
 
 template<typename Item>
@@ -55,7 +63,20 @@ public:
 
     template<typename Callback>
     void forEachItemDo(Item* item, int n, Callback callback);
+
+    void forEachItemDo2(void* items, int n, std::function<void(std::variant<mm6::Item*, mm7::Item*, mm8::Item*> variant)> callback);
 };
+
+template<typename Item>
+void TemplatedItemStructAccessor<Item>::forEachItemDo2(void* items, int n, std::function<void(std::variant<mm6::Item*, mm7::Item*, mm8::Item*> variant)> callback)
+{
+    for (int i = 0; i < n; ++i)
+    {
+        callback(reinterpret_cast<Item*>(items) + i);
+    }
+}
+
+void ff();
 
 template<typename Item>
 template<typename Callback>

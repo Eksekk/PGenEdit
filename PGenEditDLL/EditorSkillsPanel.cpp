@@ -99,11 +99,11 @@ void EditorSkillsPanel::setDefaultCustomSettings()
 }
 bool EditorSkillsPanel::persist(Json& json) const
 {
-    throw std::logic_error("The method or operation is not implemented.");
+	return true;
 }
 bool EditorSkillsPanel::unpersist(const Json& json)
 {
-    throw std::logic_error("The method or operation is not implemented.");
+	return true;
 }
 void EditorSkillsPanel::onSkillValueChange(wxCommandEvent& event)
 {

@@ -20,3 +20,16 @@ ItemStructAccessor::~ItemStructAccessor()
 {
 
 }
+
+void ff()
+{
+    int x = 0;
+    itemAccessor->forEachItemDo2(nullptr, 5, [&](auto var)->void
+        {
+            std::visit([&](auto ptr) {
+                x = ptr->number;
+                }, var);
+        });
+}
+
+INSTANTIATE_CLASS_TEMPLATES_MM_GAMES(TemplatedItemStructAccessor, Item);

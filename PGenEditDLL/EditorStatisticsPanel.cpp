@@ -270,13 +270,9 @@ void EditorStatisticsPanel::createImmediateStatSettings()
 
 
 	mainRecoveryDelaySizer->Add(30, 0, 0, wxEXPAND, 5);
-	wxCheckBox* noRecovery = new wxCheckBox(recoveryDelaySizer->GetStaticBox(), wxID_ANY, "No recovery");
-	noRecovery->Bind(wxEVT_CHECKBOX, [this](wxCommandEvent& event)
-		{
-			wxASSERT_MSG(playerIndex >= 0 && playerIndex <= MAX_PLAYERS, wxString::Format("Invalid player index %d", playerIndex));
-			HookParams::noRecoveryEnabled[playerIndex] = event.IsChecked();
-		});
-    mainRecoveryDelaySizer->Add(noRecovery, 0, wxALL, 5);
+	noRecoveryCheckbox = new wxCheckBox(recoveryDelaySizer->GetStaticBox(), wxID_ANY, "No recovery");
+	noRecoveryCheckbox->Bind(wxEVT_CHECKBOX, &EditorStatisticsPanel::onNoRecoveryCheck, this);
+    mainRecoveryDelaySizer->Add(noRecoveryCheckbox, 0, wxALL, 5);
 
 	recoverFullyButton = new wxButton(recoveryDelaySizer->GetStaticBox(), wxID_ANY, _("Recover fully right now"));
 	recoverFullyButton->Bind(wxEVT_BUTTON, &EditorStatisticsPanel::onRecoverFullyPress, this);
@@ -550,6 +546,7 @@ std::string EditorStatisticsPanel::getJsonPersistKey() const
 
 bool EditorStatisticsPanel::persist(Json& json) const
 {
+	Json& recoveryMuls = json["recoveryMultipliers"];
 	return false;
 }
 
@@ -695,6 +692,7 @@ void EditorStatisticsPanel::processClassControlsChange(ClassChangeWhat what, boo
 }
 void EditorStatisticsPanel::onRecoveryDelayMultiplierChange(wxCommandEvent& event)
 {
+	HookParams::recoveryMultiplier[rosterIndex] = dynamic_cast<wxSpinCtrlDouble*>(event.GetEventObject())->GetValue();
 }
 
 void EditorStatisticsPanel::onRecoverFullyPress(wxCommandEvent& event)
@@ -704,10 +702,12 @@ void EditorStatisticsPanel::onRecoverFullyPress(wxCommandEvent& event)
 
 void EditorStatisticsPanel::onReduceBuffSpellRecoveryCheck(wxCommandEvent& event)
 {
+	HookParams::buffSpellRecoveryReduced[rosterIndex] = event.IsChecked();
 }
 
 void EditorStatisticsPanel::onReduceBuffRecoveryOutOfCombatCheck(wxCommandEvent& event)
 {
+    HookParams::buffSpellRecoveryReducedOnlyOutOfCombat[rosterIndex] = event.IsChecked();
 }
 
 void EditorStatisticsPanel::onFullClassChoiceSelect(wxCommandEvent& event)
@@ -715,6 +715,13 @@ void EditorStatisticsPanel::onFullClassChoiceSelect(wxCommandEvent& event)
 	processClassControlsChange(CLASS_CHANGE_ALL, false);
 }
 
+void EditorStatisticsPanel::onNoRecoveryCheck(wxCommandEvent& event)
+{
+    wxASSERT_MSG(playerIndex >= 0 && playerIndex <= MAX_PLAYERS, wxString::Format("Invalid player index %d", playerIndex));
+    HookParams::noRecoveryEnabled[playerIndex] = event.IsChecked();
+	recoveryDelayMultiplierLabel->Enable(!event.IsChecked());
+	recoveryDelayMultiplierValue->Enable(!event.IsChecked());
+}
 void EditorStatisticsPanel::onExtraStatsPaneClick(wxCollapsiblePaneEvent& event)
 {
 	SendSizeEvent();

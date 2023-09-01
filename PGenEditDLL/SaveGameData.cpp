@@ -6,6 +6,7 @@
 #include "EditorPlayerWindow.h"
 #include "PlayerPanel.h"
 #include <MainWindow.h>
+#include "HookParams.h"
 
 SaveGameData saveGameData;
 
@@ -78,11 +79,14 @@ void SaveGameData::resetPlayerCustomData(int playerIndex, int rosterIndex)
 
 std::string SaveGameData::saveAllToString()
 {
+    saveAllToJson(data);
     return data.dump();
 }
 
 bool SaveGameData::saveAllToJson(Json& json)
 {
+    json.clear();
+    HookParams::persist(json["hookParams"]);
     // NO copy constructor, because our data might not be updated - need to query all existing windows etc.
     return false;
 }
@@ -110,12 +114,14 @@ bool SaveGameData::loadAllFromString(const std::string& str)
     {
         wxLogError("Parsing json failed: %s", e.what());
         wxLog::FlushActive();
+        data = copy;
         return false;
     }
 }
 
 bool SaveGameData::loadAllFromJson(const Json& json)
 {
+    HookParams::unpersist(json["hookParams"]);
     return false;
 }
 
