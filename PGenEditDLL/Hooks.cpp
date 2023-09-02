@@ -58,6 +58,67 @@ void setupHooks() {
         HookElementBuilder().address(mmv(0, 0x48E962, 0)).target(mmv(0U, (uint32_t)noRecovery_7, 0U)).type(HOOK_ELEM_TYPE_JUMP).description("No recovery for player").build()
     ));
     hooks.at(HK_NO_RECOVERY).enable();
+
+    // ATTEMPT AT CATCHING WINDOW MESSAGES
+
+    auto getFileNameFromPath = [](const std::string& str) -> std::string
+    {
+        int lastSlashPos = -1;
+        int i = 0;
+        for (char c : str)
+        {
+            if (c == '/' || c == '\\')
+            {
+                lastSlashPos = i;
+            }
+            ++i;
+        }
+        if (lastSlashPos == -1)
+        {
+            return "";
+        }
+        std::string result = str.substr(lastSlashPos + 1);
+        while (!result.empty() && (result.back() == '/' || result.back() == '\\'))
+        {
+            result.pop_back();
+        }
+        return tolowerStr(result);
+    };
+
+    typedef LRESULT(APIENTRY* WxWndProc)(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
+    auto module = GetModuleHandleA("wxmsw321ud_core_vc_custom.dll");
+    assert(module);
+    WxWndProc wxWndProc = reinterpret_cast<WxWndProc>(GetProcAddress(module, "wxWndProc"));
+    auto func = [=](HookData* d) -> int
+    {
+        MSG* msg = (MSG*)dword(d->esp);
+        HWND handle = msg->hwnd;
+        char buffer[600];
+        GetWindowModuleFileNameA(handle, buffer, 600);
+        std::string name = getFileNameFromPath(buffer);
+        if (name == "pgenedit.dll" && msg->message != WM_TIMER)
+        {
+            wxWndProc(handle, msg->message, msg->wParam, msg->lParam);
+            // one stack arg
+            d->push(dword(d->esp - 4));
+            return HOOK_RETURN_AUTOHOOK_NO_PUSH;
+            //wxWndProc();
+        }
+        return HOOK_RETURN_SUCCESS;
+    };
+    hooks.emplace(3, Hook
+        {
+            HookElementBuilder().address(mmv(0, 0x462AFC, 0)).type(HOOK_ELEM_TYPE_AUTOHOOK).func(func).build(),
+            HookElementBuilder().address(mmv(0, 0x463309, 0)).type(HOOK_ELEM_TYPE_AUTOHOOK).func(func).build(),
+            HookElementBuilder().address(mmv(0, 0x4975C3, 0)).type(HOOK_ELEM_TYPE_AUTOHOOK).func(func).build(),
+            HookElementBuilder().address(mmv(0, 0x497CC1, 0)).type(HOOK_ELEM_TYPE_AUTOHOOK).func(func).build(),
+            HookElementBuilder().address(mmv(0, 0x4BE762, 0)).type(HOOK_ELEM_TYPE_AUTOHOOK).func(func).build(),
+            HookElementBuilder().address(mmv(0, 0x4BE838, 0)).type(HOOK_ELEM_TYPE_AUTOHOOK).func(func).build(),
+            HookElementBuilder().address(mmv(0, 0x4BFCA5, 0)).type(HOOK_ELEM_TYPE_AUTOHOOK).func(func).build(),
+            HookElementBuilder().address(mmv(0, 0x4BFCFC, 0)).type(HOOK_ELEM_TYPE_AUTOHOOK).func(func).build(),
+        });
+    // works 100% (I'm surprised), but doesn't solve any problems I intended to solve (tooltips and creation time); keeping it, because it may prove useful later
+    // hooks.at(3).enable();
 }
 // hooks[RECOVERY_MULTIPLIER] = Hook
 // ({

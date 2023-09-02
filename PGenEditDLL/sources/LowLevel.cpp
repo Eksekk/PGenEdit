@@ -726,7 +726,7 @@ void removeHooks()
 	// destructors (to free memory in some cases) will run automatically when map is destroyed on exit
 }
 
-void __fastcall dispatchHook(uint32_t esp)
+static void __fastcall dispatchHook(uint32_t esp)
 {
 	HookData* d = reinterpret_cast<HookData*>(esp);
 	DWORD hookAddr = dword(d->esp) - 5;

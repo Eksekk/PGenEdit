@@ -535,7 +535,7 @@ public:
 extern std::unordered_map<int, Hook> hooks;
 extern std::unordered_map<uint32_t, HookFunc> hookFuncMap;
 
-void __fastcall dispatchHook(uint32_t esp);
+static void __fastcall dispatchHook(uint32_t esp);
 
 void removeHooks();
 
