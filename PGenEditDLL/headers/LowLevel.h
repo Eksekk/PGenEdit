@@ -183,7 +183,8 @@ void unhookCall(uint32_t addr, std::vector<uint8_t>& restoreData);
 
 // mmext-like autohook
 uint32_t autohookCall(uint32_t addr, HookFunc func, std::vector<uint8_t>* storeAt, uint32_t size = 5);
-void unhookAutohookCall(uint32_t addr, std::vector<uint8_t>& restoreData, void* allocatedCode);
+// unhook, also sets passed extra data pointer to nullptr
+void unhookAutohookCall(uint32_t addr, std::vector<uint8_t>& restoreData, void*& allocatedCode);
 /*
 struct f
 {
@@ -364,6 +365,7 @@ void unhookHookFunction(uint32_t addr, std::vector<uint8_t>& restoreData, void* 
 
 enum HookElementType
 {
+    HOOK_ELEM_TYPE_DISABLED, // for example for hooks which are only in mm7+, so in mm6 they need not be used
 	HOOK_ELEM_TYPE_CALL_RAW, // simple call hook
 	HOOK_ELEM_TYPE_CALL, // mmext-like call hook
 	HOOK_ELEM_TYPE_JUMP,
@@ -396,6 +398,7 @@ public:
 	bool patchUseNops;
 	void* extraData; // like copied code for autohook
     // int stackParamNum; // for callable function hooks; number is automatically deduced from argument count and calling convention
+    std::vector<int> gameVersions;
 
     // required for hooks where function receives multiple arguments with various types, can't store templated data member
     std::function<void()> setCallableFunctionHook = nullptr, unsetCallableFunctionHook = nullptr;
@@ -408,6 +411,8 @@ public:
 	void toggle();
 	inline bool isActive() const;
 	HookElement();
+    HookElement(const HookElement&) = default; // TODO: check (extraData)
+    HookElement(HookElement&&) = default;
 	~HookElement();
 };
 
@@ -493,6 +498,7 @@ public:
     HookElementBuilder& needUnprotect(bool needUnprotect);
 	HookElementBuilder& description(const std::string& desc);
 	HookElementBuilder& patchUseNops(bool on);
+	HookElementBuilder& gameVersions(const std::vector<int>& gameVersions);
     template<typename ReturnType, int cc, typename... Args>
     HookElementBuilder& callableFunctionHookFunc(CallableFunctionHookFunc<ReturnType, Args...> func);
     HookElement build();
@@ -519,12 +525,13 @@ public:
 	inline bool isActive() const;
 	bool isFullyActive() const; // every element is _active
 
+    // cannot use move constructors with initializer_list
 	Hook(std::initializer_list<HookElement> elements, const std::string& description = "");
     Hook(const std::vector<HookElement>& elements, const std::string description = "");
-	Hook(HookElement element, const std::string& description = "");
+	Hook(const HookElement& element, const std::string& description = "");
 
 	Hook() = delete;
-	Hook(const Hook&) = delete;
+	//Hook(const Hook&) = delete; // breaks with initializer lists
 	Hook(Hook&&) = default;
 	~Hook();
 	Hook& operator=(const Hook&) = delete;

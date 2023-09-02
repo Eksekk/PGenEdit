@@ -100,14 +100,22 @@ void setupHooks() {
         {
             wxWndProc(handle, msg->message, msg->wParam, msg->lParam);
             // one stack arg
+            // return directly to base code (skip overwritten call)
             d->push(dword(d->esp - 4));
             return HOOK_RETURN_AUTOHOOK_NO_PUSH;
             //wxWndProc();
         }
+        if (unloadCleanupStarted)
+        {
+            MessageBoxA(nullptr, "Unload cleanup started", nullptr, 0);
+            // window message autohook entered, ctrl + F3 message dispatched, hooks are removed, code memory is freed, returns to user32, which tries to return to hook proc
+            d->push(dword(d->esp - 4));
+            return HOOK_RETURN_AUTOHOOK_NO_PUSH;
+        }
         return HOOK_RETURN_SUCCESS;
     };
     hooks.emplace(3, Hook
-        {
+        ({
             HookElementBuilder().address(mmv(0, 0x462AFC, 0)).type(HOOK_ELEM_TYPE_AUTOHOOK).func(func).build(),
             HookElementBuilder().address(mmv(0, 0x463309, 0)).type(HOOK_ELEM_TYPE_AUTOHOOK).func(func).build(),
             HookElementBuilder().address(mmv(0, 0x4975C3, 0)).type(HOOK_ELEM_TYPE_AUTOHOOK).func(func).build(),
@@ -116,9 +124,9 @@ void setupHooks() {
             HookElementBuilder().address(mmv(0, 0x4BE838, 0)).type(HOOK_ELEM_TYPE_AUTOHOOK).func(func).build(),
             HookElementBuilder().address(mmv(0, 0x4BFCA5, 0)).type(HOOK_ELEM_TYPE_AUTOHOOK).func(func).build(),
             HookElementBuilder().address(mmv(0, 0x4BFCFC, 0)).type(HOOK_ELEM_TYPE_AUTOHOOK).func(func).build(),
-        });
+        }));
     // works 100% (I'm surprised), but doesn't solve any problems I intended to solve (tooltips and creation time); keeping it, because it may prove useful later
-    // hooks.at(3).enable();
+    hooks.at(3).enable();
 }
 // hooks[RECOVERY_MULTIPLIER] = Hook
 // ({

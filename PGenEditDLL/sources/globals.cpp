@@ -8,6 +8,7 @@ Generator* generator = nullptr;
 
 const int INVALID_ID = -1;
 const int DEFAULT_SETTINGS_INDEX = -2;
+bool unloadCleanupStarted = false;
 
 int MMVER = INVALID_ID;
 

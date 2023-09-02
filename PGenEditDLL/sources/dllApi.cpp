@@ -287,6 +287,7 @@ extern "C"
 
     DLL_EXPORT void __stdcall unloadCleanup()
     {
+        unloadCleanupStarted = true;
 		delete mainUpdateTimer;
 		delete generator;
 		delete playerAccessor;

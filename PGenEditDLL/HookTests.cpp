@@ -751,10 +751,10 @@ static std::vector<wxString> HookTests::testAdvancedHookFunctionality()
     };
 
     Hook hook
-    ({
+    {
         HookElementBuilder().address((uint32_t)hookFunctionTest1).size(5).type(HOOK_ELEM_TYPE_HOOKFUNCTION).callableFunctionHookFunc<int, 2, int, int, unsigned char>(hookFunctionFunc).build(),
         HookElementBuilder().address(findCall(replaceCallHookTestOuter, replaceCallHookTestInner)).size(5).type(HOOK_ELEM_TYPE_REPLACE_CALL).callableFunctionHookFunc<int, 0, unsigned char>(replaceCallFunc).build()
-    });
+    };
     hook.enable();
     int r = hookFunctionTest1(0x5555, 0x2, 0x44);
     myassert(r == HOOK_RETURN_SUCCESS, wxString::Format("Function call returned %d", r));

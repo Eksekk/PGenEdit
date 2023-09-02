@@ -42,6 +42,10 @@ void testMemberFunctions()
 
 void HookElement::enable(bool enable)
 {
+	if (!existsInVector(gameVersions, MMVER))
+	{
+		return;
+	}
 	if (enable && !_active)
 	{
 		_active = true;
@@ -77,7 +81,6 @@ void HookElement::enable(bool enable)
 		break;
 		case HOOK_ELEM_TYPE_ERASE_CODE:
 		{
-			// TODO: check overlap
 			eraseCode(address, hookSize, &restoreData);
 		}
 		break;
@@ -88,6 +91,8 @@ void HookElement::enable(bool enable)
 			setCallableFunctionHook();
 		}
 		break;
+		case HOOK_ELEM_TYPE_DISABLED:
+			break;
 		default:
 		{
 			wxFAIL_MSG(wxString::Format("Unknown hook type %d", (int)type));
@@ -115,7 +120,9 @@ void HookElement::enable(bool enable)
 		case HOOK_ELEM_TYPE_REPLACE_CALL:
 		case HOOK_ELEM_TYPE_HOOKFUNCTION:
 			unsetCallableFunctionHook();
-			break;
+            break;
+        case HOOK_ELEM_TYPE_DISABLED:
+            break;
 		}
 	}
 }
@@ -136,7 +143,7 @@ inline bool HookElement::isActive() const
 }
 
 HookElement::HookElement() : _active(false), type(HOOK_ELEM_TYPE_CALL_RAW), address(0), target(0), hookSize(5), dataSize(0), func(0), patchDataStr(0),
-	needUnprotect(false), description(""), patchUseNops(false), extraData(nullptr)
+	needUnprotect(false), description(""), patchUseNops(false), extraData(nullptr), gameVersions{6, 7, 8}
 {
 }
 
@@ -148,7 +155,7 @@ HookElement::~HookElement()
 	}
 	if (extraData)
 	{
-		codeMemoryFree(extraData);
+		//codeMemoryFree(extraData); // done inside unhook functions
 		extraData = nullptr;
 	}
 }
@@ -213,10 +220,21 @@ HookElementBuilder& HookElementBuilder::patchUseNops(bool on)
 	return *this;
 }
 
+HookElementBuilder& HookElementBuilder::gameVersions(const std::vector<int>& gameVersions)
+{
+	elem.gameVersions = gameVersions;
+	return *this;
+}
+
 HookElement HookElementBuilder::build()
 {
     // hook properties: type, address, dataSize, hookSize, target, func, needUnprotect, description, patchUseNops (only for patch data)
     // hook types: jump, call raw, call, patch data, erase code
+    
+	if (elem.gameVersions.empty())
+	{
+		wxLogWarning("Hook at 0x%X not applicable to any game", elem.address);
+	}
     
     // all need address
     if (elem.address == 0)
@@ -320,9 +338,9 @@ Hook::Hook(const std::vector<HookElement>& elements, const std::string descripti
 
 }
 
-Hook::Hook(HookElement element, const std::string& description) : elements({element}), _active(false), description(description)
+Hook::Hook(const HookElement& element, const std::string& description) : elements({ element }), _active(false), description(description)
 {
-
+	
 }
 
 Hook::~Hook()
@@ -493,10 +511,11 @@ uint32_t autohookCall(uint32_t addr, HookFunc func, std::vector<uint8_t>* storeA
 }
 
 // TODO: all unhooks could also store all required data by themselves, to not require passing unnecessary arguments
-void unhookAutohookCall(uint32_t addr, std::vector<uint8_t>& restoreData, void* allocatedCode)
+void unhookAutohookCall(uint32_t addr, std::vector<uint8_t>& restoreData, void*& allocatedCode)
 {
 	unhookCall(addr, restoreData);
 	codeMemoryFree(allocatedCode);
+	allocatedCode = nullptr;
 }
 
 // TODO: generic function to generate all four without repeating code?

@@ -80,6 +80,7 @@ InventoryManagerCtrl::InventoryManagerCtrl(wxWindow* parent, int CELLS_ROW, int 
     m_dataViewListColumn18 = m_dataViewListCtrl3->AppendTextColumn(_("Name"), wxDATAVIEW_CELL_INERT, -1, static_cast<wxAlignment>(wxALIGN_LEFT), wxDATAVIEW_COL_RESIZABLE);
     itemsMainSizer->Add(m_dataViewListCtrl3, 0, wxALL | wxEXPAND, 5);
 
+    Fit();
     this->Layout();
 }
 
