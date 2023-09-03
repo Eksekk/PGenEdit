@@ -8,8 +8,13 @@
 class PlayerItem // holds generic item data, one entry per each item id
 {
 public:
-	int number;
+	union
+	{
+		int id;
+        int number;
+	};
 	std::string name;
+	std::string pictureName;
 	PlayerSkill* skill;
 	ItemType type;
 	double power; // relative

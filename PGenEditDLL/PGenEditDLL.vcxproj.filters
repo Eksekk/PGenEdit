@@ -346,7 +346,7 @@
       <Filter>Pliki nagłówkowe\Editor GUI</Filter>
     </ClInclude>
     <ClInclude Include="LodStructAccessor.h">
-      <Filter>Pliki nagłówkowe</Filter>
+      <Filter>Pliki nagłówkowe\GameStructs\Accessors</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -549,7 +549,7 @@
       <Filter>Pliki źródłowe\Editor GUI</Filter>
     </ClCompile>
     <ClCompile Include="LodStructAccessor.cpp">
-      <Filter>Pliki źródłowe</Filter>
+      <Filter>Pliki źródłowe\GameStructs\Accessors</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

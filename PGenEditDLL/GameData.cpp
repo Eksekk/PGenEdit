@@ -16,21 +16,13 @@ std::unordered_map<int, PlayerClass> GameData::classes;
 std::unordered_map<int, PlayerSkill> GameData::skills;
 std::map<int, std::unique_ptr<PlayerPrimaryStat>> GameData::primaryStats;
 std::map<int, std::unique_ptr<PlayerResistance>> GameData::resistances;
+std::map<int, std::unique_ptr<PlayerItem>> GameData::items;
 Json GameData::classDataJson;
 Json GameData::skillDataJson;
 Json GameData::miscDataJson;
+Json GameData::itemDataJson;
 
-bool GameData::allDataReceived = false;
-void GameData::postProcess()
-{
-    // TODO: fill out once I add parsing for other things
-    if (!classes.empty() && !skills.empty() && !primaryStats.empty())
-    {
-        allDataReceived = true;
-    }
-}
-
-bool GameData::processClassDataJson(const char* str)
+Json getJsonFromStr(const char* str)
 {
     Json json;
     if (inMM)
@@ -43,6 +35,22 @@ bool GameData::processClassDataJson(const char* str)
         json = json.parse(file);
         file.close();
     }
+    return json;
+}
+
+bool GameData::allDataReceived = false;
+void GameData::postProcess()
+{
+    // TODO: fill out once I add parsing for other things
+    if (!classes.empty() && !skills.empty() && !primaryStats.empty() && !items.empty())
+    {
+        allDataReceived = true;
+    }
+}
+
+bool GameData::processClassDataJson(const char* str)
+{
+    Json json = getJsonFromStr(str);
     classDataJson = json;
     
     //wxLogMessage(wxString(to_string(json)));
@@ -183,17 +191,7 @@ bool GameData::processSkillDataJson(const char* str)
 {
     try
     {
-        Json json;
-        if (inMM)
-        {
-            json = json.parse(str);
-        }
-        else
-        {
-            std::fstream file(str, std::ios::in);
-            json = json.parse(file);
-            file.close();
-        }
+        Json json = getJsonFromStr(str);
         skillDataJson = json;
         if (json.size() == 0)
         {
@@ -301,17 +299,7 @@ bool GameData::processMiscDataJson(const char* str)
 {
     try
     {
-		Json json;
-		if (inMM)
-		{
-			json = json.parse(str);
-		}
-		else
-		{
-			std::fstream file(str, std::ios::in);
-			json = json.parse(file);
-			file.close();
-		}
+        Json json = getJsonFromStr(str);
 		miscDataJson = json;
 
 		auto stats = json["primaryStats"].get<std::unordered_map<std::string, Json>>();
@@ -354,6 +342,34 @@ bool GameData::processMiscDataJson(const char* str)
     catch (const nlohmann::json::exception& e)
     {
         wxLogError("Json exception while parsing misc data: %s", e.what());
+        wxLog::FlushActive();
+        return false;
+    }
+    return true;
+}
+
+void GameData::fillInItemImages()
+{
+    std::map<std::string, std::vector<int>> imageToIdMap;
+    for (auto& [id, item] : items)
+    {
+        imageToIdMap[tolowerStr(item->pictureName)].push_back(id);
+    }
+
+}
+
+bool GameData::processItemDataJson(const char* str)
+{
+    try
+    {
+
+        Json json = getJsonFromStr(str);
+
+        postProcess();
+    }
+    catch (const JsonException& ex)
+    {
+        wxLogError("Exception received: %s", ex.what());
         wxLog::FlushActive();
         return false;
     }

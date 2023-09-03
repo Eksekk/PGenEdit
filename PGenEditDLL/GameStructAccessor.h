@@ -10,6 +10,8 @@ public:
 	virtual HWND getWindowHandle() = 0;
 	virtual int getCurrentPlayer() = 0;
 
+	virtual void* getIconsLodPtr() = 0;
+
 	virtual ~GameStructAccessor();
 };
 
@@ -21,6 +23,11 @@ class TemplatedGameStructAccessor : public GameStructAccessor
 public:
 	HWND getWindowHandle() override;
 	int getCurrentPlayer() override;
+	// Inherited via GameStructAccessor
+	virtual void* getIconsLodPtr() override
+	{
+		return &game->iconsLod;
+	}
 };
 using GameStructAccessor_6 = TemplatedGameStructAccessor<mm6::Game>;
 using GameStructAccessor_7 = TemplatedGameStructAccessor<mm7::Game>;
