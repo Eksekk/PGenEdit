@@ -4,6 +4,8 @@
 
 template<typename Lod>
 class TemplatedLodStructAccessor;
+class LodStructAccessor;
+extern LodStructAccessor* lodAccessor;
 
 enum BitmapsLodType
 {
@@ -49,10 +51,12 @@ public:
             TemplatedLodStructAccessor<mm8::Lod>::forEachLodBitmapDo(func, type);
         }
     }
+
+    virtual ~LodStructAccessor();
 };
 
 template<typename Lod>
-class TemplatedLodStructAccessor : LodStructAccessor
+class TemplatedLodStructAccessor : public LodStructAccessor
 {
 public:
     // Inherited via LodStructAccessor
@@ -126,4 +130,4 @@ inline int test()
     return 0;
 }
 
-//const int x = test();
+INSTANTIATE_ACCESSOR_TEMPLATES_MM_GAMES(LodStructAccessor, Lod);

@@ -19,4 +19,3 @@ public:
     using MouseType = MakeType<mm6::GameMouse, mm7::GameMouse, mm8::GameMouse>;
     static inline MouseType* const mouse = reinterpret_cast<MouseType*>(0);
 };
-

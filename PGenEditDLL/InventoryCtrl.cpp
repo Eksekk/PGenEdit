@@ -4,6 +4,7 @@
 #include "PlayerStructAccessor.h"
 #include "ItemStructAccessor.h"
 #include "GameData.h"
+#include "MapStructAccessor.h"
 
 const std::string ITEM_LOC_STORED = "stored", ITEM_LOC_CHEST = "chest", ITEM_LOC_PLAYER = "player";
 
@@ -331,13 +332,28 @@ bool InventoryCtrl::reloadReferencedItems()
     ElementsContainer storedOnly;
     std::ranges::copy_if(elements, std::back_inserter(storedOnly), [=](const ItemStoreElement& elem)
     {
-        return std::holds_alternative<StoredItemRef>(elem.location);
+        return std::holds_alternative<StoredItemRef>(elem.origin);
     });
 
     if (const MapChestRef* ref = std::get_if<MapChestRef>(&inventoryType))
     {
         // add items from chest
-        //auto addItems = [](auto& )
+        auto callback = [&](auto itemPtr)
+        {
+            mm7::Item convertedItem = itemAccessor->forItem(itemPtr)->convertToMM7Item();
+            if (convertedItem.number != 0)
+            {
+                ItemStoreElement elem(convertedItem, { -1, -1 }, StoredItemRef{}, MapChestRef(*ref));
+                InventoryPosition pos = findFreePositionForItem(elem);
+                if (pos.x != -1)
+                {
+                    elem.pos = pos;
+                    elem.location = MapChestRef(*ref);
+                }
+                elements.push_back(std::move(elem));
+            }
+        };
+        mapAccessor->forEachMapChestDo(callback);
     }
     else if (const PlayerInventoryRef* ref = std::get_if<PlayerInventoryRef>(&inventoryType))
     {
@@ -345,14 +361,14 @@ bool InventoryCtrl::reloadReferencedItems()
         auto callback = [&](auto& item)
         {
             mm7::Item convertedItem = itemAccessor->forItem(&item)->convertToMM7Item();
-            if (item.number != 0)
+            if (convertedItem.number != 0)
             {
-                ItemStoreElement elem(convertedItem, { -1, -1 }, StoredItemRef{}, PlayerInventoryRef{ref->rosterIndex});
+                ItemStoreElement elem(convertedItem, { -1, -1 }, StoredItemRef{}, PlayerInventoryRef(*ref));
                 InventoryPosition pos = findFreePositionForItem(elem);
                 if (pos.x != -1)
                 {
                     elem.pos = pos;
-                    elem.location = PlayerInventoryRef{ ref->rosterIndex };
+                    elem.location = PlayerInventoryRef(*ref);
                 }
                 elements.push_back(std::move(elem));
             }

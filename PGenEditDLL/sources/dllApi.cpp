@@ -19,6 +19,8 @@
 #include "PartyStructAccessor.h"
 #include "GameStructAccessor.h"
 #include <ItemStructAccessor.h>
+#include <LodStructAccessor.h>
+#include <MapStructAccessor.h>
 
 extern bool inMM;
 extern void setMaxSkillLevel();
@@ -154,6 +156,8 @@ extern "C"
             partyAccessor = new PartyStructAccessor_6;
             gameAccessor = new GameStructAccessor_6;
             itemAccessor = new ItemStructAccessor_6;
+            lodAccessor = new LodStructAccessor_6;
+            mapAccessor = new MapStructAccessor_6;
             playerSize = sizeof(mm6::Player);
             playerStart = offsetof(mm6::GameParty, playersArray);
             playerCount = 4;
@@ -167,6 +171,8 @@ extern "C"
             partyAccessor = new PartyStructAccessor_7;
             gameAccessor = new GameStructAccessor_7;
             itemAccessor = new ItemStructAccessor_7;
+            lodAccessor = new LodStructAccessor_7;
+            mapAccessor = new MapStructAccessor_7;
             playerSize = sizeof(mm7::Player);
             playerStart = offsetof(mm7::GameParty, playersArray);
             playerCount = 4;
@@ -180,6 +186,8 @@ extern "C"
             partyAccessor = new PartyStructAccessor_8;
             gameAccessor = new GameStructAccessor_8;
             itemAccessor = new ItemStructAccessor_8;
+            lodAccessor = new LodStructAccessor_8;
+            mapAccessor = new MapStructAccessor_8;
             playerSize = sizeof(mm8::Player);
             playerStart = offsetof(mm8::GameParty, playersArray);
             playerCount = 50;
@@ -255,7 +263,11 @@ extern "C"
 			if (GameData::primaryStats.empty())
 			{
 				errors.push_back("Statistics info wasn't received from lua yet!");
-			}
+            }
+            if (GameData::items.empty())
+            {
+                errors.push_back("Items info wasn't received from lua yet!");
+            }
 			// TODO: check all data to be received from lua
 			wxMessageBox(concatWxStrings(errors, "\n"), "Error", wxOK | wxICON_ERROR);
 			return false;
@@ -294,6 +306,8 @@ extern "C"
         delete partyAccessor;
         delete gameAccessor;
         delete itemAccessor;
+        delete lodAccessor;
+        delete mapAccessor;
         removeHooks();
         wxLog::FlushActive();
         wxEntryCleanup();

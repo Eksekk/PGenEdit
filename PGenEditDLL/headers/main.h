@@ -49,6 +49,13 @@ INSTANTIATE_CLASS_TEMPLATES_SINGLE_GAME(6, identifier, name); \
 INSTANTIATE_CLASS_TEMPLATES_SINGLE_GAME(7, identifier, name); \
 INSTANTIATE_CLASS_TEMPLATES_SINGLE_GAME(8, identifier, name)
 
+#define INSTANTIATE_ACCESSOR_TEMPLATES_SINGLE_GAME(game, identifier, name) using identifier##_##game = Templated##identifier<mm##game::name>
+
+#define INSTANTIATE_ACCESSOR_TEMPLATES_MM_GAMES(identifier, name) \
+INSTANTIATE_ACCESSOR_TEMPLATES_SINGLE_GAME(6, identifier, name); \
+INSTANTIATE_ACCESSOR_TEMPLATES_SINGLE_GAME(7, identifier, name); \
+INSTANTIATE_ACCESSOR_TEMPLATES_SINGLE_GAME(8, identifier, name)
+
 /*#pragma comment( lib, "comctl32.lib")
 
 #pragma comment( linker, "/manifestdependency:\"type='win32' \
