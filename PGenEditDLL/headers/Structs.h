@@ -58,3 +58,13 @@ inline void gameVersionDispatchItem(void* stru, auto func)
 }
 
 #undef GENERATE_DISPATCH_CODE
+
+#define genDef(name) using Any##name##Variant = std::variant<mm6::name*, mm7::name*, mm8::name*>
+genDef(Item);
+genDef(Player);
+genDef(Lod);
+genDef(LodBitmap);
+genDef(GameStructure);
+genDef(SpellBuff);
+genDef(GameParty);
+genDef(GameMap);

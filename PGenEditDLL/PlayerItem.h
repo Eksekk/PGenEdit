@@ -18,6 +18,7 @@ public:
 	std::vector<double> affinityByClass;
 	std::vector<double> affinityByPlayerType;
 	wxBitmap* image;
+	// width in cells is ceil(width / 45), same for height
 	int inventoryWidth, inventoryHeight;
 
 	PlayerItem();

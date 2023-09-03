@@ -25,16 +25,15 @@ void InventoryManagerCtrl::onRestorePress(wxCommandEvent& event)
 
 // PASSING RVALUE REFERENCES REQUIRES std::forward
 InventoryManagerCtrl::InventoryManagerCtrl(wxWindow* parent, int CELLS_ROW, int CELLS_COL, InventoryType&& inventoryType, const ElementsContainer& elements)
-    : wxScrolledWindow(parent), inventoryCtrl(new InventoryCtrl(this, CELLS_ROW, CELLS_COL, std::forward<InventoryType>(inventoryType), elements))
+    : wxPanel(parent), inventoryCtrl(new InventoryCtrl(this, CELLS_ROW, CELLS_COL, std::forward<InventoryType>(inventoryType), elements))
 {
-    SetScrollRate(35, 35);
     wxBoxSizer* itemsMainSizer = new wxBoxSizer(wxVERTICAL);
     this->SetSizer(itemsMainSizer);
 
     wxBoxSizer* inventoryAndActionsSizer;
     inventoryAndActionsSizer = new wxBoxSizer(wxHORIZONTAL);
 
-    inventoryAndActionsSizer->Add(inventoryCtrl, 0, 0, 5);
+    inventoryAndActionsSizer->Add(inventoryCtrl, wxSizerFlags(0).Border(wxALL, 5));
 
     wxBoxSizer* buttonsSizer;
     buttonsSizer = new wxBoxSizer(wxVERTICAL);
@@ -66,7 +65,7 @@ InventoryManagerCtrl::InventoryManagerCtrl(wxWindow* parent, int CELLS_ROW, int 
     buttonsSizer->Add(restoreButton, 0, wxALL | wxALIGN_CENTER_HORIZONTAL, 5);
 
 
-    inventoryAndActionsSizer->Add(buttonsSizer, 1, wxEXPAND, 5);
+    inventoryAndActionsSizer->Add(buttonsSizer, 1, wxEXPAND | wxALL, 5);
 
 
     itemsMainSizer->Add(inventoryAndActionsSizer, 0, wxEXPAND, 5);

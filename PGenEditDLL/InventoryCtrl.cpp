@@ -9,7 +9,7 @@ const std::string ITEM_LOC_STORED = "stored", ITEM_LOC_CHEST = "chest", ITEM_LOC
 const int InventoryCtrl::CELL_HEIGHT = 40; // TODO
 const int InventoryCtrl::CELL_WIDTH = 40; // TODO
 
-wxSize InventoryCtrl::DoGetBestSize() const
+wxSize InventoryCtrl::DoGetBestClientSize() const
 {
     return wxSize(CELLS_ROW * CELL_WIDTH, CELLS_COL * CELL_HEIGHT);
 }
@@ -18,7 +18,7 @@ void InventoryCtrl::OnPaint(wxPaintEvent& event)
 {
     wxPaintDC dc(this);
     // inventory border
-    wxSize size = DoGetBestSize();
+    wxSize size = DoGetBestClientSize();
     static wxBrush cornerBrush(0x6b6868, wxBRUSHSTYLE_SOLID); // gray
     static wxBrush edgeBrush(0x8c8685, wxBRUSHSTYLE_SOLID);
     // background
@@ -442,6 +442,7 @@ bool InventoryCtrl::canItemBePlacedAtPosition(const ItemStoreElement& elem, Inve
 InventoryCtrl::InventoryCtrl(wxWindow* parent, int CELLS_ROW, int CELLS_COL, InventoryType&& inventoryType, const ElementsContainer& elements)
     : wxControl(parent, wxID_ANY), CELLS_ROW(CELLS_ROW), CELLS_COL(CELLS_COL), inventoryType(inventoryType), elements(elements)
 {
+    SetSizeHints(DoGetBestClientSize());
     // TODO: unpersist
 }
 

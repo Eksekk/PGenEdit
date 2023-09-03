@@ -125,8 +125,8 @@ void setupHooks() {
             HookElementBuilder().address(mmv(0, 0x4BFCA5, 0)).type(HOOK_ELEM_TYPE_AUTOHOOK).func(func).build(),
             HookElementBuilder().address(mmv(0, 0x4BFCFC, 0)).type(HOOK_ELEM_TYPE_AUTOHOOK).func(func).build(),
         }));
-    // works 100% (I'm surprised), but doesn't solve any problems I intended to solve (tooltips and creation time); keeping it, because it may prove useful later
-    hooks.at(3).enable();
+    // doesn't solve any problems I intended to solve (tooltips and creation time); keeping it, because it may prove useful later
+    // hooks.at(3).enable(); // FIXME! crashes on dll unload
 }
 // hooks[RECOVERY_MULTIPLIER] = Hook
 // ({

@@ -64,6 +64,7 @@
     <ClInclude Include="InventoryCtrl.h" />
     <ClInclude Include="InventoryManagerCtrl.h" />
     <ClInclude Include="ItemStructAccessor.h" />
+    <ClInclude Include="LodStructAccessor.h" />
     <ClInclude Include="LuaFunctions.h" />
     <ClInclude Include="PartyStructAccessor.h" />
     <ClInclude Include="PlayerClass.h" />
@@ -130,6 +131,7 @@
     <ClCompile Include="InventoryCtrl.cpp" />
     <ClCompile Include="InventoryManagerCtrl.cpp" />
     <ClCompile Include="ItemStructAccessor.cpp" />
+    <ClCompile Include="LodStructAccessor.cpp" />
     <ClCompile Include="LuaFunctions.cpp" />
     <ClCompile Include="PartyStructAccessor.cpp" />
     <ClCompile Include="PlayerClass.cpp" />

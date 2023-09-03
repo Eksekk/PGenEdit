@@ -6,9 +6,8 @@
 class wxDataViewListCtrl;
 class wxDataViewColumn;
 
-class InventoryManagerCtrl : public wxScrolledWindow
+class InventoryManagerCtrl : public wxPanel
 {
-
     wxButton* addButton;
     wxButton* deleteButton;
     wxButton* modifyButton;

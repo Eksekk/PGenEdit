@@ -64,7 +64,7 @@ class InventoryCtrl : public wxControl
     ElementsContainer elements;
     
     // wx stuff
-    virtual wxSize DoGetBestSize() const;
+    virtual wxSize DoGetBestClientSize() const;
     void OnPaint(wxPaintEvent& event);
 public:
     InventoryType inventoryType;

@@ -6,7 +6,7 @@
 
 class InventoryManagerCtrl;
 
-class EditorItemsPanel : public EditorPlayerPanel, public wxPanel
+class EditorItemsPanel : public EditorPlayerPanel, public wxScrolledWindow
 {
     void onActivateWindow(wxActivateEvent& event);
 public:

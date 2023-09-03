@@ -345,6 +345,9 @@
     <ClInclude Include="EditorItemsPanel.h">
       <Filter>Pliki nagłówkowe\Editor GUI</Filter>
     </ClInclude>
+    <ClInclude Include="LodStructAccessor.h">
+      <Filter>Pliki nagłówkowe</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="sources\MainWindow.cpp">
@@ -544,6 +547,9 @@
     </ClCompile>
     <ClCompile Include="EditorItemsPanel.cpp">
       <Filter>Pliki źródłowe\Editor GUI</Filter>
+    </ClCompile>
+    <ClCompile Include="LodStructAccessor.cpp">
+      <Filter>Pliki źródłowe</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
