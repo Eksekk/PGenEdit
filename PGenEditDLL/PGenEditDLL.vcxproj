@@ -66,6 +66,7 @@
     <ClInclude Include="ItemStructAccessor.h" />
     <ClInclude Include="LodStructAccessor.h" />
     <ClInclude Include="LuaFunctions.h" />
+    <ClInclude Include="MapStructAccessor.h" />
     <ClInclude Include="PartyStructAccessor.h" />
     <ClInclude Include="PlayerClass.h" />
     <ClInclude Include="headers\GuiApplication.h" />
@@ -97,6 +98,7 @@
     <ClInclude Include="ResistanceWidget.h" />
     <ClInclude Include="SaveGameData.h" />
     <ClInclude Include="SpecificClassChooserPanel.h" />
+    <ClInclude Include="StructAccessor.h" />
     <ClInclude Include="Tests.h" />
     <ClInclude Include="CommandManager.h" />
     <ClInclude Include="Utility.h" />
@@ -133,6 +135,7 @@
     <ClCompile Include="ItemStructAccessor.cpp" />
     <ClCompile Include="LodStructAccessor.cpp" />
     <ClCompile Include="LuaFunctions.cpp" />
+    <ClCompile Include="MapStructAccessor.cpp" />
     <ClCompile Include="PartyStructAccessor.cpp" />
     <ClCompile Include="PlayerClass.cpp" />
     <ClCompile Include="PlayerResistance.cpp" />
@@ -169,6 +172,7 @@
     <ClCompile Include="sources\structs\GameStructure.cpp" />
     <ClCompile Include="sources\structs\Lod.cpp" />
     <ClCompile Include="SpecificClassChooserPanel.cpp" />
+    <ClCompile Include="StructAccessor.cpp" />
     <ClCompile Include="Tests.cpp" />
     <ClCompile Include="CommandManager.cpp" />
     <ClCompile Include="Utility.cpp" />

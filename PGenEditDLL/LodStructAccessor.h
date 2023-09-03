@@ -95,6 +95,10 @@ public:
         {
             lod = (BitmapsLod*)&game->iconsLod;
         }
+        else
+        {
+            assert(false);
+        }
         LodBitmap* bmp = reinterpret_cast<LodBitmap*>(lod->bitmaps.data());
         for (size_t i = 0; i < lod->bitmaps_size; ++i)
         {

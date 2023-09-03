@@ -348,6 +348,12 @@
     <ClInclude Include="LodStructAccessor.h">
       <Filter>Pliki nagłówkowe\GameStructs\Accessors</Filter>
     </ClInclude>
+    <ClInclude Include="MapStructAccessor.h">
+      <Filter>Pliki nagłówkowe\GameStructs\Accessors</Filter>
+    </ClInclude>
+    <ClInclude Include="StructAccessor.h">
+      <Filter>Pliki nagłówkowe\GameStructs\Accessors</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="sources\MainWindow.cpp">
@@ -549,6 +555,12 @@
       <Filter>Pliki źródłowe\Editor GUI</Filter>
     </ClCompile>
     <ClCompile Include="LodStructAccessor.cpp">
+      <Filter>Pliki źródłowe\GameStructs\Accessors</Filter>
+    </ClCompile>
+    <ClCompile Include="MapStructAccessor.cpp">
+      <Filter>Pliki źródłowe\GameStructs\Accessors</Filter>
+    </ClCompile>
+    <ClCompile Include="StructAccessor.cpp">
       <Filter>Pliki źródłowe\GameStructs\Accessors</Filter>
     </ClCompile>
   </ItemGroup>

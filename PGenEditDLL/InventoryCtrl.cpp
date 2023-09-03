@@ -3,6 +3,7 @@
 #include "InventoryCtrl.h"
 #include "PlayerStructAccessor.h"
 #include "ItemStructAccessor.h"
+#include "GameData.h"
 
 const std::string ITEM_LOC_STORED = "stored", ITEM_LOC_CHEST = "chest", ITEM_LOC_PLAYER = "player";
 
@@ -24,6 +25,7 @@ void InventoryCtrl::OnPaint(wxPaintEvent& event)
     // background
     dc.SetBrush(wxBrush(0xe6d0cf, wxBRUSHSTYLE_SOLID));
     dc.DrawRectangle(wxPoint(0, 0), size);
+    std::vector<wxRect> drawRects;
     for (int y = 0; y < CELL_HEIGHT + 1; ++y)
     {
         for (int x = 0; x < CELL_WIDTH + 1; ++x)
@@ -39,9 +41,19 @@ void InventoryCtrl::OnPaint(wxPaintEvent& event)
                 dc.SetBrush(edgeBrush);
                 dc.DrawLine(wxPoint(0, CELL_HEIGHT * y), wxPoint(size.GetX(), CELL_HEIGHT * y));
             }
-            dc.SetBrush(cornerBrush);
-            dc.DrawRectangle(wxPoint(x * CELL_WIDTH, y * CELL_HEIGHT), wxSize(10, 10));
+            drawRects.push_back(wxRect(wxPoint(x * CELL_WIDTH, y * CELL_HEIGHT), wxSize(10, 10)));
         }
+    }
+
+    dc.SetBrush(cornerBrush);
+    for (const auto& rect : drawRects)
+    {
+        dc.DrawRectangle(rect);
+    }
+
+    for (const auto& elem : elements)
+    {
+        drawItemAt(dc, elem, elem.pos.x * CELL_WIDTH, elem.pos.y * CELL_HEIGHT);
     }
     /*
      
@@ -153,7 +165,7 @@ bool unpersistItem(ItemStoreElement& elem, const Json& json)
     }
     catch (const nlohmann::json::exception& ex)
     {
-        wxLogError("Couldn't persist item: %s", ex.what());
+        wxLogError("Couldn't persist elem: %s", ex.what());
         return false;
     }
 }
@@ -178,7 +190,7 @@ bool InventoryCtrl::persistInventory(Json& json) const
                 "mapName": "d23.blv",
                 "chestId": 5
             },
-            item: {
+            elem: {
                 "number": 20,
                 "bonus2": 33,
                 "condition": 3,
@@ -186,7 +198,7 @@ bool InventoryCtrl::persistInventory(Json& json) const
             }
         },
         {
-            // another item...
+            // another elem...
         }
      }
      **/
@@ -222,7 +234,7 @@ bool InventoryCtrl::persistInventory(Json& json) const
             persistItemLocationVariant(elem.origin, originJson);
             Json itemJson;
             persistItem(elem, itemJson);
-            entryJson["item"] = std::move(itemJson);
+            entryJson["elem"] = std::move(itemJson);
             json.push_back(std::move(entryJson));
         }
     }
@@ -281,7 +293,7 @@ bool InventoryCtrl::unpersistInventory(const Json& json)
                 return false;
             }
             unpersistItemLocationVariant(elem.origin, json["origin"]);
-            unpersistItem(elem, entry["item"]);
+            unpersistItem(elem, entry["elem"]);
             elements.push_back(std::move(elem));
         }
     }
@@ -306,6 +318,12 @@ bool InventoryCtrl::unpersist(const Json& json)
         return unpersistInventory(json["inventory"]);
     }
     return false;
+}
+
+bool InventoryCtrl::drawItemAt(wxPaintDC& dc, const ItemStoreElement& elem, int x, int y)
+{
+    dc.DrawBitmap(*GameData::items.at(elem.item.number)->image, x, y);
+    return true;
 }
 
 bool InventoryCtrl::reloadReferencedItems()

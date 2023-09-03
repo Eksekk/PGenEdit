@@ -383,6 +383,7 @@ void GameData::fillInItemImages()
             else
             {
                 wxFAIL;
+                assert(false);
             }
 
             // extract palette colors
@@ -395,7 +396,7 @@ void GameData::fillInItemImages()
 
             // couuuld simply read dword from memory, but to be 100% sure no invalid memory access happens, let's use a small buffer
             uint8_t entry[4];
-            int entrySize = paletteBitWidth * 8;
+            int entrySize = std::round(paletteBitWidth / 8.0 * 3);
             uint16_t mask = (1 << paletteBitWidth) - 1;
 
             for (int i = 0; i < 256; ++i)
@@ -416,6 +417,10 @@ void GameData::fillInItemImages()
                 {
                     int pal = byte(bitmapPtr->image + x + y * width);
                     img.SetRGB(x, y, red[pal], blue[pal], green[pal]);
+                    if (pal == 0) // first color in palette is transparency color
+                    {
+                        img.SetAlpha(x, y, 255);
+                    }
                 }
             }
 

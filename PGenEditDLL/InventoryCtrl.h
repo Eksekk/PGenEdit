@@ -76,6 +76,8 @@ public:
     bool persist(Json& json) const;
     bool unpersist(const Json& json);
 
+    bool drawItemAt(wxPaintDC& dc, const ItemStoreElement& elem, int x, int y);
+
     // delete all player inventory / map chest items, and readd them, if possible on old positions
     bool reloadReferencedItems();
 
