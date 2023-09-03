@@ -22,7 +22,7 @@ public:
 	static bool processClassDataJson(const char* str);
 	static bool processSkillDataJson(const char* str);
 	static bool processMiscDataJson(const char* str);
-	void fillInItemImages();
+	static void fillInItemImages();
 	static bool processItemDataJson(const char* str);
 
 	static const int DATA_TYPE_COUNT = 3;

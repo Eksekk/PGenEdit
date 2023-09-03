@@ -5,10 +5,16 @@
 template<typename Lod>
 class TemplatedLodStructAccessor;
 
+enum BitmapsLodType
+{
+    BITMAPS_LOD_BITMAPS,
+    BITMAPS_LOD_ICONS
+};
+
 class LodStructAccessor
 {
 public:
-    //virtual void forEachLodBitmapDo(void* ptr, int n, std::function<void(AnyLodBitmapVariant var)> func) = 0;
+    //virtual void forEachIconsLodBitmapDo(void* ptr, int n, std::function<void(AnyLodBitmapVariant var)> func) = 0;
 
     template<typename Function>
     static void forEachLodDo(void* ptr, int n, Function func)
@@ -28,19 +34,19 @@ public:
     }
 
     template<typename Function>
-    static void forEachLodBitmapDo(Function func)
+    static void forEachLodBitmapDo(Function func, BitmapsLodType type)
     {
         if (MMVER == 6)
         {
-            TemplatedLodStructAccessor<mm6::Lod>::forEachLodBitmapDo(func);
+            TemplatedLodStructAccessor<mm6::Lod>::forEachLodBitmapDo(func, type);
         }
         else if (MMVER == 7)
         {
-            TemplatedLodStructAccessor<mm7::Lod>::forEachLodBitmapDo(func);
+            TemplatedLodStructAccessor<mm7::Lod>::forEachLodBitmapDo(func, type);
         }
         else if (MMVER == 8)
         {
-            TemplatedLodStructAccessor<mm8::Lod>::forEachLodBitmapDo(func);
+            TemplatedLodStructAccessor<mm8::Lod>::forEachLodBitmapDo(func, type);
         }
     }
 };
@@ -50,7 +56,7 @@ class TemplatedLodStructAccessor : LodStructAccessor
 {
 public:
     // Inherited via LodStructAccessor
-    /*virtual void forEachLodBitmapDo(void* ptr, int n, std::function<void(AnyLodBitmapVariant var)> func) override
+    /*virtual void forEachIconsLodBitmapDo(void* ptr, int n, std::function<void(AnyLodBitmapVariant var)> func) override
     {
         mm6::LodBitmap* lodBmps = reinterpret_cast<mm6::LodBitmap*>(ptr);
 
@@ -78,11 +84,19 @@ public:
     using IconsLod = BitmapsLod;
 
     template<typename Function>
-    static void forEachLodBitmapDo(Function func)
+    static void forEachLodBitmapDo(Function func, BitmapsLodType type)
     {
-        IconsLod* lod = (IconsLod*)&game->iconsLod;
-        LodBitmap* bmp = reinterpret_cast<LodBitmap*>(lod->bitmaps);
-        for (int i = 0; i < lod->bitmaps_size; ++i)
+        BitmapsLod* lod = nullptr;
+        if (type == BITMAPS_LOD_BITMAPS)
+        {
+            lod = (BitmapsLod*)&game->bitmapsLod;
+        }
+        else if (type == BITMAPS_LOD_ICONS)
+        {
+            lod = (BitmapsLod*)&game->iconsLod;
+        }
+        LodBitmap* bmp = reinterpret_cast<LodBitmap*>(lod->bitmaps.data());
+        for (size_t i = 0; i < lod->bitmaps_size; ++i)
         {
             func(bmp + i);
         }

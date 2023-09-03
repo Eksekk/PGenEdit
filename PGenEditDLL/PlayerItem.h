@@ -22,7 +22,7 @@ public:
 	bool isArtifact;
 	std::vector<double> affinityByClass;
 	std::vector<double> affinityByPlayerType;
-	wxBitmap* image;
+	std::unique_ptr<wxBitmap> image;
 	// width in cells is ceil(width / 45), same for height
 	int inventoryWidth, inventoryHeight;
 

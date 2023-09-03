@@ -11,6 +11,8 @@
 #include "ClassWindow.h"
 #include "MainWindow.h"
 #include "Tests.h"
+#include "LodStructAccessor.h"
+#include "LowLevel.h"
 
 std::unordered_map<int, PlayerClass> GameData::classes;
 std::unordered_map<int, PlayerSkill> GameData::skills;
@@ -350,19 +352,87 @@ bool GameData::processMiscDataJson(const char* str)
 
 void GameData::fillInItemImages()
 {
-    std::map<std::string, std::vector<int>> imageToIdMap;
+    std::map<std::string, std::vector<int>> imageIdToNameMap;
     for (auto& [id, item] : items)
     {
-        imageToIdMap[tolowerStr(item->pictureName)].push_back(id);
+        imageIdToNameMap[tolowerStr(item->pictureName)].push_back(id);
     }
+    LodStructAccessor::forEachLodBitmapDo([&](auto bitmapPtr)
+        {
+            std::string name = tolowerStr(bitmapPtr->name.data());
+            int width = bitmapPtr->width, height = bitmapPtr->height;
+            wxASSERT(imageIdToNameMap.contains(name));
+            uint8_t* palettePtr;
+            int paletteBitWidth; // 16, 24, (32?)
+            if (bitmapPtr->palette)
+            {
+                palettePtr = (uint8_t*)bitmapPtr->palette;
+                paletteBitWidth = 8; // ???
+                __debugbreak();
+            }
+            else if (bitmapPtr->palette24)
+            {
+                palettePtr = (uint8_t*)bitmapPtr->palette24;
+                paletteBitWidth = 8;
+            }
+            else if (bitmapPtr->palette16)
+            {
+                palettePtr = (uint8_t*)bitmapPtr->palette16;
+                paletteBitWidth = 6;
+            }
+            else
+            {
+                wxFAIL;
+            }
 
+            // extract palette colors
+            // three vectors at index "i" contain constituent RGB colors of palette entry (max 256 entries)
+            // each palette color value has "paletteBitWidth" bits to represent the value
+            std::vector<uint8_t> red, blue, green;
+            red.resize(256);
+            blue.resize(256);
+            green.resize(256);
+
+            // couuuld simply read dword from memory, but to be 100% sure no invalid memory access happens, let's use a small buffer
+            uint8_t entry[4];
+            int entrySize = paletteBitWidth * 8;
+            uint16_t mask = (1 << paletteBitWidth) - 1;
+
+            for (int i = 0; i < 256; ++i)
+            {
+                memcpy(entry, palettePtr + i * paletteBitWidth * 3, entrySize);
+                uint32_t data = dword(entry);
+                // extract bit groups
+                red.push_back((data & mask) >> (32 - paletteBitWidth)); // 32 = bit size of "data"
+                blue.push_back(((data << paletteBitWidth) & mask) >> (32 - paletteBitWidth));
+                green.push_back(((data << (paletteBitWidth * 2)) & mask) >> (32 - paletteBitWidth));
+            }
+
+            // TODO: better, this will be slow
+            wxImage img(width, height);
+            for (int y = 0; y < height; ++y)
+            {
+                for (int x = 0; x < width; ++x)
+                {
+                    int pal = byte(bitmapPtr->image + x + y * width);
+                    img.SetRGB(x, y, red[pal], blue[pal], green[pal]);
+                }
+            }
+
+            for (int itemId : imageIdToNameMap[name])
+            {
+                PlayerItem* item = items.at(itemId).get();
+                item->inventoryHeight = std::ceil(height / 45.0);
+                item->inventoryWidth = std::ceil(width / 45.0);
+                item->image = std::make_unique<wxBitmap>(img);
+            }
+        }, BITMAPS_LOD_ICONS);
 }
 
 bool GameData::processItemDataJson(const char* str)
 {
     try
     {
-
         Json json = getJsonFromStr(str);
 
         postProcess();
