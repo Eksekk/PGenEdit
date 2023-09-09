@@ -64,7 +64,7 @@ protected:
 	void onFullClassChoiceSelect(wxCommandEvent& event);
 	
 	wxCheckBox* noRecoveryCheckbox;
-	void onNoRecoveryCheck(wxCommandEvent& event);
+    void onNoRecoveryCheck(wxCommandEvent& event);
 
 	std::unordered_map<PlayerClass*, int> fullChoiceIdToClassMap;
 	std::unordered_map<int, PlayerClass*> classToFullChoiceIdMap;

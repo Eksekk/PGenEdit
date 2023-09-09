@@ -5,11 +5,13 @@
 #include "ItemStructAccessor.h"
 #include "GameData.h"
 #include "MapStructAccessor.h"
+#include "SaveGameData.h"
 
 const std::string ITEM_LOC_STORED = "stored", ITEM_LOC_CHEST = "chest", ITEM_LOC_PLAYER = "player";
 
 const int InventoryCtrl::CELL_HEIGHT = 40; // TODO
 const int InventoryCtrl::CELL_WIDTH = 40; // TODO
+const std::string InventoryCtrl::JSON_KEY_INVENTORY = "inventory";
 
 wxSize InventoryCtrl::DoGetBestClientSize() const
 {
@@ -65,62 +67,48 @@ void InventoryCtrl::OnPaint(wxPaintEvent& event)
 template<typename Variant>
 bool persistItemLocationVariant(const Variant& loc, Json& json)
 {
-    std::visit([&](auto& arg)
+    try
     {
-        arg.persist(json);
-    }, loc);
-    return true;
+        std::visit([&](auto& arg)
+            {
+                arg.persist(json);
+            }, loc);
+        return true;
+    }
+    catch (const JsonException& ex)
+    {
+        wxLogError("Item location variant persist error: '%s'", ex.what());
+        return false;
+    }
 }
 
 template<typename Variant>
 bool unpersistItemLocationVariant(Variant& loc, const Json& json)
 {
-    try
+    try 
     {
-        std::string type = tolowerStr(json["type"]);
-        if (type == ITEM_LOC_CHEST)
-        {
-            MapChestRef ref;
-            ref.unpersist(json);
-            loc = ref;
-        }
-        else if (type == ITEM_LOC_PLAYER)
-        {
-            PlayerInventoryRef ref;
-            ref.unpersist(json);
-            loc = ref;
-        }
-        else if (type == ITEM_LOC_STORED)
-        {
-            // to have consistent code
-            StoredItemRef ref;
-            ref.unpersist(json);
-            loc = ref;
-        }
-        else
-        {
-            wxLogError("Item location unpersist error: unknown item location type '%s'", type);
-            return false;
-        }
+        std::visit([&](auto& arg)
+            {
+                arg.unpersist(json);
+            }, loc);
         return true;
     }
-    catch (const nlohmann::json::exception& ex)
+    catch (const JsonException& ex)
     {
-        wxLogError("Json error: %s", ex.what());
+        wxLogError("Item location variant unpersist error: '%s'", ex.what());
         return false;
     }
 }
 
-bool persistItem(const ItemStoreElement& elem, Json& json)
+bool ItemStoreElement::persistItem(Json& json) const
 {
     try
     {
         json["pos"] =
         {
-            {"x", elem.pos.x},
-            {"y", elem.pos.y}
+            {"x", pos.x},
+            {"y", pos.y}
         };
-        const mm7::Item& item = elem.item;
         Json& itemJson = json["item"];
         // don't care about SKIP-ped field?
         itemJson["number"] = item.number;
@@ -142,14 +130,13 @@ bool persistItem(const ItemStoreElement& elem, Json& json)
     }
 }
 
-bool unpersistItem(ItemStoreElement& elem, const Json& json)
+bool ItemStoreElement::unpersistItem(const Json& json)
 {
     try
     {
-        const Json& pos = json["pos"];
-        elem.pos.x = pos["x"];
-        elem.pos.y = pos["y"];
-        mm7::Item& item = elem.item;
+        const Json& posJson = json["pos"];
+        pos.x = posJson["x"];
+        pos.y = posJson["y"];
         const Json& itemJson = json["item"];
         // don't care about SKIP-ped field?
         item.number = itemJson["number"];
@@ -203,40 +190,48 @@ bool InventoryCtrl::persistInventory(Json& json) const
         }
      }
      **/
+
+    // only store saved items? actual chest's items will be reloaded anyways
+    /*
+     "mapChestsStoredItems" = {
+     
+     }
+     **/
     bool hasChest = false, hasPlayerInventory = false; // check that both of these are not true at the same time (can use chest's inventory + stored items or player's inventory + stored items)
+
     try
     {
+        // remove old items belonging to same inventory before adding new
+        static enum
+        {
+            REMOVE_CHEST,
+            REMOVE_PLAYER
+        } removeMode;
+        if (std::holds_alternative<MapChestRef>(inventoryType))
+        {
+            removeMode = REMOVE_CHEST;
+        }
+        else if (std::holds_alternative<PlayerInventoryRef>(inventoryType))
+        {
+            removeMode = REMOVE_PLAYER;
+        }
+        else
+        {
+            wxFAIL_MSG("Invalid inventoryType value");
+        }
+        auto r = std::ranges::remove_if(json, [&](Json& elem) -> bool
+            {
+                ItemLocationType tmp;
+                std::visit([&](auto& loc) { loc.unpersist(elem); }, tmp);
+                bool shouldRemove = (removeMode == REMOVE_CHEST && std::holds_alternative<MapChestRef>(tmp)) || (removeMode == REMOVE_PLAYER && std::holds_alternative<PlayerInventoryRef>(tmp));
+                return shouldRemove;
+            });
+        json.erase(r.begin(), r.end());
         for (const auto& elem : elements)
         {
-            Json entryJson;
-            Json& locationJson = entryJson["location"];
-            // using ifs there, because I want to make sure there aren't items both from player and chest
-            if (const MapChestRef* ref = std::get_if<MapChestRef>(&elem.location))
-            {
-                ref->persist(locationJson);
-                hasChest = true;
-            }
-            else if (const PlayerInventoryRef* ref = std::get_if<PlayerInventoryRef>(&elem.location))
-            {
-                ref->persist(locationJson);
-                hasPlayerInventory = true;
-            }
-            else if (const StoredItemRef* ref = std::get_if<StoredItemRef>(&elem.location))
-            {
-                ref->persist(locationJson);
-            }
-            else
-            {
-                wxFAIL;
-                return false;
-            }
-
-            Json& originJson = entryJson["origin"];
-            persistItemLocationVariant(elem.origin, originJson);
-            Json itemJson;
-            persistItem(elem, itemJson);
-            entryJson["elem"] = std::move(itemJson);
-            json.push_back(std::move(entryJson));
+            Json j;
+            elem.persist(j);
+            json.push_back(std::move(j));
         }
     }
     catch (const nlohmann::json::exception& ex)
@@ -255,7 +250,8 @@ bool InventoryCtrl::persistInventory(Json& json) const
 
 bool InventoryCtrl::persist(Json& json) const
 {
-    return persistInventory(json["inventory"]);
+    // not persisting directly in given json, because of potential additions in future which wouldn't classify as inventory
+    return persistInventory(json[JSON_KEY_INVENTORY]);
 }
 
 bool InventoryCtrl::unpersistInventory(const Json& json)
@@ -266,35 +262,9 @@ bool InventoryCtrl::unpersistInventory(const Json& json)
         for (const Json& entry : json)
         {
             ItemStoreElement elem;
-            const Json& location = entry["location"];
-            std::string type = tolowerStr(location["type"]);
-            if (type == ITEM_LOC_CHEST)
-            {
-                MapChestRef ref;
-                ref.unpersist(location);
-                elem.location = std::move(ref);
-                hasChest = true;
-            }
-            else if (type == ITEM_LOC_PLAYER)
-            {
-                PlayerInventoryRef ref;
-                ref.unpersist(location);
-                elem.location = std::move(ref);
-                hasPlayerInventory = true;
-            }
-            else if (type == ITEM_LOC_STORED)
-            {
-                StoredItemRef ref;
-                ref.unpersist(location);
-                elem.location = std::move(ref);
-            }
-            else
-            {
-                wxFAIL;
-                return false;
-            }
-            unpersistItemLocationVariant(elem.origin, json["origin"]);
-            unpersistItem(elem, entry["elem"]);
+            elem.unpersist(entry);
+            hasChest = hasChest || std::holds_alternative<MapChestRef>(elem.origin);
+            hasPlayerInventory = hasPlayerInventory || std::holds_alternative<PlayerInventoryRef>(elem.origin);
             elements.push_back(std::move(elem));
         }
     }
@@ -314,9 +284,9 @@ bool InventoryCtrl::unpersistInventory(const Json& json)
 
 bool InventoryCtrl::unpersist(const Json& json)
 {
-    if (json.contains("inventory"))
+    if (json.contains(JSON_KEY_INVENTORY))
     {
-        return unpersistInventory(json["inventory"]);
+        return unpersistInventory(json[JSON_KEY_INVENTORY]);
     }
     return false;
 }
@@ -329,8 +299,8 @@ bool InventoryCtrl::drawItemAt(wxPaintDC& dc, const ItemStoreElement& elem, int 
 
 bool InventoryCtrl::reloadReferencedItems()
 {
-    ElementsContainer storedOnly;
-    std::ranges::copy_if(elements, std::back_inserter(storedOnly), [=](const ItemStoreElement& elem)
+    ElementsContainer nextElements; // will be assigned to elements
+    std::ranges::copy_if(elements, std::back_inserter(nextElements), [=](const ItemStoreElement& elem)
     {
         return std::holds_alternative<StoredItemRef>(elem.origin);
     });
@@ -344,13 +314,8 @@ bool InventoryCtrl::reloadReferencedItems()
             if (convertedItem.number != 0)
             {
                 ItemStoreElement elem(convertedItem, { -1, -1 }, StoredItemRef{}, MapChestRef(*ref));
-                InventoryPosition pos = findFreePositionForItem(elem);
-                if (pos.x != -1)
-                {
-                    elem.pos = pos;
-                    elem.location = MapChestRef(*ref);
-                }
-                elements.push_back(std::move(elem));
+                moveStoredItemToInventory(elem);
+                nextElements.push_back(std::move(elem));
             }
         };
         mapAccessor->forEachMapChestDo(callback);
@@ -364,13 +329,8 @@ bool InventoryCtrl::reloadReferencedItems()
             if (convertedItem.number != 0)
             {
                 ItemStoreElement elem(convertedItem, { -1, -1 }, StoredItemRef{}, PlayerInventoryRef(*ref));
-                InventoryPosition pos = findFreePositionForItem(elem);
-                if (pos.x != -1)
-                {
-                    elem.pos = pos;
-                    elem.location = PlayerInventoryRef(*ref);
-                }
-                elements.push_back(std::move(elem));
+                moveStoredItemToInventory(elem);
+                nextElements.push_back(std::move(elem));
             }
         };
         void* items = playerAccessor->forPlayerRosterId(ref->rosterIndex)->getItemsPtr();
@@ -391,7 +351,7 @@ bool InventoryCtrl::reloadReferencedItems()
     {
         wxFAIL;
     }
-    elements = std::move(storedOnly);
+    elements = std::move(nextElements);
     return false;
 }
 
@@ -406,7 +366,7 @@ void InventoryCtrl::onRightclick(wxMouseEvent& event)
 bool InventoryCtrl::moveStoredItemToInventory(ItemStoreElement& item, InventoryPosition pos)
 {
     wxASSERT_MSG(std::holds_alternative<StoredItemRef>(item.location), "Expected item in storage");
-    auto visitor = [&](const auto& ref) {item.location = ref; };
+    auto visitor = [&](const auto& ref) {item.location = ref; }; // needed because inventoryType doesn't have stored item ref alternative
     item.pos = findFreePositionForItem(item);
     if (pos.x != -1 || item.pos.x != -1)
     {
@@ -477,17 +437,38 @@ InventoryCtrl::InventoryCtrl(wxWindow* parent, int CELLS_ROW, int CELLS_COL, Inv
     : wxControl(parent, wxID_ANY), CELLS_ROW(CELLS_ROW), CELLS_COL(CELLS_COL), inventoryType(inventoryType), elements(elements)
 {
     SetSizeHints(DoGetBestClientSize());
-    // TODO: unpersist
+    saveGameData.loadInventoryControl(*this);
 }
 
 InventoryCtrl::~InventoryCtrl()
 {
-    // TODO: persist
+    saveGameData.saveInventoryControl(*this);
 }
 
 ItemStoreElement::ItemStoreElement() : item{ 0 }, pos{ -1, -1 }, location{ PlayerInventoryRef{} }
 {
 
+}
+
+bool ItemStoreElement::persist(Json& json) const
+{
+    json.clear();
+    Json& locationJson = json["location"];
+    persistItemLocationVariant(location, locationJson);
+
+    Json& originJson = json["origin"];
+    persistItemLocationVariant(origin, originJson);
+    persistItem(json);
+    return true;
+}
+
+bool ItemStoreElement::unpersist(const Json& json)
+{
+    const Json& locationJson = json.at("location");
+    unpersistItemLocationVariant(location, locationJson);
+    unpersistItemLocationVariant(origin, json.at("origin"));
+    unpersistItem(json);
+    return true;
 }
 
 ItemStoreElement::ItemStoreElement(const mm7::Item& item, InventoryPosition pos, const ItemLocationType& location, const ItemLocationType& origin)
@@ -511,9 +492,31 @@ bool ItemStoreElement::isSameExceptPos(const ItemStoreElement& other) const
 
 bool MapChestRef::persist(Json& json) const
 {
-    json["type"] = ITEM_LOC_CHEST;
-    json["mapName"] = mapName;
-    json["chestId"] = chestId;
+    auto mapLower = tolowerStr(mapName);
+    // not sure yet which storage approach I take (one big array of map chests or tree indexed by map names and chest ids), so store both ways
+    // LOCATION (current) -> flat?
+    // ORIGIN (initial) -> flat?
+    // MAP CHESTS array -> structured?
+    // mapChests = 
+    // {
+    //     "7d05.blv":
+    //     {
+    //         "chestId" = 5,
+    //         "items" = {...}
+    //     },
+    //     {
+    //         ...
+    //     }
+    // },
+    // {
+    //     ...
+    // }
+    json[mapLower][std::to_string(chestId)] =
+    {
+        {"type", ITEM_LOC_CHEST},
+        {"mapName", mapLower},
+        {"chestId", chestId},
+    };
     return true;
 }
 

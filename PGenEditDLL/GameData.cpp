@@ -404,9 +404,9 @@ void GameData::fillInItemImages()
                 memcpy(entry, palettePtr + i * paletteBitWidth * 3, entrySize);
                 uint32_t data = dword(entry);
                 // extract bit groups
-                red.push_back((data & mask) >> (32 - paletteBitWidth)); // 32 = bit size of "data"
-                blue.push_back(((data << paletteBitWidth) & mask) >> (32 - paletteBitWidth));
-                green.push_back(((data << (paletteBitWidth * 2)) & mask) >> (32 - paletteBitWidth));
+                red[i] = (data >> (32 - paletteBitWidth)) & mask; // 32 = bit size of "data"
+                blue[i] = (((data << paletteBitWidth) >> (32 - paletteBitWidth)) & mask);
+                green[i] = (((data << (paletteBitWidth * 2)) & mask) >> (32 - paletteBitWidth));
             }
 
             // TODO: better, this will be slow
@@ -439,6 +439,12 @@ bool GameData::processItemDataJson(const char* str)
     try
     {
         Json json = getJsonFromStr(str);
+
+        for (const auto& [indexStr, data] : json.get<std::map<std::string, Json>>())
+        {
+            items.emplace(stoi(indexStr), std::make_unique<PlayerItem>());
+            // TODO: fill other info
+        }
 
         postProcess();
     }

@@ -7,19 +7,21 @@
 #include "PlayerPanel.h"
 #include <MainWindow.h>
 #include "HookParams.h"
+#include "InventoryCtrl.h"
 
 SaveGameData saveGameData;
 
-static const std::string EDITOR_KEY = "editorJson", GENERATOR_KEY = "generator", PLAYERS_KEY = "playersJson", PLAYER_WINDOW_KEY = "window", PLAYER_PANELS_KEY = "panelsJson";
+static const std::string JSON_KEY_EDITOR = "editorJson", JSON_KEY_GENERATOR = "generator", JSON_KEY_PLAYERS = "playersJson", JSON_KEY_PLAYER_WINDOW = "window", JSON_KEY_PLAYER_PANELS = "panelsJson";
+static const std::string JSON_KEY_INVENTORY_CONTROLS = "inventoryControls", JSON_KEY_MAP_CHESTS = "mapChests";
 
 bool SaveGameData::saveEditorPlayerPanelData(const EditorPlayerPanel& panel)
 {
     // {"editorJson": {"playersJson": {"1": {<...window data...>, "panelsJson": {...}}}}}
-    Json& editorJson = data[EDITOR_KEY]; // implicitly created
+    Json& editorJson = data[JSON_KEY_EDITOR]; // implicitly created
     if (wxGetApp().editorMainWindow)
     {
         auto playerKey = std::to_string(panel.getRosterIndex());
-        Json& playerJson = editorJson[PLAYERS_KEY][playerKey];
+        Json& playerJson = editorJson[JSON_KEY_PLAYERS][playerKey];
         if (dynamic_cast<const EditorPlayerWindow*>(&panel))
         {
             if (!panel.persist(playerJson))
@@ -30,7 +32,7 @@ bool SaveGameData::saveEditorPlayerPanelData(const EditorPlayerPanel& panel)
         }
         else
         {
-            Json& panelsJson = playerJson[PLAYER_PANELS_KEY];
+            Json& panelsJson = playerJson[JSON_KEY_PLAYER_PANELS];
             if (!panel.persist(panelsJson[panel.getJsonPersistKey()]))
             {
                 wxLogError("Player panel %s persist error", playerKey);
@@ -43,10 +45,10 @@ bool SaveGameData::saveEditorPlayerPanelData(const EditorPlayerPanel& panel)
 
 bool SaveGameData::loadEditorPlayerPanelData(EditorPlayerPanel& panel)
 {
-    Json& editorJson = data[EDITOR_KEY];
+    Json& editorJson = data[JSON_KEY_EDITOR];
     if (wxGetApp().editorMainWindow)
     {
-        Json& playersJson = editorJson[PLAYERS_KEY];
+        Json& playersJson = editorJson[JSON_KEY_PLAYERS];
         auto playerKey = std::to_string(panel.getRosterIndex());
         if (dynamic_cast<EditorPlayerWindow*>(&panel))
         {
@@ -58,9 +60,9 @@ bool SaveGameData::loadEditorPlayerPanelData(EditorPlayerPanel& panel)
         }
         else
         {
-            if (playersJson.contains(playerKey) && playersJson[playerKey].contains(PLAYER_PANELS_KEY))
+            if (playersJson.contains(playerKey) && playersJson[playerKey].contains(JSON_KEY_PLAYER_PANELS))
             {
-                Json& panelsJson = playersJson[playerKey][PLAYER_PANELS_KEY];
+                Json& panelsJson = playersJson[playerKey][JSON_KEY_PLAYER_PANELS];
                 if (panelsJson.contains(panel.getJsonPersistKey()) && !panel.unpersist(panelsJson[panel.getJsonPersistKey()]))
                 {
                     wxLogError("Player panel %s unpersist error", playerKey);
@@ -70,6 +72,66 @@ bool SaveGameData::loadEditorPlayerPanelData(EditorPlayerPanel& panel)
         }
     }
     return true;
+}
+
+bool SaveGameData::saveInventoryControl(const InventoryCtrl& ctrl)
+{
+    // TODO: won't work for generator, invalid json path
+    try
+    {
+        Json& dest = data[JSON_KEY_EDITOR][JSON_KEY_INVENTORY_CONTROLS];
+        if (const PlayerInventoryRef* ref = std::get_if<PlayerInventoryRef>(&ctrl.inventoryType))
+        {
+            Json& invCtrlJson = dest[JSON_KEY_PLAYERS][std::to_string(ref->rosterIndex)];
+            ctrl.persist(invCtrlJson);
+        }
+        else if (const MapChestRef* ref = std::get_if<MapChestRef>(&ctrl.inventoryType))
+        {
+            Json& invCtrlJson = dest[JSON_KEY_MAP_CHESTS][tolowerStr(ref->mapName)][ref->chestId];
+            ctrl.persist(invCtrlJson);
+        }
+        else
+        {
+            wxFAIL;
+        }
+    }
+    catch (const JsonException& ex)
+    {
+        wxLogError("Inventory control persist error: '%s'", ex.what());
+    }
+    return false;
+}
+
+bool SaveGameData::loadInventoryControl(InventoryCtrl& ctrl)
+{
+    try
+    {
+        const Json& src = data[JSON_KEY_EDITOR][JSON_KEY_INVENTORY_CONTROLS];
+        if (const PlayerInventoryRef* ref = std::get_if<PlayerInventoryRef>(&ctrl.inventoryType))
+        {
+            const Json& invCtrlJson = src[JSON_KEY_PLAYERS][std::to_string(ref->rosterIndex)];
+            ctrl.unpersist(invCtrlJson);
+            return true;
+        }
+        else if (const MapChestRef* ref = std::get_if<MapChestRef>(&ctrl.inventoryType))
+        {
+            std::string pointer = wxString::Format("%s/%s/%s", JSON_KEY_MAP_CHESTS, tolowerStr(ref->mapName), std::to_string(ref->chestId)).ToStdString();
+            if (src.contains(pointer))
+            {
+                ctrl.unpersist(src.at(pointer));
+            }
+            return true;
+        }
+        else
+        {
+            wxFAIL;
+        }
+    }
+    catch (const JsonException& ex)
+    {
+        wxLogError("Inventory control unpersist error: '%s'", ex.what());
+    }
+    return false;
 }
 
 void SaveGameData::resetPlayerCustomData(int playerIndex, int rosterIndex)
@@ -138,26 +200,26 @@ bool SaveGameData::loadAllFromSaveFile()
 bool SaveGameData::updateAllFromUpdatedData()
 {
     /*// {"editorJson": {"playersJson": {"1": {"panels": {...}}}}}
-    Json& editorJson = data[EDITOR_KEY]; // implicitly created
+    Json& editorJson = data[JSON_KEY_EDITOR]; // implicitly created
     if (wxGetApp().editorMainWindow)
     {
         EditorMainWindow* win = wxGetApp().editorMainWindow;
-        Json& playersJson = editorJson[PLAYERS_KEY];
+        Json& playersJson = editorJson[JSON_KEY_PLAYERS];
         for (auto& playerWindow : win->playerWindows)
         {
             if (playerWindow)
             {
                 if (dynamic_cast<EditorPlayerWindow*>(&panel))
                 {
-                    if (playersJson.contains(PLAYER_WINDOW_KEY))
+                    if (playersJson.contains(JSON_KEY_PLAYER_WINDOW))
                     {
                         if
                     }
                 }
                 auto playerKey = std::to_string(playerWindow->getRosterIndex());
-                if (playersJson.contains(playerKey) && playersJson[playerKey].contains(PLAYER_PANELS_KEY))
+                if (playersJson.contains(playerKey) && playersJson[playerKey].contains(JSON_KEY_PLAYER_PANELS))
                 {
-                    Json& panels = playersJson[playerKey][PLAYER_PANELS_KEY];
+                    Json& panels = playersJson[playerKey][JSON_KEY_PLAYER_PANELS];
                     if (!playerWindow->unpersist(panels[playerKey]))
                     {
                         wxLogError("Player panel %s unpersist error", playerKey);

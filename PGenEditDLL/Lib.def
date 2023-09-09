@@ -16,3 +16,4 @@ EXPORTS
 	setPlayerPointers
 	setSkillData
 	unloadCleanup
+	setItemData

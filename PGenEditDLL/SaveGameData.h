@@ -5,11 +5,14 @@
 
 struct SaveGameData;
 extern SaveGameData saveGameData;
+class InventoryCtrl;
 
 struct SaveGameData
 {
     bool saveEditorPlayerPanelData(const EditorPlayerPanel& panel);
     bool loadEditorPlayerPanelData(EditorPlayerPanel& panel);
+    bool saveInventoryControl(const InventoryCtrl& ctrl);
+    bool loadInventoryControl(InventoryCtrl& ctrl);
     void resetPlayerCustomData(int playerIndex, int rosterIndex); // for use in situations like if mercenary is generated in merge
 
     Json data;
