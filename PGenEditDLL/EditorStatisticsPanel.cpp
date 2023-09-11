@@ -547,12 +547,12 @@ std::string EditorStatisticsPanel::getJsonPersistKey() const
 bool EditorStatisticsPanel::persist(Json& json) const
 {
 	Json& recoveryMuls = json["recoveryMultipliers"];
-	return false;
+	return true;
 }
 
 bool EditorStatisticsPanel::unpersist(const Json& json)
 {
-	return false;
+	return true;
 }
 
 void EditorStatisticsPanel::onCurrentHpChange(wxCommandEvent& event)

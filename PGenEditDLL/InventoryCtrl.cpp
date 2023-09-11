@@ -67,6 +67,7 @@ void InventoryCtrl::OnPaint(wxPaintEvent& event)
 template<typename Variant>
 bool persistItemLocationVariant(const Variant& loc, Json& json)
 {
+    jsonEnsureIsObject(json);
     try
     {
         std::visit([&](auto& arg)
@@ -197,6 +198,7 @@ bool InventoryCtrl::persistInventory(Json& json) const
      
      }
      **/
+    jsonEnsureIsArray(json);
     bool hasChest = false, hasPlayerInventory = false; // check that both of these are not true at the same time (can use chest's inventory + stored items or player's inventory + stored items)
 
     try
@@ -250,9 +252,9 @@ bool InventoryCtrl::persistInventory(Json& json) const
 
 bool InventoryCtrl::persist(Json& json) const
 {
-    Json j = json.value(JSON_KEY_INVENTORY, Json{});
+    jsonEnsureIsObject(json);
     // not persisting directly in given json, because of potential additions in future which wouldn't classify as inventory
-    return persistInventory(j);
+    return persistInventory(json);
 }
 
 bool InventoryCtrl::unpersistInventory(const Json& json)
@@ -289,7 +291,7 @@ bool InventoryCtrl::unpersist(const Json& json)
     {
         return unpersistInventory(json[JSON_KEY_INVENTORY]);
     }
-    return false;
+    return true;
 }
 
 bool InventoryCtrl::drawItemAt(wxPaintDC& dc, const ItemStoreElement& elem, int x, int y)
@@ -435,8 +437,9 @@ bool InventoryCtrl::canItemBePlacedAtPosition(const ItemStoreElement& elem, Inve
 }
 
 InventoryCtrl::InventoryCtrl(wxWindow* parent, int CELLS_ROW, int CELLS_COL, InventoryType&& inventoryType, const ElementsContainer& elements)
-    : wxControl(parent, wxID_ANY), CELLS_ROW(CELLS_ROW), CELLS_COL(CELLS_COL), inventoryType(inventoryType), elements(elements)
+    : wxWindow(parent, wxID_ANY), CELLS_ROW(CELLS_ROW), CELLS_COL(CELLS_COL), inventoryType(inventoryType), elements(elements)
 {
+    Bind(wxEVT_PAINT, &InventoryCtrl::OnPaint, this);
     SetSizeHints(DoGetBestClientSize());
     saveGameData.loadInventoryControl(*this);
 }
@@ -493,6 +496,7 @@ bool ItemStoreElement::isSameExceptPos(const ItemStoreElement& other) const
 
 bool MapChestRef::persist(Json& json) const
 {
+    jsonEnsureIsObject(json);
     auto mapLower = tolowerStr(mapName);
     // not sure yet which storage approach I take (one big array of map chests or tree indexed by map names and chest ids), so store both ways
     // LOCATION (current) -> flat?
@@ -530,6 +534,7 @@ bool MapChestRef::unpersist(const Json& json)
 
 bool PlayerInventoryRef::persist(Json& json) const
 {
+    jsonEnsureIsObject(json);
     json["type"] = ITEM_LOC_PLAYER;
     json["rosterIndex"] = rosterIndex;
     return true;
@@ -543,6 +548,7 @@ bool PlayerInventoryRef::unpersist(const Json& json)
 
 bool StoredItemRef::persist(Json& json) const
 {
+    jsonEnsureIsObject(json);
     json["type"] = ITEM_LOC_STORED;
     return true;
 }

@@ -100,3 +100,13 @@ void redBlackGreenTextThreshold(wxWindow* win, int value, int threshold)
 		win->SetOwnForegroundColour(*wxBLACK);
 	}
 }
+
+void jsonEnsureIsObject(Json& json)
+{
+	json = !json.is_object() ? Json::object() : json;
+}
+
+void jsonEnsureIsArray(Json& json)
+{
+    json = !json.is_array() ? Json::array() : json;
+}

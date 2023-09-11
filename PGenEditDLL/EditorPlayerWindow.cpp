@@ -239,8 +239,17 @@ void EditorPlayerWindow::onTabChange(wxBookCtrlEvent& event)
 		wxFAIL_MSG(wxString::Format("Unknown player panel type (%d)", (int)newSel));
 		break;
     }
-    tabs->DeletePage(newSelInt);
-	tabs->ChangeSelection(newSelInt);
+	try
+	{
+
+        tabs->DeletePage(newSelInt);
+        tabs->ChangeSelection(newSelInt);
+	}
+	catch (const std::exception& ex)
+	{
+		wxLogError(ex.what());
+		wxLog::FlushActive();
+	}
     panel = dynamic_cast<EditorPlayerPanel*>(tabs->GetPage(newSelInt));
     if (panel) // TODO: remove condition when all panels are implemented (now they can be wxPanel as placeholder)
     {

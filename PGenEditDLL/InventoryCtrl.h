@@ -63,14 +63,14 @@ struct ItemStoreElement
 using ElementsContainer = std::vector<ItemStoreElement>;
 using ItemsVariant = std::variant<mm6::Item*, mm7::Item*, mm8::Item*>;
 
-class InventoryCtrl : public wxControl
+class InventoryCtrl : public wxWindow
 {
     // FIXME: all these methods modify chest's or player's items array, but inventory positions are not modified
     static const int CELL_WIDTH, CELL_HEIGHT;
     ElementsContainer elements;
     
     // wx stuff
-    virtual wxSize DoGetBestClientSize() const;
+    virtual wxSize DoGetBestClientSize() const override;
     void OnPaint(wxPaintEvent& event);
 
     template<typename Variant> bool unpersistItemLocationVariant(Variant& loc, const Json& json);

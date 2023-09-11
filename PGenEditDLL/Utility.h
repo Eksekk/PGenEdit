@@ -214,3 +214,7 @@ wxString my_to_string(const T& t)
 }
 
 void redBlackGreenTextThreshold(wxWindow* win, int value, int threshold);
+
+// if argument is "null", converts it to empty object
+void jsonEnsureIsObject(Json& json);
+void jsonEnsureIsArray(Json& json);

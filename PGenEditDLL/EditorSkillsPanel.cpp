@@ -284,7 +284,7 @@ void EditorSkillsPanel::affectCheckboxHelper(bool on, SkillCategory cat)
 
 EditorSkillsPanel::~EditorSkillsPanel()
 {
-    wxMessageBox(wxString::Format("Deleting skills panel with address 0x%X", (uint32_t)this), "Message");
+    //wxMessageBox(wxString::Format("Deleting skills panel with address 0x%X", (uint32_t)this), "Message");
 }
 
 void EditorSkillsPanel::createSkillPointsOptionsPanel()
