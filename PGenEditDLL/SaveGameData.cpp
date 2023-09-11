@@ -33,6 +33,7 @@ bool SaveGameData::saveEditorPlayerPanelData(const EditorPlayerPanel& panel)
         else
         {
             Json& panelsJson = playerJson[JSON_KEY_PLAYER_PANELS];
+            // operator[] used as getter assigns NULL if key is not present, not object
             if (!panel.persist(panelsJson[panel.getJsonPersistKey()]))
             {
                 wxLogError("Player panel %s persist error", playerKey);
@@ -109,8 +110,11 @@ bool SaveGameData::loadInventoryControl(InventoryCtrl& ctrl)
         const Json& src = data[JSON_KEY_EDITOR][JSON_KEY_INVENTORY_CONTROLS];
         if (const PlayerInventoryRef* ref = std::get_if<PlayerInventoryRef>(&ctrl.inventoryType))
         {
-            const Json& invCtrlJson = src[JSON_KEY_PLAYERS][std::to_string(ref->rosterIndex)];
-            ctrl.unpersist(invCtrlJson);
+            std::string pointer = wxString::Format("%s/%s", JSON_KEY_PLAYERS, std::to_string(ref->rosterIndex)).ToStdString();
+            if (src.contains(pointer))
+            {
+                ctrl.unpersist(src.at(pointer));
+            }
             return true;
         }
         else if (const MapChestRef* ref = std::get_if<MapChestRef>(&ctrl.inventoryType))

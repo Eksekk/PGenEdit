@@ -38,6 +38,7 @@ std::string EditorItemsPanel::getJsonPersistKey() const
 
 bool EditorItemsPanel::persist(Json& json) const
 {
+    json = json.is_null() ? Json{} : json;
     return inventoryManagerCtrl->persist(json);
 }
 

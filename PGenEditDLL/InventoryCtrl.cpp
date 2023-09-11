@@ -226,7 +226,7 @@ bool InventoryCtrl::persistInventory(Json& json) const
                 bool shouldRemove = (removeMode == REMOVE_CHEST && std::holds_alternative<MapChestRef>(tmp)) || (removeMode == REMOVE_PLAYER && std::holds_alternative<PlayerInventoryRef>(tmp));
                 return shouldRemove;
             });
-        json.erase(r.begin(), r.end());
+        json.erase(r.begin(), json.end());
         for (const auto& elem : elements)
         {
             Json j;
@@ -250,8 +250,9 @@ bool InventoryCtrl::persistInventory(Json& json) const
 
 bool InventoryCtrl::persist(Json& json) const
 {
+    Json j = json.value(JSON_KEY_INVENTORY, Json{});
     // not persisting directly in given json, because of potential additions in future which wouldn't classify as inventory
-    return persistInventory(json[JSON_KEY_INVENTORY]);
+    return persistInventory(j);
 }
 
 bool InventoryCtrl::unpersistInventory(const Json& json)

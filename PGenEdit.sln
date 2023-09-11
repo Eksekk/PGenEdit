@@ -7,6 +7,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "PGenEditDLL", "PGenEditDLL\
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{D6EA8C48-C10F-4A0D-80A0-F72D2CF0DD0F}"
 	ProjectSection(SolutionItems) = preProject
+		notes.md = notes.md
 		readme.md = readme.md
 		todo.md = todo.md
 	EndProjectSection

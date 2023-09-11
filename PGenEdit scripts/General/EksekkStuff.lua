@@ -50,7 +50,7 @@ function M.loadDll()
 		M.dll.setClassData(json.encode(M.C())) -- SET DATA BEFORE INIT
 		M.dll.setSkillData(json.encode(M.Sk()))
 		M.dll.setMiscData(json.encode(M.getMiscData()))
-		M.dll.setItemData(json.encode(M.getItemData()))
+		--M.dll.setItemData(json.encode(M.getItemData()))
 		M.dll.init()
 		runEventLoopOnce = function() M.dll.runEventLoopOnce() end
 		events.Tick = runEventLoopOnce
