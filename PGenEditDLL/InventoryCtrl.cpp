@@ -25,7 +25,9 @@ void InventoryCtrl::OnPaint(wxPaintEvent& event)
     wxSize windowSize = DoGetBestClientSize();
     static wxBrush cornerBrush(0x6b6868, wxBRUSHSTYLE_SOLID); // gray
     static wxBrush edgeBrush(0x8c8685, wxBRUSHSTYLE_SOLID);
-    static const int borderSize = 10;
+    const wxPen& oldPen = dc.GetPen();
+    dc.SetPen(wxPen(*wxBLACK, 2, wxPENSTYLE_SOLID));
+    static const int cornerSize = 10;
     // background
     dc.SetBrush(wxBrush(0xe6d0cf, wxBRUSHSTYLE_SOLID));
     dc.DrawRectangle(wxPoint(0, 0), windowSize);
@@ -46,8 +48,9 @@ void InventoryCtrl::OnPaint(wxPaintEvent& event)
                 dc.DrawLine(wxPoint(0, CELL_HEIGHT * y), wxPoint(windowSize.GetX(), CELL_HEIGHT * y));
             }
 
-            wxPoint center(x * CELL_WIDTH - borderSize / 2, y * CELL_HEIGHT - borderSize / 2);
-            wxSize size(10, 10);
+            // corners
+            wxPoint center(x * CELL_WIDTH - cornerSize / 2, y * CELL_HEIGHT - cornerSize / 2);
+            wxSize size(cornerSize, cornerSize);
             // take care of points outside window borders
             int newX = std::clamp(center.x, 0, windowSize.GetWidth());
             int newY = std::clamp(center.y, 0, windowSize.GetHeight());
@@ -58,6 +61,7 @@ void InventoryCtrl::OnPaint(wxPaintEvent& event)
         }
     }
 
+    dc.SetPen(oldPen);
     dc.SetBrush(cornerBrush);
     for (const auto& rect : drawRects)
     {

@@ -12,6 +12,19 @@ int TemplatedGameStructAccessor<Game>::getCurrentPlayer()
 	return sdword(&game->currentPlayer) - 1; // returns same as mmext Game.CurrentPlayer
 }
 
+// Inherited via GameStructAccessor
+template<typename Game>
+inline int64_t TemplatedGameStructAccessor<Game>::getTime()
+{
+	return game->time;
+}
+
+template<typename Game>
+inline void TemplatedGameStructAccessor<Game>::setTime(uint64_t time)
+{
+	game->time = time;
+}
+
 #pragma warning(push)
 #pragma warning(disable: 6001) // null pointer dereference
 

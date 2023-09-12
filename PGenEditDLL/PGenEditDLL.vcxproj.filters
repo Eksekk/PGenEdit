@@ -354,6 +354,9 @@
     <ClInclude Include="StructAccessor.h">
       <Filter>Pliki nagłówkowe\GameStructs\Accessors</Filter>
     </ClInclude>
+    <ClInclude Include="TimeChooserCtrl.h">
+      <Filter>Pliki nagłówkowe</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="sources\MainWindow.cpp">
@@ -562,6 +565,9 @@
     </ClCompile>
     <ClCompile Include="StructAccessor.cpp">
       <Filter>Pliki źródłowe\GameStructs\Accessors</Filter>
+    </ClCompile>
+    <ClCompile Include="TimeChooserCtrl.cpp">
+      <Filter>Pliki źródłowe</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
