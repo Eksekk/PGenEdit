@@ -22,29 +22,39 @@ void InventoryCtrl::OnPaint(wxPaintEvent& event)
 {
     wxPaintDC dc(this);
     // inventory border
-    wxSize size = DoGetBestClientSize();
+    wxSize windowSize = DoGetBestClientSize();
     static wxBrush cornerBrush(0x6b6868, wxBRUSHSTYLE_SOLID); // gray
     static wxBrush edgeBrush(0x8c8685, wxBRUSHSTYLE_SOLID);
+    static const int borderSize = 10;
     // background
     dc.SetBrush(wxBrush(0xe6d0cf, wxBRUSHSTYLE_SOLID));
-    dc.DrawRectangle(wxPoint(0, 0), size);
+    dc.DrawRectangle(wxPoint(0, 0), windowSize);
     std::vector<wxRect> drawRects;
-    for (int y = 0; y < CELL_HEIGHT + 1; ++y)
+    for (int y = 0; y < CELLS_COL + 1; ++y)
     {
-        for (int x = 0; x < CELL_WIDTH + 1; ++x)
+        for (int x = 0; x < CELLS_ROW + 1; ++x)
         {
-            // important to draw lines before corners, so they get covered, but I think that's done here
+            // important to draw lines before corners, so they get covered
             if (y == 0) // draw top to bottom
             {
                 dc.SetBrush(edgeBrush);
-                dc.DrawLine(wxPoint(CELL_WIDTH * x, 0), wxPoint(CELL_WIDTH * x, size.GetY()));
+                dc.DrawLine(wxPoint(CELL_WIDTH * x, 0), wxPoint(CELL_WIDTH * x, windowSize.GetY()));
             }
             else if (x == 0) // draw left to right
             {
                 dc.SetBrush(edgeBrush);
-                dc.DrawLine(wxPoint(0, CELL_HEIGHT * y), wxPoint(size.GetX(), CELL_HEIGHT * y));
+                dc.DrawLine(wxPoint(0, CELL_HEIGHT * y), wxPoint(windowSize.GetX(), CELL_HEIGHT * y));
             }
-            drawRects.push_back(wxRect(wxPoint(x * CELL_WIDTH, y * CELL_HEIGHT), wxSize(10, 10)));
+
+            wxPoint center(x * CELL_WIDTH - borderSize / 2, y * CELL_HEIGHT - borderSize / 2);
+            wxSize size(10, 10);
+            // take care of points outside window borders
+            int newX = std::clamp(center.x, 0, windowSize.GetWidth());
+            int newY = std::clamp(center.y, 0, windowSize.GetHeight());
+            size.SetWidth(size.GetWidth() - std::abs(center.x - newX));
+            size.SetHeight(size.GetHeight() - std::abs(center.y - newY));
+            center = wxPoint(newX, newY);
+            drawRects.push_back(wxRect(center, size));
         }
     }
 
