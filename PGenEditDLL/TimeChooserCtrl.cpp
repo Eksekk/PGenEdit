@@ -1,272 +1,155 @@
 #include "pch.h"
 #include "TimeChooserCtrl.h"
-#include "GameStructAccessor.h"
+#include "wx/spinctrl.h"
 
-void GameTime::calculateValuesFromTicks()
+void TimeChooserCtrl::updateValuesFromTime()
 {
-    int64_t tmpTicks = ticks;
-    std::initializer_list<std::pair<int64_t&, int>> vals =
-    {
-        {years, TIME_MONTHS_IN_YEAR},
-        {months, TIME_WEEKS_IN_MONTH},
-        {weeks, TIME_DAYS_IN_WEEK},
-        {days, TIME_HOURS_IN_DAY},
-        {hours, TIME_MINUTES_IN_HOUR},
-        {minutes, TIME_TICKS_IN_MINUTE}
-    };
-
-    for (auto& [value, divisor] : vals)
-    {
-        value = tmpTicks / divisor;
-        wxASSERT_MSG(value > 0, "Found negative time value"); // for now (negative values are used by game sometimes)
-        tmpTicks %= divisor;
-    }
+    valueTicks->SetValue(time.getTicks());
+    valueMinutes->SetValue(time.getMinutes());
+    valueHours->SetValue(time.getHours());
+    valueDays->SetValue(time.getDays());
 }
 
-inline int64_t GameTime::getTicks() const
+void TimeChooserCtrl::onDaysChange(wxCommandEvent& event)
 {
-    return ticks;
+    time.setDays(valueDays->GetValue());
 }
 
-inline void GameTime::setTicks(int64_t val)
+void TimeChooserCtrl::onHoursChange(wxCommandEvent& event)
 {
-    ticks = val;
-    calculateValuesFromTicks();
+    time.setHours(valueHours->GetValue());
 }
 
-inline int64_t GameTime::getYears() const
+void TimeChooserCtrl::onMinutesChange(wxCommandEvent& event)
 {
-    return years;
+    time.setMinutes(valueMinutes->GetValue());
 }
 
-inline void GameTime::setYears(int64_t val)
+void TimeChooserCtrl::onTicksChange(wxCommandEvent& event)
 {
-    int64_t change = val - years;
-    ticks += change * TIME_TICKS_IN_YEAR;
-    calculateValuesFromTicks();
+    time.setTicks(valueTicks->GetValue());
 }
 
-double GameTime::getFullTimeInMinutes()
+TimeChooserCtrl::TimeChooserCtrl(wxWindow* parent) : wxPanel(parent)
 {
-    return (double)ticks / TIME_TICKS_IN_MINUTE;
+    mainSizer = new wxBoxSizer(wxHORIZONTAL);
+    wxSizerFlags valueFlags, labelFlags;
+    valueFlags.Border(wxALL, 5);
+    labelFlags.Border(wxALL, 5).CenterVertical();
+
+    labelDays = new wxStaticText(this, wxID_ANY, _("Days:"), wxDefaultPosition, wxDefaultSize, 0);
+    labelDays->Wrap(-1);
+    mainSizer->Add(labelDays, labelFlags);
+
+    valueDays = new wxSpinCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 0, 100, 0);
+    mainSizer->Add(valueDays, valueFlags);
+
+    labelHours = new wxStaticText(this, wxID_ANY, _("Hours:"), wxDefaultPosition, wxDefaultSize, 0);
+    labelHours->Wrap(-1);
+    mainSizer->Add(labelHours, labelFlags);
+
+    valueHours = new wxSpinCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 0, 100, 0);
+    mainSizer->Add(valueHours, valueFlags);
+
+    labelMinutes = new wxStaticText(this, wxID_ANY, _("Minutes:"), wxDefaultPosition, wxDefaultSize, 0);
+    labelMinutes->Wrap(-1);
+    mainSizer->Add(labelMinutes, labelFlags);
+
+    valueMinutes = new wxSpinCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 0, 100, 0);
+    mainSizer->Add(valueMinutes, valueFlags);
+
+    labelTicks = new wxStaticText(this, wxID_ANY, _("Ticks:"), wxDefaultPosition, wxDefaultSize, 0);
+    labelTicks->Wrap(-1);
+    mainSizer->Add(labelTicks, labelFlags);
+
+    valueTicks = new wxSpinCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 0, 100, 0);
+    mainSizer->Add(valueTicks, valueFlags);
 }
 
-double GameTime::getFullTimeInHours()
+GameTime TimeChooserCtrl::getTime()
 {
-    return (double)ticks / TIME_TICKS_IN_HOUR;
-}
-
-double GameTime::getFullTimeInDays()
-{
-    return (double)ticks / TIME_TICKS_IN_DAY;
-}
-
-double GameTime::getFullTimeInWeeks()
-{
-    return (double)ticks / TIME_TICKS_IN_WEEK;
-}
-
-double GameTime::getFullTimeInMonths()
-{
-    return (double)ticks / TIME_TICKS_IN_MONTH;
-}
-
-double GameTime::getFullTimeInYears()
-{
-    return (double)ticks / TIME_TICKS_IN_YEAR;
-}
-
-int64_t GameTime::calcTicksFromFullTime()
-{
-    std::initializer_list<std::pair<int64_t&, int>> vals =
-    {
-        {minutes, TIME_TICKS_IN_MINUTE},
-        {hours, TIME_MINUTES_IN_HOUR},
-        {days, TIME_HOURS_IN_DAY},
-        {weeks, TIME_DAYS_IN_WEEK},
-        {months, TIME_WEEKS_IN_MONTH},
-        {years, TIME_MONTHS_IN_YEAR},
-    };
-
-    int64_t newTicks = ticks % TIME_TICKS_IN_MINUTE; // only those free, that can't make up a minute
-    int64_t currTickEquivalent = 1;
-    for (auto& [value, multiplier] : vals)
-    {
-        currTickEquivalent *= multiplier;
-        newTicks += currTickEquivalent * value;
-    }
-    return newTicks;
-}
-
-inline int64_t GameTime::getMonths() const
-{
-    return months;
-}
-
-inline void GameTime::setMonths(int64_t val)
-{
-    int64_t change = val - months;
-    ticks += change * TIME_TICKS_IN_MONTH;
-    calculateValuesFromTicks();
-}
-
-inline int64_t GameTime::getWeeks() const
-{
-    return weeks;
-}
-
-inline void GameTime::setWeeks(int64_t val)
-{
-    int64_t change = val - weeks;
-    ticks += change * TIME_TICKS_IN_WEEK;
-    calculateValuesFromTicks();
-}
-
-inline int64_t GameTime::getDays() const
-{
-    return days;
-}
-
-inline void GameTime::setDays(int64_t val)
-{
-    int64_t change = val - days;
-    ticks += change * TIME_TICKS_IN_DAY;
-    calculateValuesFromTicks();
-}
-
-inline int64_t GameTime::getHours() const
-{
-    return hours;
-}
-
-inline void GameTime::setHours(int64_t val)
-{
-    int64_t change = val - hours;
-    ticks += change * TIME_TICKS_IN_HOUR;
-    calculateValuesFromTicks();
-}
-
-inline int64_t GameTime::getMinutes() const
-{
-    return minutes;
-}
-
-inline void GameTime::setMinutes(int64_t val)
-{
-    int64_t change = val - minutes;
-    ticks += change * TIME_TICKS_IN_MINUTE;
-    calculateValuesFromTicks();
-}
-
-GameTime::GameTime() : ticks(0), minutes(0), hours(0), days(0), weeks(0), months(0), years(0)
-{
-
-}
-
-GameTime GameTime::current()
-{
-    int64_t ticks = gameAccessor->getTime();
-    GameTime time;
-    time.setTicks(ticks);
     return time;
 }
 
-GameTime& GameTime::operator-=(const GameTime& rhs)
+void TimeChooserCtrl::setTime(const GameTime& time)
 {
-    setTicks(getTicks() - rhs.getTicks());
-    return *this;
-}
-
-GameTime& GameTime::operator+=(const GameTime& rhs)
-{
-    setTicks(getTicks() + rhs.getTicks());
-    return *this;
-}
-
-GameTime operator-(const GameTime& lhs, const GameTime& rhs)
-{
-    GameTime ret;
-    ret.setTicks(lhs.getTicks() - rhs.getTicks());
-    return ret;
-}
-
-GameTime operator+(const GameTime& lhs, const GameTime& rhs)
-{
-    GameTime ret;
-    ret.setTicks(lhs.getTicks() + rhs.getTicks());
-    return ret;
-}
-
-TimeChooserCtrl::TimeChooserCtrl(wxWindow* parent)
-{
+    this->time = time;
+    updateValuesFromTime();
 }
 
 int64_t TimeChooserCtrl::getYears()
 {
-    return time.years;
+    return time.getYears();
 }
 
 int64_t TimeChooserCtrl::getMonths()
 {
-    return time.months;
+    return time.getMonths();
 }
 
 int64_t TimeChooserCtrl::getWeeks()
 {
-    return time.weeks;
+    return time.getWeeks();
 }
 
 int64_t TimeChooserCtrl::getDays()
 {
-    return time.days;
+    return time.getDays();
 }
 
 int64_t TimeChooserCtrl::getHours()
 {
-    return time.hours;
+    return time.getHours();
 }
 
 int64_t TimeChooserCtrl::getMinutes()
 {
-    return time.minutes;
+    return time.getMinutes();
 }
 
 int64_t TimeChooserCtrl::getTicks()
 {
-    return time.ticks;
+    return time.getTicks();
 }
 
 void TimeChooserCtrl::setYears(int64_t val)
 {
     time.setYears(val);
+    updateValuesFromTime();
 }
 
 void TimeChooserCtrl::setMonths(int64_t val)
 {
     time.setMonths(val);
+    updateValuesFromTime();
 }
 
 void TimeChooserCtrl::setWeeks(int64_t val)
 {
-    time.setYears(val);
+    time.setWeeks(val);
+    updateValuesFromTime();
 }
 
 void TimeChooserCtrl::setDays(int64_t val)
 {
     time.setDays(val);
+    updateValuesFromTime();
 }
 
 void TimeChooserCtrl::setHours(int64_t val)
 {
     time.setHours(val);
+    updateValuesFromTime();
 }
 
 void TimeChooserCtrl::setMinutes(int64_t val)
 {
     time.setMinutes(val);
+    updateValuesFromTime();
 }
 
 void TimeChooserCtrl::setTicks(int64_t val)
 {
     time.setTicks(val);
+    updateValuesFromTime();
 }
