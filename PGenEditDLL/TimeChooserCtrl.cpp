@@ -33,6 +33,7 @@ void TimeChooserCtrl::onTicksChange(wxCommandEvent& event)
 TimeChooserCtrl::TimeChooserCtrl(wxWindow* parent) : wxPanel(parent)
 {
     mainSizer = new wxBoxSizer(wxHORIZONTAL);
+    SetSizer(mainSizer);
     wxSizerFlags valueFlags, labelFlags;
     valueFlags.Border(wxALL, 5);
     labelFlags.Border(wxALL, 5).CenterVertical();
@@ -41,29 +42,31 @@ TimeChooserCtrl::TimeChooserCtrl(wxWindow* parent) : wxPanel(parent)
     labelDays->Wrap(-1);
     mainSizer->Add(labelDays, labelFlags);
 
-    valueDays = new wxSpinCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 0, 100, 0);
+    valueDays = new wxSpinCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 0, 1000000, 0);
     mainSizer->Add(valueDays, valueFlags);
 
     labelHours = new wxStaticText(this, wxID_ANY, _("Hours:"), wxDefaultPosition, wxDefaultSize, 0);
     labelHours->Wrap(-1);
     mainSizer->Add(labelHours, labelFlags);
 
-    valueHours = new wxSpinCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 0, 100, 0);
+    valueHours = new wxSpinCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 0, 1000000, 0);
     mainSizer->Add(valueHours, valueFlags);
 
     labelMinutes = new wxStaticText(this, wxID_ANY, _("Minutes:"), wxDefaultPosition, wxDefaultSize, 0);
     labelMinutes->Wrap(-1);
     mainSizer->Add(labelMinutes, labelFlags);
 
-    valueMinutes = new wxSpinCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 0, 100, 0);
+    valueMinutes = new wxSpinCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 0, 1000000, 0);
     mainSizer->Add(valueMinutes, valueFlags);
 
     labelTicks = new wxStaticText(this, wxID_ANY, _("Ticks:"), wxDefaultPosition, wxDefaultSize, 0);
     labelTicks->Wrap(-1);
     mainSizer->Add(labelTicks, labelFlags);
 
-    valueTicks = new wxSpinCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 0, 100, 0);
+    valueTicks = new wxSpinCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 0, 1000000, 0);
     mainSizer->Add(valueTicks, valueFlags);
+
+    Layout();
 }
 
 GameTime TimeChooserCtrl::getTime()

@@ -121,10 +121,8 @@ int getRealHookSize(uint32_t addr, uint32_t size, uint32_t minSize = 5);
 void checkOverlap(uint32_t address, uint32_t size = 5);
 void storeBytes(std::vector<uint8_t>* storeAt, uint32_t addr, uint32_t size);
 
-uint32_t findCode(uint32_t addr, const char* code);
-uint32_t findCode(uint32_t addr, const std::string& code);
-uint32_t findCode(void* addr, const char* code);
-uint32_t findCode(void* addr, const std::string& code);
+uint32_t findCode(uint32_t addr, const char* code, int len = -1);
+uint32_t findCode(void* addr, const char* code, int len = -1);
 
 // finds nearest call to address findAddr beginning at beginAddr
 // if address is 0, finds any nearest call

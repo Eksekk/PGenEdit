@@ -376,10 +376,10 @@ void storeBytes(std::vector<uint8_t>* storeAt, uint32_t addr, uint32_t size)
 	}
 }
 
-uint32_t findCode(uint32_t addr, const char* code)
+uint32_t findCode(uint32_t addr, const char* code, int len)
 {
     ZydisDisassembledInstruction instr;
-	int codeLen = strlen(code); // FIXME: will fail with embedded zeros
+	int codeLen = len != -1 ? len : strlen(code); // FIXME: will fail with embedded zeros
 	while (true)
 	{
 		if (!ZYAN_SUCCESS(ZydisDisassembleIntel(ZYDIS_MACHINE_MODE_LEGACY_32, addr, (void*)addr, 20, &instr))) // invalid code
@@ -404,19 +404,9 @@ uint32_t findCode(uint32_t addr, const char* code)
 	return addr;
 }
 
-uint32_t findCode(uint32_t addr, const std::string& code)
+uint32_t findCode(void* addr, const char* code, int len)
 {
-	return findCode(addr, code.c_str());
-}
-
-uint32_t findCode(void* addr, const char* code)
-{
-	return findCode((uint32_t)addr, code);
-}
-
-uint32_t findCode(void* addr, const std::string& code)
-{
-	return findCode((uint32_t)addr, code);
+	return findCode((uint32_t)addr, code, len);
 }
 
 uint32_t intMax = std::numeric_limits<int>::max();

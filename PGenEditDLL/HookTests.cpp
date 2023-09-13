@@ -247,7 +247,6 @@ static __declspec(naked) void callDoNothing()
 // TODO: versions of above functions actually generating required data?
 
 uint32_t $eax, $edx, $esi, $ebp;
-bool autohookTestPassed = false;
 int failReasonId;
 // RETURNS FALSE (0) IF NO ERROR, otherwise 1-based index of check that failed
 static __declspec(naked) int __stdcall expectRegisterValues()
@@ -569,7 +568,9 @@ namespace // make vars file scoped
     namespace advancedHooksTestData // make vars non-conflicting with later code in this file
     {
         int setInt1, setInt2;
-        int hookFunctionTestFailReasonId, replaceCallFailReasonInner, replaceCallFailReasonOuter;
+        int hookFunctionTestFailReasonId, replaceCallFailReasonInner, replaceCallFailReasonOuter, autohookFailReason;
+        bool setBoolAutohook;
+        int64_t setIntAutohook;
     }
 }
 
@@ -702,6 +703,58 @@ static int __declspec(naked) __stdcall replaceCallHookTestOuter()
     }
 }
 
+static uint32_t returnAValueFunc(unsigned char arg1, int arg2)
+{
+    return arg1 + arg2;
+}
+
+static int __declspec(naked) autohookTest()
+{
+    using namespace advancedHooksTestData;
+    _asm
+    {
+        // 1. ax has to be 0x5678
+        xor eax, eax
+        mov autohookFailReason, 1
+        // relocated start
+        nop
+        cmp ax, 0x5678
+        mov eax, 0x22222222
+        // relocated end
+        jne fail
+        mov autohookFailReason, 2
+        // 2. eax has to be changed by relocated code
+        cmp eax, 0x22222222
+        jne fail
+        // 3. edx has to be 0x10101010
+        mov autohookFailReason, 3
+        cmp edx, 0x10101010
+        jne fail
+
+        mov autohookFailReason, 4
+        // relocated start 2
+        // nop word ptr ds:[eax], ax // 0x660F1F00
+        _emit 0x66
+        _emit 0x0F
+        _emit 0x1F
+        _emit 0
+        // 4. edx has to be 15
+        add edx, 5
+        // relocated end 2
+
+        cmp edx, 20
+        jne fail
+
+
+        xor eax, eax
+        jmp end
+        fail:
+        mov eax, autohookFailReason
+        end:
+        ret
+    }
+}
+
 template<typename Player, typename Game>
 static std::vector<wxString> HookTests::testAdvancedHookFunctionality()
 {
@@ -750,10 +803,44 @@ static std::vector<wxString> HookTests::testAdvancedHookFunctionality()
         return 0x00003333;
     };
 
+    /*
+     *  // 1. ax has to be 0x5678
+        xor eax, eax
+        mov autohookFailReason, 1
+        // relocated start
+        cmp ax, 0x5678
+        mov eax, 0x12345678
+        // relocated end
+        jne fail
+        // 2. edx has to be 0x10101010
+        mov autohookFailReason, 2
+        cmp edx, 0x10101010
+        jne fail
+
+        mov autohookFailReason, 3
+        // relocated start 2
+        nop word [eax] // 0x660F1F00
+        // 3. edx has to be 15*/
+
+    auto autohookFunc1 = [](HookData* d) -> int
+    {
+        d->ax = 0x5678;
+        d->edx = 0x10101010;
+        return HOOK_RETURN_SUCCESS;
+    };
+
+    auto autohookFunc2 = [](HookData* d) -> int
+    {
+        d->edx = 15;
+        return HOOK_RETURN_SUCCESS;
+    };
+
     Hook hook
     {
         HookElementBuilder().address((uint32_t)hookFunctionTest1).size(5).type(HOOK_ELEM_TYPE_HOOKFUNCTION).callableFunctionHookFunc<int, 2, int, int, unsigned char>(hookFunctionFunc).build(),
-        HookElementBuilder().address(findCall(replaceCallHookTestOuter, replaceCallHookTestInner)).size(5).type(HOOK_ELEM_TYPE_REPLACE_CALL).callableFunctionHookFunc<int, 0, unsigned char>(replaceCallFunc).build()
+        HookElementBuilder().address(findCall(replaceCallHookTestOuter, replaceCallHookTestInner)).size(5).type(HOOK_ELEM_TYPE_REPLACE_CALL).callableFunctionHookFunc<int, 0, unsigned char>(replaceCallFunc).build(),
+        HookElementBuilder().address((uint32_t)findCode(autohookTest, NOP)).type(HOOK_ELEM_TYPE_AUTOHOOK).size(6).func(autohookFunc1).build(),
+        HookElementBuilder().address((uint32_t)findCode(autohookTest, "\x66\x0F\x1F\x00", 4)).type(HOOK_ELEM_TYPE_AUTOHOOK).size(5).func(autohookFunc2).build(),
     };
     hook.enable();
     int r = hookFunctionTest1(0x5555, 0x2, 0x44);
@@ -762,7 +849,8 @@ static std::vector<wxString> HookTests::testAdvancedHookFunctionality()
     r = replaceCallHookTestOuter();
     myassertf(r == 0, "[replace call, outer] received error id %d", r);
 
-    // TODO: autohook
+    r = autohookTest();
+    myassertf(r == 0, "[autohook] received error id %d", r);
 
     return myasserter.errors;
 }
@@ -1257,7 +1345,7 @@ HookTests::testMiscFunctions()
         for (const FindCodeTestItem& test : data.tests)
         {
             const uint32_t fullTestOffset = funcPtr + test.offset, fullDesiredOffset = funcPtr + test.desiredOffset;
-            const uint32_t fullFoundOffset = findCode(fullTestOffset, test.code);
+            const uint32_t fullFoundOffset = findCode(fullTestOffset, test.code.c_str(), test.code.size());
             myassert(fullFoundOffset == fullDesiredOffset,
                 wxString::Format("[findCode test '%s'] Tried to find code '%s' at 0x%X, desired offset is 0x%X, got 0x%X",
                     data.name, codeToSemiReadableString(test.code), fullTestOffset, fullDesiredOffset, fullFoundOffset
