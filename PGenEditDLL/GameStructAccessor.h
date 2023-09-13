@@ -12,7 +12,7 @@ public:
 
 	virtual void* getIconsLodPtr() = 0;
 	virtual int64_t getTime() = 0;
-	virtual void setTime(uint64_t time) = 0;
+	virtual void setTime(int64_t time) = 0;
 
 	virtual ~GameStructAccessor();
 };
@@ -34,7 +34,7 @@ public:
 	// Inherited via GameStructAccessor
 	virtual int64_t getTime() override;
 
-	virtual void setTime(uint64_t time) override;
+	virtual void setTime(int64_t time) override;
 };
 using GameStructAccessor_6 = TemplatedGameStructAccessor<mm6::Game>;
 using GameStructAccessor_7 = TemplatedGameStructAccessor<mm7::Game>;

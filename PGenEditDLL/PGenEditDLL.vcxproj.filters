@@ -355,7 +355,7 @@
       <Filter>Pliki nagłówkowe\GameStructs\Accessors</Filter>
     </ClInclude>
     <ClInclude Include="TimeChooserCtrl.h">
-      <Filter>Pliki nagłówkowe</Filter>
+      <Filter>Pliki nagłówkowe\Shared GUI</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -567,7 +567,7 @@
       <Filter>Pliki źródłowe\GameStructs\Accessors</Filter>
     </ClCompile>
     <ClCompile Include="TimeChooserCtrl.cpp">
-      <Filter>Pliki źródłowe</Filter>
+      <Filter>Pliki źródłowe\Shared GUI</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

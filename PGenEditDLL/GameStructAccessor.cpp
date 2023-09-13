@@ -20,7 +20,7 @@ inline int64_t TemplatedGameStructAccessor<Game>::getTime()
 }
 
 template<typename Game>
-inline void TemplatedGameStructAccessor<Game>::setTime(uint64_t time)
+inline void TemplatedGameStructAccessor<Game>::setTime(int64_t time)
 {
 	game->time = time;
 }
