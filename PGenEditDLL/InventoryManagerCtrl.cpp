@@ -2,6 +2,7 @@
 #include "main.h"
 #include "InventoryManagerCtrl.h"
 #include <wx/dataview.h>
+#include "ItemDialogBase.h"
 
 void InventoryManagerCtrl::onAddPress(wxCommandEvent& event)
 {
@@ -21,6 +22,17 @@ void InventoryManagerCtrl::onStorePress(wxCommandEvent& event)
 
 void InventoryManagerCtrl::onRestorePress(wxCommandEvent& event)
 {
+}
+
+void InventoryManagerCtrl::addItem()
+{
+    ItemDialogBase dialog(this);
+    mm7::Item item = dialog.getNewItemModal();
+}
+
+mm7::Item InventoryManagerCtrl::modifyItem(const mm7::Item& item)
+{
+    return mm7::Item();
 }
 
 // PASSING RVALUE REFERENCES REQUIRES std::forward

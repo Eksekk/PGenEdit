@@ -1,8 +1,11 @@
 #pragma once
 #include "pch.h"
 #include "main.h"
-#include <wx/dataview.h>
-#include <wx/spinctrl.h>
+
+class wxDataViewListCtrl;
+class wxDataViewColumn;
+class wxSpinCtrl;
+class wxGridBagSizer;
 
 class ItemDialogBase : public wxDialog
 {
@@ -37,13 +40,13 @@ protected:
     wxSlider* sliderItemCount;
     wxRadioButton* radioNoEnchantment;
     wxRadioButton* radioStandardEnchantment;
-    wxStaticText* m_staticText18;
-    wxChoice* radioStandardEnchantmentType;
+    wxStaticText* labelStandardEnchantmentType;
+    wxChoice* choiceStandardEnchantmentType;
     wxRadioButton* radioSpecialEnchantment;
     wxStaticText* m_staticText181;
     wxChoice* choiceSpecialEnchantmentType;
     wxStaticText* m_staticText26;
-    wxTextCtrl* textStandardEnchantmentPower;
+    wxSpinCtrl* valueStandardEnchantmentPower;
     wxRadioButton* randomEnchantmentRadio;
     wxStaticText* labelChance;
     wxSlider* sliderRandomEnchantmentChance;
@@ -79,6 +82,14 @@ protected:
     wxBoxSizer* sizerMaxCharges;
     wxStaticBoxSizer* sizerCondition;
     wxStaticBoxSizer* sizerTemporaryBonus;
+
+    void createItemConditionTemporaryBonusPanel();
+    void createWandSettings();
+    void createEnchantmentsStaticBox();
+    void createItemFilters();
+    void reapplyFilters();
+    void setControlValuesFromItem(const mm7::Item& item);
+    mm7::Item buildItemFromControlValues();
 public:
 
     enum class Mode
@@ -90,21 +101,9 @@ public:
 
     ItemDialogBase(wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = _("Create item"), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize(791, 794), long style = wxDEFAULT_DIALOG_STYLE);
 
-    void createItemConditionTemporaryBonusPanel();
-
-    void createWandSettings();
-
-    void createEnchantmentsStaticBox();
-
-	void createItemFilters();
-
-    template<typename Item>
-    mm7::Item getNewItemModal(const Item& item);
+    mm7::Item getNewItemModal();
+    mm7::Item editItemModal(const mm7::Item& item);
 
     ~ItemDialogBase();
 
 };
-
-template mm7::Item ItemDialogBase::getNewItemModal<mm6::Item>(const mm6::Item& item);
-template mm7::Item ItemDialogBase::getNewItemModal<mm7::Item>(const mm7::Item& item);
-template mm7::Item ItemDialogBase::getNewItemModal<mm8::Item>(const mm8::Item& item);

@@ -27,6 +27,9 @@ class InventoryManagerCtrl : public wxPanel
     void onStorePress(wxCommandEvent& event);
     void onRestorePress(wxCommandEvent& event);
 
+    void addItem();
+    mm7::Item modifyItem(const mm7::Item& item);
+
 public:
     // not instance and not smart pointer, because wxWidgets auto-deletes all windows and so it'd be deleted twice
     InventoryCtrl* const inventoryCtrl;

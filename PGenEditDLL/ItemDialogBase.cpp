@@ -1,6 +1,8 @@
 #include "pch.h"
 #include "ItemDialogBase.h"
-#include "wx/gbsizer.h"
+#include <wx/dataview.h>
+#include <wx/spinctrl.h>
+#include <wx/gbsizer.h>
 
 ItemDialogBase::ItemDialogBase(wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style) : wxDialog(parent, id, title, pos, size, style)
 {
@@ -209,53 +211,53 @@ void ItemDialogBase::createEnchantmentsStaticBox()
     radioStandardEnchantment = new wxRadioButton(sizerEnchantments->GetStaticBox(), wxID_ANY, _("Standard"), wxDefaultPosition, wxDefaultSize, 0);
     sizerEnchantmentsInner->Add(radioStandardEnchantment, wxGBPosition(1, 0), wxGBSpan(1, 1), wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
-    wxBoxSizer* bSizer361;
-    bSizer361 = new wxBoxSizer(wxHORIZONTAL);
+    wxBoxSizer* sizerStandardEnchantmentType;
+    sizerStandardEnchantmentType = new wxBoxSizer(wxHORIZONTAL);
 
-    m_staticText18 = new wxStaticText(sizerEnchantments->GetStaticBox(), wxID_ANY, _("Type:"), wxDefaultPosition, wxDefaultSize, 0);
-    m_staticText18->Wrap(-1);
-    bSizer361->Add(m_staticText18, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+    labelStandardEnchantmentType = new wxStaticText(sizerEnchantments->GetStaticBox(), wxID_ANY, _("Type:"), wxDefaultPosition, wxDefaultSize, 0);
+    labelStandardEnchantmentType->Wrap(-1);
+    sizerStandardEnchantmentType->Add(labelStandardEnchantmentType, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
     wxString standardEnchantmentTypeChoiceChoices[] = { _("Any"), _("of Might"), _("of Thought"), _("of Health"), _("of Fire Resistance") };
     int standardEnchantmentTypeChoiceNChoices = sizeof(standardEnchantmentTypeChoiceChoices) / sizeof(wxString);
-    radioStandardEnchantmentType = new wxChoice(sizerEnchantments->GetStaticBox(), wxID_ANY, wxDefaultPosition, wxDefaultSize, standardEnchantmentTypeChoiceNChoices, standardEnchantmentTypeChoiceChoices, 0);
-    radioStandardEnchantmentType->SetSelection(0);
-    bSizer361->Add(radioStandardEnchantmentType, 0, wxALL, 5);
+    choiceStandardEnchantmentType = new wxChoice(sizerEnchantments->GetStaticBox(), wxID_ANY, wxDefaultPosition, wxDefaultSize, standardEnchantmentTypeChoiceNChoices, standardEnchantmentTypeChoiceChoices, 0);
+    choiceStandardEnchantmentType->SetSelection(0);
+    sizerStandardEnchantmentType->Add(choiceStandardEnchantmentType, 0, wxALL, 5);
+
+    sizerEnchantmentsInner->Add(sizerStandardEnchantmentType, wxGBPosition(1, 1), wxGBSpan(1, 1), wxEXPAND, 5);
 
 
-    sizerEnchantmentsInner->Add(bSizer361, wxGBPosition(1, 1), wxGBSpan(1, 1), wxEXPAND, 5);
+    wxBoxSizer* sizerStandardEnchantmentPower;
+    sizerStandardEnchantmentPower = new wxBoxSizer(wxHORIZONTAL);
+
+    m_staticText26 = new wxStaticText(sizerEnchantments->GetStaticBox(), wxID_ANY, _("Power:"), wxDefaultPosition, wxDefaultSize, 0);
+    m_staticText26->Wrap(-1);
+    sizerStandardEnchantmentPower->Add(m_staticText26, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+
+    valueStandardEnchantmentPower = new wxSpinCtrl(sizerEnchantments->GetStaticBox(), wxID_ANY, _("10"), wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 0, 25, 10);
+    sizerStandardEnchantmentPower->Add(valueStandardEnchantmentPower, 0, wxALL, 5);
+
+
+    sizerEnchantmentsInner->Add(sizerStandardEnchantmentPower, wxGBPosition(1, 3), wxGBSpan(1, 1), wxEXPAND, 5);
 
     radioSpecialEnchantment = new wxRadioButton(sizerEnchantments->GetStaticBox(), wxID_ANY, _("Special"), wxDefaultPosition, wxDefaultSize, 0);
     sizerEnchantmentsInner->Add(radioSpecialEnchantment, wxGBPosition(2, 0), wxGBSpan(1, 1), wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
-    wxBoxSizer* bSizer3611;
-    bSizer3611 = new wxBoxSizer(wxHORIZONTAL);
+    wxBoxSizer* sizerSpecialEnchantmentType;
+    sizerSpecialEnchantmentType = new wxBoxSizer(wxHORIZONTAL);
 
     m_staticText181 = new wxStaticText(sizerEnchantments->GetStaticBox(), wxID_ANY, _("Type:"), wxDefaultPosition, wxDefaultSize, 0);
     m_staticText181->Wrap(-1);
-    bSizer3611->Add(m_staticText181, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+    sizerSpecialEnchantmentType->Add(m_staticText181, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
     wxString specialEnchantmentTypeChoiceChoices[] = { _("Any"), _("Warriors'"), _("of Life"), _("of Mana"), _("of the Dragon") };
     int specialEnchantmentTypeChoiceNChoices = sizeof(specialEnchantmentTypeChoiceChoices) / sizeof(wxString);
     choiceSpecialEnchantmentType = new wxChoice(sizerEnchantments->GetStaticBox(), wxID_ANY, wxDefaultPosition, wxDefaultSize, specialEnchantmentTypeChoiceNChoices, specialEnchantmentTypeChoiceChoices, 0);
     choiceSpecialEnchantmentType->SetSelection(0);
-    bSizer3611->Add(choiceSpecialEnchantmentType, 1, wxALL, 5);
+    sizerSpecialEnchantmentType->Add(choiceSpecialEnchantmentType, 1, wxALL, 5);
 
 
-    sizerEnchantmentsInner->Add(bSizer3611, wxGBPosition(2, 1), wxGBSpan(1, 1), wxEXPAND, 5);
-
-    wxBoxSizer* bSizer40;
-    bSizer40 = new wxBoxSizer(wxHORIZONTAL);
-
-    m_staticText26 = new wxStaticText(sizerEnchantments->GetStaticBox(), wxID_ANY, _("Power:"), wxDefaultPosition, wxDefaultSize, 0);
-    m_staticText26->Wrap(-1);
-    bSizer40->Add(m_staticText26, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
-
-    textStandardEnchantmentPower = new wxTextCtrl(sizerEnchantments->GetStaticBox(), wxID_ANY, _("10"), wxDefaultPosition, wxDefaultSize, 0);
-    bSizer40->Add(textStandardEnchantmentPower, 0, wxALL, 5);
-
-
-    sizerEnchantmentsInner->Add(bSizer40, wxGBPosition(1, 3), wxGBSpan(1, 1), wxEXPAND, 5);
+    sizerEnchantmentsInner->Add(sizerSpecialEnchantmentType, wxGBPosition(2, 1), wxGBSpan(1, 1), wxEXPAND, 5);
 
     randomEnchantmentRadio = new wxRadioButton(sizerEnchantments->GetStaticBox(), wxID_ANY, _("Random"), wxDefaultPosition, wxDefaultSize, 0);
     sizerEnchantmentsInner->Add(randomEnchantmentRadio, wxGBPosition(3, 0), wxGBSpan(1, 1), wxALL, 5);
@@ -273,18 +275,18 @@ void ItemDialogBase::createEnchantmentsStaticBox()
 
     sizerEnchantmentsInner->Add(bSizer45, wxGBPosition(3, 1), wxGBSpan(1, 3), wxEXPAND, 5);
 
-    wxBoxSizer* bSizer441;
-    bSizer441 = new wxBoxSizer(wxHORIZONTAL);
+    wxBoxSizer* sizerRandomEnchantmentPower;
+    sizerRandomEnchantmentPower = new wxBoxSizer(wxHORIZONTAL);
 
     m_staticText31 = new wxStaticText(sizerEnchantments->GetStaticBox(), wxID_ANY, _("Power:"), wxDefaultPosition, wxDefaultSize, 0);
     m_staticText31->Wrap(-1);
-    bSizer441->Add(m_staticText31, 0, wxALL, 5);
+    sizerRandomEnchantmentPower->Add(m_staticText31, 0, wxALL, 5);
 
-    m_slider9 = new wxSlider(sizerEnchantments->GetStaticBox(), wxID_ANY, 1, 1, 6, wxDefaultPosition, wxDefaultSize, wxSL_AUTOTICKS | wxSL_HORIZONTAL);
-    bSizer441->Add(m_slider9, 0, wxALL | wxEXPAND, 5);
+    sliderRandomEnchantmentPower  = new wxSlider(sizerEnchantments->GetStaticBox(), wxID_ANY, 1, 1, 6, wxDefaultPosition, wxDefaultSize, wxSL_AUTOTICKS | wxSL_HORIZONTAL);
+    sizerRandomEnchantmentPower->Add(sliderRandomEnchantmentPower , 0, wxALL | wxEXPAND, 5);
 
 
-    sizerEnchantmentsInner->Add(bSizer441, wxGBPosition(3, 4), wxGBSpan(1, 1), wxEXPAND, 5);
+    sizerEnchantmentsInner->Add(sizerRandomEnchantmentPower, wxGBPosition(3, 4), wxGBSpan(1, 1), wxEXPAND, 5);
 
 
     sizerEnchantments->Add(sizerEnchantmentsInner, 1, wxEXPAND, 5);
@@ -399,13 +401,54 @@ void ItemDialogBase::createItemFilters()
     sizerMain->Add(0, 5, 0, wxEXPAND, 5);
 }
 
+void ItemDialogBase::reapplyFilters()
+{
+
+}
 ItemDialogBase::~ItemDialogBase()
 {
 
 }
 
-template<typename Item>
-mm7::Item ItemDialogBase::getNewItemModal(const Item& item)
+void ItemDialogBase::setControlValuesFromItem(const mm7::Item& item)
+{
+    wxDataViewEvent event;
+    event.
+}
+
+mm7::Item ItemDialogBase::buildItemFromControlValues()
+{
+    mm7::Item item;
+    memset(&item, 0, sizeof mm7::Item);
+    if (radioSpecialEnchantment->GetValue())
+    {
+        item.bonus2 = choiceSpecialEnchantmentType->GetSelection(); // FIXME: translation tables
+    }
+    else if (radioStandardEnchantment->GetValue())
+    {
+        item.bonus = choiceStandardEnchantmentType->GetSelection(); // FIXME: see above
+        item.bonusStrength = valueStandardEnchantmentPower->
+    }
+    // TODO: number
+    
+    item.identified = checkboxIdentified->IsChecked();
+    item.broken = checkboxBroken->IsChecked();
+    if (MMVER >= 7)
+    {
+        item.hardened = checkboxHardened->IsChecked();
+    }
+    if (MMVER == 7)
+    {
+        item.stolen = checkboxStolen->IsChecked();
+    }
+}
+
+mm7::Item ItemDialogBase::getNewItemModal()
+{
+    ShowModal();
+}
+
+mm7::Item ItemDialogBase::editItemModal(const mm7::Item& item)
 {
     return mm7::Item();
 }
