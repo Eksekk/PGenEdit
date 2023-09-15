@@ -26,6 +26,7 @@
     <ClInclude Include="ClassSettingsTab.h" />
     <ClInclude Include="ClassWindow.h" />
     <ClInclude Include="ControlPanel.h" />
+    <ClInclude Include="CreateEditItemDialog.h" />
     <ClInclude Include="DefaultPlayerPanel.h" />
     <ClInclude Include="EditorItemsPanel.h" />
     <ClInclude Include="EditorMainWindow.h" />
@@ -64,6 +65,7 @@
     <ClInclude Include="HookTests.h" />
     <ClInclude Include="InventoryCtrl.h" />
     <ClInclude Include="InventoryManagerCtrl.h" />
+    <ClInclude Include="ItemDialogBase.h" />
     <ClInclude Include="ItemStructAccessor.h" />
     <ClInclude Include="LodStructAccessor.h" />
     <ClInclude Include="LuaFunctions.h" />
@@ -114,6 +116,7 @@
     <ClCompile Include="ClassSettingsTab.cpp" />
     <ClCompile Include="ClassWindow.cpp" />
     <ClCompile Include="ControlPanel.cpp" />
+    <ClCompile Include="CreateEditItemDialog.cpp" />
     <ClCompile Include="DefaultPlayerPanel.cpp" />
     <ClCompile Include="EditorItemsPanel.cpp" />
     <ClCompile Include="EditorMainWindow.cpp" />
@@ -135,6 +138,7 @@
     <ClCompile Include="HookTests.cpp" />
     <ClCompile Include="InventoryCtrl.cpp" />
     <ClCompile Include="InventoryManagerCtrl.cpp" />
+    <ClCompile Include="ItemDialogBase.cpp" />
     <ClCompile Include="ItemStructAccessor.cpp" />
     <ClCompile Include="LodStructAccessor.cpp" />
     <ClCompile Include="LuaFunctions.cpp" />

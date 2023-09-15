@@ -360,6 +360,12 @@
     <ClInclude Include="GameTime.h">
       <Filter>Pliki nagłówkowe\GameData</Filter>
     </ClInclude>
+    <ClInclude Include="CreateEditItemDialog.h">
+      <Filter>Pliki nagłówkowe</Filter>
+    </ClInclude>
+    <ClInclude Include="ItemDialogBase.h">
+      <Filter>Pliki nagłówkowe</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="sources\MainWindow.cpp">
@@ -574,6 +580,12 @@
     </ClCompile>
     <ClCompile Include="GameTime.cpp">
       <Filter>Pliki źródłowe\GameData</Filter>
+    </ClCompile>
+    <ClCompile Include="CreateEditItemDialog.cpp">
+      <Filter>Pliki źródłowe</Filter>
+    </ClCompile>
+    <ClCompile Include="ItemDialogBase.cpp">
+      <Filter>Pliki źródłowe</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

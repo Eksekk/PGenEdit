@@ -4,6 +4,8 @@
 #include "GameTime.h"
 class wxSpinCtrl;
 
+wxDECLARE_EVENT(TIME_CTRL_TIME_CHANGE, wxCommandEvent);
+
 class TimeChooserCtrl : public wxPanel
 {
     wxStaticText* labelDays;
@@ -19,11 +21,9 @@ class TimeChooserCtrl : public wxPanel
     GameTime time;
 
     void updateValuesFromTime();
+    void updateTimeFromValues();
 
-    void onDaysChange(wxCommandEvent& event);
-    void onHoursChange(wxCommandEvent& event);
-    void onMinutesChange(wxCommandEvent& event);
-    void onTicksChange(wxCommandEvent& event);
+    void onValuesChange(wxCommandEvent& event);
 
 public:
     TimeChooserCtrl(wxWindow* parent);
