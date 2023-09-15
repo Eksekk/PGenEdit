@@ -6,295 +6,296 @@ ItemDialogBase::ItemDialogBase(wxWindow* parent, wxWindowID id, const wxString& 
 {
     this->SetSizeHints(wxDefaultSize, wxDefaultSize);
 
-    mainSizer = new wxBoxSizer(wxVERTICAL);
+    sizerMain = new wxBoxSizer(wxVERTICAL);
 
     createItemFilters();
 
+    wxStaticBoxSizer* sizerChooseItem;
+    sizerChooseItem = new wxStaticBoxSizer(new wxStaticBox(this, wxID_ANY, _("Choose item")), wxVERTICAL);
 
-    wxStaticBoxSizer* chooseItemSizer;
-    chooseItemSizer = new wxStaticBoxSizer(new wxStaticBox(this, wxID_ANY, _("Choose item")), wxVERTICAL);
+    itemTable = new wxDataViewListCtrl(sizerChooseItem->GetStaticBox(), wxID_ANY, wxDefaultPosition, wxDefaultSize, 0);
+    colNumber = itemTable->AppendTextColumn(_("#"), wxDATAVIEW_CELL_INERT, 50, static_cast<wxAlignment>(wxALIGN_LEFT), wxDATAVIEW_COL_RESIZABLE);
+    colName = itemTable->AppendTextColumn(_("Name"), wxDATAVIEW_CELL_INERT, -1, static_cast<wxAlignment>(wxALIGN_LEFT), wxDATAVIEW_COL_RESIZABLE);
+    colCategory = itemTable->AppendTextColumn(_("Category"), wxDATAVIEW_CELL_INERT, -1, static_cast<wxAlignment>(wxALIGN_LEFT), wxDATAVIEW_COL_RESIZABLE);
+    colType = itemTable->AppendTextColumn(_("Type"), wxDATAVIEW_CELL_INERT, -1, static_cast<wxAlignment>(wxALIGN_LEFT), wxDATAVIEW_COL_RESIZABLE);
+    colMod = itemTable->AppendTextColumn(_("Mod"), wxDATAVIEW_CELL_INERT, -1, static_cast<wxAlignment>(wxALIGN_LEFT), wxDATAVIEW_COL_RESIZABLE);
+    colMaterial = itemTable->AppendTextColumn(_("Material"), wxDATAVIEW_CELL_INERT, -1, static_cast<wxAlignment>(wxALIGN_LEFT), wxDATAVIEW_COL_RESIZABLE);
+    colExtra = itemTable->AppendTextColumn(_("Extra"), wxDATAVIEW_CELL_INERT, -1, static_cast<wxAlignment>(wxALIGN_LEFT), wxDATAVIEW_COL_RESIZABLE);
+    colImage = itemTable->AppendIconTextColumn(_("Image"), wxDATAVIEW_CELL_INERT, -1, static_cast<wxAlignment>(wxALIGN_LEFT), wxDATAVIEW_COL_RESIZABLE);
+    sizerChooseItem->Add(itemTable, 0, wxALL | wxEXPAND, 5);
 
-    itemTable = new wxDataViewListCtrl(chooseItemSizer->GetStaticBox(), wxID_ANY, wxDefaultPosition, wxDefaultSize, 0);
-    numberCol = itemTable->AppendTextColumn(_("#"), wxDATAVIEW_CELL_INERT, 50, static_cast<wxAlignment>(wxALIGN_LEFT), wxDATAVIEW_COL_RESIZABLE);
-    nameCol = itemTable->AppendTextColumn(_("Name"), wxDATAVIEW_CELL_INERT, -1, static_cast<wxAlignment>(wxALIGN_LEFT), wxDATAVIEW_COL_RESIZABLE);
-    categoryCol = itemTable->AppendTextColumn(_("Category"), wxDATAVIEW_CELL_INERT, -1, static_cast<wxAlignment>(wxALIGN_LEFT), wxDATAVIEW_COL_RESIZABLE);
-    typeCol = itemTable->AppendTextColumn(_("Type"), wxDATAVIEW_CELL_INERT, -1, static_cast<wxAlignment>(wxALIGN_LEFT), wxDATAVIEW_COL_RESIZABLE);
-    modCol = itemTable->AppendTextColumn(_("Mod"), wxDATAVIEW_CELL_INERT, -1, static_cast<wxAlignment>(wxALIGN_LEFT), wxDATAVIEW_COL_RESIZABLE);
-    materialCol = itemTable->AppendTextColumn(_("Material"), wxDATAVIEW_CELL_INERT, -1, static_cast<wxAlignment>(wxALIGN_LEFT), wxDATAVIEW_COL_RESIZABLE);
-    extraCol = itemTable->AppendTextColumn(_("Extra"), wxDATAVIEW_CELL_INERT, -1, static_cast<wxAlignment>(wxALIGN_LEFT), wxDATAVIEW_COL_RESIZABLE);
-    imageCol = itemTable->AppendIconTextColumn(_("Image"), wxDATAVIEW_CELL_INERT, -1, static_cast<wxAlignment>(wxALIGN_LEFT), wxDATAVIEW_COL_RESIZABLE);
-    chooseItemSizer->Add(itemTable, 0, wxALL | wxEXPAND, 5);
-
-    mainSizer->Add(chooseItemSizer, 1, wxEXPAND, 5);
-
-
-    mainSizer->Add(0, 15, 0, wxEXPAND, 5);
-
-    wxBoxSizer* bSizer44;
-    bSizer44 = new wxBoxSizer(wxHORIZONTAL);
-
-    m_staticText30 = new wxStaticText(this, wxID_ANY, _("Count:"), wxDefaultPosition, wxDefaultSize, 0);
-    m_staticText30->Wrap(-1);
-    bSizer44->Add(m_staticText30, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
-
-    itemCountLabel = new wxSlider(this, wxID_ANY, 1, 1, 20, wxDefaultPosition, wxDefaultSize, wxSL_HORIZONTAL | wxSL_VALUE_LABEL);
-    itemCountLabel->SetMinSize(wxSize(300, -1));
-
-    bSizer44->Add(itemCountLabel, 0, wxALL, 5);
+    sizerMain->Add(sizerChooseItem, 1, wxEXPAND, 5);
 
 
-    mainSizer->Add(bSizer44, 1, wxEXPAND, 5);
+    sizerMain->Add(0, 15, 0, wxEXPAND, 5);
+
+    wxBoxSizer* sizerItemCount;
+    sizerItemCount = new wxBoxSizer(wxHORIZONTAL);
+
+    labelItemCount = new wxStaticText(this, wxID_ANY, _("Count:"), wxDefaultPosition, wxDefaultSize, 0);
+    labelItemCount->Wrap(-1);
+    sizerItemCount->Add(labelItemCount, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+
+    sliderItemCount = new wxSlider(this, wxID_ANY, 1, 1, 20, wxDefaultPosition, wxDefaultSize, wxSL_HORIZONTAL | wxSL_VALUE_LABEL);
+    sliderItemCount->SetMinSize(wxSize(300, -1));
+
+    sizerItemCount->Add(sliderItemCount, 0, wxALL, 5);
+
+
+    sizerMain->Add(sizerItemCount, 1, wxEXPAND, 5);
 
     createEnchantmentsStaticBox();
 
-    mainSizer->Add(enchantmentsSizer, 1, wxEXPAND, 5);
+    sizerMain->Add(sizerEnchantments, 1, wxEXPAND, 5);
 
 
-    mainSizer->Add(0, 5, 0, wxEXPAND, 5);
+    sizerMain->Add(0, 5, 0, wxEXPAND, 5);
 
-    wxStaticBoxSizer* conditionSbSizer;
-    conditionSbSizer = new wxStaticBoxSizer(new wxStaticBox(this, wxID_ANY, _("Item condition")), wxHORIZONTAL);
-
-    identifiedCheckbox = new wxCheckBox(conditionSbSizer->GetStaticBox(), wxID_ANY, _("Identified"), wxDefaultPosition, wxDefaultSize, 0);
-    identifiedCheckbox->SetValue(true);
-    conditionSbSizer->Add(identifiedCheckbox, 0, wxALL, 5);
-
-    brokenCheckbox = new wxCheckBox(conditionSbSizer->GetStaticBox(), wxID_ANY, _("Broken"), wxDefaultPosition, wxDefaultSize, 0);
-    conditionSbSizer->Add(brokenCheckbox, 0, wxALL, 5);
-
-    stolenCheckbox = new wxCheckBox(conditionSbSizer->GetStaticBox(), wxID_ANY, _("Stolen (MM7)"), wxDefaultPosition, wxDefaultSize, 0);
-    conditionSbSizer->Add(stolenCheckbox, 0, wxALL, 5);
-
-    hardenedCheckbox = new wxCheckBox(conditionSbSizer->GetStaticBox(), wxID_ANY, _("Hardened (MM7+)"), wxDefaultPosition, wxDefaultSize, 0);
-    conditionSbSizer->Add(hardenedCheckbox, 0, wxALL, 5);
+    createItemConditionTemporaryBonusPanel();
 
 
-    mainSizer->Add(conditionSbSizer, 0, wxEXPAND, 5);
-
-
-    mainSizer->Add(0, 5, 0, wxEXPAND, 5);
-
-    wxStaticBoxSizer* temporaryBonusSizer;
-    temporaryBonusSizer = new wxStaticBoxSizer(new wxStaticBox(this, wxID_ANY, _("Temporary bonus")), wxHORIZONTAL);
-
-    labelTmpEnchantmentType = new wxStaticText(temporaryBonusSizer->GetStaticBox(), wxID_ANY, _("Type:"), wxDefaultPosition, wxDefaultSize, 0);
-    labelTmpEnchantmentType->Wrap(-1);
-    temporaryBonusSizer->Add(labelTmpEnchantmentType, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
-
-    wxArrayString choiceTmpEnchantmentChoices;
-    choiceTmpEnchantment = new wxChoice(temporaryBonusSizer->GetStaticBox(), wxID_ANY, wxDefaultPosition, wxDefaultSize, choiceTmpEnchantmentChoices, 0);
-    choiceTmpEnchantment->SetSelection(0);
-    temporaryBonusSizer->Add(choiceTmpEnchantment, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
-
-
-    temporaryBonusSizer->Add(30, 0, 0, 0, 5);
-
-    labelDays = new wxStaticText(temporaryBonusSizer->GetStaticBox(), wxID_ANY, _("Days:"), wxDefaultPosition, wxDefaultSize, 0);
-    labelDays->Wrap(-1);
-    temporaryBonusSizer->Add(labelDays, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
-
-    valueDays = new wxSpinCtrl(temporaryBonusSizer->GetStaticBox(), wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 0, 10, 0);
-    temporaryBonusSizer->Add(valueDays, 0, wxALL, 5);
-
-    labelHours = new wxStaticText(temporaryBonusSizer->GetStaticBox(), wxID_ANY, _("Hours:"), wxDefaultPosition, wxDefaultSize, 0);
-    labelHours->Wrap(-1);
-    temporaryBonusSizer->Add(labelHours, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
-
-    valueHours = new wxSpinCtrl(temporaryBonusSizer->GetStaticBox(), wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 0, 10, 0);
-    temporaryBonusSizer->Add(valueHours, 0, wxALL, 5);
-
-    labelMinutes = new wxStaticText(temporaryBonusSizer->GetStaticBox(), wxID_ANY, _("Minutes:"), wxDefaultPosition, wxDefaultSize, 0);
-    labelMinutes->Wrap(-1);
-    temporaryBonusSizer->Add(labelMinutes, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
-
-    valueMinutes = new wxSpinCtrl(temporaryBonusSizer->GetStaticBox(), wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 0, 10, 0);
-    temporaryBonusSizer->Add(valueMinutes, 0, wxALL, 5);
-
-
-    mainSizer->Add(temporaryBonusSizer, 1, wxEXPAND, 5);
+    sizerMain->Add(sizerTemporaryBonus, 1, wxEXPAND, 5);
 
     createWandSettings();
 
-    mainSizer->Add(wandSettingsSizer, 1, wxEXPAND, 5);
+    sizerMain->Add(sizerWandSettings, 1, wxEXPAND, 5);
 
 
-    this->SetSizer(mainSizer);
+    this->SetSizer(sizerMain);
     this->Layout();
 
     this->Centre(wxBOTH);
 }
 
+void ItemDialogBase::createItemConditionTemporaryBonusPanel()
+{
+    sizerCondition = new wxStaticBoxSizer(new wxStaticBox(this, wxID_ANY, _("Item condition")), wxHORIZONTAL);
+
+    checkboxIdentified = new wxCheckBox(sizerCondition->GetStaticBox(), wxID_ANY, _("Identified"), wxDefaultPosition, wxDefaultSize, 0);
+    checkboxIdentified->SetValue(true);
+    sizerCondition->Add(checkboxIdentified, 0, wxALL, 5);
+
+    checkboxBroken = new wxCheckBox(sizerCondition->GetStaticBox(), wxID_ANY, _("Broken"), wxDefaultPosition, wxDefaultSize, 0);
+    sizerCondition->Add(checkboxBroken, 0, wxALL, 5);
+
+    checkboxStolen = new wxCheckBox(sizerCondition->GetStaticBox(), wxID_ANY, _("Stolen (MM7)"), wxDefaultPosition, wxDefaultSize, 0);
+    sizerCondition->Add(checkboxStolen, 0, wxALL, 5);
+
+    checkboxHardened = new wxCheckBox(sizerCondition->GetStaticBox(), wxID_ANY, _("Hardened (MM7+)"), wxDefaultPosition, wxDefaultSize, 0);
+    sizerCondition->Add(checkboxHardened, 0, wxALL, 5);
+
+
+    sizerMain->Add(sizerCondition, 0, wxEXPAND, 5);
+
+
+    sizerMain->Add(0, 5, 0, wxEXPAND, 5);
+
+    sizerTemporaryBonus = new wxStaticBoxSizer(new wxStaticBox(this, wxID_ANY, _("Temporary bonus")), wxHORIZONTAL);
+
+    labelTmpEnchantmentType = new wxStaticText(sizerTemporaryBonus->GetStaticBox(), wxID_ANY, _("Type:"), wxDefaultPosition, wxDefaultSize, 0);
+    labelTmpEnchantmentType->Wrap(-1);
+    sizerTemporaryBonus->Add(labelTmpEnchantmentType, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+
+    wxArrayString choiceTmpEnchantmentChoices;
+    choiceTmpEnchantment = new wxChoice(sizerTemporaryBonus->GetStaticBox(), wxID_ANY, wxDefaultPosition, wxDefaultSize, choiceTmpEnchantmentChoices, 0);
+    choiceTmpEnchantment->SetSelection(0);
+    sizerTemporaryBonus->Add(choiceTmpEnchantment, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+
+    sizerTemporaryBonus->Add(30, 0, 0, 0, 5);
+
+    labelDays = new wxStaticText(sizerTemporaryBonus->GetStaticBox(), wxID_ANY, _("Days:"), wxDefaultPosition, wxDefaultSize, 0);
+    labelDays->Wrap(-1);
+    sizerTemporaryBonus->Add(labelDays, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+
+    valueDays = new wxSpinCtrl(sizerTemporaryBonus->GetStaticBox(), wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 0, 10, 0);
+    sizerTemporaryBonus->Add(valueDays, 0, wxALL, 5);
+
+    labelHours = new wxStaticText(sizerTemporaryBonus->GetStaticBox(), wxID_ANY, _("Hours:"), wxDefaultPosition, wxDefaultSize, 0);
+    labelHours->Wrap(-1);
+    sizerTemporaryBonus->Add(labelHours, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+
+    valueHours = new wxSpinCtrl(sizerTemporaryBonus->GetStaticBox(), wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 0, 10, 0);
+    sizerTemporaryBonus->Add(valueHours, 0, wxALL, 5);
+
+    labelMinutes = new wxStaticText(sizerTemporaryBonus->GetStaticBox(), wxID_ANY, _("Minutes:"), wxDefaultPosition, wxDefaultSize, 0);
+    labelMinutes->Wrap(-1);
+    sizerTemporaryBonus->Add(labelMinutes, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+
+    valueMinutes = new wxSpinCtrl(sizerTemporaryBonus->GetStaticBox(), wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 0, 10, 0);
+    sizerTemporaryBonus->Add(valueMinutes, 0, wxALL, 5);
+}
+
 void ItemDialogBase::createWandSettings()
 {
-    wandSettingsSizer = new wxStaticBoxSizer(new wxStaticBox(this, wxID_ANY, _("Wand-specific settings")), wxVERTICAL);
+    sizerWandSettings = new wxStaticBoxSizer(new wxStaticBox(this, wxID_ANY, _("Wand-specific settings")), wxVERTICAL);
 
-    maxChargesSizer = new wxBoxSizer(wxVERTICAL);
+    sizerMaxCharges = new wxBoxSizer(wxVERTICAL);
 
     wxBoxSizer* bSizer28;
     bSizer28 = new wxBoxSizer(wxHORIZONTAL);
 
-    m_staticText14 = new wxStaticText(wandSettingsSizer->GetStaticBox(), wxID_ANY, _("Max charges:"), wxDefaultPosition, wxDefaultSize, 0);
+    m_staticText14 = new wxStaticText(sizerWandSettings->GetStaticBox(), wxID_ANY, _("Max charges:"), wxDefaultPosition, wxDefaultSize, 0);
     m_staticText14->Wrap(-1);
     bSizer28->Add(m_staticText14, 0, wxALL, 5);
 
-    wandChargesManualAmountCheckbox = new wxCheckBox(wandSettingsSizer->GetStaticBox(), wxID_ANY, _("Manual amount"), wxDefaultPosition, wxDefaultSize, 0);
-    wandChargesManualAmountCheckbox->SetToolTip(_("Enable to set your own amount. If disabled, game default will be generated."));
+    checkboxWandChargesManualAmount = new wxCheckBox(sizerWandSettings->GetStaticBox(), wxID_ANY, _("Manual amount"), wxDefaultPosition, wxDefaultSize, 0);
+    checkboxWandChargesManualAmount->SetToolTip(_("Enable to set your own amount. If disabled, game default will be generated."));
 
-    bSizer28->Add(wandChargesManualAmountCheckbox, 0, wxALL, 5);
+    bSizer28->Add(checkboxWandChargesManualAmount, 0, wxALL, 5);
 
-    wandChargesVaryWithStrengthCheckbox = new wxCheckBox(wandSettingsSizer->GetStaticBox(), wxID_ANY, _("Vary with strength"), wxDefaultPosition, wxDefaultSize, 0);
-    wandChargesVaryWithStrengthCheckbox->SetValue(true);
-    wandChargesVaryWithStrengthCheckbox->SetToolTip(_("If enabled, the stronger wand's spell is, the fewer charges (assumed input is for lowest-grade wands, that is about 35-45). Otherwise amount is exact, no matter what wand it is"));
+    checkboxWandChargesVaryWithStrength = new wxCheckBox(sizerWandSettings->GetStaticBox(), wxID_ANY, _("Vary with strength"), wxDefaultPosition, wxDefaultSize, 0);
+    checkboxWandChargesVaryWithStrength->SetValue(true);
+    checkboxWandChargesVaryWithStrength->SetToolTip(_("If enabled, the stronger wand's spell is, the fewer charges (assumed input is for lowest-grade wands, that is about 35-45). Otherwise amount is exact, no matter what wand it is"));
 
-    bSizer28->Add(wandChargesVaryWithStrengthCheckbox, 0, wxALL, 5);
+    bSizer28->Add(checkboxWandChargesVaryWithStrength, 0, wxALL, 5);
 
 
-    maxChargesSizer->Add(bSizer28, 0, wxEXPAND, 5);
+    sizerMaxCharges->Add(bSizer28, 0, wxEXPAND, 5);
 
     wxBoxSizer* minSliderSizer;
     minSliderSizer = new wxBoxSizer(wxHORIZONTAL);
 
-    m_staticText151 = new wxStaticText(wandSettingsSizer->GetStaticBox(), wxID_ANY, _("Min:"), wxDefaultPosition, wxDefaultSize, 0);
+    m_staticText151 = new wxStaticText(sizerWandSettings->GetStaticBox(), wxID_ANY, _("Min:"), wxDefaultPosition, wxDefaultSize, 0);
     m_staticText151->Wrap(-1);
     minSliderSizer->Add(m_staticText151, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
-    lowMaxChargesSizer = new wxSlider(wandSettingsSizer->GetStaticBox(), wxID_ANY, 50, 1, 255, wxDefaultPosition, wxDefaultSize, wxSL_HORIZONTAL | wxSL_VALUE_LABEL);
-    minSliderSizer->Add(lowMaxChargesSizer, 1, wxALL, 5);
+    sizerLowMaxCharges = new wxSlider(sizerWandSettings->GetStaticBox(), wxID_ANY, 50, 1, 255, wxDefaultPosition, wxDefaultSize, wxSL_HORIZONTAL | wxSL_VALUE_LABEL);
+    minSliderSizer->Add(sizerLowMaxCharges, 1, wxALL, 5);
 
 
-    maxChargesSizer->Add(minSliderSizer, 0, wxEXPAND, 5);
+    sizerMaxCharges->Add(minSliderSizer, 0, wxEXPAND, 5);
 
     wxBoxSizer* maxSliderSizer;
     maxSliderSizer = new wxBoxSizer(wxHORIZONTAL);
 
-    m_staticText161 = new wxStaticText(wandSettingsSizer->GetStaticBox(), wxID_ANY, _("Max:"), wxDefaultPosition, wxDefaultSize, 0);
+    m_staticText161 = new wxStaticText(sizerWandSettings->GetStaticBox(), wxID_ANY, _("Max:"), wxDefaultPosition, wxDefaultSize, 0);
     m_staticText161->Wrap(-1);
     maxSliderSizer->Add(m_staticText161, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
-    highMaxChargesSizer = new wxSlider(wandSettingsSizer->GetStaticBox(), wxID_ANY, 50, 1, 255, wxDefaultPosition, wxDefaultSize, wxSL_HORIZONTAL | wxSL_VALUE_LABEL);
-    maxSliderSizer->Add(highMaxChargesSizer, 1, wxALL, 5);
+    sizerHighMaxCharges = new wxSlider(sizerWandSettings->GetStaticBox(), wxID_ANY, 50, 1, 255, wxDefaultPosition, wxDefaultSize, wxSL_HORIZONTAL | wxSL_VALUE_LABEL);
+    maxSliderSizer->Add(sizerHighMaxCharges, 1, wxALL, 5);
 
 
-    maxChargesSizer->Add(maxSliderSizer, 0, wxEXPAND, 5);
+    sizerMaxCharges->Add(maxSliderSizer, 0, wxEXPAND, 5);
 
 
-    wandSettingsSizer->Add(maxChargesSizer, 1, wxEXPAND, 5);
+    sizerWandSettings->Add(sizerMaxCharges, 1, wxEXPAND, 5);
 
     wxBoxSizer* bSizer301;
     bSizer301 = new wxBoxSizer(wxHORIZONTAL);
 
-    m_staticText171 = new wxStaticText(wandSettingsSizer->GetStaticBox(), wxID_ANY, _("Percentage of starting charges:"), wxDefaultPosition, wxDefaultSize, 0);
+    m_staticText171 = new wxStaticText(sizerWandSettings->GetStaticBox(), wxID_ANY, _("Percentage of starting charges:"), wxDefaultPosition, wxDefaultSize, 0);
     m_staticText171->Wrap(-1);
     bSizer301->Add(m_staticText171, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
-    chargesPercentageSizer = new wxSlider(wandSettingsSizer->GetStaticBox(), wxID_ANY, 50, 0, 100, wxDefaultPosition, wxDefaultSize, wxSL_HORIZONTAL | wxSL_VALUE_LABEL);
-    bSizer301->Add(chargesPercentageSizer, 1, wxALL, 5);
+    sizerChargesPercentage = new wxSlider(sizerWandSettings->GetStaticBox(), wxID_ANY, 50, 0, 100, wxDefaultPosition, wxDefaultSize, wxSL_HORIZONTAL | wxSL_VALUE_LABEL);
+    bSizer301->Add(sizerChargesPercentage, 1, wxALL, 5);
 
 
-    wandSettingsSizer->Add(bSizer301, 1, wxEXPAND, 5);
+    sizerWandSettings->Add(bSizer301, 1, wxEXPAND, 5);
 }
 void ItemDialogBase::createEnchantmentsStaticBox()
 {
-    enchantmentsSizer = new wxStaticBoxSizer(new wxStaticBox(this, wxID_ANY, _("Enchantments")), wxVERTICAL);
+    sizerEnchantments = new wxStaticBoxSizer(new wxStaticBox(this, wxID_ANY, _("Enchantments")), wxVERTICAL);
 
-    enchantmentsInnerSizer = new wxGridBagSizer(0, 0);
-    enchantmentsInnerSizer->SetFlexibleDirection(wxBOTH);
-    enchantmentsInnerSizer->SetNonFlexibleGrowMode(wxFLEX_GROWMODE_SPECIFIED);
+    sizerEnchantmentsInner = new wxGridBagSizer(0, 0);
+    sizerEnchantmentsInner->SetFlexibleDirection(wxBOTH);
+    sizerEnchantmentsInner->SetNonFlexibleGrowMode(wxFLEX_GROWMODE_SPECIFIED);
 
-    noEnchantmentRadio = new wxRadioButton(enchantmentsSizer->GetStaticBox(), wxID_ANY, _("None"), wxDefaultPosition, wxDefaultSize, wxRB_GROUP);
-    noEnchantmentRadio->SetValue(true);
-    enchantmentsInnerSizer->Add(noEnchantmentRadio, wxGBPosition(0, 0), wxGBSpan(1, 1), wxALL, 5);
+    radioNoEnchantment = new wxRadioButton(sizerEnchantments->GetStaticBox(), wxID_ANY, _("None"), wxDefaultPosition, wxDefaultSize, wxRB_GROUP);
+    radioNoEnchantment->SetValue(true);
+    sizerEnchantmentsInner->Add(radioNoEnchantment, wxGBPosition(0, 0), wxGBSpan(1, 1), wxALL, 5);
 
-    standardEnchantmentRadio = new wxRadioButton(enchantmentsSizer->GetStaticBox(), wxID_ANY, _("Standard"), wxDefaultPosition, wxDefaultSize, 0);
-    enchantmentsInnerSizer->Add(standardEnchantmentRadio, wxGBPosition(1, 0), wxGBSpan(1, 1), wxALL | wxALIGN_CENTER_VERTICAL, 5);
+    radioStandardEnchantment = new wxRadioButton(sizerEnchantments->GetStaticBox(), wxID_ANY, _("Standard"), wxDefaultPosition, wxDefaultSize, 0);
+    sizerEnchantmentsInner->Add(radioStandardEnchantment, wxGBPosition(1, 0), wxGBSpan(1, 1), wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
     wxBoxSizer* bSizer361;
     bSizer361 = new wxBoxSizer(wxHORIZONTAL);
 
-    m_staticText18 = new wxStaticText(enchantmentsSizer->GetStaticBox(), wxID_ANY, _("Type:"), wxDefaultPosition, wxDefaultSize, 0);
+    m_staticText18 = new wxStaticText(sizerEnchantments->GetStaticBox(), wxID_ANY, _("Type:"), wxDefaultPosition, wxDefaultSize, 0);
     m_staticText18->Wrap(-1);
     bSizer361->Add(m_staticText18, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
     wxString standardEnchantmentTypeChoiceChoices[] = { _("Any"), _("of Might"), _("of Thought"), _("of Health"), _("of Fire Resistance") };
     int standardEnchantmentTypeChoiceNChoices = sizeof(standardEnchantmentTypeChoiceChoices) / sizeof(wxString);
-    standardEnchantmentTypeChoice = new wxChoice(enchantmentsSizer->GetStaticBox(), wxID_ANY, wxDefaultPosition, wxDefaultSize, standardEnchantmentTypeChoiceNChoices, standardEnchantmentTypeChoiceChoices, 0);
-    standardEnchantmentTypeChoice->SetSelection(0);
-    bSizer361->Add(standardEnchantmentTypeChoice, 0, wxALL, 5);
+    radioStandardEnchantmentType = new wxChoice(sizerEnchantments->GetStaticBox(), wxID_ANY, wxDefaultPosition, wxDefaultSize, standardEnchantmentTypeChoiceNChoices, standardEnchantmentTypeChoiceChoices, 0);
+    radioStandardEnchantmentType->SetSelection(0);
+    bSizer361->Add(radioStandardEnchantmentType, 0, wxALL, 5);
 
 
-    enchantmentsInnerSizer->Add(bSizer361, wxGBPosition(1, 1), wxGBSpan(1, 1), wxEXPAND, 5);
+    sizerEnchantmentsInner->Add(bSizer361, wxGBPosition(1, 1), wxGBSpan(1, 1), wxEXPAND, 5);
 
-    specialEnchantmentRadio = new wxRadioButton(enchantmentsSizer->GetStaticBox(), wxID_ANY, _("Special"), wxDefaultPosition, wxDefaultSize, 0);
-    enchantmentsInnerSizer->Add(specialEnchantmentRadio, wxGBPosition(2, 0), wxGBSpan(1, 1), wxALL | wxALIGN_CENTER_VERTICAL, 5);
+    radioSpecialEnchantment = new wxRadioButton(sizerEnchantments->GetStaticBox(), wxID_ANY, _("Special"), wxDefaultPosition, wxDefaultSize, 0);
+    sizerEnchantmentsInner->Add(radioSpecialEnchantment, wxGBPosition(2, 0), wxGBSpan(1, 1), wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
     wxBoxSizer* bSizer3611;
     bSizer3611 = new wxBoxSizer(wxHORIZONTAL);
 
-    m_staticText181 = new wxStaticText(enchantmentsSizer->GetStaticBox(), wxID_ANY, _("Type:"), wxDefaultPosition, wxDefaultSize, 0);
+    m_staticText181 = new wxStaticText(sizerEnchantments->GetStaticBox(), wxID_ANY, _("Type:"), wxDefaultPosition, wxDefaultSize, 0);
     m_staticText181->Wrap(-1);
     bSizer3611->Add(m_staticText181, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
     wxString specialEnchantmentTypeChoiceChoices[] = { _("Any"), _("Warriors'"), _("of Life"), _("of Mana"), _("of the Dragon") };
     int specialEnchantmentTypeChoiceNChoices = sizeof(specialEnchantmentTypeChoiceChoices) / sizeof(wxString);
-    specialEnchantmentTypeChoice = new wxChoice(enchantmentsSizer->GetStaticBox(), wxID_ANY, wxDefaultPosition, wxDefaultSize, specialEnchantmentTypeChoiceNChoices, specialEnchantmentTypeChoiceChoices, 0);
-    specialEnchantmentTypeChoice->SetSelection(0);
-    bSizer3611->Add(specialEnchantmentTypeChoice, 1, wxALL, 5);
+    choiceSpecialEnchantmentType = new wxChoice(sizerEnchantments->GetStaticBox(), wxID_ANY, wxDefaultPosition, wxDefaultSize, specialEnchantmentTypeChoiceNChoices, specialEnchantmentTypeChoiceChoices, 0);
+    choiceSpecialEnchantmentType->SetSelection(0);
+    bSizer3611->Add(choiceSpecialEnchantmentType, 1, wxALL, 5);
 
 
-    enchantmentsInnerSizer->Add(bSizer3611, wxGBPosition(2, 1), wxGBSpan(1, 1), wxEXPAND, 5);
+    sizerEnchantmentsInner->Add(bSizer3611, wxGBPosition(2, 1), wxGBSpan(1, 1), wxEXPAND, 5);
 
     wxBoxSizer* bSizer40;
     bSizer40 = new wxBoxSizer(wxHORIZONTAL);
 
-    m_staticText26 = new wxStaticText(enchantmentsSizer->GetStaticBox(), wxID_ANY, _("Power:"), wxDefaultPosition, wxDefaultSize, 0);
+    m_staticText26 = new wxStaticText(sizerEnchantments->GetStaticBox(), wxID_ANY, _("Power:"), wxDefaultPosition, wxDefaultSize, 0);
     m_staticText26->Wrap(-1);
     bSizer40->Add(m_staticText26, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
-    standardEnchantmentPowerText = new wxTextCtrl(enchantmentsSizer->GetStaticBox(), wxID_ANY, _("10"), wxDefaultPosition, wxDefaultSize, 0);
-    bSizer40->Add(standardEnchantmentPowerText, 0, wxALL, 5);
+    textStandardEnchantmentPower = new wxTextCtrl(sizerEnchantments->GetStaticBox(), wxID_ANY, _("10"), wxDefaultPosition, wxDefaultSize, 0);
+    bSizer40->Add(textStandardEnchantmentPower, 0, wxALL, 5);
 
 
-    enchantmentsInnerSizer->Add(bSizer40, wxGBPosition(1, 3), wxGBSpan(1, 1), wxEXPAND, 5);
+    sizerEnchantmentsInner->Add(bSizer40, wxGBPosition(1, 3), wxGBSpan(1, 1), wxEXPAND, 5);
 
-    randomEnchantmentRadio = new wxRadioButton(enchantmentsSizer->GetStaticBox(), wxID_ANY, _("Random"), wxDefaultPosition, wxDefaultSize, 0);
-    enchantmentsInnerSizer->Add(randomEnchantmentRadio, wxGBPosition(3, 0), wxGBSpan(1, 1), wxALL, 5);
+    randomEnchantmentRadio = new wxRadioButton(sizerEnchantments->GetStaticBox(), wxID_ANY, _("Random"), wxDefaultPosition, wxDefaultSize, 0);
+    sizerEnchantmentsInner->Add(randomEnchantmentRadio, wxGBPosition(3, 0), wxGBSpan(1, 1), wxALL, 5);
 
     wxBoxSizer* bSizer45;
     bSizer45 = new wxBoxSizer(wxHORIZONTAL);
 
-    chanceLabel = new wxStaticText(enchantmentsSizer->GetStaticBox(), wxID_ANY, _("Chance:"), wxDefaultPosition, wxDefaultSize, 0);
-    chanceLabel->Wrap(-1);
-    bSizer45->Add(chanceLabel, 0, wxALL, 5);
+    labelChance = new wxStaticText(sizerEnchantments->GetStaticBox(), wxID_ANY, _("Chance:"), wxDefaultPosition, wxDefaultSize, 0);
+    labelChance->Wrap(-1);
+    bSizer45->Add(labelChance, 0, wxALL, 5);
 
-    randomEnchantmentChanceSlider = new wxSlider(enchantmentsSizer->GetStaticBox(), wxID_ANY, 50, 0, 100, wxDefaultPosition, wxDefaultSize, wxSL_HORIZONTAL | wxSL_VALUE_LABEL);
-    bSizer45->Add(randomEnchantmentChanceSlider, 1, wxALL, 5);
+    sliderRandomEnchantmentChance = new wxSlider(sizerEnchantments->GetStaticBox(), wxID_ANY, 50, 0, 100, wxDefaultPosition, wxDefaultSize, wxSL_HORIZONTAL | wxSL_VALUE_LABEL);
+    bSizer45->Add(sliderRandomEnchantmentChance, 1, wxALL, 5);
 
 
-    enchantmentsInnerSizer->Add(bSizer45, wxGBPosition(3, 1), wxGBSpan(1, 3), wxEXPAND, 5);
+    sizerEnchantmentsInner->Add(bSizer45, wxGBPosition(3, 1), wxGBSpan(1, 3), wxEXPAND, 5);
 
     wxBoxSizer* bSizer441;
     bSizer441 = new wxBoxSizer(wxHORIZONTAL);
 
-    m_staticText31 = new wxStaticText(enchantmentsSizer->GetStaticBox(), wxID_ANY, _("Power:"), wxDefaultPosition, wxDefaultSize, 0);
+    m_staticText31 = new wxStaticText(sizerEnchantments->GetStaticBox(), wxID_ANY, _("Power:"), wxDefaultPosition, wxDefaultSize, 0);
     m_staticText31->Wrap(-1);
     bSizer441->Add(m_staticText31, 0, wxALL, 5);
 
-    m_slider9 = new wxSlider(enchantmentsSizer->GetStaticBox(), wxID_ANY, 1, 1, 6, wxDefaultPosition, wxDefaultSize, wxSL_AUTOTICKS | wxSL_HORIZONTAL);
+    m_slider9 = new wxSlider(sizerEnchantments->GetStaticBox(), wxID_ANY, 1, 1, 6, wxDefaultPosition, wxDefaultSize, wxSL_AUTOTICKS | wxSL_HORIZONTAL);
     bSizer441->Add(m_slider9, 0, wxALL | wxEXPAND, 5);
 
 
-    enchantmentsInnerSizer->Add(bSizer441, wxGBPosition(3, 4), wxGBSpan(1, 1), wxEXPAND, 5);
+    sizerEnchantmentsInner->Add(bSizer441, wxGBPosition(3, 4), wxGBSpan(1, 1), wxEXPAND, 5);
 
 
-    enchantmentsSizer->Add(enchantmentsInnerSizer, 1, wxEXPAND, 5);
+    sizerEnchantments->Add(sizerEnchantmentsInner, 1, wxEXPAND, 5);
 }
 void ItemDialogBase::createItemFilters()
 {
 
-    itemIsFreeCheckbox = new wxCheckBox(this, wxID_ANY, _("Item is free"), wxDefaultPosition, wxDefaultSize, 0);
-    itemIsFreeCheckbox->SetToolTip(_("If this is checked, guaranteed item won't decrease available \"item points\" pool (will essentially be free)"));
+    checkboxItemIsFree = new wxCheckBox(this, wxID_ANY, _("Item is free"), wxDefaultPosition, wxDefaultSize, 0);
+    checkboxItemIsFree->SetToolTip(_("If this is checked, guaranteed item won't decrease available \"item points\" pool (will essentially be free)"));
 
-    mainSizer->Add(itemIsFreeCheckbox, 0, wxALL, 10);
+    sizerMain->Add(checkboxItemIsFree, 0, wxALL, 10);
 
     wxStaticBoxSizer* filtersSizer;
     filtersSizer = new wxStaticBoxSizer(new wxStaticBox(this, wxID_ANY, _("Filter item list")), wxVERTICAL);
@@ -302,11 +303,11 @@ void ItemDialogBase::createItemFilters()
     wxBoxSizer* filterButtonsSizer;
     filterButtonsSizer = new wxBoxSizer(wxHORIZONTAL);
 
-    useFiltersCheckbox = new wxCheckBox(filtersSizer->GetStaticBox(), wxID_ANY, _("Enable filters"), wxDefaultPosition, wxDefaultSize, 0);
-    filterButtonsSizer->Add(useFiltersCheckbox, 0, wxALIGN_CENTER_VERTICAL | wxALL, 5);
+    checkboxUseFilters = new wxCheckBox(filtersSizer->GetStaticBox(), wxID_ANY, _("Enable filters"), wxDefaultPosition, wxDefaultSize, 0);
+    filterButtonsSizer->Add(checkboxUseFilters, 0, wxALIGN_CENTER_VERTICAL | wxALL, 5);
 
-    resetButton = new wxButton(filtersSizer->GetStaticBox(), wxID_ANY, _("Reset"), wxDefaultPosition, wxDefaultSize, 0);
-    filterButtonsSizer->Add(resetButton, 0, wxALL, 5);
+    buttonResetFilters = new wxButton(filtersSizer->GetStaticBox(), wxID_ANY, _("Reset"), wxDefaultPosition, wxDefaultSize, 0);
+    filterButtonsSizer->Add(buttonResetFilters, 0, wxALL, 5);
 
 
     filtersSizer->Add(filterButtonsSizer, 1, wxEXPAND, 5);
@@ -314,15 +315,15 @@ void ItemDialogBase::createItemFilters()
     wxBoxSizer* bSizer36;
     bSizer36 = new wxBoxSizer(wxHORIZONTAL);
 
-    itemCategoryLabel = new wxStaticText(filtersSizer->GetStaticBox(), wxID_ANY, _("Item category:"), wxDefaultPosition, wxDefaultSize, 0);
-    itemCategoryLabel->Wrap(-1);
-    bSizer36->Add(itemCategoryLabel, 0, wxALIGN_CENTER_VERTICAL | wxALL, 5);
+    labelItemCategory = new wxStaticText(filtersSizer->GetStaticBox(), wxID_ANY, _("Item category:"), wxDefaultPosition, wxDefaultSize, 0);
+    labelItemCategory->Wrap(-1);
+    bSizer36->Add(labelItemCategory, 0, wxALIGN_CENTER_VERTICAL | wxALL, 5);
 
     wxString itemCategoryChoiceChoices[] = { _("Any"), _("Melee weapon"), _("Ranged weapon"), _("Armor"), _("Potion"), _("Scroll"), _("Book"), _("Jewelry"), _("Other") };
     int itemCategoryChoiceNChoices = sizeof(itemCategoryChoiceChoices) / sizeof(wxString);
-    itemCategoryChoice = new wxChoice(filtersSizer->GetStaticBox(), wxID_ANY, wxDefaultPosition, wxDefaultSize, itemCategoryChoiceNChoices, itemCategoryChoiceChoices, 0);
-    itemCategoryChoice->SetSelection(0);
-    bSizer36->Add(itemCategoryChoice, 0, wxALL, 5);
+    choiceItemCategory = new wxChoice(filtersSizer->GetStaticBox(), wxID_ANY, wxDefaultPosition, wxDefaultSize, itemCategoryChoiceNChoices, itemCategoryChoiceChoices, 0);
+    choiceItemCategory->SetSelection(0);
+    bSizer36->Add(choiceItemCategory, 0, wxALL, 5);
 
 
     bSizer36->Add(30, 0, 0, wxEXPAND, 5);
@@ -333,9 +334,9 @@ void ItemDialogBase::createItemFilters()
 
     wxString skillFilterChoiceChoices[] = { _("Any"), _("Other/no skill"), _("Club"), _("Sword"), _("Axe"), _("Blaster"), _("Fire magic"), _("Leather") };
     int skillFilterChoiceNChoices = sizeof(skillFilterChoiceChoices) / sizeof(wxString);
-    skillFilterChoice = new wxChoice(filtersSizer->GetStaticBox(), wxID_ANY, wxDefaultPosition, wxDefaultSize, skillFilterChoiceNChoices, skillFilterChoiceChoices, 0);
-    skillFilterChoice->SetSelection(0);
-    bSizer36->Add(skillFilterChoice, 0, wxALL, 5);
+    choiceSkillFilter = new wxChoice(filtersSizer->GetStaticBox(), wxID_ANY, wxDefaultPosition, wxDefaultSize, skillFilterChoiceNChoices, skillFilterChoiceChoices, 0);
+    choiceSkillFilter->SetSelection(0);
+    bSizer36->Add(choiceSkillFilter, 0, wxALL, 5);
 
 
     filtersSizer->Add(bSizer36, 1, wxEXPAND, 5);
@@ -392,11 +393,19 @@ void ItemDialogBase::createItemFilters()
     filtersSizer->Add(bSizer39, 1, wxEXPAND, 5);
 
 
-    mainSizer->Add(filtersSizer, 0, wxEXPAND, 5);
+    sizerMain->Add(filtersSizer, 0, wxEXPAND, 5);
 
 
-    mainSizer->Add(0, 5, 0, wxEXPAND, 5);
+    sizerMain->Add(0, 5, 0, wxEXPAND, 5);
 }
+
 ItemDialogBase::~ItemDialogBase()
 {
+
+}
+
+template<typename Item>
+mm7::Item ItemDialogBase::getNewItemModal(const Item& item)
+{
+    return mm7::Item();
 }
