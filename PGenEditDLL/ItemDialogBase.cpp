@@ -10,6 +10,11 @@ ItemDialogBase::ItemDialogBase(wxWindow* parent, wxWindowID id, const wxString& 
 
     sizerMain = new wxBoxSizer(wxVERTICAL);
 
+    checkboxItemIsFree = new wxCheckBox(this, wxID_ANY, _("Item is free"), wxDefaultPosition, wxDefaultSize, 0);
+    checkboxItemIsFree->SetToolTip(_("If this is checked, guaranteed item won't decrease available \"item points\" pool (will essentially be free)"));
+
+    sizerMain->Add(checkboxItemIsFree, 0, wxALL, 10);
+
     createItemFilters();
 
     wxStaticBoxSizer* sizerChooseItem;
@@ -161,8 +166,8 @@ void ItemDialogBase::createWandSettings()
     m_staticText151->Wrap(-1);
     minSliderSizer->Add(m_staticText151, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
-    sizerLowMaxCharges = new wxSlider(sizerWandSettings->GetStaticBox(), wxID_ANY, 50, 1, 255, wxDefaultPosition, wxDefaultSize, wxSL_HORIZONTAL | wxSL_VALUE_LABEL);
-    minSliderSizer->Add(sizerLowMaxCharges, 1, wxALL, 5);
+    sliderLowMaxCharges = new wxSlider(sizerWandSettings->GetStaticBox(), wxID_ANY, 50, 1, 255, wxDefaultPosition, wxDefaultSize, wxSL_HORIZONTAL | wxSL_VALUE_LABEL);
+    minSliderSizer->Add(sliderLowMaxCharges, 1, wxALL, 5);
 
 
     sizerMaxCharges->Add(minSliderSizer, 0, wxEXPAND, 5);
@@ -174,8 +179,8 @@ void ItemDialogBase::createWandSettings()
     m_staticText161->Wrap(-1);
     maxSliderSizer->Add(m_staticText161, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
-    sizerHighMaxCharges = new wxSlider(sizerWandSettings->GetStaticBox(), wxID_ANY, 50, 1, 255, wxDefaultPosition, wxDefaultSize, wxSL_HORIZONTAL | wxSL_VALUE_LABEL);
-    maxSliderSizer->Add(sizerHighMaxCharges, 1, wxALL, 5);
+    sliderHighMaxCharges = new wxSlider(sizerWandSettings->GetStaticBox(), wxID_ANY, 50, 1, 255, wxDefaultPosition, wxDefaultSize, wxSL_HORIZONTAL | wxSL_VALUE_LABEL);
+    maxSliderSizer->Add(sliderHighMaxCharges, 1, wxALL, 5);
 
 
     sizerMaxCharges->Add(maxSliderSizer, 0, wxEXPAND, 5);
@@ -190,8 +195,8 @@ void ItemDialogBase::createWandSettings()
     m_staticText171->Wrap(-1);
     bSizer301->Add(m_staticText171, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
-    sizerChargesPercentage = new wxSlider(sizerWandSettings->GetStaticBox(), wxID_ANY, 50, 0, 100, wxDefaultPosition, wxDefaultSize, wxSL_HORIZONTAL | wxSL_VALUE_LABEL);
-    bSizer301->Add(sizerChargesPercentage, 1, wxALL, 5);
+    sliderChargesPercentage = new wxSlider(sizerWandSettings->GetStaticBox(), wxID_ANY, 50, 0, 100, wxDefaultPosition, wxDefaultSize, wxSL_HORIZONTAL | wxSL_VALUE_LABEL);
+    bSizer301->Add(sliderChargesPercentage, 1, wxALL, 5);
 
 
     sizerWandSettings->Add(bSizer301, 1, wxEXPAND, 5);
@@ -293,16 +298,8 @@ void ItemDialogBase::createEnchantmentsStaticBox()
 }
 void ItemDialogBase::createItemFilters()
 {
-
-    checkboxItemIsFree = new wxCheckBox(this, wxID_ANY, _("Item is free"), wxDefaultPosition, wxDefaultSize, 0);
-    checkboxItemIsFree->SetToolTip(_("If this is checked, guaranteed item won't decrease available \"item points\" pool (will essentially be free)"));
-
-    sizerMain->Add(checkboxItemIsFree, 0, wxALL, 10);
-
-    wxStaticBoxSizer* filtersSizer;
     filtersSizer = new wxStaticBoxSizer(new wxStaticBox(this, wxID_ANY, _("Filter item list")), wxVERTICAL);
 
-    wxBoxSizer* filterButtonsSizer;
     filterButtonsSizer = new wxBoxSizer(wxHORIZONTAL);
 
     checkboxUseFilters = new wxCheckBox(filtersSizer->GetStaticBox(), wxID_ANY, _("Enable filters"), wxDefaultPosition, wxDefaultSize, 0);
@@ -314,43 +311,48 @@ void ItemDialogBase::createItemFilters()
 
     filtersSizer->Add(filterButtonsSizer, 1, wxEXPAND, 5);
 
-    wxBoxSizer* bSizer36;
-    bSizer36 = new wxBoxSizer(wxHORIZONTAL);
+    panelFilters = new wxPanel(filtersSizer->GetStaticBox());
+    wxBoxSizer* sizerFiltersPanel = new wxBoxSizer(wxVERTICAL);
 
-    labelItemCategory = new wxStaticText(filtersSizer->GetStaticBox(), wxID_ANY, _("Item category:"), wxDefaultPosition, wxDefaultSize, 0);
+    filtersSizer->Add(sizerFiltersPanel);
+
+    wxBoxSizer* sizerItemFilterCategorySkill;
+    sizerItemFilterCategorySkill = new wxBoxSizer(wxHORIZONTAL);
+
+    labelItemCategory = new wxStaticText(panelFilters, wxID_ANY, _("Item category:"), wxDefaultPosition, wxDefaultSize, 0);
     labelItemCategory->Wrap(-1);
-    bSizer36->Add(labelItemCategory, 0, wxALIGN_CENTER_VERTICAL | wxALL, 5);
+    sizerItemFilterCategorySkill->Add(labelItemCategory, 0, wxALIGN_CENTER_VERTICAL | wxALL, 5);
 
     wxString itemCategoryChoiceChoices[] = { _("Any"), _("Melee weapon"), _("Ranged weapon"), _("Armor"), _("Potion"), _("Scroll"), _("Book"), _("Jewelry"), _("Other") };
     int itemCategoryChoiceNChoices = sizeof(itemCategoryChoiceChoices) / sizeof(wxString);
-    choiceItemCategory = new wxChoice(filtersSizer->GetStaticBox(), wxID_ANY, wxDefaultPosition, wxDefaultSize, itemCategoryChoiceNChoices, itemCategoryChoiceChoices, 0);
+    choiceItemCategory = new wxChoice(panelFilters, wxID_ANY, wxDefaultPosition, wxDefaultSize, itemCategoryChoiceNChoices, itemCategoryChoiceChoices, 0);
     choiceItemCategory->SetSelection(0);
-    bSizer36->Add(choiceItemCategory, 0, wxALL, 5);
+    sizerItemFilterCategorySkill->Add(choiceItemCategory, 0, wxALL, 5);
 
 
-    bSizer36->Add(30, 0, 0, wxEXPAND, 5);
+    sizerItemFilterCategorySkill->Add(30, 0, 0, wxEXPAND, 5);
 
-    m_staticText16 = new wxStaticText(filtersSizer->GetStaticBox(), wxID_ANY, _("Skill required to equip item:"), wxDefaultPosition, wxDefaultSize, 0);
+    m_staticText16 = new wxStaticText(panelFilters, wxID_ANY, _("Skill required to equip item:"), wxDefaultPosition, wxDefaultSize, 0);
     m_staticText16->Wrap(-1);
-    bSizer36->Add(m_staticText16, 0, wxALIGN_CENTER_VERTICAL | wxALL, 5);
+    sizerItemFilterCategorySkill->Add(m_staticText16, 0, wxALIGN_CENTER_VERTICAL | wxALL, 5);
 
     wxString skillFilterChoiceChoices[] = { _("Any"), _("Other/no skill"), _("Club"), _("Sword"), _("Axe"), _("Blaster"), _("Fire magic"), _("Leather") };
     int skillFilterChoiceNChoices = sizeof(skillFilterChoiceChoices) / sizeof(wxString);
-    choiceSkillFilter = new wxChoice(filtersSizer->GetStaticBox(), wxID_ANY, wxDefaultPosition, wxDefaultSize, skillFilterChoiceNChoices, skillFilterChoiceChoices, 0);
+    choiceSkillFilter = new wxChoice(panelFilters, wxID_ANY, wxDefaultPosition, wxDefaultSize, skillFilterChoiceNChoices, skillFilterChoiceChoices, 0);
     choiceSkillFilter->SetSelection(0);
-    bSizer36->Add(choiceSkillFilter, 0, wxALL, 5);
+    sizerItemFilterCategorySkill->Add(choiceSkillFilter, 0, wxALL, 5);
 
 
-    filtersSizer->Add(bSizer36, 1, wxEXPAND, 5);
+    sizerFiltersPanel->Add(sizerItemFilterCategorySkill, 1, wxEXPAND, 5);
 
-    wxBoxSizer* bSizer38;
-    bSizer38 = new wxBoxSizer(wxHORIZONTAL);
+    wxBoxSizer* sizerFilterItemName;
+    sizerFilterItemName = new wxBoxSizer(wxHORIZONTAL);
 
-    m_staticText15 = new wxStaticText(filtersSizer->GetStaticBox(), wxID_ANY, _("Part of item's name (empty means any item):"), wxDefaultPosition, wxDefaultSize, 0);
+    m_staticText15 = new wxStaticText(panelFilters, wxID_ANY, _("Part of item's name (empty means any item):"), wxDefaultPosition, wxDefaultSize, 0);
     m_staticText15->Wrap(-1);
-    bSizer38->Add(m_staticText15, 0, wxALIGN_CENTER_VERTICAL | wxALL, 5);
+    sizerFilterItemName->Add(m_staticText15, 0, wxALIGN_CENTER_VERTICAL | wxALL, 5);
 
-    m_textCtrl15 = new wxTextCtrl(filtersSizer->GetStaticBox(), wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0);
+    m_textCtrl15 = new wxTextCtrl(panelFilters, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0);
 #ifdef __WXGTK__
     if (!m_textCtrl15->HasFlag(wxTE_MULTILINE))
     {
@@ -361,38 +363,38 @@ void ItemDialogBase::createItemFilters()
 #endif
     m_textCtrl15->SetMinSize(wxSize(250, -1));
 
-    bSizer38->Add(m_textCtrl15, 0, wxALL, 5);
+    sizerFilterItemName->Add(m_textCtrl15, 0, wxALL, 5);
 
 
-    filtersSizer->Add(bSizer38, 1, wxEXPAND, 5);
+    sizerFiltersPanel->Add(sizerFilterItemName, 1, wxEXPAND, 5);
 
-    wxBoxSizer* bSizer39;
-    bSizer39 = new wxBoxSizer(wxHORIZONTAL);
+    wxBoxSizer* sizerFilterLowestRow;
+    sizerFilterLowestRow = new wxBoxSizer(wxHORIZONTAL);
 
-    m_staticText17 = new wxStaticText(filtersSizer->GetStaticBox(), wxID_ANY, _("Item type:"), wxDefaultPosition, wxDefaultSize, 0);
+    m_staticText17 = new wxStaticText(panelFilters, wxID_ANY, _("Item type:"), wxDefaultPosition, wxDefaultSize, 0);
     m_staticText17->Wrap(-1);
-    bSizer39->Add(m_staticText17, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+    sizerFilterLowestRow->Add(m_staticText17, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
     wxString m_choice5Choices[] = { _("Any"), _("Leather"), _("Plate"), _("Weapon 1H"), _("Ring"), _("Boots") };
     int m_choice5NChoices = sizeof(m_choice5Choices) / sizeof(wxString);
-    m_choice5 = new wxChoice(filtersSizer->GetStaticBox(), wxID_ANY, wxDefaultPosition, wxDefaultSize, m_choice5NChoices, m_choice5Choices, 0);
+    m_choice5 = new wxChoice(panelFilters, wxID_ANY, wxDefaultPosition, wxDefaultSize, m_choice5NChoices, m_choice5Choices, 0);
     m_choice5->SetSelection(0);
-    bSizer39->Add(m_choice5, 0, wxALL, 5);
+    sizerFilterLowestRow->Add(m_choice5, 0, wxALL, 5);
 
 
-    bSizer39->Add(30, 0, 0, wxEXPAND, 5);
+    sizerFilterLowestRow->Add(30, 0, 0, wxEXPAND, 5);
 
-    m_checkBox27 = new wxCheckBox(filtersSizer->GetStaticBox(), wxID_ANY, _("Show quest/lore items"), wxDefaultPosition, wxDefaultSize, 0);
-    bSizer39->Add(m_checkBox27, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+    checkboxFilterShowQuestLoreItems = new wxCheckBox(panelFilters, wxID_ANY, _("Show quest/lore items"), wxDefaultPosition, wxDefaultSize, 0);
+    sizerFilterLowestRow->Add(checkboxFilterShowQuestLoreItems, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
-    m_checkBox28 = new wxCheckBox(filtersSizer->GetStaticBox(), wxID_ANY, _("Show special items"), wxDefaultPosition, wxDefaultSize, 0);
-    bSizer39->Add(m_checkBox28, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+    checkboxFilterShowSpecialItems = new wxCheckBox(panelFilters, wxID_ANY, _("Show special items"), wxDefaultPosition, wxDefaultSize, 0);
+    sizerFilterLowestRow->Add(checkboxFilterShowSpecialItems, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
-    m_checkBox30 = new wxCheckBox(filtersSizer->GetStaticBox(), wxID_ANY, _("Show artifacts/relics"), wxDefaultPosition, wxDefaultSize, 0);
-    bSizer39->Add(m_checkBox30, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
+    checkboxFilterShowArtifactsRelics = new wxCheckBox(panelFilters, wxID_ANY, _("Show artifacts/relics"), wxDefaultPosition, wxDefaultSize, 0);
+    sizerFilterLowestRow->Add(checkboxFilterShowArtifactsRelics, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
 
-    filtersSizer->Add(bSizer39, 1, wxEXPAND, 5);
+    sizerFiltersPanel->Add(sizerFilterLowestRow, 1, wxEXPAND, 5);
 
 
     sizerMain->Add(filtersSizer, 0, wxEXPAND, 5);
@@ -405,6 +407,11 @@ void ItemDialogBase::reapplyFilters()
 {
 
 }
+void ItemDialogBase::setControlsEnabledState()
+{
+    bool filtersEnabled = checkboxUseFilters->IsChecked();
+}
+
 ItemDialogBase::~ItemDialogBase()
 {
 
@@ -418,8 +425,10 @@ void ItemDialogBase::setControlValuesFromItem(const mm7::Item& item)
 
 mm7::Item ItemDialogBase::buildItemFromControlValues()
 {
+    // TODO: create "BuildItemInformation" struct, which would be filled here and passed to other method, to facilitate testing this other method?
     mm7::Item item;
     memset(&item, 0, sizeof mm7::Item);
+    // TODO: number
     if (radioSpecialEnchantment->GetValue())
     {
         item.bonus2 = choiceSpecialEnchantmentType->GetSelection(); // FIXME: translation tables
@@ -427,9 +436,10 @@ mm7::Item ItemDialogBase::buildItemFromControlValues()
     else if (radioStandardEnchantment->GetValue())
     {
         item.bonus = choiceStandardEnchantmentType->GetSelection(); // FIXME: see above
-        item.bonusStrength = valueStandardEnchantmentPower->
+        item.bonusStrength = valueStandardEnchantmentPower->GetValue();
     }
-    // TODO: number
+
+    if (checkboxWandChargesManualAmount->IsChecked())
     
     item.identified = checkboxIdentified->IsChecked();
     item.broken = checkboxBroken->IsChecked();

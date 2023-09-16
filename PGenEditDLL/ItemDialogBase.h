@@ -51,7 +51,7 @@ protected:
     wxStaticText* labelChance;
     wxSlider* sliderRandomEnchantmentChance;
     wxStaticText* m_staticText31;
-    wxSlider* m_slider9;
+    wxSlider* sliderRandomEnchantmentPower ;
     wxCheckBox* checkboxIdentified;
     wxCheckBox* checkboxBroken;
     wxCheckBox* checkboxStolen;
@@ -68,11 +68,12 @@ protected:
     wxCheckBox* checkboxWandChargesManualAmount;
     wxCheckBox* checkboxWandChargesVaryWithStrength;
     wxStaticText* m_staticText151;
-    wxSlider* sizerLowMaxCharges;
+    wxSlider* sliderLowMaxCharges;
     wxStaticText* m_staticText161;
-    wxSlider* sizerHighMaxCharges;
+    wxSlider* sliderHighMaxCharges;
     wxStaticText* m_staticText171;
-    wxSlider* sizerChargesPercentage;
+    wxSlider* sliderChargesPercentage;
+    wxPanel* panelFilters; // will contain controls to disable/enable all of them with single method call
 
     // sizers
     wxBoxSizer* sizerMain;
@@ -82,12 +83,15 @@ protected:
     wxBoxSizer* sizerMaxCharges;
     wxStaticBoxSizer* sizerCondition;
     wxStaticBoxSizer* sizerTemporaryBonus;
+    wxStaticBoxSizer* filtersSizer;
+    wxBoxSizer* filterButtonsSizer;
 
     void createItemConditionTemporaryBonusPanel();
     void createWandSettings();
     void createEnchantmentsStaticBox();
     void createItemFilters();
     void reapplyFilters();
+    void setControlsEnabledState();
     void setControlValuesFromItem(const mm7::Item& item);
     mm7::Item buildItemFromControlValues();
 public:
@@ -98,7 +102,6 @@ public:
         EDIT
     };
     Mode mode;
-
     ItemDialogBase(wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = _("Create item"), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize(791, 794), long style = wxDEFAULT_DIALOG_STYLE);
 
     mm7::Item getNewItemModal();
