@@ -1,11 +1,15 @@
 #pragma once
 #include "pch.h"
 #include "main.h"
+#include "StructAccessor.h"
 
 class ItemStructAccessor;
 extern ItemStructAccessor* itemAccessor;
 
-class ItemStructAccessor
+template<typename Item>
+class TemplatedItemStructAccessor;
+
+class ItemStructAccessor : public StructAccessorGenericFor
 {
 protected:
     void* itemPtr;
@@ -17,6 +21,30 @@ public:
     [[nodiscard]] virtual mm7::Item convertToMM7Item() = 0;
     virtual ~ItemStructAccessor();
 
+    template<typename Function>
+    static void forEachItemDo(void* item, int n, Function callback)
+    {
+        if (MMVER == 6)
+        {
+            TemplatedItemStructAccessor<mm6::Item>::forEachItemDo(item, n, callback);
+        }
+        else if (MMVER == 7)
+        {
+            TemplatedItemStructAccessor<mm7::Item>::forEachItemDo(item, n, callback);
+        }
+        else if (MMVER == 8)
+        {
+            TemplatedItemStructAccessor<mm8::Item>::forEachItemDo(item, n, callback);
+        }
+    }
+
+    template<typename Function>
+    void forEachItemTxtDo(void* ptr, int n, Function func)
+    {
+        StructAccessorGenericFor::genericForEachDo<Function, mm6::ItemsTxtItem, mm7::ItemsTxtItem, mm8::ItemsTxtItem,
+            TemplatedItemStructAccessor>(ptr, n, func);
+    }
+
     // pure virtual function forEachItemDo(void* items, Callback callback)
     // template instantiations override it to cast to game version item type and execute callback
     // callback (usually polymorphic lambda) receives correct type
@@ -27,7 +55,7 @@ public:
 };
 
 template<typename Item>
-class TemplatedItemStructAccessor : public ItemStructAccessor
+class TemplatedItemStructAccessor : public ItemStructAccessor, StructAccessor<Item, mm6::Item, mm7::Item, mm8::Item>
 {
     [[nodiscard]] Item* getItemToAffect();
 public:
@@ -58,11 +86,15 @@ public:
         }
     }
 
-    template<typename Container, typename Callback>
-    void forEachItemDo(Container& container, Callback callback);
-
-    template<typename Callback>
-    void forEachItemDo(Item* item, int n, Callback callback);
+    template<typename Function>
+    static void forEachItemDo(void* item, int n, Function callback)
+    {
+        Item* items = reinterpret_cast<Item*>(item);
+        for (int i = 0; i < n; ++i)
+        {
+            callback(items + i);
+        }
+    }
 
     void forEachItemDo2(void* items, int n, std::function<void(std::variant<mm6::Item*, mm7::Item*, mm8::Item*> variant)> callback);
 };
@@ -77,26 +109,6 @@ void TemplatedItemStructAccessor<Item>::forEachItemDo2(void* items, int n, std::
 }
 
 void ff();
-
-template<typename Item>
-template<typename Callback>
-void TemplatedItemStructAccessor<Item>::forEachItemDo(Item* item, int n, Callback callback)
-{
-    for (int i = 0; i < n; ++i)
-    {
-        callback(item[i]);
-    }
-}
-
-template<typename Item>
-template<typename Container, typename Callback>
-void TemplatedItemStructAccessor<Item>::forEachItemDo(Container& container, Callback callback)
-{
-    for (Item& item : container)
-    {
-        callback(item);
-    }
-}
 
 template<typename Item>
 Item* TemplatedItemStructAccessor<Item>::getItemToAffect()

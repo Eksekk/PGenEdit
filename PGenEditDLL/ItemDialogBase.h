@@ -1,6 +1,31 @@
 #pragma once
 #include "pch.h"
 #include "main.h"
+#include <wx/dataview.h>
+
+class ItemDialogBase;
+class ItemTableViewModel : public wxDataViewModel
+{
+private:
+    wxVector<wxVector<wxVariant>> data;
+public:
+    void GetValue(wxVariant& variant, const wxDataViewItem& item, unsigned int col) const override;
+
+    bool SetValue(const wxVariant& variant, const wxDataViewItem& item, unsigned int col) override;
+
+    wxDataViewItem GetParent(const wxDataViewItem& item) const override;
+
+    bool IsContainer(const wxDataViewItem& item) const override;
+
+    unsigned int GetChildren(const wxDataViewItem& item, wxDataViewItemArray& children) const override;
+
+    unsigned int GetColumnCount() const override;
+    wxString GetColumnType(unsigned int col) const override;
+    ItemDialogBase& dialog;
+
+    std::unordered_map<int, int> classIdsToTableIndexes;
+    ItemTableViewModel(ItemDialogBase& dialog);
+};
 
 class wxDataViewListCtrl;
 class wxDataViewColumn;
@@ -24,9 +49,9 @@ protected:
     wxTextCtrl* m_textCtrl15;
     wxStaticText* m_staticText17;
     wxChoice* m_choice5;
-    wxCheckBox* m_checkBox27;
-    wxCheckBox* m_checkBox28;
-    wxCheckBox* m_checkBox30;
+    wxCheckBox* checkboxFilterShowQuestLoreItems;
+    wxCheckBox* checkboxFilterShowSpecialItems;
+    wxCheckBox* checkboxFilterShowArtifactsRelics;
     wxDataViewListCtrl* itemTable;
     wxDataViewColumn* colNumber;
     wxDataViewColumn* colName;

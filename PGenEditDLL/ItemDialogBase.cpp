@@ -3,6 +3,7 @@
 #include <wx/dataview.h>
 #include <wx/spinctrl.h>
 #include <wx/gbsizer.h>
+#include "PlayerItem.h"
 
 ItemDialogBase::ItemDialogBase(wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style) : wxDialog(parent, id, title, pos, size, style)
 {
@@ -410,6 +411,7 @@ void ItemDialogBase::reapplyFilters()
 void ItemDialogBase::setControlsEnabledState()
 {
     bool filtersEnabled = checkboxUseFilters->IsChecked();
+    panelFilters->Enable(filtersEnabled);
 }
 
 ItemDialogBase::~ItemDialogBase()
@@ -420,7 +422,7 @@ ItemDialogBase::~ItemDialogBase()
 void ItemDialogBase::setControlValuesFromItem(const mm7::Item& item)
 {
     wxDataViewEvent event;
-    event.
+    //event.
 }
 
 mm7::Item ItemDialogBase::buildItemFromControlValues()
@@ -451,14 +453,84 @@ mm7::Item ItemDialogBase::buildItemFromControlValues()
     {
         item.stolen = checkboxStolen->IsChecked();
     }
+    return item;
 }
 
 mm7::Item ItemDialogBase::getNewItemModal()
 {
     ShowModal();
+    return buildItemFromControlValues();
 }
 
 mm7::Item ItemDialogBase::editItemModal(const mm7::Item& item)
 {
-    return mm7::Item();
+    setControlValuesFromItem(item);
+    ShowModal();
+    return buildItemFromControlValues();
+}
+
+void ItemTableViewModel::GetValue(wxVariant& variant, const wxDataViewItem& item, unsigned int col) const
+{
+    const PlayerItem* playerItem = reinterpret_cast<const PlayerItem*>(&item);
+    switch (col)
+    {
+    case 0:
+        variant = (long)playerItem->id;
+        break;
+    case 1:
+        variant = playerItem->name;
+        break;
+    case 2:
+        variant = playerItem->name;
+        break;
+    case 3:
+        variant = playerItem->name;
+        break;
+    case 4:
+        variant = playerItem->name;
+        break;
+    case 5:
+        variant = playerItem->name;
+        break;
+    case 6:
+        variant = playerItem->name;
+        break;
+    case 7:
+        variant = playerItem->name;
+        break;
+    }
+}
+
+bool ItemTableViewModel::SetValue(const wxVariant& variant, const wxDataViewItem& item, unsigned int col)
+{
+    return false;
+}
+
+wxDataViewItem ItemTableViewModel::GetParent(const wxDataViewItem& item) const
+{
+    return wxDataViewItem();
+}
+
+bool ItemTableViewModel::IsContainer(const wxDataViewItem& item) const
+{
+    return false;
+}
+
+unsigned int ItemTableViewModel::GetChildren(const wxDataViewItem& item, wxDataViewItemArray& children) const
+{
+    //itemAccessor->for
+}
+
+unsigned int ItemTableViewModel::GetColumnCount() const
+{
+    return 0;
+}
+
+wxString ItemTableViewModel::GetColumnType(unsigned int col) const
+{
+    return wxString();
+}
+
+ItemTableViewModel::ItemTableViewModel(ItemDialogBase& dialog) : dialog(dialog)
+{
 }

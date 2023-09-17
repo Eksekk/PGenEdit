@@ -340,9 +340,9 @@ bool InventoryCtrl::reloadReferencedItems()
     else if (const PlayerInventoryRef* ref = std::get_if<PlayerInventoryRef>(&inventoryType))
     {
         // add items from player
-        auto callback = [&](auto& item)
+        auto callback = [&](auto item)
         {
-            mm7::Item convertedItem = itemAccessor->forItem(&item)->convertToMM7Item();
+            mm7::Item convertedItem = itemAccessor->forItem(item)->convertToMM7Item();
             if (convertedItem.number != 0)
             {
                 ItemStoreElement elem(convertedItem, { -1, -1 }, StoredItemRef{}, PlayerInventoryRef(*ref));
@@ -351,18 +351,8 @@ bool InventoryCtrl::reloadReferencedItems()
             }
         };
         void* items = playerAccessor->forPlayerRosterId(ref->rosterIndex)->getItemsPtr();
-        if (MMVER == 6)
-        {
-            dynamic_cast<ItemStructAccessor_6*>(itemAccessor)->forEachItemDo((mm6::Item*)items, playerAccessor->getItemsSize(), callback);
-        }
-        else if (MMVER == 7)
-        {
-            dynamic_cast<ItemStructAccessor_7*>(itemAccessor)->forEachItemDo((mm7::Item*)items, playerAccessor->getItemsSize(), callback);
-        }
-        else if (MMVER == 8)
-        {
-            dynamic_cast<ItemStructAccessor_8*>(itemAccessor)->forEachItemDo((mm8::Item*)items, playerAccessor->getItemsSize(), callback);
-        }
+        int count = playerAccessor->getItemsSize();
+        itemAccessor->forEachItemDo(items, count, callback);
     }
     else
     {

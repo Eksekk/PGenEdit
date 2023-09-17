@@ -361,10 +361,10 @@
       <Filter>Pliki nagłówkowe\GameData</Filter>
     </ClInclude>
     <ClInclude Include="CreateEditItemDialog.h">
-      <Filter>Pliki nagłówkowe</Filter>
+      <Filter>Pliki nagłówkowe\Shared GUI</Filter>
     </ClInclude>
     <ClInclude Include="ItemDialogBase.h">
-      <Filter>Pliki nagłówkowe</Filter>
+      <Filter>Pliki nagłówkowe\Shared GUI</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -582,10 +582,10 @@
       <Filter>Pliki źródłowe\GameData</Filter>
     </ClCompile>
     <ClCompile Include="CreateEditItemDialog.cpp">
-      <Filter>Pliki źródłowe</Filter>
+      <Filter>Pliki źródłowe\Shared GUI</Filter>
     </ClCompile>
     <ClCompile Include="ItemDialogBase.cpp">
-      <Filter>Pliki źródłowe</Filter>
+      <Filter>Pliki źródłowe\Shared GUI</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
