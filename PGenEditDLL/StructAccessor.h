@@ -24,33 +24,61 @@ public:
 
 class StructAccessorGenericFor
 {
+public:
     template<typename Function, typename Type6, typename Type7, typename Type8, template<typename> typename Subclass>
-    static void genericForEachDo(void* ptr, int n, Function func)
+    static auto genericForEachDo(void* ptr, int n, Function&& func)
     {
         if (MMVER == 6)
         {
-            Subclass<Type6>::genericForEachDoSpecialized(reinterpret_cast<Type6*>(ptr), n, func);
+            Subclass<Type6>::genericForEachDoSpecialized(reinterpret_cast<Type6*>(ptr), n, std::forward<Function>(func));
         }
         else if (MMVER == 6)
         {
-            Subclass<Type7>::genericForEachDoSpecialized(reinterpret_cast<Type7*>(ptr), n, func);
+            Subclass<Type7>::genericForEachDoSpecialized(reinterpret_cast<Type7*>(ptr), n, std::forward<Function>(func));
         }
         else if (MMVER == 6)
         {
-            Subclass<Type8>::genericForEachDoSpecialized(reinterpret_cast<Type8*>(ptr), n, func);
+            Subclass<Type8>::genericForEachDoSpecialized(reinterpret_cast<Type8*>(ptr), n, std::forward<Function>(func));
         }
         else
         {
             wxFAIL;
         }
     }
+
     template<typename Function, typename T>
-    static void genericForEachDoSpecialized(void* ptr, int n, Function func)
+    static auto genericForEachDoSpecialized(T* ptr, int n, Function&& func)
     {
-        T* vals = reinterpret_cast<T*>(ptr);
         for (int i = 0; i < n; ++i)
         {
-            func(vals + i);
+            func(ptr + i);
         }
+    }
+
+    template<typename Function, typename Type6, typename Type7, typename Type8, template<typename> typename Subclass>
+    static auto genericForItemExecute(void* ptr, Function&& func)
+    {
+        if (MMVER == 6)
+        {
+            return Subclass<Type6>::genericForItemExecuteSpecialized(reinterpret_cast<Type6*>(ptr), std::forward<Function>(func));
+        }
+        else if (MMVER == 6)
+        {
+            return Subclass<Type7>::genericForItemExecuteSpecialized(reinterpret_cast<Type7*>(ptr), std::forward<Function>(func));
+        }
+        else if (MMVER == 6)
+        {
+            return Subclass<Type8>::genericForItemExecuteSpecialized(reinterpret_cast<Type8*>(ptr), std::forward<Function>(func));
+        }
+        else
+        {
+            wxFAIL;
+        }
+    }
+
+    template<typename Function, typename T>
+    static auto genericForItemExecuteSpecialized(T* ptr, Function&& func)
+    {
+        return func(ptr);
     }
 };
