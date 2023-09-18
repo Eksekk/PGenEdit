@@ -2,6 +2,60 @@
 #include "pch.h"
 #include "main.h"
 
+struct ArrayData
+{
+private:
+    std::variant<int, int*> countVariant;
+    void* ptr;
+public:
+
+    ArrayData() = delete;
+
+    template<typename T, size_t Count>
+    ArrayData(std::array<T, Count>& arr)
+    {
+        ptr = arr.data();
+        countVariant = (int)Count;
+    }
+
+    template<typename T>
+    ArrayData(T* data, int count)
+    {
+        ptr = data;
+        countVariant = count;
+    }
+
+    template<typename T>
+    ArrayData(T* data, int* count)
+    {
+        ptr = data;
+        countVariant = count;
+    }
+
+    void* ptr() const
+    {
+        return ptr;
+    }
+
+    int size() const
+    {
+        if (const int* val = std::get_if<int>(&countVariant))
+        {
+            return *val;
+        }
+        else if (int* const * val = std::get_if<int*>(&countVariant))
+        {
+            return **val;
+        }
+    }
+
+    void checkIndex(int index) const
+    {
+        const int size = this->size();
+        wxASSERT_MSG(index >= 0 && index < size, wxString::Format("Out of bounds access with index '%d' (size is '%d')", index, size));
+    }
+};
+
 template<typename MainTypeActual, typename MainType6, typename MainType7, typename MainType8>
 class StructAccessor
 {
@@ -32,11 +86,11 @@ public:
         {
             Subclass<Type6>::genericForEachDoSpecialized(reinterpret_cast<Type6*>(ptr), n, std::forward<Function>(func));
         }
-        else if (MMVER == 6)
+        else if (MMVER == 7)
         {
             Subclass<Type7>::genericForEachDoSpecialized(reinterpret_cast<Type7*>(ptr), n, std::forward<Function>(func));
         }
-        else if (MMVER == 6)
+        else if (MMVER == 8)
         {
             Subclass<Type8>::genericForEachDoSpecialized(reinterpret_cast<Type8*>(ptr), n, std::forward<Function>(func));
         }
@@ -62,11 +116,11 @@ public:
         {
             return Subclass<Type6>::genericForItemExecuteSpecialized(reinterpret_cast<Type6*>(ptr), std::forward<Function>(func));
         }
-        else if (MMVER == 6)
+        else if (MMVER == 7)
         {
             return Subclass<Type7>::genericForItemExecuteSpecialized(reinterpret_cast<Type7*>(ptr), std::forward<Function>(func));
         }
-        else if (MMVER == 6)
+        else if (MMVER == 8)
         {
             return Subclass<Type8>::genericForItemExecuteSpecialized(reinterpret_cast<Type8*>(ptr), std::forward<Function>(func));
         }
@@ -74,11 +128,35 @@ public:
         {
             wxFAIL;
         }
+        return false;
     }
 
     template<typename Function, typename T>
     static auto genericForItemExecuteSpecialized(T* ptr, Function&& func)
     {
         return func(ptr);
+    }
+
+    // to be used for example with items.txt - where there is one array only, so if you need item id 5 data, you don't need to calculate pointer
+    template<typename Function, typename Type6, typename Type7, typename Type8, template<typename> typename Subclass>
+    static auto genericForSingleArrayIndexExecute(void* ptr, int index, Function&& func)
+    {
+        if (MMVER == 6)
+        {
+            return Subclass<Type6>::genericForItemExecuteSpecialized(reinterpret_cast<Type6*>(ptr) + index, std::forward<Function>(func));
+        }
+        else if (MMVER == 7)
+        {
+            return Subclass<Type7>::genericForItemExecuteSpecialized(reinterpret_cast<Type7*>(ptr) + index, std::forward<Function>(func));
+        }
+        else if (MMVER == 8)
+        {
+            return Subclass<Type8>::genericForItemExecuteSpecialized(reinterpret_cast<Type8*>(ptr) + index, std::forward<Function>(func));
+        }
+        else
+        {
+            wxFAIL;
+        }
+        return false;
     }
 };

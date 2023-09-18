@@ -4,6 +4,7 @@
 #include <wx/spinctrl.h>
 #include <wx/gbsizer.h>
 #include "PlayerItem.h"
+#include "ItemStructAccessor.h"
 
 ItemDialogBase::ItemDialogBase(wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style) : wxDialog(parent, id, title, pos, size, style)
 {
@@ -478,7 +479,7 @@ void ItemTableViewModel::GetValue(wxVariant& variant, const wxDataViewItem& item
         variant = (long)playerItem->id;
         break;
     case 1:
-        variant = playerItem->name;
+        variant = itemAccessor->forItemTxtIndexDo(playerItem->id - 1, [](auto ptr) -> long { return ptr->equipStat; }); // TODO: stringize item type (equip stat) as category
         break;
     case 2:
         variant = playerItem->name;
