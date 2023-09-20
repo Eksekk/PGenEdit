@@ -29,5 +29,6 @@ public:
 	PlayerItem();
 
 	void loadAndConvertBitmap(const wxString& name);
+	std::string getCategoryName() const;
 };
 

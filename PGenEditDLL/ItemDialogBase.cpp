@@ -479,10 +479,10 @@ void ItemTableViewModel::GetValue(wxVariant& variant, const wxDataViewItem& item
         variant = (long)playerItem->id;
         break;
     case 1:
-        variant = itemAccessor->forItemTxtIndexDo(playerItem->id - 1, [](auto ptr) -> long { return ptr->equipStat; }); // TODO: stringize item type (equip stat) as category
+        variant = playerItem->getCategoryName(); // TODO: stringize item type (equip stat) as category
         break;
     case 2:
-        variant = playerItem->name;
+        variant = itemAccessor->forItemTxtIndexDo(playerItem->id - 1, [](auto ptr) -> long { return ptr->equipStat; }); // TODO: stringize item type (equip stat) as category
         break;
     case 3:
         variant = playerItem->name;

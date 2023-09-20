@@ -1,5 +1,5 @@
 function reload()
-	dofile("Scripts/Global/GenerateStructInfo.lua")
+	dofile(debug.getinfo(1, "S").source:sub(2))
 end
 r = reload
 local mmver = offsets.MMVersion
@@ -131,7 +131,8 @@ end
 local globalExcludes =
 {
 	Player = {"Attrs"}, -- attrs is from merge.
-	GameStructure = {"Dialogs"}, -- mmext
+	GameStructure = {"Dialogs", -- mmext
+		"ExtraStatDescriptions"}, -- mine
 	Item = {"ExtraData"}, -- my stuff for MAW mod
 }
 
@@ -944,6 +945,9 @@ function processStruct(args)
 			end
 		end
 		if data then -- in certain cases member data is unknown or otherwise unavailable to gather
+			if data.offset and data.offset > 0x1000000 then
+				printf("member %q has offset 0x%X - probably dynamically relocated", data.name, data.offset)
+			end
 			addNamespacePrefixes(data, myNamespaceStr)
 			if args.union and tonumber(data.name) then
 				-- array with some fields rearranged, so it can't be indexed with const.* in all cases
@@ -965,7 +969,7 @@ function processStruct(args)
 				goto continue
 			elseif (data.array and data.innerType.convertToPointer) or data.convertToPointer then
 				findDependencies(data, structureDependencies)
-				if not args.saveToGeneratorDirectory then -- keep normal field only if reverse engineering?
+				if not args.intendedForPgenedit then -- keep normal field only if reverse engineering?
 					local f = deepcopyMM(data)
 					table.insert(fields, f)
 				end
@@ -992,7 +996,7 @@ function processStruct(args)
 				resultTypeAndName = getArrayPointerString(arraysNestedOnly, baseData, true)
 				table.insert(staticDefinitionCode, string.format("%s = nullptr;", resultTypeAndName))
 				if arrays[1] then
-					if not args.saveToGeneratorDirectory then -- if for reverse engineering, add default size field
+					if not args.intendedForPgenedit then -- if for reverse engineering, add default size field
 						addArraySizeField()
 					end
 					local isPointer = arrays[1].lenA and true or false
@@ -1173,12 +1177,12 @@ local function processAll(args)
 	return processed
 end
 
--- saveToGeneratorDirectory - whether it's for my project (true) or for reverse engineering purposes (false)
+-- intendedForPgenedit - whether it's for my project (true) or for reverse engineering purposes (false)
 -- isLast if it's last of 3 games processed
-function printStruct(name, includeMembers, excludeMembers, indentLevel, saveToGeneratorDirectory, isLast, directoryPrefix) 
+function printStruct(name, includeMembers, excludeMembers, indentLevel, intendedForPgenedit, isLast, directoryPrefix) 
 	luaData = {}
 	indentLevel = indentLevel or 1 -- always 1 indentation level if wrapping
-	local args = {name = name, includeMembers = includeMembers, excludeMembers = excludeMembers, indentLevel = indentLevel, saveToGeneratorDirectory = saveToGeneratorDirectory}
+	local args = {name = name, includeMembers = includeMembers, excludeMembers = excludeMembers, indentLevel = indentLevel, intendedForPgenedit = intendedForPgenedit}
 	local processed = processAll(args)
 	_G.processed, _G.args = processed, args
 	local pathToLoad = "C:\\Users\\Eksekk\\code.bin"
@@ -1241,11 +1245,12 @@ function printStruct(name, includeMembers, excludeMembers, indentLevel, saveToGe
 	if not isLast then
 		io.save(pathToLoad, internal.persist(code))
 	else
-		if saveToGeneratorDirectory then
+		local dir = directoryPrefix or "C:\\Users\\Eksekk\\structOffsets"
+		if not directoryPrefix and intendedForPgenedit then
 			os.remove("C:\\Users\\Eksekk\\source\\repos\\PGenEdit\\PGenEditDLL\\headers\\structs")
 			os.remove("C:\\Users\\Eksekk\\source\\repos\\PGenEdit\\PGenEditDLL\\sources\\structs")
 		else
-			for p in path.find("C:\\Users\\Eksekk\\structOffsets\\*") do
+			for p in path.find(path.addslash(dir) .. "*") do
 				if not mem.dll.shlwapi.PathIsDirectoryA(p) then
 					os.remove(p)
 				end
@@ -1263,7 +1268,7 @@ function printStruct(name, includeMembers, excludeMembers, indentLevel, saveToGe
 				"#include \"pch.h\"",
 				"#include \"main.h\"",
 			}
-			if not saveToGeneratorDirectory then -- all header includes are in pch.h
+			if not intendedForPgenedit then -- all header includes are in pch.h
 				multipleInsert(prefix, #prefix + 1, includeCode)
 			end
 			multipleInsert(prefix, #prefix + 1, {
@@ -1277,16 +1282,16 @@ function printStruct(name, includeMembers, excludeMembers, indentLevel, saveToGe
 				"#pragma pack(pop)"
 			})
 			local headerFileName, sourceFileName
-			if saveToGeneratorDirectory then
+			if not directoryPrefix and intendedForPgenedit then
 				headerFileName = string.format("C:\\Users\\Eksekk\\source\\repos\\PGenEdit\\PGenEditDLL\\headers\\structs\\%s.h", fileName)
 				sourceFileName = string.format("C:\\Users\\Eksekk\\source\\repos\\PGenEdit\\PGenEditDLL\\sources\\structs\\%s.cpp", fileName)
 			else
-				headerFileName = string.format("%s\\MM%d\\%s.h", directoryPrefix or "C:\\Users\\Eksekk\\structOffsets", Game.Version, fileName)
-				sourceFileName = string.format("%s\\MM%d\\%s.cpp", directoryPrefix or "C:\\Users\\Eksekk\\structOffsets", Game.Version, fileName)
+				headerFileName = string.format("%s\\MM%d\\%s.h", dir, Game.Version, fileName)
+				sourceFileName = string.format("%s\\MM%d\\%s.cpp", dir, Game.Version, fileName)
 			end
-			local luaDataFileName = "C:\\Users\\Eksekk\\source\\repos\\PGenEdit\\luaData.cpp"
+			local luaDataFileName = (path.addslash(directoryPrefix) or "C:\\Users\\Eksekk\\source\\repos\\PGenEdit\\") .. "luaData.cpp"
 			io.save(headerFileName, table.concat(currentCode.header, "\n"))
-			if #currentCode.source > 0 and saveToGeneratorDirectory then
+			if #currentCode.source > 0 and intendedForPgenedit then
 				local prefix = {
 					"#pragma once",
 					"#include \"pch.h\"",
@@ -1299,7 +1304,7 @@ function printStruct(name, includeMembers, excludeMembers, indentLevel, saveToGe
 			end
 			-- ptrName
 			--tget(luaData, args.name, baseData.name).sizePtrName
-			if saveToGeneratorDirectory then
+			if intendedForPgenedit then
 				local content = {}
 				for sname, fields in pairs(luaData) do
 					for fname, field in pairs(fields) do
@@ -1343,6 +1348,10 @@ end
 
 function pr3(isLast)
 	printStruct("GameStructure", nil, nil, nil, false, isLast)
+end
+
+function generateDefinitionsForPgenedit(isLast)
+	printStruct("GameStructure", nil, nil, nil, true, isLast, "C:\\Users\\Eksekk\\structOffsetsPgenedit")
 end
 
 -- adding most information from lua to x64dbg database

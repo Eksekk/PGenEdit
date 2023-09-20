@@ -2,11 +2,11 @@
 #include "pch.h"
 #include "main.h"
 
-struct ArrayData
+struct ArrayData // TODO: wrap all suitable dynamic arrays inside this class
 {
 private:
     std::variant<int, int*> countVariant;
-    void* ptr;
+    void* myPtr;
 public:
 
     ArrayData() = delete;
@@ -14,27 +14,27 @@ public:
     template<typename T, size_t Count>
     ArrayData(std::array<T, Count>& arr)
     {
-        ptr = arr.data();
+        myPtr = arr.data();
         countVariant = (int)Count;
     }
 
     template<typename T>
     ArrayData(T* data, int count)
     {
-        ptr = data;
+        myPtr = data;
         countVariant = count;
     }
 
     template<typename T>
     ArrayData(T* data, int* count)
     {
-        ptr = data;
+        myPtr = data;
         countVariant = count;
     }
 
     void* ptr() const
     {
-        return ptr;
+        return myPtr;
     }
 
     int size() const
