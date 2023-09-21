@@ -185,17 +185,23 @@ local convertToPointers = -- because updated during runtime etc.
 {
 	SpritesLod = {"SpritesSW"},
 	GameStructure = {"NPCDataTxt", "MonstersTxt", "CharacterPortraits", "TransportLocations", "NPCGroup", "NPCText", "TransTxt", "ShopTheftExpireTime",
-		"MapDoorSound", "GlobalEvtLines", "ItemsTxt", "NPC", "MixPotions", "ReagentSettings", "NPCNews", "MapFogChances",
+		"MapDoorSound", "GlobalEvtLines", "ItemsTxt", "SpcItemsTxt", "StdItemsTxt", "NPC", "MixPotions", "ReagentSettings", "NPCNews", "MapFogChances",
 		"ShopItems", "GuildItems", "NPCTopic", "ShopSpecialItems", "AutonoteTxt", "MapStats", "Houses", "ClassNames", "HostileTxt",
 		"PlaceMonTxt", "AutonoteCategory", "QuestsTxt", "HousesExtra", "CharacterDollTypes", "HouseMovies", "NPCGreet", "TransportIndex",
-		"GuildNextRefill2", "ShopNextRefill", "ClassNames" -- from merge
-		, "PatchOptions" -- potentially relocated each run
-		, "CustomLods", "MonsterKinds", "TitleTrackOffset", "MissileSetup", "AwardsSort" -- MMExt
+		"GuildNextRefill2", "ShopNextRefill", "ClassNames", "AwardsTxt", "InOODialog", -- from merge
+		"PatchOptions", -- potentially relocated each run (dll loading at different address)
+		"CustomLods", "MonsterKinds", "TitleTrackOffset", "MissileSetup", "AwardsSort", "FoodGoldVisible",-- MMExt
+		"FrameCounter", "NPCNames"
 	},
 	GameClasses = {"HPBase", "SPBase", "HPFactor", "SPFactor", "StartingStats", "Skills" -- Merge
 	, "SPStats"}, -- MMExt
 	GameClassKinds = {"StartingSkills"}, -- Merge
-	DialogLogic = {"List"} -- MMExt
+	DialogLogic = {"List"}, -- MMExt
+	GameParty = {"QBits"}, -- doesn't have changed structs.o.GameParty.QBits entry
+	-- Merge structs
+	CharacterVoices = {"Avail", "Sounds"},
+	ArmorPicsCoords = {"Armors", "Belts", "Boots", "Cloaks", "Helms"},
+	HouseRules = {"AlchemistsSpecial", "AlchemistsStandart", "Arcomage", "ArcomageTexts", "ArmorShopsSpecial", "ArmorShopsStandart", "MagicShopsSpecial", "MagicShopsStandart", "SpellbookShops", "Training", "WeaponShopsSpecial", "WeaponShopsStandart"},
 }
 
 -- decided to keep all three games' structures in one file, because I would have to include files for all games anyway
@@ -221,7 +227,9 @@ local structureByFile =
 	
 	TxtFileItems = {"HistoryTxtItem", "StdItemsTxtItem", "SpcItemsTxtItem", "SpellsTxtItem", "MapStatsItem", "ItemsTxtItem", "NPCProfTxtItem", "Events2DItem", },
 
-	GameDataStructs = {"GameRaces", "GameClasses", "GameClassKinds", "DialogLogic", "Dlg", "GameScreen"},
+	GameDataStructs = {"GameRaces", "GameClasses", "GameClassKinds", "DialogLogic", "Dlg", "GameScreen",
+	"SkillMasteryDescriptions" -- my addition
+},
 
 	GameMisc = {"SpellInfo", "TravelInfo", "FogChances", "ShopItemKind", "GeneralStoreItemKind", "HouseMovie", "Weather", "MoveToMap", "MissileSetup", "TownPortalTownInfo", "EventLine", "ProgressBar", "ActionItem", "PatchOptions", "GameMouse", "MouseStruct", "Fnt"},
 
@@ -277,8 +285,7 @@ all possible attributes:
 - [added in processStruct] ptrValue - pointer with set value
 - [added in getGroup] padStart
 ]]
-local getMemberData
-function getMemberData(structName, memberName, member, offsets, members, class, rofields, customFieldSizes, inArray)
+local function getMemberData(structName, memberName, member, offsets, members, class, rofields, customFieldSizes, inArray)
 	rofields = rofields or {}
 	member = member or members[memberName]
 	local data = {name = memberName or "", offset = offsets[memberName or ""] or 0}
@@ -945,8 +952,8 @@ function processStruct(args)
 			end
 		end
 		if data then -- in certain cases member data is unknown or otherwise unavailable to gather
-			if data.offset and data.offset > 0x1000000 then
-				printf("member %q has offset 0x%X - probably dynamically relocated", data.name, data.offset)
+			if data.offset and data.offset > 0x1000000 and (not getBaseTypeField(data, "convertToPointer") and not data.convertToPointer) then -- convertToPointer can be defined in outer type too
+				printf("member '%s.%s' has offset 0x%X - probably dynamically relocated", args.name, data.name, data.offset)
 			end
 			addNamespacePrefixes(data, myNamespaceStr)
 			if args.union and tonumber(data.name) then
@@ -1351,7 +1358,7 @@ function pr3(isLast)
 end
 
 function generateDefinitionsForPgenedit(isLast)
-	printStruct("GameStructure", nil, nil, nil, true, isLast, "C:\\Users\\Eksekk\\structOffsetsPgenedit")
+	printStruct("GameStructure", nil, nil, nil, true, isLast, "C:\\Users\\Eksekk\\structOffsetsPgenedit 2")
 end
 
 -- adding most information from lua to x64dbg database
