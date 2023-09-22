@@ -999,7 +999,12 @@ function processStruct(args)
 					)
 				)
 				local old2 = baseData.namespacePrefix
-				baseData.namespacePrefix = myNamespaceStr .. args.name .. "::"
+				local add = myNamespaceStr .. args.name .. "::"
+				--mm6::GameStructure::char** NPCText = nullptr;
+				if baseData.struct then -- struct uses namespace-qualified type name, other types don't
+					baseData.namespacePrefix = myNamespaceStr
+				end
+				baseData.name = add .. baseData.name
 				resultTypeAndName = getArrayPointerString(arraysNestedOnly, baseData, true)
 				table.insert(staticDefinitionCode, string.format("%s = nullptr;", resultTypeAndName))
 				if arrays[1] then

@@ -95,13 +95,17 @@ extern "C"
 	}
 }
 
-template<typename Game>
-struct GameStructureDataFromLua
+// can be no array but single pointer (patchOptions, frameCounter etc.)
+template<typename Struct>
+struct StructArray
 {
-	const char* luaStructureField;
-	
-	//int countFieldSize;
+	std::string arrayPath;
+	void*& ptr;
+	std::variant<void*&, uint32_t&> size;
+    // (constant array size OR array size pointer) AND pointer to data
 };
+
+
 
 void fillGameStaticPointersAndSizes()
 {
