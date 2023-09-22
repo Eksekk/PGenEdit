@@ -366,6 +366,9 @@
     <ClInclude Include="ItemDialogBase.h">
       <Filter>Pliki nagłówkowe\Shared GUI</Filter>
     </ClInclude>
+    <ClInclude Include="LuaWrapper.h">
+      <Filter>Pliki nagłówkowe\Misc\Lua</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="sources\MainWindow.cpp">
@@ -586,6 +589,9 @@
     </ClCompile>
     <ClCompile Include="ItemDialogBase.cpp">
       <Filter>Pliki źródłowe\Shared GUI</Filter>
+    </ClCompile>
+    <ClCompile Include="LuaWrapper.cpp">
+      <Filter>Pliki źródłowe\Misc\Lua</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

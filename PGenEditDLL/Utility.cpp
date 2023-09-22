@@ -110,3 +110,24 @@ void jsonEnsureIsArray(Json& json)
 {
     json = !json.is_array() ? Json::array() : json;
 }
+
+std::vector<std::string> splitString(const std::string& text, const std::string& delimiter, bool ignoreCase)
+{
+	std::string useText = ignoreCase ? tolowerStr(text) : text;
+	std::string useDelimiter = ignoreCase ? tolowerStr(delimiter) : delimiter;
+	std::vector<std::string> strings;
+	size_t pos = 0, foundPos;
+	while ((foundPos = useText.find(useDelimiter, pos)) != std::string::npos)
+	{
+		strings.push_back(text.substr(pos, foundPos - pos + 1));
+		pos = foundPos + useDelimiter.size();
+	}
+	return strings;
+}
+
+std::vector<std::string> splitString(const std::string& text, char delimiter, bool ignoreCase)
+{
+	std::string s;
+	s.push_back(delimiter);
+	return splitString(text, s, ignoreCase);
+}

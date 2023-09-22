@@ -259,6 +259,17 @@ end
 -- helper functions
 -- DEFINED IN A_EksekkFunctions.lua
 
+local CODE_INJECT_PATH = ("C:/Users/Eksekk/structsCodeInjection/"):gsub("/", "\\")
+
+local function getCodeInjectionForStruct(name)
+	local file = io.open(CODE_INJECT_PATH .. name .. ".cpp")
+	if file then
+		local code = file:read("*a")
+		file:close()
+		return code
+	end
+end
+
 --[[
 all possible attributes:
 - array - is array

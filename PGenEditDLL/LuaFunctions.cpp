@@ -83,29 +83,35 @@ extern "C"
 		lua_rawget(Lua, LUA_REGISTRYINDEX);
 		if (lua_type(Lua, -1) == LUA_TNIL)
 		{
-			lua_settop(Lua, 0);
+			lua_pop(Lua, 1);
 			return false;
 		}
 		else
 		{
 			bool ret = lua_toboolean(Lua, -1);
-			lua_settop(Lua, 0);
+			lua_pop(Lua, 1);
 			return ret;
 		}
 	}
 }
 
 // can be no array but single pointer (patchOptions, frameCounter etc.)
-template<typename Struct>
 struct StructArray
 {
-	std::string arrayPath;
-	void*& ptr;
-	std::variant<void*&, uint32_t&> size;
+	std::string arrayPath; // from global environment
+	void*& ptr; // reference to pointer to data
+	std::variant<std::reference_wrapper<uint32_t*>, std::reference_wrapper<uint32_t>> size; // reference to either unchangeable size or pointer to size
     // (constant array size OR array size pointer) AND pointer to data
 };
 
-
+template<typename GameStructure>
+std::vector<StructArray> arrays =
+{
+	StructArray
+	{
+		"Game.ItemsTxt", (void*&)(GameStructure::itemsTxt), std::ref((uint32_t*&)(GameStructure::itemsTxt_sizePtr))
+	},
+};
 
 void fillGameStaticPointersAndSizes()
 {

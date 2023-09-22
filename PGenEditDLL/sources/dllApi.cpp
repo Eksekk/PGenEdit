@@ -21,6 +21,7 @@
 #include <ItemStructAccessor.h>
 #include <LodStructAccessor.h>
 #include <MapStructAccessor.h>
+#include "LuaWrapper.h"
 
 extern bool inMM;
 extern void setMaxSkillLevel();
@@ -323,6 +324,7 @@ extern "C"
         
         bool init = Lua == nullptr; // only once
         Lua = (lua_State*)ptr;
+        luaWrapper.setLuaState(Lua);
         if (init)
         {
             luaInit();

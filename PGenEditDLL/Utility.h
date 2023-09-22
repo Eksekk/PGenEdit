@@ -218,3 +218,6 @@ void redBlackGreenTextThreshold(wxWindow* win, int value, int threshold);
 // if argument is "null", converts it to empty object
 void jsonEnsureIsObject(Json& json);
 void jsonEnsureIsArray(Json& json);
+
+std::vector<std::string> splitString(const std::string& text, const std::string& delimiter, bool ignoreCase = true);
+std::vector<std::string> splitString(const std::string& text, char delimiter, bool ignoreCase = true);

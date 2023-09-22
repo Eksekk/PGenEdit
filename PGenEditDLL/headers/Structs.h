@@ -59,7 +59,26 @@ inline void gameVersionDispatchItem(void* stru, auto func)
 
 #undef GENERATE_DISPATCH_CODE
 
-#define genDef(name) using Any##name##Variant = std::variant<mm6::name*, mm7::name*, mm8::name*>
+// std::decay doesn't remove pointer after array is converted to it
+template<typename Struct>
+using decay_fully = std::remove_pointer_t<std::decay_t<Struct>>;
+
+template<typename GameStructure>
+struct GameSpecificStructsBase
+{
+	using Game = std::decay_t<GameStructure>;
+	using Party = decay_fully<decltype(Game::party)>;
+	using Player = decay_fully<decltype(Party::playersArray[0])>;
+	using Item = decay_fully<decltype(Player::items)>;
+};
+
+template struct GameSpecificStructsBase<mm6::Game>;
+
+#define genDef(name) using Any##name##Variant = std::variant<mm6::name*, mm7::name*, mm8::name*>;\
+namespace mm6\
+{\
+	using name = mm6::name;\
+}
 genDef(Item);
 genDef(Player);
 genDef(Lod);
@@ -68,3 +87,5 @@ genDef(GameStructure);
 genDef(SpellBuff);
 genDef(GameParty);
 genDef(GameMap);
+
+#undef genDef
