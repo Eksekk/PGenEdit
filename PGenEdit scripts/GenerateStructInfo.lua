@@ -256,6 +256,13 @@ local function getStructFile(name)
 	return "unknown"
 end
 
+local function noInfinity(amount) -- structs.Fnt
+	if math.abs(amount) ~= 1/0 then
+		return amount
+	end
+	return 256
+end
+
 -- helper functions
 -- DEFINED IN A_EksekkFunctions.lua
 
@@ -346,7 +353,7 @@ local function getMemberData(structName, memberName, member, offsets, members, c
 		data.lenP = up.lenP
 		data.lenA = data.lenP and getU(MT(up.lenA).__index, "size")
 		data.beyondLen = up.beyondLen
-		data.count = up.count == 0xFFFFFFFF and 0 or up.count
+		data.count = noInfinity(up.count == 0xFFFFFFFF and 0 or up.count)
 		if data.beyondLen then
 			addComment("AccessBeyondLength is active (???)")
 		end
@@ -573,8 +580,10 @@ local function processSingle(data, indentLevel, structName, namespaceStr, debugL
 			end
 		end
 		local offset = arrays and arrays[1] and arrays[1].offset or data.offset or 0
+		-- UNCOMMENT LATER
 		table.insert(comments, string.format("0x%X (%d decimal)", offset, offset))
 		if data.bit and data.bitIndex then
+			-- UNCOMMENT LATER
 			comments[#comments] = comments[#comments] .. ", bit index " .. data.bitIndex
 		end
 		if data.commentOut then
@@ -896,8 +905,7 @@ do
 	end
 end
 
-local processStruct
-function processStruct(args)
+local function processStruct(args)
 	-- initialization
 
 	-- default arguments
@@ -915,7 +923,7 @@ function processStruct(args)
 	local staticPtrDeclarationCode, staticConvertToPointerDeclarationCode, staticDefinitionCode = {}, {}, {}
 	local offsets, members = args.offsets or structs.o[args.name], args.members or structs.m[args.name]
 	local class, rofields = args.class or structs[args.name], args.rofields or {}
-	local size = not args.union and class["?size"] or 0
+	local size = noInfinity(not args.union and class["?size"] or 0)
 	
 	-- after initialization
 	-- forward declaration only if structure has 0 size or no members (yes, those exists)
@@ -940,6 +948,7 @@ function processStruct(args)
 	addExtraFields(args.name, fields)
 
 	-- get Info{} data
+	-- TODO: append this as comments to fields
 	local infoData, methods
 	if not args.union then
 		infoData, methods = getStructureMembersInfoData(args.name)
@@ -1177,6 +1186,13 @@ function processStruct(args)
 				maxI = i
 			end
 		end
+		-- alphabetically
+		-- for i = 1, maxI - 1 do
+		-- 	if args.structOrder[i]:lower() < args.structOrder[i + 1]:lower() then
+		-- 		maxI = i
+		-- 		break
+		-- 	end
+		-- end
 		table.insert(args.structOrder, math.min(#args.structOrder + 1, maxI + 1), args.name)
 	end
 	return setmetatable(args.processedStructs[args.name] or {code = code, dependencies = structureDependencies, size = size,
@@ -1460,13 +1476,6 @@ do
 			return false
 		end
 		error("Unknown type", 2)
-	end
-
-	local function noInfinity(amount) -- structs.Fnt
-		if math.abs(amount) ~= 1/0 then
-			return amount
-		end
-		return 256
 	end
 
 	function processDebuggerDatabase(removeOld) -- remove old for testing
