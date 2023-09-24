@@ -157,7 +157,7 @@ local globalExcludes =
 {
 	Player = {"Attrs"}, -- attrs is from merge.
 	GameStructure = {"Dialogs", -- mmext
-		"ExtraStatDescriptions"}, -- mine
+		"ExtraStatDescriptions", "SkillMasteryDescriptions"}, -- mine
 	Item = {"ExtraData"}, -- my stuff for MAW mod
 }
 
@@ -386,9 +386,11 @@ local function getMemberData(structName, memberName, member, offsets, members, c
 		if data.low and data.low > 0 then
 			addComment(string.format("MMExt: %d..%d, here %d..%d", data.low, data.low + data.count - 1, 0, data.count - 1))
 		end
-		data.size = ((data.ptr or data.count == 0) and 4 or data.count * (up.fakeSize or up.size))
+		data.size = ((data.ptr or data.count == 0) and 4 or data.count * (up.size + (data.innerType.fakeSize or 0) ))
 		-- PADDING PROBLEMS, two solutions below:
-		if data.innerType.size and up.size > data.innerType.size then
+		if data.innerType.fakeSize then
+			data.innerType.padding = data.innerType.fakeSize
+		elseif data.innerType.size and up.size > data.innerType.size then
 			data.innerType.padding = up.size - data.innerType.size
 			-- 1st, count padding as type size
 			--data.innerType.size = up.size
@@ -506,14 +508,14 @@ local function getMemberData(structName, memberName, member, offsets, members, c
 		data.typeName = sname
 		data.ptr = isPtr
 		data.struct = true
-		if table.find(structsWithFakeSize, sname) then
-			data.padding = data.size
-			data.padStart = data.size
-			data.fakeSize = data.size
-			data.size = calcStructLargestSize(sname)
-		else
+		-- if table.find(structsWithFakeSize, sname) then
+		-- 	--data.size = calcStructLargestSize(sname)
+		-- 	data.size = structs[sname]["?size"]
+		-- 	data.padding = data.size
+		-- 	data.fakeSize = data.size
+		-- else
 			data.size = isPtr and 4 or structs[sname]["?size"]
-		end
+		--end
 		data.dataType = isPtr and types.pstruct or types.struct
 	else
 		data.array = true
@@ -1173,6 +1175,13 @@ local function processStruct(args)
 			table.insert(layout, {type = "padding", value = endPadding})
 		end
 	end
+
+	local injection = getCodeInjectionForStruct(args.name)
+	if injection then
+		local lines = injection:split("\r\n")
+		--multipleInsert(code, #code + 1, lines)
+	end
+
 	code[#code + 1] = args.union and string.format("%s} %s;", indentOuter, args.name) or (indentOuter .. "};")
 	if args.union then
 		table.insert(code, 1, string.format("%sstruct // size: 0x%X, MMExt union", indentOuter, size))
@@ -1848,4 +1857,17 @@ function processConst(name)
 		end
 		
 		table.insert(source, "}")
-		table.i
+		table.insert(source, "")
+	end
+	table.insert(source, "")
+end
+
+local constsToProcess = {"Damage"}
+function writeConsts()
+	for _, const in ipairs(constsToProcess) do
+		processConst(const)
+	end
+	io.save("constHeader.h", table.concat(header, "\n"))
+	io.save("constSource.cpp", table.concat(source, "\n"))
+	header, source = {}, {}
+end

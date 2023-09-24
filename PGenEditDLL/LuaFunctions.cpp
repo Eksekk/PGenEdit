@@ -100,17 +100,41 @@ struct StructArray
 {
 	std::string arrayPath; // from global environment
 	void*& ptr; // reference to pointer to data
-	std::variant<std::reference_wrapper<uint32_t*>, std::reference_wrapper<uint32_t>> size; // reference to either unchangeable size or pointer to size
+	std::variant<std::monostate, std::reference_wrapper<uint32_t*>, std::reference_wrapper<uint32_t>> size; // reference to either unchangeable size or pointer to size
     // (constant array size OR array size pointer) AND pointer to data
 };
 
 template<typename GameStructure>
-std::vector<StructArray> arrays =
+std::vector<StructArray> arraysBase =
 {
-	StructArray
-	{
-		"Game.ItemsTxt", (void*&)(GameStructure::itemsTxt), std::ref((uint32_t*&)(GameStructure::itemsTxt_sizePtr))
-	},
+	{ "Game.ItemsTxt", (void*&)(GameStructure::itemsTxt), std::ref((uint32_t*&)(GameStructure::itemsTxt_sizePtr)) },
+	{ "Game.StdItemsTxt", (void*&)(GameStructure::stdItemsTxt), std::ref((uint32_t*&)(GameStructure::stdItemsTxt_sizePtr)) },
+	{ "Game.SpcItemsTxt", (void*&)(GameStructure::spcItemsTxt), std::ref((uint32_t*&)(GameStructure::spcItemsTxt_sizePtr)) },
+	{ "Game.SpcItemsTxt", (void*&)(GameStructure::spcItemsTxt), std::ref((uint32_t*&)(GameStructure::spcItemsTxt_sizePtr)) },
+	{ "Game.SpcItemsTxt", (void*&)(GameStructure::spcItemsTxt), std::ref((uint32_t*&)(GameStructure::spcItemsTxt_sizePtr)) },
+	{ "Game.SpcItemsTxt", (void*&)(GameStructure::spcItemsTxt), std::ref((uint32_t*&)(GameStructure::spcItemsTxt_sizePtr)) },
+};
+
+/*
+ // ArmorPicsCoords::Belts, pointer name: "Belts"
+// ArmorPicsCoords::cloaks, size field/pointer name: "cloaks_size"
+// ArmorPicsCoords::Cloaks, pointer name: "Cloaks"
+// ArmorPicsCoords::boots, size field/pointer name: "boots_size"
+// ArmorPicsCoords::belts, size field/pointer name: "belts_size"
+// ArmorPicsCoords::helms, size field/pointer name: "helms_size"
+// ArmorPicsCoords::Helms, pointer name: "Helms"
+// ArmorPicsCoords::Boots, pointer name: "Boots"
+// ArmorPicsCoords::Armors, pointer name: "Armors"
+// ArmorPicsCoords::armors, size field/pointer name: "armors_size"
+// CharacterVoices::Sounds, pointer name: "Sounds"
+// CharacterVoices::avail, size field/pointer name: "avail_size"
+// CharacterVoices::Avail, pointer name: "Avail"
+// CharacterVoices::sounds, size field/pointer name: "sounds_size"
+ **/
+using Game8 = mm8::GameStructure;
+std::vector<StructArray> arraysMerge =
+{
+	{"Game.ArmorPicsCoords.Belts", (void*&)Game8::armorPicsCoords->belts, std::monostate()},
 };
 
 void fillGameStaticPointersAndSizes()
