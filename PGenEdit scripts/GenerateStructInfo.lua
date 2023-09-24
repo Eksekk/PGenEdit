@@ -128,6 +128,31 @@ function getStructureMembersInfoData(structName)
 	return output, methods
 end
 
+-- those that contain size override at the end (like "define.size = 4")
+local structsWithFakeSize = {"SkillMasteryDescriptions"}
+local function calcStructLargestSize(name)
+	-- member(...) is called for every member, as its name suggests
+	local oldMember, oldCustomType, oldStructsCustomType = getU(types.i8, "member"), types.CustomType, mem.structs.CustomType
+	local max = 0
+	local currentDefine -- to not call getU each time in myMember()
+	local function myMember(...)
+		local ret = {oldMember(...)}
+		--debug.Message(dump(currentDefine, 1))
+		max = math.max(max, currentDefine.offset) -- after member, so array sizes get counted
+		return unpack(ret)
+	end
+	setU(types.i8, "member", myMember)
+	types.CustomType, mem.structs.CustomType = myMember, myMember
+	mem.struct(function(define, ...)
+		currentDefine = define
+		return structs.f[name](define, ...)
+	end)
+	setU(types.i8, "member", oldMember)
+	types.CustomType, mem.structs.CustomType = oldCustomType, oldStructsCustomType
+	--debug.Message(name, max)
+	return max
+end
+
 local globalExcludes =
 {
 	Player = {"Attrs"}, -- attrs is from merge.
@@ -361,7 +386,7 @@ local function getMemberData(structName, memberName, member, offsets, members, c
 		if data.low and data.low > 0 then
 			addComment(string.format("MMExt: %d..%d, here %d..%d", data.low, data.low + data.count - 1, 0, data.count - 1))
 		end
-		data.size = ((data.ptr or data.count == 0) and 4 or data.count * up.size)
+		data.size = ((data.ptr or data.count == 0) and 4 or data.count * (up.fakeSize or up.size))
 		-- PADDING PROBLEMS, two solutions below:
 		if data.innerType.size and up.size > data.innerType.size then
 			data.innerType.padding = up.size - data.innerType.size
@@ -481,7 +506,14 @@ local function getMemberData(structName, memberName, member, offsets, members, c
 		data.typeName = sname
 		data.ptr = isPtr
 		data.struct = true
-		data.size = isPtr and 4 or structs[sname]["?size"]
+		if table.find(structsWithFakeSize, sname) then
+			data.padding = data.size
+			data.padStart = data.size
+			data.fakeSize = data.size
+			data.size = calcStructLargestSize(sname)
+		else
+			data.size = isPtr and 4 or structs[sname]["?size"]
+		end
 		data.dataType = isPtr and types.pstruct or types.struct
 	else
 		data.array = true
@@ -1816,17 +1848,4 @@ function processConst(name)
 		end
 		
 		table.insert(source, "}")
-		table.insert(source, "")
-	end
-	table.insert(source, "")
-end
-
-local constsToProcess = {"Damage"}
-function writeConsts()
-	for _, const in ipairs(constsToProcess) do
-		processConst(const)
-	end
-	io.save("constHeader.h", table.concat(header, "\n"))
-	io.save("constSource.cpp", table.concat(source, "\n"))
-	header, source = {}, {}
-end
+		table.i
