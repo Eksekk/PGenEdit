@@ -1073,6 +1073,7 @@ local function processStruct(args)
 
 	addExtraFields(args.name, fields)
 
+	local functionCode = {}
 	-- get Info{} data
 	-- TODO: append this as comments to fields
 	local infoData, methods
@@ -1081,6 +1082,47 @@ local function processStruct(args)
 	end
 	-- get function data
 	local functionData = not args.union and getFunctionsData(class, infoData)
+	if not args.union then
+		local funcFormat = "%s %s %s(%s);%s"
+		for mname, data in pairs(functionData) do
+			local def, info = data.def, data.info
+			local r, retStr = def.ret, "void"
+			if r then
+				local typ = type(r)
+				if typ == "string" then
+					retStr = "char*"
+				elseif typ == "boolean" then
+					retStr = "bool"
+				elseif typ == "number" then
+					retStr = int
+				else
+					error(typ)
+				end
+			end
+			local comment = ""
+			if def[1] then -- has default parameters or has parameters at all
+				local t = {}
+				local start = 1
+				if methods[mname] then
+					start = 2 -- methods auto-prepend one dummy parameter
+					t[1] = "(this)"
+				end
+				local function tostring2(str) -- quotes string instead of "nil"
+					if type(str) == "string" then
+						return format("%q", str)
+					end
+					return tostring(str)
+				end
+				for i = start, #def do
+					t[#t + 1] = tostring2(def[i])
+				end
+				comment = " // defaults: " .. table.concat(t, ", ")
+			end
+			local ccStr = select(def.cc + 1, "__stdcall", "__thiscall", "__fastcall", "__fastcall/*+eax*/")
+			table.insert(functionCode, format(funcFormat, retStr, ccStr, def.name, info and info.Sig and format("/*%s*/", info.Sig) or "", comment))
+		end
+	end
+	print(table.concat(functionCode, "\n"))
 
 	-- process members
 	for mname, f in sortpairs(members) do
