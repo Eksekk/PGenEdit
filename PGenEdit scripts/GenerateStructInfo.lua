@@ -294,6 +294,7 @@ end
 local CODE_INJECT_PATH = ("C:/Users/Eksekk/structsCodeInjection/"):gsub("/", "\\")
 
 local function getCodeInjectionForStruct(name)
+	os.mkdir(CODE_INJECT_PATH)
 	local file = io.open(CODE_INJECT_PATH .. name .. ".cpp")
 	if file then
 		local code = file:read("*a")
@@ -585,7 +586,7 @@ local function paddingField(value)
 	return {type = "padding", value = value}
 end
 
-local function processSingle(data, indentLevel, structName, namespaceStr, debugLines, layout)
+local function processSingle(data, indentLevel, structName, namespaceStr, debugLines, layout, infoData)
 	indentLevel = indentLevel or 0
 	local indentOuter, indentInner = string.rep(INDENT_CHARS, indentLevel), string.rep(INDENT_CHARS, indentLevel + 1)
 	local dataCopy = data
@@ -614,11 +615,13 @@ local function processSingle(data, indentLevel, structName, namespaceStr, debugL
 			end
 		end
 		local offset = arrays and arrays[1] and arrays[1].offset or data.offset or 0
-		-- UNCOMMENT LATER
 		table.insert(comments, string.format("0x%X (%d decimal)", offset, offset))
 		if data.bit and data.bitIndex then
-			-- UNCOMMENT LATER
 			comments[#comments] = comments[#comments] .. ", bit index " .. data.bitIndex
+		end
+		local info = (infoData or {})[data.pascalCaseName] -- unions don't have info data
+		if info and type(info) == "string" then
+			comments[#comments] = comments[#comments] .. " | MMExt info: " .. info
 		end
 		if data.commentOut then
 			result = "// " .. result
@@ -717,11 +720,10 @@ end
 
 -- using visual studio code with "lua booster" extension
 -- need to dummy forward declare to not miss recursive call when using "find references"
-local processGroup
-function processGroup(group, indentLevel, structName, namespaceStr, debugLines, layout)
+local function processGroup(group, indentLevel, structName, namespaceStr, debugLines, layout, infoData)
 	indentLevel = indentLevel or 0
 	if #group == 1 then
-		local ret = processSingle(group[1], indentLevel, structName, namespaceStr, debugLines, layout)
+		local ret = processSingle(group[1], indentLevel, structName, namespaceStr, debugLines, layout, infoData)
 		return type(ret) == "table" and ret or {ret}
 	end
 	local indentOuter, indentInner = string.rep(INDENT_CHARS, indentLevel), string.rep(INDENT_CHARS, indentLevel + 1)
@@ -766,7 +768,7 @@ function processGroup(group, indentLevel, structName, namespaceStr, debugLines, 
 				layoutTmp = stru.value -- next call will pack members into this struct
 				table.insert(layout, stru)
 			end
-			code[#code + 1] = processSingle(member, indentLevel + 1, structName, namespaceStr, debugLines, layoutTmp)
+			code[#code + 1] = processSingle(member, indentLevel + 1, structName, namespaceStr, debugLines, layoutTmp, infoData)
 			if padding and not skipFirst then
 				indentLevel = indentLevel - 1
 				code[#code + 1] = indentInner .. "};"
@@ -838,9 +840,9 @@ function processGroup(group, indentLevel, structName, namespaceStr, debugLines, 
 				doBits()
 			end
 			if #members == 1 then
-				code[#code + 1] = processSingle(currentField, indentLevel + 2, structName, namespaceStr, debugLines, layout)
+				code[#code + 1] = processSingle(currentField, indentLevel + 2, structName, namespaceStr, debugLines, layout, infoData)
 			else
-				code[#code + 1] = processGroup(members, indentLevel + 2, structName, namespaceStr, debugLines, layout) -- nested unions
+				code[#code + 1] = processGroup(members, indentLevel + 2, structName, namespaceStr, debugLines, layout, infoData) -- nested unions
 			end
 			lastOffset = currentField.offset + currentField.size
 			if i > #wrap then break end
@@ -1162,7 +1164,7 @@ local function processStruct(args)
 		local firstIndex = i
 		members, i, maxNextOffset = getGroup(fields, currentField, i)
 		groups[#groups + 1] = {members = members, firstIndex = firstIndex, maxNextOffset = maxNextOffset}
-		local group = processGroup(members, args.indentLevel + 1, not args.union and args.name, not args.union and myNamespaceStr or "", debugLines, layout)
+		local group = processGroup(members, args.indentLevel + 1, not args.union and args.name, not args.union and myNamespaceStr or "", debugLines, layout, infoData)
 		multipleInsert(code, #code + 1, group)
 		prevOffset = maxNextOffset
 	end
@@ -1176,10 +1178,16 @@ local function processStruct(args)
 		end
 	end
 
-	local injection = getCodeInjectionForStruct(args.name)
-	if injection then
-		local lines = injection:split("\r\n")
-		--multipleInsert(code, #code + 1, lines)
+	if not args.union then
+		local injection = getCodeInjectionForStruct(args.name)
+		if injection then
+			local lines = injection:gsub("\r\n", "\n"):split("\n") -- gsub just in case
+			for i, text in ipairs(lines) do
+				lines[i] = indentInner .. text
+			end
+			table.insert(lines, 1, "")
+			multipleInsert(code, #code + 1, lines)
+		end
 	end
 
 	code[#code + 1] = args.union and string.format("%s} %s;", indentOuter, args.name) or (indentOuter .. "};")
