@@ -2,6 +2,7 @@ function reload()
 	dofile(debug.getinfo(1, "S").source:sub(2))
 end
 r = reload
+local format = string.format
 local mmver = offsets.MMVersion
 local function mm78(...)
 	local r = select(mmver - 6, ...)
@@ -9,6 +10,7 @@ local function mm78(...)
 	return r
 end
 local _DEBUG = true
+local CODE_INJECT_PATH = path.addslash("C:/Users/Eksekk/Documents/GitHub/MMStuff/pgenedit/structsCodeInjection"):gsub("/", "\\")
 --[[
 	> dump(structs, 1)
 	-- interesting stuff:
@@ -291,8 +293,6 @@ end
 -- helper functions
 -- DEFINED IN A_EksekkFunctions.lua
 
-local CODE_INJECT_PATH = ("C:/Users/Eksekk/structsCodeInjection/"):gsub("/", "\\")
-
 local function getCodeInjectionForStruct(name)
 	os.mkdir(CODE_INJECT_PATH)
 	local file = io.open(CODE_INJECT_PATH .. name .. ".cpp")
@@ -301,6 +301,96 @@ local function getCodeInjectionForStruct(name)
 		file:close()
 		return code
 	end
+end
+
+local function processCodeInjection(injection, gameVer)
+	gameVer = gameVer or offsets.MMVersion
+	local lines = injection:gsub("\r\n", "\n"):split("\n") -- gsub just in case
+	local removeRows = {}
+	local mmverRestrictions = {}
+	for i, line in ipairs(lines) do
+		local matchVer = line:match("^#mmver%s-(%d+)")
+		local matchEndVer = line:match("^#endmmver")
+		if matchVer then
+			local vers = {}
+			for c in matchVer:gmatch("%d") do
+				local j = #vers
+				table.insert(vers, tonumber(c))
+				assert(#vers > j, format("Added nil index %d", i))
+			end
+			table.insert(mmverRestrictions, vers)
+			removeRows[i] = true
+		elseif matchEndVer then
+			assert(#mmverRestrictions > 0, format("Too many %q lines", "#endmmver"))
+			table.remove(mmverRestrictions, #mmverRestrictions)
+			removeRows[i] = true
+		else
+			for index = 1, #mmverRestrictions do
+				local vers = mmverRestrictions[index]
+				if not table.find(vers, gameVer) then
+					removeRows[i] = true
+					break
+				end
+			end
+		end
+	end
+	if #mmverRestrictions > 0 then
+		error(format("Not enough %q lines", "#endmmver"))
+	end
+	local processedLines = {}
+	for i, line in ipairs(lines) do
+		if not removeRows[i] then
+			table.insert(processedLines, line)
+		end
+	end
+	return processedLines
+end
+
+local function codeInjectionTests(gameVer)
+	gameVer = gameVer or offsets.MMVersion
+	local testPath = path.addslash(CODE_INJECT_PATH) .. "/tests/"
+	local index = 0
+	local failedAny
+	local attempted = 0
+	while true do
+		index = index + 1
+		local ok, test, output
+		ok, test = pcall(io.load, testPath .. index .. ".cpp")
+		if not ok then break end
+		ok, output = pcall(io.load, testPath .. index .. ".output" .. gameVer)
+		if not ok then break end
+		attempted = attempted + 1
+		local try = processCodeInjection(test, gameVer)
+		io.save(testPath .. index .. ".try", table.concat(try, "\r\n"))
+		output = output:gsub("\r\n", "\n"):split("\n")
+		local fail
+		if #output == 1 and output[1] == "" then -- handle edge case of no output
+			output[1] = nil
+		end
+		if #output ~= #try then
+			fail = true
+		else
+			for i, line in ipairs(output) do
+				if line ~= try[i] then
+					fail = true
+					break
+				end
+			end
+		end
+		if fail then
+			failedAny = true
+			printf("[MM%d] Code injection processing test #%d failed", gameVer, index)
+		end
+	end
+	if not failedAny then
+		printf("[MM%d] All code injection tests passed", gameVer)
+	end
+end
+
+function doTests()
+	codeInjectionTests(6)
+	codeInjectionTests(7)
+	codeInjectionTests(8)
 end
 
 --[[
@@ -1181,9 +1271,9 @@ local function processStruct(args)
 	if not args.union then
 		local injection = getCodeInjectionForStruct(args.name)
 		if injection then
-			local lines = injection:gsub("\r\n", "\n"):split("\n") -- gsub just in case
-			for i, text in ipairs(lines) do
-				lines[i] = indentInner .. text
+			local lines = processCodeInjection(injection)
+			for i, line in ipairs(lines) do
+				lines[i] = indentInner .. line
 			end
 			table.insert(lines, 1, "")
 			multipleInsert(code, #code + 1, lines)
