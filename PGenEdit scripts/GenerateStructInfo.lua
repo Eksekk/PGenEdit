@@ -303,6 +303,13 @@ local function getCodeInjectionForStruct(name)
 	end
 end
 
+local function toCamelCase(str)
+	local twoUpper = str:len() >= 2 and str:sub(1, 2):upper() == str:sub(1, 2)
+	str = twoUpper and str or (str:sub(1, 1):lower() .. (str:len() >= 2 and str:sub(2) or ""))
+	str = globalReplacements[str] or str
+	return str
+end
+
 local function processCodeInjection(injection, gameVer)
 	gameVer = gameVer or offsets.MMVersion
 	local lines = injection:gsub("\r\n", "\n"):split("\n") -- gsub just in case
@@ -391,6 +398,59 @@ function doTests()
 	codeInjectionTests(6)
 	codeInjectionTests(7)
 	codeInjectionTests(8)
+end
+
+local function generateFunctionCode(functionData, methods, structName, namespaceStr)
+	local functionDeclCode = {}
+	local functionDefCode = {}
+	local funcFormatDecl = "%s %s %s(%s);%s" -- [return type] [calling convention] [name]([params])[comment]
+	local funcFormatDef = "%s %s%s::%s(%s)" -- [return type] [namespaceStr][structName]::[name]([params])
+	for mname, data in pairs(functionData) do
+		local def, info = data.def, data.info
+		local r, retStr = def.ret, "void"
+		if r then
+			local typ = type(r)
+			if typ == "string" then
+				retStr = "char*"
+			elseif typ == "boolean" then
+				retStr = "bool"
+			elseif typ == "number" then
+				retStr = "int"
+			else
+				error(typ)
+			end
+		end
+		local comment = format(" // address: 0x%X", def.p)
+		if def[1] then -- has default parameters or has parameters at all
+			local t = {}
+			local start = 1
+			if methods[mname] then
+				start = 2 -- methods auto-prepend one dummy parameter
+				t[1] = "(this)"
+			end
+			local function tostring2(str) -- quotes string instead of "nil"
+				if type(str) == "string" then
+					return format("%q", str)
+				end
+				return tostring(str)
+			end
+			for i = start, #def do
+				t[#t + 1] = tostring2(def[i])
+			end
+			comment = comment .. " | defaults: " .. table.concat(t, ", ")
+		end
+		local ccStr = select(def.cc + 1, "__stdcall", "__thiscall", "__fastcall", "__fastcall/*+eax*/")
+		local paramsStr = info and info.Sig and format("/*%s*/", info.Sig) or ""
+		table.insert(functionDeclCode, format(funcFormatDecl, retStr, ccStr, toCamelCase(def.name), paramsStr, comment))
+		multipleInsert(functionDefCode, #functionDefCode + 1, {
+			format(funcFormatDef, retStr, namespaceStr, structName, mname, paramsStr),
+			"{",
+			INDENT_CHARS .. "",
+			"}",
+			""
+		})
+	end
+	return functionDeclCode, functionDefCode
 end
 
 --[[
@@ -642,13 +702,6 @@ function getArrayPointerString(arrays, last, addPointer) -- for testing: https:/
 		end
 	end
 	return type .. (addPointer and "*" or "") .. " " .. last.name
-end
-
-local function toCamelCase(str)
-	local twoUpper = str:len() >= 2 and str:sub(1, 2):upper() == str:sub(1, 2)
-	str = twoUpper and str or (str:sub(1, 1):lower() .. (str:len() >= 2 and str:sub(2) or ""))
-	str = globalReplacements[str] or str
-	return str
 end
 
 local function getArraysCommentsAndBaseData(data)
@@ -1024,7 +1077,7 @@ function returns table with definition lines, array of names of structures it de
 ]]
 local checkInvalidProcessedStructIndex
 do
-	local expected = {"code", "dependencies", "size", "processedStructs", "staticDefinitionCode", "fields", "groups", "memberInfoData", "functionData", "methods"}
+	local expected = {"code", "dependencies", "size", "processedStructs", "staticDefinitionCode", "fields", "groups", "memberInfoData", "functionData", "methods", "functionDefCode"}
 	function checkInvalidProcessedStructIndex(tbl, key)
 		if table.find(expected, key) then return end
 		error(string.format("Unexpected struct table index %q", key), 2)
@@ -1063,66 +1116,30 @@ local function processStruct(args)
 			size = 0,
 			processedStructs = args.processedStructs,
 			fields = {},
-			functionData = {},
+			functionData = {}, functionDefCode = {},
 			methods = {}, class = {}, layout = {}
 		}
 		args.processedStructs[args.name] = data
 		table.insert(tget(args, "structOrder"), 1, args.name)
-		return setmetatable(data, {__index = invalidIndex})
+		return setmetatable(data, {__index = checkInvalidProcessedStructIndex})
 	end
 
 	addExtraFields(args.name, fields)
 
-	local functionCode = {}
+	local functionDeclCode, functionDefCode = {}, {}
 	-- get Info{} data
 	-- TODO: append this as comments to fields
 	local infoData, methods
 	if not args.union then
 		infoData, methods = getStructureMembersInfoData(args.name)
 	end
-	-- get function data
+	-- generate function code
 	local functionData = not args.union and getFunctionsData(class, infoData)
 	if not args.union then
-		local funcFormat = "%s %s %s(%s);%s"
-		for mname, data in pairs(functionData) do
-			local def, info = data.def, data.info
-			local r, retStr = def.ret, "void"
-			if r then
-				local typ = type(r)
-				if typ == "string" then
-					retStr = "char*"
-				elseif typ == "boolean" then
-					retStr = "bool"
-				elseif typ == "number" then
-					retStr = int
-				else
-					error(typ)
-				end
-			end
-			local comment = ""
-			if def[1] then -- has default parameters or has parameters at all
-				local t = {}
-				local start = 1
-				if methods[mname] then
-					start = 2 -- methods auto-prepend one dummy parameter
-					t[1] = "(this)"
-				end
-				local function tostring2(str) -- quotes string instead of "nil"
-					if type(str) == "string" then
-						return format("%q", str)
-					end
-					return tostring(str)
-				end
-				for i = start, #def do
-					t[#t + 1] = tostring2(def[i])
-				end
-				comment = " // defaults: " .. table.concat(t, ", ")
-			end
-			local ccStr = select(def.cc + 1, "__stdcall", "__thiscall", "__fastcall", "__fastcall/*+eax*/")
-			table.insert(functionCode, format(funcFormat, retStr, ccStr, def.name, info and info.Sig and format("/*%s*/", info.Sig) or "", comment))
-		end
+		functionDeclCode, functionDefCode = generateFunctionCode(functionData, methods, args.name, myNamespaceStr)
 	end
-	print(table.concat(functionCode, "\n"))
+	print(table.concat(functionDeclCode, "\n"))
+	print(table.concat(functionDefCode, "\n"))
 
 	-- process members
 	for mname, f in sortpairs(members) do
@@ -1233,7 +1250,8 @@ local function processStruct(args)
 			elseif data.union then
 				local res = processStruct{name = data.name:sub(1, 1):lower() .. data.name:sub(2), offsets = data.offsets, members = data.fields, rofields = data.rofields,
 					union = true, indentLevel = 0, prependNamespace = args.prependNamespace, offset = data.offset, processedStructs = args.processedStructs, parent = args.name,
-					processDependencies = args.processDependencies, structOrder = args.structOrder, shouldProcessDependency = args.shouldProcessDependency, layout = {}}
+					processDependencies = args.processDependencies, structOrder = args.structOrder,
+					shouldProcessDependency = args.shouldProcessDependency, layout = {}, functionDefCode = functionDefCode,}
 				data.code, data.size, data.layout = res.code, res.size, res.layout
 					-- unions have 0 indent level and this breaks normal structs processed as dependencies
 					-- this whole indent system should be probably redone anyways
@@ -1310,6 +1328,11 @@ local function processStruct(args)
 		end
 	end
 
+	for i, sig in ipairs(functionDeclCode) do
+		functionDeclCode[i] = indentInner .. sig
+	end
+	multipleInsert(code, #code + 1, functionDeclCode)
+
 	if not args.union then
 		local injection = getCodeInjectionForStruct(args.name)
 		if injection then
@@ -1356,8 +1379,8 @@ local function processStruct(args)
 		if not args.processedStructs[args.name] then -- unions are inline
 			args.processedStructs[args.name] = setmetatable({code = code, dependencies = structureDependencies,
 				size = size, staticDefinitionCode = staticDefinitionCode, groups = groups, fields = fields, memberInfoData = infoData,
-				functionData = functionData, methods = methods, class = class, layout = layout},
-				{__index = invalidIndex}
+				functionData = functionData, methods = methods, class = class, layout = layout, functionDefCode = functionDefCode},
+				{__index = checkInvalidProcessedStructIndex}
 			)
 		end
 		-- structure needs to be after all of its dependencies
@@ -1378,7 +1401,8 @@ local function processStruct(args)
 	end
 	return setmetatable(args.processedStructs[args.name] or {code = code, dependencies = structureDependencies, size = size,
 		processedStructs = args.processedStructs, groups = groups, fields = fields, memberInfoData = infoData,
-		functionData = functionData, methods = methods, class = class, layout = layout}, {__index = invalidIndex})
+		functionData = functionData, methods = methods, class = class, layout = layout,
+		functionDefCode = functionDefCode}, {__index = checkInvalidProcessedStructIndex})
 end
 
 local function processAll(args)
@@ -1437,6 +1461,10 @@ function printStruct(name, includeMembers, excludeMembers, indentLevel, intended
 		})
 		if struct.staticDefinitionCode and #struct.staticDefinitionCode > 0 then
 			currentCode.source = table.join(currentCode.source, struct.staticDefinitionCode)
+			table.insert(currentCode.source, "")
+		end
+		if struct.functionDefCode and #struct.functionDefCode > 0 then
+			currentCode.source = table.join(currentCode.source, struct.functionDefCode)
 			table.insert(currentCode.source, "")
 		end
 		for i, v in ipairs(struct.dependencies) do
@@ -1804,8 +1832,7 @@ do
 					paddingIndex = paddingIndex + 1
 					return p
 				end
-				local doStructUnion
-				function doStructUnion(struct, name, isUnion)
+				local function doStructUnion(struct, name, isUnion)
 					local json = {
 						name = name or ((isUnion and "U" or "S") .. "_" .. structIndex),
 						members = {}
@@ -1978,36 +2005,4 @@ function processConst(name)
 		table.insert(forwardDecl, string.format("extern void makeEnum%s_%d();", name, i))
 	end
 	multipleInsert(header, #header + 1, forwardDecl)
-	table.insert(header, "")
-	
-	-- source
-	
-	source[#source + 1] = "int "
-	local last = allKeys[#allKeys]
-	for _, k in ipairs(allKeys) do
-		table.insert(source, string.format("\t%s = INVALID_ID%s", formatName(k), k == last and ";" or ","))
-	end
-	table.insert(source, "")
-	
-	for _, i in ipairs{6, 7, 8} do
-		table.insert(source, string.format("void makeEnum%s_%d()", name, i))
-		table.insert(source, "{")
-		for v, k in sortpairs(table.invert(consts[i][name])) do
-			table.insert(source, string.format("\t%s = %d;", formatName(k), v))
-		end
-		
-		table.insert(source, "}")
-		table.insert(source, "")
-	end
-	table.insert(source, "")
-end
-
-local constsToProcess = {"Damage"}
-function writeConsts()
-	for _, const in ipairs(constsToProcess) do
-		processConst(const)
-	end
-	io.save("constHeader.h", table.concat(header, "\n"))
-	io.save("constSource.cpp", table.concat(source, "\n"))
-	header, source = {}, {}
-end
+	t
