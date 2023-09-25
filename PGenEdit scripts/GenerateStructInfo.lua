@@ -688,20 +688,51 @@ local function getMemberData(structName, memberName, member, offsets, members, c
 	end
 	return data
 end
-
-function getArrayPointerString(arrays, last, addPointer) -- for testing: https://cdecl.org/
+--r();print(getArrayPointerString({{count = 5, ptr = true, innerType = {count = 3}}}, {typeName = "int", name = "testMember", ptr = true}))
+do
 	local stdArray = "std::array<%s, %d>"
-	local type = (last.namespacePrefix or "") .. last.typeName .. (last.ptr and "*" or "") .. (last.constPtr and "const" or "")
-	for i = #arrays, 1, -1 do
-		local arr = arrays[i]
-		if arr.count == 0 then
-			type = type .. "*"
+	local primitiveArrayNormal = "(%s)[%d]"
+	local primitiveArrayOfPointers = "(*%s)[%d]"
+	local primitiveArrayOfPointersNoSize = "(*%s)"
+
+	function getArrayPointerString(arrays, last, addPointer, usePrimitiveArrays) -- for testing: https://cdecl.org/
+		local type
+		if usePrimitiveArrays then
+			type = last.name
 		else
-			type = stdArray:format(type, arr.count) .. (arr.ptr and "*" or "")
-			-- std::array<std::array<uint8_t, 128>*, 128> heightMap;
+			type = (last.namespacePrefix or "") .. last.typeName .. (last.ptr and "*" or "") .. (last.constPtr and "const" or "")
+		end
+		if usePrimitiveArrays then
+			for i = 1, #arrays do
+				local arr = arrays[i]
+				if arr.count == 0 then
+					type = primitiveArrayOfPointersNoSize:format(type)
+				else
+					if arr.ptr then
+						type = primitiveArrayOfPointers:format(type, arr.count)
+					else
+						type = primitiveArrayNormal:format(type, arr.count)
+					end
+				end
+			end
+		else
+			for i = #arrays, 1, -1 do
+				local arr = arrays[i]
+				if arr.count == 0 then
+					type = type .. "*"
+				else
+					type = stdArray:format(type, arr.count) .. (arr.ptr and "*" or "")
+					-- std::array<std::array<uint8_t, 128>*, 128> heightMap;
+				end
+			end
+		end
+		-- int a(*[5])[3]
+		if usePrimitiveArrays then
+			return last.typeName .. (last.ptr and "*" or "") .. (constPtr and "const" or "") .. (addPointer and "*" or "") .. type
+		else
+			return type .. (addPointer and "*" or "") .. " " .. last.name
 		end
 	end
-	return type .. (addPointer and "*" or "") .. " " .. last.name
 end
 
 local function getArraysCommentsAndBaseData(data)
@@ -791,7 +822,7 @@ local function processSingle(data, indentLevel, structName, namespaceStr, debugL
 		}
 		layoutAdd = {
 			{type = "struct", value = {
-				{type = "member", value = data},
+				memberField(data),
 				{type = "padding", value = data.padding}
 			}
 		}}
@@ -800,7 +831,7 @@ local function processSingle(data, indentLevel, structName, namespaceStr, debugL
 		data.typeName = structName
 		data.ptr = nil
 		s[#s + 1] = indentOuter .. doBaseType(true) .. ";"
-		table.insert(layoutAdd, {type = "member", value = arrays and arrays[1] or data})
+		table.insert(layoutAdd, memberField(arrays and arrays[1] or data))
 		data.typeName, data.ptr = old2, old3
 	else
 		if data.padStart then
@@ -814,12 +845,12 @@ local function processSingle(data, indentLevel, structName, namespaceStr, debugL
 			layoutAdd = {
 				{type = "struct", value = {
 					{type = "padding", value = data.padStart},
-					{type = "member", value = arrays and arrays[1] or data}
+					memberField(arrays and arrays[1] or data)
 				}
 			}}
 		else
 			s = s .. doBaseType(true)
-			layoutAdd = {{type = "member", value = arrays and arrays[1] or data}}
+			layoutAdd = {memberField(arrays and arrays[1] or data)}
 		end
 	end
 	local commentsStr = #comments > 0 and (" // " .. table.concat(comments, " | ")) or ""
@@ -871,7 +902,7 @@ local function processGroup(group, indentLevel, structName, namespaceStr, debugL
 	end
 	local indentOuter, indentInner = string.rep(INDENT_CHARS, indentLevel), string.rep(INDENT_CHARS, indentLevel + 1)
 	-- do union wrap
-	local union = {type = "union", value = {}}
+	local union = unionField{}
 	table.insert(layout, union)
 	layout = union.value -- everything else goes into union
 	local code = {
@@ -1205,7 +1236,6 @@ local function processStruct(args)
 				)
 				local old2 = baseData.namespacePrefix
 				local add = myNamespaceStr .. args.name .. "::"
-				--mm6::GameStructure::char** NPCText = nullptr;
 				if baseData.struct then -- struct uses namespace-qualified type name, other types don't
 					baseData.namespacePrefix = myNamespaceStr
 				end
@@ -1284,6 +1314,8 @@ local function processStruct(args)
 	end)
 	local code = {}
 	code[#code + 1] = indentOuter .. "{"
+	
+	-- new pointers
 	if #staticPtrDeclarationCode > 0 then
 		table.insert(staticPtrDeclarationCode, "")
 	end
@@ -1292,6 +1324,8 @@ local function processStruct(args)
 		table.insert(staticConvertToPointerDeclarationCode, "")
 	end
 	multipleInsert(code, #code + 1, staticConvertToPointerDeclarationCode)
+
+	-- fields
 	local currentOffset = -1
 	local prevOffset = args.offset or 0 -- for skipping bytes
 	local i = 1
@@ -1482,8 +1516,6 @@ function printStruct(name, includeMembers, excludeMembers, indentLevel, intended
 			end
 		end
 	end
-	--code = table.join(code, processed[name].code)
-	--io.save("structs.h", table.concat(code, "\n"))
 	for i, fileName in ipairs(usedFiles) do
 		local currentCode = code[fileName]
 		multipleInsert(currentCode.header, #currentCode.header + 1, {
@@ -2005,4 +2037,29 @@ function processConst(name)
 		table.insert(forwardDecl, string.format("extern void makeEnum%s_%d();", name, i))
 	end
 	multipleInsert(header, #header + 1, forwardDecl)
-	t
+	table.insert(header, "")
+	
+	-- source
+	
+	source[#source + 1] = "int "
+	local last = allKeys[#allKeys]
+	for _, k in ipairs(allKeys) do
+		table.insert(source, string.format("\t%s = INVALID_ID%s", formatName(k), k == last and ";" or ","))
+	end
+	table.insert(source, "")
+	
+	for _, i in ipairs{6, 7, 8} do
+		table.insert(source, string.format("void makeEnum%s_%d()", name, i))
+		table.insert(source, "{")
+		for v, k in sortpairs(table.invert(consts[i][name])) do
+			table.insert(source, string.format("\t%s = %d;", formatName(k), v))
+		end
+		
+		table.insert(source, "}")
+		table.insert(source, "")
+	end
+	table.insert(source, "")
+end
+
+local constsToProcess = {"Damage"}
+function wri
