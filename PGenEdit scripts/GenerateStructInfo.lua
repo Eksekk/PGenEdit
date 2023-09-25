@@ -439,13 +439,16 @@ local function generateFunctionCode(functionData, methods, structName, namespace
 			end
 			comment = comment .. " | defaults: " .. table.concat(t, ", ")
 		end
+		local retVal = ({["char*"] = "nullptr", bool = "false", int = "0"})[retStr]
+		local fbody = INDENT_CHARS .. (retVal and format("return %s;", retVal) or "")
 		local ccStr = select(def.cc + 1, "__stdcall", "__thiscall", "__fastcall", "__fastcall/*+eax*/")
 		local paramsStr = info and info.Sig and format("/*%s*/", info.Sig) or ""
-		table.insert(functionDeclCode, format(funcFormatDecl, retStr, ccStr, toCamelCase(def.name), paramsStr, comment))
+		local fname = toCamelCase(mname) -- using "mname" here also takes care of duplicated functions within class still having distinct names
+		table.insert(functionDeclCode, format(funcFormatDecl, retStr, ccStr, fname, paramsStr, comment))
 		multipleInsert(functionDefCode, #functionDefCode + 1, {
-			format(funcFormatDef, retStr, namespaceStr, structName, mname, paramsStr),
+			format(funcFormatDef, retStr, namespaceStr, structName, fname, paramsStr),
 			"{",
-			INDENT_CHARS .. "",
+			fbody,
 			"}",
 			""
 		})
@@ -696,13 +699,8 @@ do
 	local primitiveArrayOfPointersNoSize = "(*%s)"
 
 	function getArrayPointerString(arrays, last, addPointer, usePrimitiveArrays) -- for testing: https://cdecl.org/
-		local type
 		if usePrimitiveArrays then
-			type = last.name
-		else
-			type = (last.namespacePrefix or "") .. last.typeName .. (last.ptr and "*" or "") .. (last.constPtr and "const" or "")
-		end
-		if usePrimitiveArrays then
+			local type = last.name
 			for i = 1, #arrays do
 				local arr = arrays[i]
 				if arr.count == 0 then
@@ -715,21 +713,17 @@ do
 					end
 				end
 			end
+			return (last.namespacePrefix or "") .. last.typeName .. (last.ptr and "*" or "") .. (last.constPtr and "const" or "") .. (addPointer and "*" or "") .. type
 		else
+			local type = (last.namespacePrefix or "") .. last.typeName .. (last.ptr and "*" or "") .. (last.constPtr and "const" or "")
 			for i = #arrays, 1, -1 do
 				local arr = arrays[i]
 				if arr.count == 0 then
 					type = type .. "*"
 				else
 					type = stdArray:format(type, arr.count) .. (arr.ptr and "*" or "")
-					-- std::array<std::array<uint8_t, 128>*, 128> heightMap;
 				end
 			end
-		end
-		-- int a(*[5])[3]
-		if usePrimitiveArrays then
-			return last.typeName .. (last.ptr and "*" or "") .. (constPtr and "const" or "") .. (addPointer and "*" or "") .. type
-		else
 			return type .. (addPointer and "*" or "") .. " " .. last.name
 		end
 	end
@@ -773,6 +767,17 @@ local function processSingle(data, indentLevel, structName, namespaceStr, debugL
 	table.foreach(arrays or {}, function(v) v.pascalCaseName = v.name end)
 	data.name = toCamelCase(tostring(data.name))
 
+	local multilineComment -- if two lines or more, put comment before field
+	local function processMultiline(index, indent)
+		if multilineComment then
+			multilineComment[1] = "MMExt info: " .. multilineComment[1]
+			for i, line in ipairs(multilineComment) do
+				multilineComment[i] = indent .. "// " .. line
+			end
+			multipleInsert(s, index, multilineComment)
+			return true
+		end
+	end
 	local function doBaseType(doArrays)
 		local result = data.static and "static " or ""
 		-- structure, mem array, edit pchars, bools, bits
@@ -795,7 +800,13 @@ local function processSingle(data, indentLevel, structName, namespaceStr, debugL
 		end
 		local info = (infoData or {})[data.pascalCaseName] -- unions don't have info data
 		if info and type(info) == "string" then
-			comments[#comments] = comments[#comments] .. " | MMExt info: " .. info
+			local parts = info:gsub("\r\n", "\n"):split("\n")
+			if #parts == 1 then
+				local comment = " | MMExt info: " .. parts[1]
+				comments[#comments] = comments[#comments] .. comment
+			else
+				multilineComment = parts
+			end
 		end
 		if data.commentOut then
 			result = "// " .. result
@@ -830,6 +841,7 @@ local function processSingle(data, indentLevel, structName, namespaceStr, debugL
 		local old2, old3 = data.typeName, data.ptr -- hacky hacky
 		data.typeName = structName
 		data.ptr = nil
+		processMultiline(5, indentOuter)
 		s[#s + 1] = indentOuter .. doBaseType(true) .. ";"
 		table.insert(layoutAdd, memberField(arrays and arrays[1] or data))
 		data.typeName, data.ptr = old2, old3
@@ -842,6 +854,7 @@ local function processSingle(data, indentLevel, structName, namespaceStr, debugL
 				indentInner .. 		doBaseType(true) .. ";",
 				indentOuter .. "};"
 			}
+			processMultiline(4, indentInner)
 			layoutAdd = {
 				{type = "struct", value = {
 					{type = "padding", value = data.padStart},
@@ -849,13 +862,14 @@ local function processSingle(data, indentLevel, structName, namespaceStr, debugL
 				}
 			}}
 		else
-			s = s .. doBaseType(true)
+			s = {s .. doBaseType(true)}
+			processMultiline(1, indentOuter)
 			layoutAdd = {memberField(arrays and arrays[1] or data)}
 		end
 	end
 	local commentsStr = #comments > 0 and (" // " .. table.concat(comments, " | ")) or ""
 	if type(s) == "table" then
-		s[#s] = s[#s] .. commentsStr
+		s[#s] = s[#s] .. ";" .. commentsStr
 	else
 		s = s .. ";" .. commentsStr
 	end
@@ -1169,8 +1183,6 @@ local function processStruct(args)
 	if not args.union then
 		functionDeclCode, functionDefCode = generateFunctionCode(functionData, methods, args.name, myNamespaceStr)
 	end
-	print(table.concat(functionDeclCode, "\n"))
-	print(table.concat(functionDefCode, "\n"))
 
 	-- process members
 	for mname, f in sortpairs(members) do
@@ -1470,6 +1482,7 @@ function printStruct(name, includeMembers, excludeMembers, indentLevel, intended
 		ok, oldCode = pcall(internal.unpersist, fileContent)
 	end
 	local code = ok and oldCode or {}
+	local loadedSuccessfully = ok and true or false -- if more than one game, put files inside "combined" folder
 	-- for i, name in ipairs(args.structOrder) do
 	-- 	structureByFile[name] = {name} -- hack to help with doxygen
 	-- end
@@ -1565,11 +1578,14 @@ function printStruct(name, includeMembers, excludeMembers, indentLevel, intended
 			if not directoryPrefix and intendedForPgenedit then
 				headerFileName = string.format("C:\\Users\\Eksekk\\source\\repos\\PGenEdit\\PGenEditDLL\\headers\\structs\\%s.h", fileName)
 				sourceFileName = string.format("C:\\Users\\Eksekk\\source\\repos\\PGenEdit\\PGenEditDLL\\sources\\structs\\%s.cpp", fileName)
+			elseif loadedSuccessfully then
+				headerFileName = string.format("%s\\combined\\%s.h", dir, fileName)
+				sourceFileName = string.format("%s\\combined\\%s.cpp", dir, fileName)
 			else
 				headerFileName = string.format("%s\\MM%d\\%s.h", dir, Game.Version, fileName)
 				sourceFileName = string.format("%s\\MM%d\\%s.cpp", dir, Game.Version, fileName)
 			end
-			local luaDataFileName = (path.addslash(directoryPrefix) or "C:\\Users\\Eksekk\\source\\repos\\PGenEdit\\") .. "luaData.cpp"
+			local luaDataFileName = path.addslash(directoryPrefix or "C:\\Users\\Eksekk\\source\\repos\\PGenEdit") .. "luaData.cpp"
 			io.save(headerFileName, table.concat(currentCode.header, "\n"))
 			if #currentCode.source > 0 and intendedForPgenedit then
 				local prefix = {
@@ -1631,6 +1647,10 @@ function pr3(isLast)
 end
 
 function generateDefinitionsForPgenedit(isLast)
+	printStruct("GameStructure", nil, nil, nil, true, isLast)
+end
+
+function generateDefinitionsForPgeneditCmp(isLast)
 	printStruct("GameStructure", nil, nil, nil, true, isLast, "C:\\Users\\Eksekk\\structOffsetsPgenedit 2")
 end
 
@@ -2061,5 +2081,4 @@ function processConst(name)
 	table.insert(source, "")
 end
 
-local constsToProcess = {"Damage"}
-function wri
+local
