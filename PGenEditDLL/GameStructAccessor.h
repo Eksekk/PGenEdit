@@ -42,7 +42,7 @@ public:
 	}
 	virtual ArrayData getItemsTxtArrayData() override
 	{
-		return ArrayData(game->itemsTxt, game->itemsTxt_size);
+		return ArrayData(game->itemsTxt, game->itemsTxt_sizePtr);
 	}
 	virtual ArrayData getStdItemsTxtArrayData() override
 	{

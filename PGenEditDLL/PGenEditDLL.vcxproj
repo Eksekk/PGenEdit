@@ -178,8 +178,17 @@
     <ClCompile Include="sources\SkillsData.cpp" />
     <ClCompile Include="sources\SpellsData.cpp" />
     <ClCompile Include="sources\StatisticsData.cpp" />
+    <ClCompile Include="sources\structs\Bin.cpp" />
+    <ClCompile Include="sources\structs\Common.cpp" />
+    <ClCompile Include="sources\structs\GameDataStructs.cpp" />
+    <ClCompile Include="sources\structs\GameMap.cpp" />
+    <ClCompile Include="sources\structs\GameMisc.cpp" />
+    <ClCompile Include="sources\structs\GameParty.cpp" />
     <ClCompile Include="sources\structs\GameStructure.cpp" />
     <ClCompile Include="sources\structs\Lod.cpp" />
+    <ClCompile Include="sources\structs\MergeSpecific.cpp" />
+    <ClCompile Include="sources\structs\Monster.cpp" />
+    <ClCompile Include="sources\structs\Player.cpp" />
     <ClCompile Include="SpecificClassChooserPanel.cpp" />
     <ClCompile Include="StructAccessor.cpp" />
     <ClCompile Include="Tests.cpp" />

@@ -5,7 +5,7 @@
 struct ArrayData // TODO: wrap all suitable dynamic arrays inside this class
 {
 private:
-    std::variant<int, int*> countVariant;
+    std::variant<int, int*, uint32_t*> countVariant;
     void* myPtr;
 public:
 
@@ -32,7 +32,14 @@ public:
         countVariant = count;
     }
 
-    void* ptr() const
+    template<typename T>
+    ArrayData(T* data, uint32_t* count)
+    {
+        myPtr = data;
+        countVariant = count;
+    }
+
+    inline void* ptr() const
     {
         return myPtr;
     }
@@ -47,9 +54,13 @@ public:
         {
             return **val;
         }
+        else if (uint32_t* const* val = std::get_if<uint32_t*>(&countVariant))
+        {
+            return **val;
+        }
     }
 
-    void checkIndex(int index) const
+    inline void checkIndex(int index) const
     {
         const int size = this->size();
         wxASSERT_MSG(index >= 0 && index < size, wxString::Format("Out of bounds access with index '%d' (size is '%d')", index, size));

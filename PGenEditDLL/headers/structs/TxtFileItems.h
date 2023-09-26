@@ -6,15 +6,133 @@
 
 namespace mm6
 {
+	struct StdItemsTxtItem // size: 0x14
+	{
+		char* nameAdd; // EditPChar | 0x0 (0 decimal)
+		char* bonusStat; // EditPChar | 0x4 (4 decimal)
+		union
+		{
+			std::array<uint8_t, 9> chanceForSlot; // 0x8 (8 decimal)
+			struct
+			{
+				uint8_t arm; // 0x8 (8 decimal)
+				uint8_t shld; // 0x9 (9 decimal)
+				uint8_t helm; // 0xA (10 decimal)
+				uint8_t belt; // 0xB (11 decimal)
+				uint8_t cape; // 0xC (12 decimal)
+				uint8_t gaunt; // 0xD (13 decimal)
+				uint8_t boot; // 0xE (14 decimal)
+				uint8_t ring; // 0xF (15 decimal)
+				uint8_t amul; // 0x10 (16 decimal)
+			};
+		};
+		SKIP(3);
+	};
+	static_assert(sizeof(mm6::StdItemsTxtItem) == 0x14, "Invalid \"mm6::StdItemsTxtItem\" structure size");
+	static_assert(offsetof(mm6::StdItemsTxtItem, bonusStat) == 4);
+	static_assert(offsetof(mm6::StdItemsTxtItem, chanceForSlot) == 8);
+	static_assert(offsetof(mm6::StdItemsTxtItem, arm) == 8);
+	static_assert(offsetof(mm6::StdItemsTxtItem, shld) == 9);
+	static_assert(offsetof(mm6::StdItemsTxtItem, helm) == 10);
+	static_assert(offsetof(mm6::StdItemsTxtItem, belt) == 11);
+	static_assert(offsetof(mm6::StdItemsTxtItem, cape) == 12);
+	static_assert(offsetof(mm6::StdItemsTxtItem, gaunt) == 13);
+	static_assert(offsetof(mm6::StdItemsTxtItem, boot) == 14);
+	static_assert(offsetof(mm6::StdItemsTxtItem, ring) == 15);
+	static_assert(offsetof(mm6::StdItemsTxtItem, amul) == 16);
+
+
+
+	struct SpellsTxtItem // size: 0x1C
+	{
+		char* name; // EditPChar | 0x0 (0 decimal)
+		char* shortName; // EditPChar | 0x4 (4 decimal)
+		char* description; // EditPChar | 0x8 (8 decimal)
+		char* normal; // EditPChar | 0xC (12 decimal)
+		char* expert; // EditPChar | 0x10 (16 decimal)
+		char* master; // EditPChar | 0x14 (20 decimal)
+		uint8_t damageType; // 0x18 (24 decimal)
+		union
+		{
+			std::array<uint8_t, 3> spellPoints; // MMExt: 1..3, here 0..2 | 0x19 (25 decimal)
+			struct
+			{
+				uint8_t spellPointsNormal; // 0x19 (25 decimal)
+				uint8_t spellPointsExpert; // 0x1A (26 decimal)
+				uint8_t spellPointsMaster; // 0x1B (27 decimal)
+			};
+		};
+	};
+	static_assert(sizeof(mm6::SpellsTxtItem) == 0x1C, "Invalid \"mm6::SpellsTxtItem\" structure size");
+	static_assert(offsetof(mm6::SpellsTxtItem, shortName) == 4);
+	static_assert(offsetof(mm6::SpellsTxtItem, description) == 8);
+	static_assert(offsetof(mm6::SpellsTxtItem, normal) == 12);
+	static_assert(offsetof(mm6::SpellsTxtItem, expert) == 16);
+	static_assert(offsetof(mm6::SpellsTxtItem, master) == 20);
+	static_assert(offsetof(mm6::SpellsTxtItem, damageType) == 24);
+	static_assert(offsetof(mm6::SpellsTxtItem, spellPoints) == 25);
+	static_assert(offsetof(mm6::SpellsTxtItem, spellPointsNormal) == 25);
+	static_assert(offsetof(mm6::SpellsTxtItem, spellPointsExpert) == 26);
+	static_assert(offsetof(mm6::SpellsTxtItem, spellPointsMaster) == 27);
+
+
+
+	struct SpcItemsTxtItem // size: 0x1C
+	{
+		char* nameAdd; // EditPChar | 0x0 (0 decimal)
+		char* bonusStat; // EditPChar | 0x4 (4 decimal)
+		union
+		{
+			std::array<uint8_t, 12> chanceForSlot; // 0x8 (8 decimal)
+			struct
+			{
+				uint8_t W1; // 0x8 (8 decimal)
+				uint8_t W2; // 0x9 (9 decimal)
+				uint8_t miss; // 0xA (10 decimal)
+				uint8_t arm; // 0xB (11 decimal)
+				uint8_t shld; // 0xC (12 decimal)
+				uint8_t helm; // 0xD (13 decimal)
+				uint8_t belt; // 0xE (14 decimal)
+				uint8_t cape; // 0xF (15 decimal)
+				uint8_t gaunt; // 0x10 (16 decimal)
+				uint8_t boot; // 0x11 (17 decimal)
+				uint8_t ring; // 0x12 (18 decimal)
+				uint8_t amul; // 0x13 (19 decimal)
+			};
+		};
+		int32_t value; // 0x14 (20 decimal)
+		uint8_t lvl; // 0x18 (24 decimal)
+		SKIP(3);
+	};
+	static_assert(sizeof(mm6::SpcItemsTxtItem) == 0x1C, "Invalid \"mm6::SpcItemsTxtItem\" structure size");
+	static_assert(offsetof(mm6::SpcItemsTxtItem, bonusStat) == 4);
+	static_assert(offsetof(mm6::SpcItemsTxtItem, chanceForSlot) == 8);
+	static_assert(offsetof(mm6::SpcItemsTxtItem, W1) == 8);
+	static_assert(offsetof(mm6::SpcItemsTxtItem, W2) == 9);
+	static_assert(offsetof(mm6::SpcItemsTxtItem, miss) == 10);
+	static_assert(offsetof(mm6::SpcItemsTxtItem, arm) == 11);
+	static_assert(offsetof(mm6::SpcItemsTxtItem, shld) == 12);
+	static_assert(offsetof(mm6::SpcItemsTxtItem, helm) == 13);
+	static_assert(offsetof(mm6::SpcItemsTxtItem, belt) == 14);
+	static_assert(offsetof(mm6::SpcItemsTxtItem, cape) == 15);
+	static_assert(offsetof(mm6::SpcItemsTxtItem, gaunt) == 16);
+	static_assert(offsetof(mm6::SpcItemsTxtItem, boot) == 17);
+	static_assert(offsetof(mm6::SpcItemsTxtItem, ring) == 18);
+	static_assert(offsetof(mm6::SpcItemsTxtItem, amul) == 19);
+	static_assert(offsetof(mm6::SpcItemsTxtItem, value) == 20);
+	static_assert(offsetof(mm6::SpcItemsTxtItem, lvl) == 24);
+
+
+
 	struct NPCProfTxtItem // size: 0x4C
 	{
-		int32_t chance;
-		int32_t cost;
-		int32_t personality;
-		char* benefit; // EditPChar
-		char* joinText; // EditPChar
-		std::array<char*, 7> profNewsTopic; // EditPChar
-		std::array<char*, 7> profNewsText; // EditPChar
+		int32_t chance; // 0x0 (0 decimal)
+		int32_t cost; // 0x4 (4 decimal)
+		int32_t personality; // 0x8 (8 decimal)
+		char* benefit; // EditPChar | 0xC (12 decimal)
+		char* joinText; // EditPChar | 0x10 (16 decimal)
+		std::array<char*, 7> profNewsTopic; // EditPChar | 0x14 (20 decimal)
+		std::array<char*, 7> profNewsText; // EditPChar | 0x30 (48 decimal)
 	};
 	static_assert(sizeof(mm6::NPCProfTxtItem) == 0x4C, "Invalid \"mm6::NPCProfTxtItem\" structure size");
 	static_assert(offsetof(mm6::NPCProfTxtItem, cost) == 4);
@@ -28,33 +146,33 @@ namespace mm6
 
 	struct MapStatsItem // size: 0x38
 	{
-		char* name; // EditPChar
-		char* fileName; // EditPChar
-		char* monster1Pic; // EditPChar
-		char* monster2Pic; // EditPChar
-		char* monster3Pic; // EditPChar
-		int32_t resetCount;
-		int32_t firstVisitDay;
-		int32_t refillDays;
+		char* name; // EditPChar | 0x0 (0 decimal)
+		char* fileName; // EditPChar | 0x4 (4 decimal)
+		char* monster1Pic; // EditPChar | 0x8 (8 decimal)
+		char* monster2Pic; // EditPChar | 0xC (12 decimal)
+		char* monster3Pic; // EditPChar | 0x10 (16 decimal)
+		int32_t resetCount; // 0x14 (20 decimal)
+		int32_t firstVisitDay; // 0x18 (24 decimal)
+		int32_t refillDays; // 0x1C (28 decimal)
 		SKIP(1);
-		uint8_t lock;
-		uint8_t trap;
-		uint8_t tres;
-		uint8_t encounterChance;
-		uint8_t encounterChanceM1;
-		uint8_t encounterChanceM2;
-		uint8_t encounterChanceM3;
-		uint8_t mon1Dif;
-		uint8_t mon1Low;
-		uint8_t mon1Hi;
-		uint8_t mon2Dif;
-		uint8_t mon2Low;
-		uint8_t mon2Hi;
-		uint8_t mon3Dif;
-		uint8_t mon3Low;
-		uint8_t mon3Hi;
+		uint8_t lock; // 0x21 (33 decimal) | MMExt info: "x5 Lock" from MapStats.txt. In MM6 the condition for successful disarming is !Lua[[Lock*5 < player:GetDisarmTrapTotalSkill() + math.random(0, 9)]]. In MM7+ the condition is !Lua[[Lock*2 <= player:GetDisarmTrapTotalSkill()]].
+		uint8_t trap; // 0x22 (34 decimal) | MMExt info: "D20's Trap" from MapStats.txt. The damage is 'Trap' rolls of '1'-'20' damage.
+		uint8_t tres; // 0x23 (35 decimal)
+		uint8_t encounterChance; // 0x24 (36 decimal)
+		uint8_t encounterChanceM1; // 0x25 (37 decimal)
+		uint8_t encounterChanceM2; // 0x26 (38 decimal)
+		uint8_t encounterChanceM3; // 0x27 (39 decimal)
+		uint8_t mon1Dif; // 0x28 (40 decimal)
+		uint8_t mon1Low; // 0x29 (41 decimal)
+		uint8_t mon1Hi; // 0x2A (42 decimal)
+		uint8_t mon2Dif; // 0x2B (43 decimal)
+		uint8_t mon2Low; // 0x2C (44 decimal)
+		uint8_t mon2Hi; // 0x2D (45 decimal)
+		uint8_t mon3Dif; // 0x2E (46 decimal)
+		uint8_t mon3Low; // 0x2F (47 decimal)
+		uint8_t mon3Hi; // 0x30 (48 decimal)
 		SKIP(3);
-		uint8_t redbookTrack;
+		uint8_t redbookTrack; // 0x34 (52 decimal)
 		SKIP(3);
 	};
 	static_assert(sizeof(mm6::MapStatsItem) == 0x38, "Invalid \"mm6::MapStatsItem\" structure size");
@@ -85,155 +203,24 @@ namespace mm6
 
 
 
-	struct SpcItemsTxtItem // size: 0x1C
-	{
-		char* nameAdd; // EditPChar
-		char* bonusStat; // EditPChar
-		union
-		{
-			std::array<uint8_t, 12> chanceForSlot;
-			struct
-			{
-				uint8_t W1;
-				uint8_t W2;
-				uint8_t miss;
-				uint8_t arm;
-				uint8_t shld;
-				uint8_t helm;
-				uint8_t belt;
-				uint8_t cape;
-				uint8_t gaunt;
-				uint8_t boot;
-				uint8_t ring;
-				uint8_t amul;
-			};
-		};
-		int32_t value;
-		uint8_t lvl;
-		SKIP(3);
-	};
-	static_assert(sizeof(mm6::SpcItemsTxtItem) == 0x1C, "Invalid \"mm6::SpcItemsTxtItem\" structure size");
-	static_assert(offsetof(mm6::SpcItemsTxtItem, bonusStat) == 4);
-	static_assert(offsetof(mm6::SpcItemsTxtItem, chanceForSlot) == 8);
-	static_assert(offsetof(mm6::SpcItemsTxtItem, W1) == 8);
-	static_assert(offsetof(mm6::SpcItemsTxtItem, W2) == 9);
-	static_assert(offsetof(mm6::SpcItemsTxtItem, miss) == 10);
-	static_assert(offsetof(mm6::SpcItemsTxtItem, arm) == 11);
-	static_assert(offsetof(mm6::SpcItemsTxtItem, shld) == 12);
-	static_assert(offsetof(mm6::SpcItemsTxtItem, helm) == 13);
-	static_assert(offsetof(mm6::SpcItemsTxtItem, belt) == 14);
-	static_assert(offsetof(mm6::SpcItemsTxtItem, cape) == 15);
-	static_assert(offsetof(mm6::SpcItemsTxtItem, gaunt) == 16);
-	static_assert(offsetof(mm6::SpcItemsTxtItem, boot) == 17);
-	static_assert(offsetof(mm6::SpcItemsTxtItem, ring) == 18);
-	static_assert(offsetof(mm6::SpcItemsTxtItem, amul) == 19);
-	static_assert(offsetof(mm6::SpcItemsTxtItem, value) == 20);
-	static_assert(offsetof(mm6::SpcItemsTxtItem, lvl) == 24);
-
-
-
-	struct StdItemsTxtItem // size: 0x14
-	{
-		char* nameAdd; // EditPChar
-		char* bonusStat; // EditPChar
-		union
-		{
-			std::array<uint8_t, 9> chanceForSlot;
-			struct
-			{
-				uint8_t arm;
-				uint8_t shld;
-				uint8_t helm;
-				uint8_t belt;
-				uint8_t cape;
-				uint8_t gaunt;
-				uint8_t boot;
-				uint8_t ring;
-				uint8_t amul;
-			};
-		};
-		SKIP(3);
-	};
-	static_assert(sizeof(mm6::StdItemsTxtItem) == 0x14, "Invalid \"mm6::StdItemsTxtItem\" structure size");
-	static_assert(offsetof(mm6::StdItemsTxtItem, bonusStat) == 4);
-	static_assert(offsetof(mm6::StdItemsTxtItem, chanceForSlot) == 8);
-	static_assert(offsetof(mm6::StdItemsTxtItem, arm) == 8);
-	static_assert(offsetof(mm6::StdItemsTxtItem, shld) == 9);
-	static_assert(offsetof(mm6::StdItemsTxtItem, helm) == 10);
-	static_assert(offsetof(mm6::StdItemsTxtItem, belt) == 11);
-	static_assert(offsetof(mm6::StdItemsTxtItem, cape) == 12);
-	static_assert(offsetof(mm6::StdItemsTxtItem, gaunt) == 13);
-	static_assert(offsetof(mm6::StdItemsTxtItem, boot) == 14);
-	static_assert(offsetof(mm6::StdItemsTxtItem, ring) == 15);
-	static_assert(offsetof(mm6::StdItemsTxtItem, amul) == 16);
-
-
-
-	struct Events2DItem // size: 0x30
-	{
-		int16_t type;
-		int16_t picture;
-		char* name; // EditPChar
-		char* ownerName; // EditPChar
-		char* enterText; // EditPChar
-		char* ownerTitle; // EditPChar
-		int16_t pictureUnk;
-		int16_t state;
-		int16_t rep;
-		int16_t per;
-		int16_t c;
-		SKIP(2);
-		float val;
-		int16_t openHour;
-		int16_t closeHour;
-		int16_t exitPic;
-		int16_t exitMap;
-		union
-		{
-			int16_t questBitRestriction;
-			int16_t QBit;
-		};
-		SKIP(2);
-	};
-	static_assert(sizeof(mm6::Events2DItem) == 0x30, "Invalid \"mm6::Events2DItem\" structure size");
-	static_assert(offsetof(mm6::Events2DItem, picture) == 2);
-	static_assert(offsetof(mm6::Events2DItem, name) == 4);
-	static_assert(offsetof(mm6::Events2DItem, ownerName) == 8);
-	static_assert(offsetof(mm6::Events2DItem, enterText) == 12);
-	static_assert(offsetof(mm6::Events2DItem, ownerTitle) == 16);
-	static_assert(offsetof(mm6::Events2DItem, pictureUnk) == 20);
-	static_assert(offsetof(mm6::Events2DItem, state) == 22);
-	static_assert(offsetof(mm6::Events2DItem, rep) == 24);
-	static_assert(offsetof(mm6::Events2DItem, per) == 26);
-	static_assert(offsetof(mm6::Events2DItem, c) == 28);
-	static_assert(offsetof(mm6::Events2DItem, val) == 32);
-	static_assert(offsetof(mm6::Events2DItem, openHour) == 36);
-	static_assert(offsetof(mm6::Events2DItem, closeHour) == 38);
-	static_assert(offsetof(mm6::Events2DItem, exitPic) == 40);
-	static_assert(offsetof(mm6::Events2DItem, exitMap) == 42);
-	static_assert(offsetof(mm6::Events2DItem, questBitRestriction) == 44);
-	static_assert(offsetof(mm6::Events2DItem, QBit) == 44);
-
-
-
 	struct ItemsTxtItem // size: 0x28
 	{
-		char* picture; // EditPChar
-		char* name; // EditPChar
-		char* notIdentifiedName; // EditPChar
-		char* notes; // EditPChar
-		int32_t value;
-		uint8_t equipStat;
-		std::array<uint8_t, 1> skill; // Unknown type
-		uint8_t mod1DiceCount;
-		uint8_t mod1DiceSides;
-		uint8_t mod2;
-		uint8_t material;
-		std::array<uint8_t, 6> chanceByLevel; // MMExt: 1..6, here 0..5
-		int8_t idRepSt;
-		int8_t spriteIndex;
-		int16_t equipX;
-		int16_t equipY;
+		char* picture; // EditPChar | 0x0 (0 decimal)
+		char* name; // EditPChar | 0x4 (4 decimal)
+		char* notIdentifiedName; // EditPChar | 0x8 (8 decimal)
+		char* notes; // EditPChar | 0xC (12 decimal)
+		int32_t value; // 0x10 (16 decimal)
+		uint8_t equipStat; // 0x14 (20 decimal) | MMExt info: Subtract 1 from #const.ItemType:# value
+		std::array<uint8_t, 1> skill; // Unknown type | 0x15 (21 decimal)
+		uint8_t mod1DiceCount; // 0x16 (22 decimal)
+		uint8_t mod1DiceSides; // 0x17 (23 decimal)
+		uint8_t mod2; // 0x18 (24 decimal)
+		uint8_t material; // 0x19 (25 decimal) | MMExt info: 0 = normal,  1 = artifact,  2 = relic,  3 = special
+		std::array<uint8_t, 6> chanceByLevel; // MMExt: 1..6, here 0..5 | 0x1A (26 decimal)
+		int8_t idRepSt; // 0x20 (32 decimal)
+		int8_t spriteIndex; // 0x21 (33 decimal)
+		int16_t equipX; // 0x22 (34 decimal)
+		int16_t equipY; // 0x24 (36 decimal)
 		SKIP(2);
 	};
 	static_assert(sizeof(mm6::ItemsTxtItem) == 0x28, "Invalid \"mm6::ItemsTxtItem\" structure size");
@@ -255,65 +242,164 @@ namespace mm6
 
 
 
-	struct SpellsTxtItem // size: 0x1C
+	struct Events2DItem // size: 0x30
 	{
-		char* name; // EditPChar
-		char* shortName; // EditPChar
-		char* description; // EditPChar
-		char* normal; // EditPChar
-		char* expert; // EditPChar
-		char* master; // EditPChar
-		uint8_t damageType;
+		int16_t type; // 0x0 (0 decimal)
+		int16_t picture; // 0x2 (2 decimal)
+		char* name; // EditPChar | 0x4 (4 decimal)
+		char* ownerName; // EditPChar | 0x8 (8 decimal)
+		char* enterText; // EditPChar | 0xC (12 decimal)
+		char* ownerTitle; // EditPChar | 0x10 (16 decimal)
 		union
 		{
-			std::array<uint8_t, 3> spellPoints; // MMExt: 1..3, here 0..2
-			struct
-			{
-				uint8_t spellPointsNormal;
-				uint8_t spellPointsExpert;
-				uint8_t spellPointsMaster;
-			};
+			int16_t ownerPicture; // 0x14 (20 decimal) | MMExt info: Was called 'PictureUnk' before MMExtension v2.3, old name is supported for backward compatibility
+			int16_t pictureUnk; // 0x14 (20 decimal)
 		};
+		int16_t state; // 0x16 (22 decimal)
+		int16_t rep; // 0x18 (24 decimal)
+		int16_t per; // 0x1A (26 decimal)
+		int16_t c; // 0x1C (28 decimal)
+		SKIP(2);
+		float val; // 0x20 (32 decimal)
+		int16_t openHour; // 0x24 (36 decimal)
+		int16_t closeHour; // 0x26 (38 decimal)
+		int16_t exitPic; // 0x28 (40 decimal)
+		int16_t exitMap; // 0x2A (42 decimal)
+		union
+		{
+			int16_t QBit; // 0x2C (44 decimal) | MMExt info: Was called 'QuestBitRestriction' before MMExtension v2.3, old name is supported for backward compatibility
+			int16_t questBitRestriction; // 0x2C (44 decimal)
+		};
+		SKIP(2);
 	};
-	static_assert(sizeof(mm6::SpellsTxtItem) == 0x1C, "Invalid \"mm6::SpellsTxtItem\" structure size");
-	static_assert(offsetof(mm6::SpellsTxtItem, shortName) == 4);
-	static_assert(offsetof(mm6::SpellsTxtItem, description) == 8);
-	static_assert(offsetof(mm6::SpellsTxtItem, normal) == 12);
-	static_assert(offsetof(mm6::SpellsTxtItem, expert) == 16);
-	static_assert(offsetof(mm6::SpellsTxtItem, master) == 20);
-	static_assert(offsetof(mm6::SpellsTxtItem, damageType) == 24);
-	static_assert(offsetof(mm6::SpellsTxtItem, spellPoints) == 25);
-	static_assert(offsetof(mm6::SpellsTxtItem, spellPointsNormal) == 25);
-	static_assert(offsetof(mm6::SpellsTxtItem, spellPointsExpert) == 26);
-	static_assert(offsetof(mm6::SpellsTxtItem, spellPointsMaster) == 27);
+	static_assert(sizeof(mm6::Events2DItem) == 0x30, "Invalid \"mm6::Events2DItem\" structure size");
+	static_assert(offsetof(mm6::Events2DItem, picture) == 2);
+	static_assert(offsetof(mm6::Events2DItem, name) == 4);
+	static_assert(offsetof(mm6::Events2DItem, ownerName) == 8);
+	static_assert(offsetof(mm6::Events2DItem, enterText) == 12);
+	static_assert(offsetof(mm6::Events2DItem, ownerTitle) == 16);
+	static_assert(offsetof(mm6::Events2DItem, ownerPicture) == 20);
+	static_assert(offsetof(mm6::Events2DItem, pictureUnk) == 20);
+	static_assert(offsetof(mm6::Events2DItem, state) == 22);
+	static_assert(offsetof(mm6::Events2DItem, rep) == 24);
+	static_assert(offsetof(mm6::Events2DItem, per) == 26);
+	static_assert(offsetof(mm6::Events2DItem, c) == 28);
+	static_assert(offsetof(mm6::Events2DItem, val) == 32);
+	static_assert(offsetof(mm6::Events2DItem, openHour) == 36);
+	static_assert(offsetof(mm6::Events2DItem, closeHour) == 38);
+	static_assert(offsetof(mm6::Events2DItem, exitPic) == 40);
+	static_assert(offsetof(mm6::Events2DItem, exitMap) == 42);
+	static_assert(offsetof(mm6::Events2DItem, QBit) == 44);
+	static_assert(offsetof(mm6::Events2DItem, questBitRestriction) == 44);
 }
 namespace mm7
 {
-	struct SpcItemsTxtItem // size: 0x1C
+	struct StdItemsTxtItem // size: 0x14
 	{
-		char* nameAdd; // EditPChar
-		char* bonusStat; // EditPChar
+		char* nameAdd; // EditPChar | 0x0 (0 decimal)
+		char* bonusStat; // EditPChar | 0x4 (4 decimal)
 		union
 		{
-			std::array<uint8_t, 12> chanceForSlot;
+			std::array<uint8_t, 9> chanceForSlot; // 0x8 (8 decimal)
 			struct
 			{
-				uint8_t W1;
-				uint8_t W2;
-				uint8_t miss;
-				uint8_t arm;
-				uint8_t shld;
-				uint8_t helm;
-				uint8_t belt;
-				uint8_t cape;
-				uint8_t gaunt;
-				uint8_t boot;
-				uint8_t ring;
-				uint8_t amul;
+				uint8_t arm; // 0x8 (8 decimal)
+				uint8_t shld; // 0x9 (9 decimal)
+				uint8_t helm; // 0xA (10 decimal)
+				uint8_t belt; // 0xB (11 decimal)
+				uint8_t cape; // 0xC (12 decimal)
+				uint8_t gaunt; // 0xD (13 decimal)
+				uint8_t boot; // 0xE (14 decimal)
+				uint8_t ring; // 0xF (15 decimal)
+				uint8_t amul; // 0x10 (16 decimal)
 			};
 		};
-		int32_t value;
-		uint8_t lvl;
+		SKIP(3);
+	};
+	static_assert(sizeof(mm7::StdItemsTxtItem) == 0x14, "Invalid \"mm7::StdItemsTxtItem\" structure size");
+	static_assert(offsetof(mm7::StdItemsTxtItem, bonusStat) == 4);
+	static_assert(offsetof(mm7::StdItemsTxtItem, chanceForSlot) == 8);
+	static_assert(offsetof(mm7::StdItemsTxtItem, arm) == 8);
+	static_assert(offsetof(mm7::StdItemsTxtItem, shld) == 9);
+	static_assert(offsetof(mm7::StdItemsTxtItem, helm) == 10);
+	static_assert(offsetof(mm7::StdItemsTxtItem, belt) == 11);
+	static_assert(offsetof(mm7::StdItemsTxtItem, cape) == 12);
+	static_assert(offsetof(mm7::StdItemsTxtItem, gaunt) == 13);
+	static_assert(offsetof(mm7::StdItemsTxtItem, boot) == 14);
+	static_assert(offsetof(mm7::StdItemsTxtItem, ring) == 15);
+	static_assert(offsetof(mm7::StdItemsTxtItem, amul) == 16);
+
+
+
+	struct SpellsTxtItem // size: 0x24
+	{
+		char* name; // EditPChar | 0x0 (0 decimal)
+		char* shortName; // EditPChar | 0x4 (4 decimal)
+		char* description; // EditPChar | 0x8 (8 decimal)
+		char* normal; // EditPChar | 0xC (12 decimal)
+		char* expert; // EditPChar | 0x10 (16 decimal)
+		char* master; // EditPChar | 0x14 (20 decimal)
+		union
+		{
+			char* GM; // EditPChar | 0x18 (24 decimal)
+			char* grandMaster; // EditPChar | 0x18 (24 decimal)
+		};
+		uint8_t damageType; // 0x1C (28 decimal)
+		union
+		{
+			std::array<uint8_t, 4> spellPoints; // MMExt: 1..4, here 0..3 | 0x1D (29 decimal)
+			struct
+			{
+				uint8_t spellPointsNormal; // 0x1D (29 decimal)
+				uint8_t spellPointsExpert; // 0x1E (30 decimal)
+				uint8_t spellPointsMaster; // 0x1F (31 decimal)
+				uint8_t spellPointsGM; // 0x20 (32 decimal)
+			};
+		};
+		SKIP(3);
+	};
+	static_assert(sizeof(mm7::SpellsTxtItem) == 0x24, "Invalid \"mm7::SpellsTxtItem\" structure size");
+	static_assert(offsetof(mm7::SpellsTxtItem, shortName) == 4);
+	static_assert(offsetof(mm7::SpellsTxtItem, description) == 8);
+	static_assert(offsetof(mm7::SpellsTxtItem, normal) == 12);
+	static_assert(offsetof(mm7::SpellsTxtItem, expert) == 16);
+	static_assert(offsetof(mm7::SpellsTxtItem, master) == 20);
+	static_assert(offsetof(mm7::SpellsTxtItem, GM) == 24);
+	static_assert(offsetof(mm7::SpellsTxtItem, grandMaster) == 24);
+	static_assert(offsetof(mm7::SpellsTxtItem, damageType) == 28);
+	static_assert(offsetof(mm7::SpellsTxtItem, spellPoints) == 29);
+	static_assert(offsetof(mm7::SpellsTxtItem, spellPointsNormal) == 29);
+	static_assert(offsetof(mm7::SpellsTxtItem, spellPointsExpert) == 30);
+	static_assert(offsetof(mm7::SpellsTxtItem, spellPointsMaster) == 31);
+	static_assert(offsetof(mm7::SpellsTxtItem, spellPointsGM) == 32);
+
+
+
+	struct SpcItemsTxtItem // size: 0x1C
+	{
+		char* nameAdd; // EditPChar | 0x0 (0 decimal)
+		char* bonusStat; // EditPChar | 0x4 (4 decimal)
+		union
+		{
+			std::array<uint8_t, 12> chanceForSlot; // 0x8 (8 decimal)
+			struct
+			{
+				uint8_t W1; // 0x8 (8 decimal)
+				uint8_t W2; // 0x9 (9 decimal)
+				uint8_t miss; // 0xA (10 decimal)
+				uint8_t arm; // 0xB (11 decimal)
+				uint8_t shld; // 0xC (12 decimal)
+				uint8_t helm; // 0xD (13 decimal)
+				uint8_t belt; // 0xE (14 decimal)
+				uint8_t cape; // 0xF (15 decimal)
+				uint8_t gaunt; // 0x10 (16 decimal)
+				uint8_t boot; // 0x11 (17 decimal)
+				uint8_t ring; // 0x12 (18 decimal)
+				uint8_t amul; // 0x13 (19 decimal)
+			};
+		};
+		int32_t value; // 0x14 (20 decimal)
+		uint8_t lvl; // 0x18 (24 decimal)
 		SKIP(3);
 	};
 	static_assert(sizeof(mm7::SpcItemsTxtItem) == 0x1C, "Invalid \"mm7::SpcItemsTxtItem\" structure size");
@@ -336,125 +422,55 @@ namespace mm7
 
 
 
-	struct StdItemsTxtItem // size: 0x14
+	struct NPCProfTxtItem // size: 0x14
 	{
-		char* nameAdd; // EditPChar
-		char* bonusStat; // EditPChar
-		union
-		{
-			std::array<uint8_t, 9> chanceForSlot;
-			struct
-			{
-				uint8_t arm;
-				uint8_t shld;
-				uint8_t helm;
-				uint8_t belt;
-				uint8_t cape;
-				uint8_t gaunt;
-				uint8_t boot;
-				uint8_t ring;
-				uint8_t amul;
-			};
-		};
-		SKIP(3);
+		int32_t cost; // 0x0 (0 decimal)
+		char* benefit; // EditPChar | 0x4 (4 decimal)
+		char* actionText; // EditPChar | 0x8 (8 decimal)
+		char* joinText; // EditPChar | 0xC (12 decimal)
+		char* dismissText; // EditPChar | 0x10 (16 decimal)
 	};
-	static_assert(sizeof(mm7::StdItemsTxtItem) == 0x14, "Invalid \"mm7::StdItemsTxtItem\" structure size");
-	static_assert(offsetof(mm7::StdItemsTxtItem, bonusStat) == 4);
-	static_assert(offsetof(mm7::StdItemsTxtItem, chanceForSlot) == 8);
-	static_assert(offsetof(mm7::StdItemsTxtItem, arm) == 8);
-	static_assert(offsetof(mm7::StdItemsTxtItem, shld) == 9);
-	static_assert(offsetof(mm7::StdItemsTxtItem, helm) == 10);
-	static_assert(offsetof(mm7::StdItemsTxtItem, belt) == 11);
-	static_assert(offsetof(mm7::StdItemsTxtItem, cape) == 12);
-	static_assert(offsetof(mm7::StdItemsTxtItem, gaunt) == 13);
-	static_assert(offsetof(mm7::StdItemsTxtItem, boot) == 14);
-	static_assert(offsetof(mm7::StdItemsTxtItem, ring) == 15);
-	static_assert(offsetof(mm7::StdItemsTxtItem, amul) == 16);
-
-
-
-	struct Events2DItem // size: 0x34
-	{
-		int16_t type;
-		int16_t picture;
-		char* name; // EditPChar
-		char* ownerName; // EditPChar
-		char* enterText; // EditPChar
-		char* ownerTitle; // EditPChar
-		int16_t pictureUnk;
-		int16_t state;
-		int16_t rep;
-		int16_t per;
-		int16_t c;
-		SKIP(2);
-		float val;
-		float a;
-		int16_t openHour;
-		int16_t closeHour;
-		int16_t exitPic;
-		int16_t exitMap;
-		union
-		{
-			int16_t questBitRestriction;
-			int16_t QBit;
-		};
-		SKIP(2);
-	};
-	static_assert(sizeof(mm7::Events2DItem) == 0x34, "Invalid \"mm7::Events2DItem\" structure size");
-	static_assert(offsetof(mm7::Events2DItem, picture) == 2);
-	static_assert(offsetof(mm7::Events2DItem, name) == 4);
-	static_assert(offsetof(mm7::Events2DItem, ownerName) == 8);
-	static_assert(offsetof(mm7::Events2DItem, enterText) == 12);
-	static_assert(offsetof(mm7::Events2DItem, ownerTitle) == 16);
-	static_assert(offsetof(mm7::Events2DItem, pictureUnk) == 20);
-	static_assert(offsetof(mm7::Events2DItem, state) == 22);
-	static_assert(offsetof(mm7::Events2DItem, rep) == 24);
-	static_assert(offsetof(mm7::Events2DItem, per) == 26);
-	static_assert(offsetof(mm7::Events2DItem, c) == 28);
-	static_assert(offsetof(mm7::Events2DItem, val) == 32);
-	static_assert(offsetof(mm7::Events2DItem, a) == 36);
-	static_assert(offsetof(mm7::Events2DItem, openHour) == 40);
-	static_assert(offsetof(mm7::Events2DItem, closeHour) == 42);
-	static_assert(offsetof(mm7::Events2DItem, exitPic) == 44);
-	static_assert(offsetof(mm7::Events2DItem, exitMap) == 46);
-	static_assert(offsetof(mm7::Events2DItem, questBitRestriction) == 48);
-	static_assert(offsetof(mm7::Events2DItem, QBit) == 48);
+	static_assert(sizeof(mm7::NPCProfTxtItem) == 0x14, "Invalid \"mm7::NPCProfTxtItem\" structure size");
+	static_assert(offsetof(mm7::NPCProfTxtItem, benefit) == 4);
+	static_assert(offsetof(mm7::NPCProfTxtItem, actionText) == 8);
+	static_assert(offsetof(mm7::NPCProfTxtItem, joinText) == 12);
+	static_assert(offsetof(mm7::NPCProfTxtItem, dismissText) == 16);
 
 
 
 	struct MapStatsItem // size: 0x44
 	{
-		char* name; // EditPChar
-		char* fileName; // EditPChar
-		char* monster1Pic; // EditPChar
-		char* monster2Pic; // EditPChar
-		char* monster3Pic; // EditPChar
-		int32_t resetCount;
-		int32_t firstVisitDay;
-		int32_t refillDays;
-		int32_t alertDays;
-		int32_t stealPerm;
-		int32_t per;
+		char* name; // EditPChar | 0x0 (0 decimal)
+		char* fileName; // EditPChar | 0x4 (4 decimal)
+		char* monster1Pic; // EditPChar | 0x8 (8 decimal)
+		char* monster2Pic; // EditPChar | 0xC (12 decimal)
+		char* monster3Pic; // EditPChar | 0x10 (16 decimal)
+		int32_t resetCount; // 0x14 (20 decimal)
+		int32_t firstVisitDay; // 0x18 (24 decimal)
+		int32_t refillDays; // 0x1C (28 decimal)
+		int32_t alertDays; // 0x20 (32 decimal)
+		int32_t stealPerm; // 0x24 (36 decimal)
+		int32_t per; // 0x28 (40 decimal)
 		SKIP(1);
-		uint8_t lock;
-		uint8_t trap;
-		uint8_t tres;
-		uint8_t encounterChance;
-		uint8_t encounterChanceM1;
-		uint8_t encounterChanceM2;
-		uint8_t encounterChanceM3;
-		uint8_t mon1Dif;
-		uint8_t mon1Low;
-		uint8_t mon1Hi;
-		uint8_t mon2Dif;
-		uint8_t mon2Low;
-		uint8_t mon2Hi;
-		uint8_t mon3Dif;
-		uint8_t mon3Low;
-		uint8_t mon3Hi;
+		uint8_t lock; // 0x2D (45 decimal) | MMExt info: "x5 Lock" from MapStats.txt. In MM6 the condition for successful disarming is !Lua[[Lock*5 < player:GetDisarmTrapTotalSkill() + math.random(0, 9)]]. In MM7+ the condition is !Lua[[Lock*2 <= player:GetDisarmTrapTotalSkill()]].
+		uint8_t trap; // 0x2E (46 decimal) | MMExt info: "D20's Trap" from MapStats.txt. The damage is 'Trap' rolls of '1'-'20' damage.
+		uint8_t tres; // 0x2F (47 decimal)
+		uint8_t encounterChance; // 0x30 (48 decimal)
+		uint8_t encounterChanceM1; // 0x31 (49 decimal)
+		uint8_t encounterChanceM2; // 0x32 (50 decimal)
+		uint8_t encounterChanceM3; // 0x33 (51 decimal)
+		uint8_t mon1Dif; // 0x34 (52 decimal)
+		uint8_t mon1Low; // 0x35 (53 decimal)
+		uint8_t mon1Hi; // 0x36 (54 decimal)
+		uint8_t mon2Dif; // 0x37 (55 decimal)
+		uint8_t mon2Low; // 0x38 (56 decimal)
+		uint8_t mon2Hi; // 0x39 (57 decimal)
+		uint8_t mon3Dif; // 0x3A (58 decimal)
+		uint8_t mon3Low; // 0x3B (59 decimal)
+		uint8_t mon3Hi; // 0x3C (60 decimal)
 		SKIP(3);
-		uint8_t redbookTrack;
-		uint8_t eaxEnvironments;
+		uint8_t redbookTrack; // 0x40 (64 decimal)
+		uint8_t eaxEnvironments; // 0x41 (65 decimal)
 		SKIP(2);
 	};
 	static_assert(sizeof(mm7::MapStatsItem) == 0x44, "Invalid \"mm7::MapStatsItem\" structure size");
@@ -491,27 +507,27 @@ namespace mm7
 
 	struct ItemsTxtItem // size: 0x30
 	{
-		char* picture; // EditPChar
-		char* name; // EditPChar
-		char* notIdentifiedName; // EditPChar
-		char* notes; // EditPChar
-		int32_t value;
-		int16_t spriteIndex;
+		char* picture; // EditPChar | 0x0 (0 decimal)
+		char* name; // EditPChar | 0x4 (4 decimal)
+		char* notIdentifiedName; // EditPChar | 0x8 (8 decimal)
+		char* notes; // EditPChar | 0xC (12 decimal)
+		int32_t value; // 0x10 (16 decimal)
+		int16_t spriteIndex; // 0x14 (20 decimal)
 		SKIP(2);
-		int16_t equipX;
-		int16_t equipY;
-		uint8_t equipStat;
-		uint8_t skill;
-		uint8_t mod1DiceCount;
-		uint8_t mod1DiceSides;
-		uint8_t mod2;
-		uint8_t material;
-		uint8_t bonus2;
-		uint8_t bonus;
-		uint8_t bonusStrength;
+		int16_t equipX; // 0x18 (24 decimal)
+		int16_t equipY; // 0x1A (26 decimal)
+		uint8_t equipStat; // 0x1C (28 decimal) | MMExt info: Subtract 1 from #const.ItemType:# value
+		uint8_t skill; // 0x1D (29 decimal)
+		uint8_t mod1DiceCount; // 0x1E (30 decimal)
+		uint8_t mod1DiceSides; // 0x1F (31 decimal)
+		uint8_t mod2; // 0x20 (32 decimal)
+		uint8_t material; // 0x21 (33 decimal) | MMExt info: 0 = normal,  1 = artifact,  2 = relic,  3 = special
+		uint8_t bonus2; // 0x22 (34 decimal) | MMExt info: VarA
+		uint8_t bonus; // 0x23 (35 decimal) | MMExt info: VarA
+		uint8_t bonusStrength; // 0x24 (36 decimal) | MMExt info: VarB
 		SKIP(3);
-		std::array<uint8_t, 6> chanceByLevel; // MMExt: 1..6, here 0..5
-		int8_t idRepSt;
+		std::array<uint8_t, 6> chanceByLevel; // MMExt: 1..6, here 0..5 | 0x28 (40 decimal)
+		int8_t idRepSt; // 0x2E (46 decimal)
 		SKIP(1);
 	};
 	static_assert(sizeof(mm7::ItemsTxtItem) == 0x30, "Invalid \"mm7::ItemsTxtItem\" structure size");
@@ -536,71 +552,65 @@ namespace mm7
 
 
 
-	struct SpellsTxtItem // size: 0x24
+	struct Events2DItem // size: 0x34
 	{
-		char* name; // EditPChar
-		char* shortName; // EditPChar
-		char* description; // EditPChar
-		char* normal; // EditPChar
-		char* expert; // EditPChar
-		char* master; // EditPChar
+		int16_t type; // 0x0 (0 decimal)
+		int16_t picture; // 0x2 (2 decimal)
+		char* name; // EditPChar | 0x4 (4 decimal)
+		char* ownerName; // EditPChar | 0x8 (8 decimal)
+		char* enterText; // EditPChar | 0xC (12 decimal)
+		char* ownerTitle; // EditPChar | 0x10 (16 decimal)
 		union
 		{
-			char* GM; // EditPChar
-			char* grandMaster; // EditPChar
+			int16_t ownerPicture; // 0x14 (20 decimal) | MMExt info: Was called 'PictureUnk' before MMExtension v2.3, old name is supported for backward compatibility
+			int16_t pictureUnk; // 0x14 (20 decimal)
 		};
-		uint8_t damageType;
+		int16_t state; // 0x16 (22 decimal)
+		int16_t rep; // 0x18 (24 decimal)
+		int16_t per; // 0x1A (26 decimal)
+		int16_t c; // 0x1C (28 decimal)
+		SKIP(2);
+		float val; // 0x20 (32 decimal)
+		float a; // 0x24 (36 decimal)
+		int16_t openHour; // 0x28 (40 decimal)
+		int16_t closeHour; // 0x2A (42 decimal)
+		int16_t exitPic; // 0x2C (44 decimal)
+		int16_t exitMap; // 0x2E (46 decimal)
 		union
 		{
-			std::array<uint8_t, 4> spellPoints; // MMExt: 1..4, here 0..3
-			struct
-			{
-				uint8_t spellPointsNormal;
-				uint8_t spellPointsExpert;
-				uint8_t spellPointsMaster;
-				uint8_t spellPointsGM;
-			};
+			int16_t QBit; // 0x30 (48 decimal) | MMExt info: Was called 'QuestBitRestriction' before MMExtension v2.3, old name is supported for backward compatibility
+			int16_t questBitRestriction; // 0x30 (48 decimal)
 		};
-		SKIP(3);
+		SKIP(2);
 	};
-	static_assert(sizeof(mm7::SpellsTxtItem) == 0x24, "Invalid \"mm7::SpellsTxtItem\" structure size");
-	static_assert(offsetof(mm7::SpellsTxtItem, shortName) == 4);
-	static_assert(offsetof(mm7::SpellsTxtItem, description) == 8);
-	static_assert(offsetof(mm7::SpellsTxtItem, normal) == 12);
-	static_assert(offsetof(mm7::SpellsTxtItem, expert) == 16);
-	static_assert(offsetof(mm7::SpellsTxtItem, master) == 20);
-	static_assert(offsetof(mm7::SpellsTxtItem, GM) == 24);
-	static_assert(offsetof(mm7::SpellsTxtItem, grandMaster) == 24);
-	static_assert(offsetof(mm7::SpellsTxtItem, damageType) == 28);
-	static_assert(offsetof(mm7::SpellsTxtItem, spellPoints) == 29);
-	static_assert(offsetof(mm7::SpellsTxtItem, spellPointsNormal) == 29);
-	static_assert(offsetof(mm7::SpellsTxtItem, spellPointsExpert) == 30);
-	static_assert(offsetof(mm7::SpellsTxtItem, spellPointsMaster) == 31);
-	static_assert(offsetof(mm7::SpellsTxtItem, spellPointsGM) == 32);
-
-
-
-	struct NPCProfTxtItem // size: 0x14
-	{
-		int32_t cost;
-		char* benefit; // EditPChar
-		char* actionText; // EditPChar
-		char* joinText; // EditPChar
-		char* dismissText; // EditPChar
-	};
-	static_assert(sizeof(mm7::NPCProfTxtItem) == 0x14, "Invalid \"mm7::NPCProfTxtItem\" structure size");
-	static_assert(offsetof(mm7::NPCProfTxtItem, benefit) == 4);
-	static_assert(offsetof(mm7::NPCProfTxtItem, actionText) == 8);
-	static_assert(offsetof(mm7::NPCProfTxtItem, joinText) == 12);
-	static_assert(offsetof(mm7::NPCProfTxtItem, dismissText) == 16);
+	static_assert(sizeof(mm7::Events2DItem) == 0x34, "Invalid \"mm7::Events2DItem\" structure size");
+	static_assert(offsetof(mm7::Events2DItem, picture) == 2);
+	static_assert(offsetof(mm7::Events2DItem, name) == 4);
+	static_assert(offsetof(mm7::Events2DItem, ownerName) == 8);
+	static_assert(offsetof(mm7::Events2DItem, enterText) == 12);
+	static_assert(offsetof(mm7::Events2DItem, ownerTitle) == 16);
+	static_assert(offsetof(mm7::Events2DItem, ownerPicture) == 20);
+	static_assert(offsetof(mm7::Events2DItem, pictureUnk) == 20);
+	static_assert(offsetof(mm7::Events2DItem, state) == 22);
+	static_assert(offsetof(mm7::Events2DItem, rep) == 24);
+	static_assert(offsetof(mm7::Events2DItem, per) == 26);
+	static_assert(offsetof(mm7::Events2DItem, c) == 28);
+	static_assert(offsetof(mm7::Events2DItem, val) == 32);
+	static_assert(offsetof(mm7::Events2DItem, a) == 36);
+	static_assert(offsetof(mm7::Events2DItem, openHour) == 40);
+	static_assert(offsetof(mm7::Events2DItem, closeHour) == 42);
+	static_assert(offsetof(mm7::Events2DItem, exitPic) == 44);
+	static_assert(offsetof(mm7::Events2DItem, exitMap) == 46);
+	static_assert(offsetof(mm7::Events2DItem, QBit) == 48);
+	static_assert(offsetof(mm7::Events2DItem, questBitRestriction) == 48);
 
 
 
 	struct HistoryTxtItem // size: 0xC
 	{
-		char* text; // EditPChar
-		char* title; // EditPChar
-		int8_t time;
+		char* text; // EditPChar | 0x0 (0 decimal)
+		char* title; // EditPChar | 0x4 (4 decimal)
+		int8_t time; // 0x8 (8 decimal)
 		SKIP(3);
 	};
 	static_assert(sizeof(mm7::HistoryTxtItem) == 0xC, "Invalid \"mm7::HistoryTxtItem\" structure size");
@@ -611,22 +621,22 @@ namespace mm8
 {
 	struct StdItemsTxtItem // size: 0x14
 	{
-		char* nameAdd; // EditPChar
-		char* bonusStat; // EditPChar
+		char* nameAdd; // EditPChar | 0x0 (0 decimal)
+		char* bonusStat; // EditPChar | 0x4 (4 decimal)
 		union
 		{
-			std::array<uint8_t, 9> chanceForSlot;
+			std::array<uint8_t, 9> chanceForSlot; // 0x8 (8 decimal)
 			struct
 			{
-				uint8_t arm;
-				uint8_t shld;
-				uint8_t helm;
-				uint8_t belt;
-				uint8_t cape;
-				uint8_t gaunt;
-				uint8_t boot;
-				uint8_t ring;
-				uint8_t amul;
+				uint8_t arm; // 0x8 (8 decimal)
+				uint8_t shld; // 0x9 (9 decimal)
+				uint8_t helm; // 0xA (10 decimal)
+				uint8_t belt; // 0xB (11 decimal)
+				uint8_t cape; // 0xC (12 decimal)
+				uint8_t gaunt; // 0xD (13 decimal)
+				uint8_t boot; // 0xE (14 decimal)
+				uint8_t ring; // 0xF (15 decimal)
+				uint8_t amul; // 0x10 (16 decimal)
 			};
 		};
 		SKIP(3);
@@ -646,31 +656,75 @@ namespace mm8
 
 
 
-	struct SpcItemsTxtItem // size: 0x1C
+	struct SpellsTxtItem // size: 0x24
 	{
-		char* nameAdd; // EditPChar
-		char* bonusStat; // EditPChar
+		char* name; // EditPChar | 0x0 (0 decimal)
+		char* shortName; // EditPChar | 0x4 (4 decimal)
+		char* description; // EditPChar | 0x8 (8 decimal)
+		char* normal; // EditPChar | 0xC (12 decimal)
+		char* expert; // EditPChar | 0x10 (16 decimal)
+		char* master; // EditPChar | 0x14 (20 decimal)
 		union
 		{
-			std::array<uint8_t, 12> chanceForSlot;
+			char* GM; // EditPChar | 0x18 (24 decimal)
+			char* grandMaster; // EditPChar | 0x18 (24 decimal)
+		};
+		uint8_t damageType; // 0x1C (28 decimal)
+		union
+		{
+			std::array<uint8_t, 4> spellPoints; // MMExt: 1..4, here 0..3 | 0x1D (29 decimal)
 			struct
 			{
-				uint8_t W1;
-				uint8_t W2;
-				uint8_t miss;
-				uint8_t arm;
-				uint8_t shld;
-				uint8_t helm;
-				uint8_t belt;
-				uint8_t cape;
-				uint8_t gaunt;
-				uint8_t boot;
-				uint8_t ring;
-				uint8_t amul;
+				uint8_t spellPointsNormal; // 0x1D (29 decimal)
+				uint8_t spellPointsExpert; // 0x1E (30 decimal)
+				uint8_t spellPointsMaster; // 0x1F (31 decimal)
+				uint8_t spellPointsGM; // 0x20 (32 decimal)
 			};
 		};
-		int32_t value;
-		uint8_t lvl;
+		SKIP(3);
+	};
+	static_assert(sizeof(mm8::SpellsTxtItem) == 0x24, "Invalid \"mm8::SpellsTxtItem\" structure size");
+	static_assert(offsetof(mm8::SpellsTxtItem, shortName) == 4);
+	static_assert(offsetof(mm8::SpellsTxtItem, description) == 8);
+	static_assert(offsetof(mm8::SpellsTxtItem, normal) == 12);
+	static_assert(offsetof(mm8::SpellsTxtItem, expert) == 16);
+	static_assert(offsetof(mm8::SpellsTxtItem, master) == 20);
+	static_assert(offsetof(mm8::SpellsTxtItem, GM) == 24);
+	static_assert(offsetof(mm8::SpellsTxtItem, grandMaster) == 24);
+	static_assert(offsetof(mm8::SpellsTxtItem, damageType) == 28);
+	static_assert(offsetof(mm8::SpellsTxtItem, spellPoints) == 29);
+	static_assert(offsetof(mm8::SpellsTxtItem, spellPointsNormal) == 29);
+	static_assert(offsetof(mm8::SpellsTxtItem, spellPointsExpert) == 30);
+	static_assert(offsetof(mm8::SpellsTxtItem, spellPointsMaster) == 31);
+	static_assert(offsetof(mm8::SpellsTxtItem, spellPointsGM) == 32);
+
+
+
+	struct SpcItemsTxtItem // size: 0x1C
+	{
+		char* nameAdd; // EditPChar | 0x0 (0 decimal)
+		char* bonusStat; // EditPChar | 0x4 (4 decimal)
+		union
+		{
+			std::array<uint8_t, 12> chanceForSlot; // 0x8 (8 decimal)
+			struct
+			{
+				uint8_t W1; // 0x8 (8 decimal)
+				uint8_t W2; // 0x9 (9 decimal)
+				uint8_t miss; // 0xA (10 decimal)
+				uint8_t arm; // 0xB (11 decimal)
+				uint8_t shld; // 0xC (12 decimal)
+				uint8_t helm; // 0xD (13 decimal)
+				uint8_t belt; // 0xE (14 decimal)
+				uint8_t cape; // 0xF (15 decimal)
+				uint8_t gaunt; // 0x10 (16 decimal)
+				uint8_t boot; // 0x11 (17 decimal)
+				uint8_t ring; // 0x12 (18 decimal)
+				uint8_t amul; // 0x13 (19 decimal)
+			};
+		};
+		int32_t value; // 0x14 (20 decimal)
+		uint8_t lvl; // 0x18 (24 decimal)
 		SKIP(3);
 	};
 	static_assert(sizeof(mm8::SpcItemsTxtItem) == 0x1C, "Invalid \"mm8::SpcItemsTxtItem\" structure size");
@@ -693,199 +747,39 @@ namespace mm8
 
 
 
-	struct ItemsTxtItem // size: 0x30
-	{
-		char* picture; // EditPChar
-		char* name; // EditPChar
-		char* notIdentifiedName; // EditPChar
-		char* notes; // EditPChar
-		int32_t value;
-		int16_t spriteIndex;
-		SKIP(2);
-		int16_t equipX;
-		int16_t equipY;
-		uint8_t equipStat;
-		uint8_t skill;
-		uint8_t mod1DiceCount;
-		uint8_t mod1DiceSides;
-		uint8_t mod2;
-		uint8_t material;
-		uint8_t bonus2;
-		uint8_t bonus;
-		uint8_t bonusStrength;
-		SKIP(4);
-		union
-		{
-			std::array<uint8_t, 6> chanceByLevel; // MMExt: 1..6, here 0..5
-			struct
-			{
-				SKIP(5);
-				int8_t idRepSt;
-			};
-		};
-		SKIP(1);
-	};
-	static_assert(sizeof(mm8::ItemsTxtItem) == 0x30, "Invalid \"mm8::ItemsTxtItem\" structure size");
-	static_assert(offsetof(mm8::ItemsTxtItem, name) == 4);
-	static_assert(offsetof(mm8::ItemsTxtItem, notIdentifiedName) == 8);
-	static_assert(offsetof(mm8::ItemsTxtItem, notes) == 12);
-	static_assert(offsetof(mm8::ItemsTxtItem, value) == 16);
-	static_assert(offsetof(mm8::ItemsTxtItem, spriteIndex) == 20);
-	static_assert(offsetof(mm8::ItemsTxtItem, equipX) == 24);
-	static_assert(offsetof(mm8::ItemsTxtItem, equipY) == 26);
-	static_assert(offsetof(mm8::ItemsTxtItem, equipStat) == 28);
-	static_assert(offsetof(mm8::ItemsTxtItem, skill) == 29);
-	static_assert(offsetof(mm8::ItemsTxtItem, mod1DiceCount) == 30);
-	static_assert(offsetof(mm8::ItemsTxtItem, mod1DiceSides) == 31);
-	static_assert(offsetof(mm8::ItemsTxtItem, mod2) == 32);
-	static_assert(offsetof(mm8::ItemsTxtItem, material) == 33);
-	static_assert(offsetof(mm8::ItemsTxtItem, bonus2) == 34);
-	static_assert(offsetof(mm8::ItemsTxtItem, bonus) == 35);
-	static_assert(offsetof(mm8::ItemsTxtItem, bonusStrength) == 36);
-	static_assert(offsetof(mm8::ItemsTxtItem, chanceByLevel) == 41);
-	static_assert(offsetof(mm8::ItemsTxtItem, idRepSt) == 46);
-
-
-
-	struct SpellsTxtItem // size: 0x24
-	{
-		char* name; // EditPChar
-		char* shortName; // EditPChar
-		char* description; // EditPChar
-		char* normal; // EditPChar
-		char* expert; // EditPChar
-		char* master; // EditPChar
-		union
-		{
-			char* grandMaster; // EditPChar
-			char* GM; // EditPChar
-		};
-		uint8_t damageType;
-		union
-		{
-			std::array<uint8_t, 4> spellPoints; // MMExt: 1..4, here 0..3
-			struct
-			{
-				uint8_t spellPointsNormal;
-				uint8_t spellPointsExpert;
-				uint8_t spellPointsMaster;
-				uint8_t spellPointsGM;
-			};
-		};
-		SKIP(3);
-	};
-	static_assert(sizeof(mm8::SpellsTxtItem) == 0x24, "Invalid \"mm8::SpellsTxtItem\" structure size");
-	static_assert(offsetof(mm8::SpellsTxtItem, shortName) == 4);
-	static_assert(offsetof(mm8::SpellsTxtItem, description) == 8);
-	static_assert(offsetof(mm8::SpellsTxtItem, normal) == 12);
-	static_assert(offsetof(mm8::SpellsTxtItem, expert) == 16);
-	static_assert(offsetof(mm8::SpellsTxtItem, master) == 20);
-	static_assert(offsetof(mm8::SpellsTxtItem, grandMaster) == 24);
-	static_assert(offsetof(mm8::SpellsTxtItem, GM) == 24);
-	static_assert(offsetof(mm8::SpellsTxtItem, damageType) == 28);
-	static_assert(offsetof(mm8::SpellsTxtItem, spellPoints) == 29);
-	static_assert(offsetof(mm8::SpellsTxtItem, spellPointsNormal) == 29);
-	static_assert(offsetof(mm8::SpellsTxtItem, spellPointsExpert) == 30);
-	static_assert(offsetof(mm8::SpellsTxtItem, spellPointsMaster) == 31);
-	static_assert(offsetof(mm8::SpellsTxtItem, spellPointsGM) == 32);
-
-
-
-	struct Events2DItem // size: 0x34
-	{
-		int16_t type;
-		int16_t picture;
-		char* name; // EditPChar
-		char* ownerName; // EditPChar
-		char* enterText; // EditPChar
-		char* ownerTitle; // EditPChar
-		int16_t pictureUnk;
-		int16_t state;
-		int16_t rep;
-		int16_t per;
-		int16_t c;
-		SKIP(2);
-		float val;
-		float a;
-		int16_t openHour;
-		int16_t closeHour;
-		int16_t exitPic;
-		int16_t exitMap;
-		union
-		{
-			int16_t questBitRestriction;
-			int16_t QBit;
-		};
-		SKIP(2);
-	};
-	static_assert(sizeof(mm8::Events2DItem) == 0x34, "Invalid \"mm8::Events2DItem\" structure size");
-	static_assert(offsetof(mm8::Events2DItem, picture) == 2);
-	static_assert(offsetof(mm8::Events2DItem, name) == 4);
-	static_assert(offsetof(mm8::Events2DItem, ownerName) == 8);
-	static_assert(offsetof(mm8::Events2DItem, enterText) == 12);
-	static_assert(offsetof(mm8::Events2DItem, ownerTitle) == 16);
-	static_assert(offsetof(mm8::Events2DItem, pictureUnk) == 20);
-	static_assert(offsetof(mm8::Events2DItem, state) == 22);
-	static_assert(offsetof(mm8::Events2DItem, rep) == 24);
-	static_assert(offsetof(mm8::Events2DItem, per) == 26);
-	static_assert(offsetof(mm8::Events2DItem, c) == 28);
-	static_assert(offsetof(mm8::Events2DItem, val) == 32);
-	static_assert(offsetof(mm8::Events2DItem, a) == 36);
-	static_assert(offsetof(mm8::Events2DItem, openHour) == 40);
-	static_assert(offsetof(mm8::Events2DItem, closeHour) == 42);
-	static_assert(offsetof(mm8::Events2DItem, exitPic) == 44);
-	static_assert(offsetof(mm8::Events2DItem, exitMap) == 46);
-	static_assert(offsetof(mm8::Events2DItem, questBitRestriction) == 48);
-	static_assert(offsetof(mm8::Events2DItem, QBit) == 48);
-
-
-
-	struct HistoryTxtItem // size: 0xC
-	{
-		char* text; // EditPChar
-		char* title; // EditPChar
-		int8_t time;
-		SKIP(3);
-	};
-	static_assert(sizeof(mm8::HistoryTxtItem) == 0xC, "Invalid \"mm8::HistoryTxtItem\" structure size");
-	static_assert(offsetof(mm8::HistoryTxtItem, title) == 4);
-	static_assert(offsetof(mm8::HistoryTxtItem, time) == 8);
-
-
-
 	struct MapStatsItem // size: 0x44
 	{
-		char* name; // EditPChar
-		char* fileName; // EditPChar
-		char* monster1Pic; // EditPChar
-		char* monster2Pic; // EditPChar
-		char* monster3Pic; // EditPChar
-		int32_t resetCount;
-		int32_t firstVisitDay;
-		int32_t refillDays;
-		int32_t alertDays;
-		int32_t stealPerm;
-		int32_t per;
+		char* name; // EditPChar | 0x0 (0 decimal)
+		char* fileName; // EditPChar | 0x4 (4 decimal)
+		char* monster1Pic; // EditPChar | 0x8 (8 decimal)
+		char* monster2Pic; // EditPChar | 0xC (12 decimal)
+		char* monster3Pic; // EditPChar | 0x10 (16 decimal)
+		int32_t resetCount; // 0x14 (20 decimal)
+		int32_t firstVisitDay; // 0x18 (24 decimal)
+		int32_t refillDays; // 0x1C (28 decimal)
+		int32_t alertDays; // 0x20 (32 decimal)
+		int32_t stealPerm; // 0x24 (36 decimal)
+		int32_t per; // 0x28 (40 decimal)
 		SKIP(1);
-		uint8_t lock;
-		uint8_t trap;
-		uint8_t tres;
-		uint8_t encounterChance;
-		uint8_t encounterChanceM1;
-		uint8_t encounterChanceM2;
-		uint8_t encounterChanceM3;
-		uint8_t mon1Dif;
-		uint8_t mon1Low;
-		uint8_t mon1Hi;
-		uint8_t mon2Dif;
-		uint8_t mon2Low;
-		uint8_t mon2Hi;
-		uint8_t mon3Dif;
-		uint8_t mon3Low;
-		uint8_t mon3Hi;
+		uint8_t lock; // 0x2D (45 decimal) | MMExt info: x5Lock
+		uint8_t trap; // 0x2E (46 decimal) | MMExt info: D20sTrap
+		uint8_t tres; // 0x2F (47 decimal)
+		uint8_t encounterChance; // 0x30 (48 decimal)
+		uint8_t encounterChanceM1; // 0x31 (49 decimal)
+		uint8_t encounterChanceM2; // 0x32 (50 decimal)
+		uint8_t encounterChanceM3; // 0x33 (51 decimal)
+		uint8_t mon1Dif; // 0x34 (52 decimal)
+		uint8_t mon1Low; // 0x35 (53 decimal)
+		uint8_t mon1Hi; // 0x36 (54 decimal)
+		uint8_t mon2Dif; // 0x37 (55 decimal)
+		uint8_t mon2Low; // 0x38 (56 decimal)
+		uint8_t mon2Hi; // 0x39 (57 decimal)
+		uint8_t mon3Dif; // 0x3A (58 decimal)
+		uint8_t mon3Low; // 0x3B (59 decimal)
+		uint8_t mon3Hi; // 0x3C (60 decimal)
 		SKIP(3);
-		uint8_t redbookTrack;
-		uint8_t eaxEnvironments;
+		uint8_t redbookTrack; // 0x40 (64 decimal)
+		uint8_t eaxEnvironments; // 0x41 (65 decimal)
 		SKIP(2);
 	};
 	static_assert(sizeof(mm8::MapStatsItem) == 0x44, "Invalid \"mm8::MapStatsItem\" structure size");
@@ -917,6 +811,122 @@ namespace mm8
 	static_assert(offsetof(mm8::MapStatsItem, mon3Hi) == 60);
 	static_assert(offsetof(mm8::MapStatsItem, redbookTrack) == 64);
 	static_assert(offsetof(mm8::MapStatsItem, eaxEnvironments) == 65);
+
+
+
+	struct ItemsTxtItem // size: 0x30
+	{
+		char* picture; // EditPChar | 0x0 (0 decimal)
+		char* name; // EditPChar | 0x4 (4 decimal)
+		char* notIdentifiedName; // EditPChar | 0x8 (8 decimal)
+		char* notes; // EditPChar | 0xC (12 decimal)
+		int32_t value; // 0x10 (16 decimal)
+		int16_t spriteIndex; // 0x14 (20 decimal)
+		SKIP(2);
+		int16_t equipX; // 0x18 (24 decimal)
+		int16_t equipY; // 0x1A (26 decimal)
+		uint8_t equipStat; // 0x1C (28 decimal) | MMExt info: Subtract 1 from #const.ItemType:# value
+		uint8_t skill; // 0x1D (29 decimal)
+		uint8_t mod1DiceCount; // 0x1E (30 decimal)
+		uint8_t mod1DiceSides; // 0x1F (31 decimal)
+		uint8_t mod2; // 0x20 (32 decimal)
+		uint8_t material; // 0x21 (33 decimal) | MMExt info: 0 = normal,  1 = artifact,  2 = relic,  3 = special
+		uint8_t bonus2; // 0x22 (34 decimal) | MMExt info: VarA
+		uint8_t bonus; // 0x23 (35 decimal) | MMExt info: VarA
+		uint8_t bonusStrength; // 0x24 (36 decimal) | MMExt info: VarB
+		SKIP(4);
+		union
+		{
+			std::array<uint8_t, 6> chanceByLevel; // MMExt: 1..6, here 0..5 | 0x29 (41 decimal)
+			struct
+			{
+				SKIP(5);
+				int8_t idRepSt; // 0x2E (46 decimal)
+			};
+		};
+		SKIP(1);
+	};
+	static_assert(sizeof(mm8::ItemsTxtItem) == 0x30, "Invalid \"mm8::ItemsTxtItem\" structure size");
+	static_assert(offsetof(mm8::ItemsTxtItem, name) == 4);
+	static_assert(offsetof(mm8::ItemsTxtItem, notIdentifiedName) == 8);
+	static_assert(offsetof(mm8::ItemsTxtItem, notes) == 12);
+	static_assert(offsetof(mm8::ItemsTxtItem, value) == 16);
+	static_assert(offsetof(mm8::ItemsTxtItem, spriteIndex) == 20);
+	static_assert(offsetof(mm8::ItemsTxtItem, equipX) == 24);
+	static_assert(offsetof(mm8::ItemsTxtItem, equipY) == 26);
+	static_assert(offsetof(mm8::ItemsTxtItem, equipStat) == 28);
+	static_assert(offsetof(mm8::ItemsTxtItem, skill) == 29);
+	static_assert(offsetof(mm8::ItemsTxtItem, mod1DiceCount) == 30);
+	static_assert(offsetof(mm8::ItemsTxtItem, mod1DiceSides) == 31);
+	static_assert(offsetof(mm8::ItemsTxtItem, mod2) == 32);
+	static_assert(offsetof(mm8::ItemsTxtItem, material) == 33);
+	static_assert(offsetof(mm8::ItemsTxtItem, bonus2) == 34);
+	static_assert(offsetof(mm8::ItemsTxtItem, bonus) == 35);
+	static_assert(offsetof(mm8::ItemsTxtItem, bonusStrength) == 36);
+	static_assert(offsetof(mm8::ItemsTxtItem, chanceByLevel) == 41);
+	static_assert(offsetof(mm8::ItemsTxtItem, idRepSt) == 46);
+
+
+
+	struct Events2DItem // size: 0x34
+	{
+		int16_t type; // 0x0 (0 decimal)
+		int16_t picture; // 0x2 (2 decimal)
+		char* name; // EditPChar | 0x4 (4 decimal)
+		char* ownerName; // EditPChar | 0x8 (8 decimal)
+		char* enterText; // EditPChar | 0xC (12 decimal)
+		char* ownerTitle; // EditPChar | 0x10 (16 decimal)
+		int16_t pictureUnk; // 0x14 (20 decimal)
+		int16_t state; // 0x16 (22 decimal)
+		int16_t rep; // 0x18 (24 decimal)
+		int16_t per; // 0x1A (26 decimal)
+		int16_t c; // 0x1C (28 decimal)
+		SKIP(2);
+		float val; // 0x20 (32 decimal)
+		float a; // 0x24 (36 decimal)
+		int16_t openHour; // 0x28 (40 decimal)
+		int16_t closeHour; // 0x2A (42 decimal)
+		int16_t exitPic; // 0x2C (44 decimal)
+		int16_t exitMap; // 0x2E (46 decimal)
+		union
+		{
+			int16_t QBit; // 0x30 (48 decimal)
+			int16_t questBitRestriction; // 0x30 (48 decimal) | MMExt info: (old name)
+		};
+		SKIP(2);
+	};
+	static_assert(sizeof(mm8::Events2DItem) == 0x34, "Invalid \"mm8::Events2DItem\" structure size");
+	static_assert(offsetof(mm8::Events2DItem, picture) == 2);
+	static_assert(offsetof(mm8::Events2DItem, name) == 4);
+	static_assert(offsetof(mm8::Events2DItem, ownerName) == 8);
+	static_assert(offsetof(mm8::Events2DItem, enterText) == 12);
+	static_assert(offsetof(mm8::Events2DItem, ownerTitle) == 16);
+	static_assert(offsetof(mm8::Events2DItem, pictureUnk) == 20);
+	static_assert(offsetof(mm8::Events2DItem, state) == 22);
+	static_assert(offsetof(mm8::Events2DItem, rep) == 24);
+	static_assert(offsetof(mm8::Events2DItem, per) == 26);
+	static_assert(offsetof(mm8::Events2DItem, c) == 28);
+	static_assert(offsetof(mm8::Events2DItem, val) == 32);
+	static_assert(offsetof(mm8::Events2DItem, a) == 36);
+	static_assert(offsetof(mm8::Events2DItem, openHour) == 40);
+	static_assert(offsetof(mm8::Events2DItem, closeHour) == 42);
+	static_assert(offsetof(mm8::Events2DItem, exitPic) == 44);
+	static_assert(offsetof(mm8::Events2DItem, exitMap) == 46);
+	static_assert(offsetof(mm8::Events2DItem, QBit) == 48);
+	static_assert(offsetof(mm8::Events2DItem, questBitRestriction) == 48);
+
+
+
+	struct HistoryTxtItem // size: 0xC
+	{
+		char* text; // EditPChar | 0x0 (0 decimal)
+		char* title; // EditPChar | 0x4 (4 decimal)
+		int8_t time; // 0x8 (8 decimal)
+		SKIP(3);
+	};
+	static_assert(sizeof(mm8::HistoryTxtItem) == 0xC, "Invalid \"mm8::HistoryTxtItem\" structure size");
+	static_assert(offsetof(mm8::HistoryTxtItem, title) == 4);
+	static_assert(offsetof(mm8::HistoryTxtItem, time) == 8);
 }
 
 #pragma pack(pop)

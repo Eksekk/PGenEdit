@@ -593,6 +593,33 @@
     <ClCompile Include="LuaWrapper.cpp">
       <Filter>Pliki źródłowe\Misc\Lua</Filter>
     </ClCompile>
+    <ClCompile Include="sources\structs\Bin.cpp">
+      <Filter>Pliki źródłowe\GameStructs\Definitions</Filter>
+    </ClCompile>
+    <ClCompile Include="sources\structs\Common.cpp">
+      <Filter>Pliki źródłowe\GameStructs\Definitions</Filter>
+    </ClCompile>
+    <ClCompile Include="sources\structs\GameDataStructs.cpp">
+      <Filter>Pliki źródłowe\GameStructs\Definitions</Filter>
+    </ClCompile>
+    <ClCompile Include="sources\structs\GameMap.cpp">
+      <Filter>Pliki źródłowe\GameStructs\Definitions</Filter>
+    </ClCompile>
+    <ClCompile Include="sources\structs\GameMisc.cpp">
+      <Filter>Pliki źródłowe\GameStructs\Definitions</Filter>
+    </ClCompile>
+    <ClCompile Include="sources\structs\GameParty.cpp">
+      <Filter>Pliki źródłowe\GameStructs\Definitions</Filter>
+    </ClCompile>
+    <ClCompile Include="sources\structs\MergeSpecific.cpp">
+      <Filter>Pliki źródłowe\GameStructs\Definitions</Filter>
+    </ClCompile>
+    <ClCompile Include="sources\structs\Monster.cpp">
+      <Filter>Pliki źródłowe\GameStructs\Definitions</Filter>
+    </ClCompile>
+    <ClCompile Include="sources\structs\Player.cpp">
+      <Filter>Pliki źródłowe\GameStructs\Definitions</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="Lib.def">

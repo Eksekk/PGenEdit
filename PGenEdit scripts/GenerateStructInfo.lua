@@ -407,7 +407,7 @@ local function generateFunctionCode(functionData, methods, structName, namespace
 	local funcFormatDef = "%s %s%s::%s(%s)" -- [return type] [namespaceStr][structName]::[name]([params])
 	for mname, data in pairs(functionData) do
 		local def, info = data.def, data.info
-		local r, retStr = def.ret, "void"
+		local r, retStr = def.ret, "int"
 		if r then
 			local typ = type(r)
 			if typ == "string" then
@@ -2000,7 +2000,10 @@ end
 
 
 -- "ENUM" GENERATOR
-local namePrefixes = {["Stats"] = "STAT", ["Skills"] = "SKILL", ["Damage"] = "DMG"}
+local namePrefixes = {["Stats"] = "STAT", ["Skills"] = "SKILL", ["Damage"] = "DMG", ItemSlot = "ITEM_SLOT", PlayerBuff = "PLAYER_BUFF", PartyBuff = "PARTY_BUFF",
+	MonsterBits = "MON_BIT", MonsterBuff = "MON_BUFF", MonsterBonus = "MON_BONUS", MonsterKind = "MON_KIND", ItemType = "ITEM_TYPE", HouseType = "HOUSE_TYPE",
+	HouseScreens = "HOUSE_SCREENS", FacetBits = "FACET_BIT", FaceAnimation = "PLAYER_FACE_ANIMATION", Condition = "PLAYER_CONDITION", ChestBits = "CHEST_BIT",
+	AIState = "MON_AI_STATE"}
 local consts, header, source = {}, {}, {}
 function processConst(name)
 	if not consts[6] then
@@ -2026,7 +2029,7 @@ function processConst(name)
 				}
 				setfenv(f, env)
 				f()
-				consts[i] = env.const
+				consts[i] = env.const or {}
 				::continue::
 			end
 		end
@@ -2037,6 +2040,7 @@ function processConst(name)
 	
 	local allKeys = {}
 	for i, const in pairs(consts) do
+		const[name] = const[name] or {}-- const.MonsterKind is not present in MM6
 		for v, k in sortpairs(table.invert(const[name])) do
 			if not table.find(allKeys, k) then
 				allKeys[#allKeys + 1] = k
@@ -2081,4 +2085,12 @@ function processConst(name)
 	table.insert(source, "")
 end
 
-local
+local constsToProcess = {"Stats", "Skills", "Damage", "ItemType", "ItemSlot", "PlayerBuff", "PartyBuff", "MonsterBits", "MonsterBuff", "MonsterBonus", "MonsterKind", "HouseType", "HouseScreens", "FacetBits", "FaceAnimation", "Condition", "ChestBits", "AIState"}
+function writeConsts()
+	for _, const in ipairs(constsToProcess) do
+		processConst(const)
+	end
+	io.save("constHeader.h", table.concat(header, "\n"))
+	io.save("constSource.cpp", table.concat(source, "\n"))
+	header, source = {}, {}
+end
