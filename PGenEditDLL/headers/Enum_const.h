@@ -243,7 +243,7 @@ extern std::vector<int> DAMAGE_ALL_TYPES;
 void checkStatValidity(int stat);
 void checkDamageTypeValidity(int dmg);
 
-extern int
+extern int64_t
 ITEM_TYPE_ANY,
 ITEM_TYPE_WEAPON,
 ITEM_TYPE_WEAPON_2H,
@@ -294,13 +294,13 @@ ITEM_TYPE_GEMS,
 ITEM_TYPE_GEMS_2,
 ITEM_TYPE_GOLD_;
 
-extern std::vector<int> ALL_ITEM_TYPE;
+extern std::vector<int64_t> ALL_ITEM_TYPE;
 
 extern void makeEnumItemType_6();
 extern void makeEnumItemType_7();
 extern void makeEnumItemType_8();
 
-extern int
+extern int64_t
 ITEM_SLOT_EXTRA_HAND,
 ITEM_SLOT_MAIN_HAND,
 ITEM_SLOT_BOW,
@@ -318,13 +318,13 @@ ITEM_SLOT_RING_4,
 ITEM_SLOT_RING_5,
 ITEM_SLOT_RING_6;
 
-extern std::vector<int> ALL_ITEM_SLOT;
+extern std::vector<int64_t> ALL_ITEM_SLOT;
 
 extern void makeEnumItemSlot_6();
 extern void makeEnumItemSlot_7();
 extern void makeEnumItemSlot_8();
 
-extern int
+extern int64_t
 PLAYER_BUFF_BLESS,
 PLAYER_BUFF_HEROISM,
 PLAYER_BUFF_HASTE,
@@ -354,13 +354,13 @@ PLAYER_BUFF_GLAMOUR,
 PLAYER_BUFF_LEVITATE,
 PLAYER_BUFF_MISFORM;
 
-extern std::vector<int> ALL_PLAYER_BUFF;
+extern std::vector<int64_t> ALL_PLAYER_BUFF;
 
 extern void makeEnumPlayerBuff_6();
 extern void makeEnumPlayerBuff_7();
 extern void makeEnumPlayerBuff_8();
 
-extern int
+extern int64_t
 PARTY_BUFF_FIRE_RESISTANCE,
 PARTY_BUFF_COLD_RESISTANCE,
 PARTY_BUFF_ELEC_RESISTANCE,
@@ -387,13 +387,13 @@ PARTY_BUFF_SHIELD,
 PARTY_BUFF_STONESKIN,
 PARTY_BUFF_WATER_RESISTANCE;
 
-extern std::vector<int> ALL_PARTY_BUFF;
+extern std::vector<int64_t> ALL_PARTY_BUFF;
 
 extern void makeEnumPartyBuff_6();
 extern void makeEnumPartyBuff_7();
 extern void makeEnumPartyBuff_8();
 
-extern int
+extern int64_t
 MON_BIT_ACTIVE,
 MON_BIT_SHOW_ON_MAP,
 MON_BIT_INVISIBLE,
@@ -404,13 +404,13 @@ MON_BIT_TREASURE_GENERATED,
 MON_BIT_SHOW_AS_HOSTILE,
 MON_BIT_IS_OBELISK_CHEST;
 
-extern std::vector<int> ALL_MONSTER_BITS;
+extern std::vector<int64_t> ALL_MONSTER_BITS;
 
 extern void makeEnumMonsterBits_6();
 extern void makeEnumMonsterBits_7();
 extern void makeEnumMonsterBits_8();
 
-extern int
+extern int64_t
 MON_BUFF_NULL,
 MON_BUFF_CHARM,
 MON_BUFF_CURSE,
@@ -440,13 +440,13 @@ MON_BUFF_DAMAGE_HALVED,
 MON_BUFF_WANDER,
 MON_BUFF_MISTFORM;
 
-extern std::vector<int> ALL_MONSTER_BUFF;
+extern std::vector<int64_t> ALL_MONSTER_BUFF;
 
 extern void makeEnumMonsterBuff_6();
 extern void makeEnumMonsterBuff_7();
 extern void makeEnumMonsterBuff_8();
 
-extern int
+extern int64_t
 MON_BONUS_CURSE,
 MON_BONUS_WEAK,
 MON_BONUS_ASLEEP,
@@ -471,13 +471,13 @@ MON_BONUS_AGE,
 MON_BONUS_DRAINSP,
 MON_BONUS_AFRAID;
 
-extern std::vector<int> ALL_MONSTER_BONUS;
+extern std::vector<int64_t> ALL_MONSTER_BONUS;
 
 extern void makeEnumMonsterBonus_6();
 extern void makeEnumMonsterBonus_7();
 extern void makeEnumMonsterBonus_8();
 
-extern int
+extern int64_t
 MON_KIND_UNDEAD,
 MON_KIND_DEMON,
 MON_KIND_DRAGON,
@@ -490,13 +490,13 @@ MON_KIND_PEASANT,
 MON_KIND_OGRE,
 MON_KIND_ELEMENTAL;
 
-extern std::vector<int> ALL_MONSTER_KIND;
+extern std::vector<int64_t> ALL_MONSTER_KIND;
 
 extern void makeEnumMonsterKind_6();
 extern void makeEnumMonsterKind_7();
 extern void makeEnumMonsterKind_8();
 
-extern int
+extern int64_t
 HOUSE_TYPE_WEAPON_SHOP,
 HOUSE_TYPE_ARMOR_SHOP,
 HOUSE_TYPE_MAGIC_SHOP,
@@ -519,8 +519,8 @@ HOUSE_TYPE_THRONE,
 HOUSE_TYPE_TAVERN,
 HOUSE_TYPE_BANK,
 HOUSE_TYPE_TEMPLE,
-HOUSE_TYPE_CASTLE_ENT,
-HOUSE_TYPE_DUNGEON_ENTRANCE,
+HOUSE_TYPE_CASTLE_ENTRANCE,
+HOUSE_TYPE_DUNGEON_ENT,
 HOUSE_TYPE_SEER_EVIL,
 HOUSE_TYPE_STABLES,
 HOUSE_TYPE_BOATS,
@@ -528,23 +528,22 @@ HOUSE_TYPE_HOUSE,
 HOUSE_TYPE_TRAINING,
 HOUSE_TYPE_JAIL,
 HOUSE_TYPE_CIRCUS,
-HOUSE_TYPE_THE_ADVENTURERS_INN,
-HOUSE_TYPE_ALCHEMIST;
+HOUSE_TYPE_THE_ADVENTURERS_INN;
 
-extern std::vector<int> ALL_HOUSE_TYPE;
+extern std::vector<int64_t> ALL_HOUSE_TYPE;
 
 extern void makeEnumHouseType_6();
 extern void makeEnumHouseType_7();
 extern void makeEnumHouseType_8();
 
-extern int
+extern int64_t
 HOUSE_SCREENS_TEACHER,
 HOUSE_SCREENS_CHOOSE_PERSON,
 HOUSE_SCREENS_MAIN,
 HOUSE_SCREENS_BUY_STANDARD,
 HOUSE_SCREENS_SELL,
 HOUSE_SCREENS_IDENTIFY,
-HOUSE_SCREENS_BUY_SPECIAL_MM6,
+HOUSE_SCREENS_BUY_SPECIAL,
 HOUSE_SCREENS_BANK_DEPOSIT,
 HOUSE_SCREENS_BANK_WITHDRAW,
 HOUSE_SCREENS_HEAL,
@@ -559,7 +558,7 @@ HOUSE_SCREENS_BUY_SPELLS,
 HOUSE_SCREENS_A,
 HOUSE_SCREENS_B,
 HOUSE_SCREENS_C,
-HOUSE_SCREENS_BEG,
+HOUSE_SCREENS_SEER_HINT,
 HOUSE_SCREENS_THREAT,
 HOUSE_SCREENS_BRIBE,
 HOUSE_SCREENS_TAVERN_DRINK,
@@ -619,6 +618,7 @@ HOUSE_SCREENS_STREET_NPC,
 HOUSE_SCREENS_LACK_FAME,
 HOUSE_SCREENS_BEG_THREAT_BRIBE,
 HOUSE_SCREENS_THREAT_BRIBE,
+HOUSE_SCREENS_BUY_SPECIAL_MM6,
 HOUSE_SCREENS_D,
 HOUSE_SCREENS_E,
 HOUSE_SCREENS_F,
@@ -629,7 +629,6 @@ HOUSE_SCREENS_ARMSMASTER,
 HOUSE_SCREENS_STEALING,
 HOUSE_SCREENS_ALCHEMY,
 HOUSE_SCREENS_DISPLAY_INVENTORY,
-HOUSE_SCREENS_BUY_SPECIAL,
 HOUSE_SCREENS_LEARN_SKILLS,
 HOUSE_SCREENS_BOUNTY_HUNT,
 HOUSE_SCREENS_PAY_FINE,
@@ -654,13 +653,13 @@ HOUSE_SCREENS_BUY_SPELLS_DARK,
 HOUSE_SCREENS_JOIN_ROSTER,
 HOUSE_SCREENS_JOIN_ROSTER_NO;
 
-extern std::vector<int> ALL_HOUSE_SCREENS;
+extern std::vector<int64_t> ALL_HOUSE_SCREENS;
 
 extern void makeEnumHouseScreens_6();
 extern void makeEnumHouseScreens_7();
 extern void makeEnumHouseScreens_8();
 
-extern int
+extern int64_t
 FACET_BIT_IS_PORTAL,
 FACET_BIT_IS_WATER,
 FACET_BIT_PROJECT_TO_XY,
@@ -693,13 +692,13 @@ FACET_BIT_ALIGN_BOTTOM,
 FACET_BIT_DISABLE_EVENT_BY_CTRL_CLICK,
 FACET_BIT_EVENT_DISABLED_BY_CTRL_CLICK;
 
-extern std::vector<int> ALL_FACET_BITS;
+extern std::vector<int64_t> ALL_FACET_BITS;
 
 extern void makeEnumFacetBits_6();
 extern void makeEnumFacetBits_7();
 extern void makeEnumFacetBits_8();
 
-extern int
+extern int64_t
 PLAYER_FACE_ANIMATION_KILL_SMALL_ENEMY,
 PLAYER_FACE_ANIMATION_KILL_BIG_ENEMY,
 PLAYER_FACE_ANIMATION_STORE_CLOSED,
@@ -802,13 +801,13 @@ PLAYER_FACE_ANIMATION_LAST_MAN_STANDING,
 PLAYER_FACE_ANIMATION_NOT_ENOUGH_FOOD,
 PLAYER_FACE_ANIMATION_DEATH_BLOW;
 
-extern std::vector<int> ALL_FACE_ANIMATION;
+extern std::vector<int64_t> ALL_FACE_ANIMATION;
 
 extern void makeEnumFaceAnimation_6();
 extern void makeEnumFaceAnimation_7();
 extern void makeEnumFaceAnimation_8();
 
-extern int
+extern int64_t
 PLAYER_CONDITION_CURSED,
 PLAYER_CONDITION_WEAK,
 PLAYER_CONDITION_ASLEEP,
@@ -829,24 +828,24 @@ PLAYER_CONDITION_ERADICATED,
 PLAYER_CONDITION_GOOD,
 PLAYER_CONDITION_ZOMBIE;
 
-extern std::vector<int> ALL_CONDITION;
+extern std::vector<int64_t> ALL_CONDITION;
 
 extern void makeEnumCondition_6();
 extern void makeEnumCondition_7();
 extern void makeEnumCondition_8();
 
-extern int
+extern int64_t
 CHEST_BIT_TRAPPED,
 CHEST_BIT_ITEMS_PLACED,
 CHEST_BIT_IDENTIFIED;
 
-extern std::vector<int> ALL_CHEST_BITS;
+extern std::vector<int64_t> ALL_CHEST_BITS;
 
 extern void makeEnumChestBits_6();
 extern void makeEnumChestBits_7();
 extern void makeEnumChestBits_8();
 
-extern int
+extern int64_t
 MON_AI_STATE_STAND,
 MON_AI_STATE_ACTIVE,
 MON_AI_STATE_MELEE_ATTACK,
@@ -868,13 +867,13 @@ MON_AI_STATE_SUMMONED,
 MON_AI_STATE_RANGED_ATTACK_4,
 MON_AI_STATE_INVISIBLE;
 
-extern std::vector<int> ALL_AISTATE;
+extern std::vector<int64_t> ALL_AISTATE;
 
 extern void makeEnumAIState_6();
 extern void makeEnumAIState_7();
 extern void makeEnumAIState_8();
 
-extern int
+extern int64_t
 SPELL_TORCH_LIGHT,
 SPELL_FLAME_ARROW,
 SPELL_PROTECTION_FROM_FIRE,
@@ -1006,7 +1005,6 @@ SPELL_CONTROL_UNDEAD,
 SPELL_PAIN_REFLECTION,
 SPELL_SACRIFICE,
 SPELL_SOULDRINKER,
-SPELL_SUMMON_WISP,
 SPELL_DARK_GRASP,
 SPELL_GLAMOUR,
 SPELL_TRAVELERS_BOON,
@@ -1022,7 +1020,7 @@ SPELL_WING_BUFFET,
 SPELL_SHOOT_CANNON_BALL,
 SPELL_SHOOT_DRAGON;
 
-extern std::vector<int> ALL_SPELLS;
+extern std::vector<int64_t> ALL_SPELLS;
 
 extern void makeEnumSpells_6();
 extern void makeEnumSpells_7();

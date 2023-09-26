@@ -2053,8 +2053,8 @@ function processConst(name)
 		name = pr .. "_" .. name:upper()
 		return name
 	end
-	local vector = format("std::vector<int> %s", formatName(name, "ALL"))
-	local forwardDecl = {"extern int"}
+	local vector = format("std::vector<int64_t> %s", formatName(name, "ALL"))
+	local forwardDecl = {"extern int64_t"}
 	for i, k in ipairs(allKeys) do
 		table.insert(forwardDecl, "\t" .. formatName(k) .. (i == #allKeys and ";" or ","))
 	end
@@ -2072,7 +2072,7 @@ function processConst(name)
 	
 	-- source
 	
-	source[#source + 1] = "int "
+	source[#source + 1] = "int64_t "
 	local last = allKeys[#allKeys]
 	for _, k in ipairs(allKeys) do
 		table.insert(source, string.format("\t%s = INVALID_ID%s", formatName(k), k == last and ";" or ","))
@@ -2101,4 +2101,12 @@ function processConst(name)
 	table.insert(source, "")
 end
 
-local constsToProcess = {"Stats"--[[, "Skills"]], "Damage", "ItemType", "ItemSlot", "PlayerBuff", "PartyBuff", "MonsterBits", "MonsterBuff", "MonsterBonus", "Mo
+local constsToProcess = {"Stats"--[[, "Skills"]], "Damage", "ItemType", "ItemSlot", "PlayerBuff", "PartyBuff", "MonsterBits", "MonsterBuff", "MonsterBonus", "MonsterKind", "HouseType", "HouseScreens", "FacetBits", "FaceAnimation", "Condition", "ChestBits", "AIState", "Spells"}
+function writeConsts()
+	for _, const in ipairs(constsToProcess) do
+		processConst(const)
+	end
+	io.save("constHeader.h", table.concat(header, "\n"))
+	io.save("constSource.cpp", table.concat(source, "\n"))
+	header, source = {}, {}
+end
