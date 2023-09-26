@@ -64,7 +64,7 @@ bool LuaWrapper::getPath(const std::string& path)
         lua_pop(L, n);
         return false;
     }
-    for (int i = 1; i < parts.size(); ++i)
+    for (size_t i = 1; i < parts.size(); ++i)
     {
         const auto& part = parts[i];
         lua_getfield(L, -1, part.c_str());

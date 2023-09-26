@@ -2003,7 +2003,7 @@ end
 local namePrefixes = {["Stats"] = "STAT", ["Skills"] = "SKILL", ["Damage"] = "DMG", ItemSlot = "ITEM_SLOT", PlayerBuff = "PLAYER_BUFF", PartyBuff = "PARTY_BUFF",
 	MonsterBits = "MON_BIT", MonsterBuff = "MON_BUFF", MonsterBonus = "MON_BONUS", MonsterKind = "MON_KIND", ItemType = "ITEM_TYPE", HouseType = "HOUSE_TYPE",
 	HouseScreens = "HOUSE_SCREENS", FacetBits = "FACET_BIT", FaceAnimation = "PLAYER_FACE_ANIMATION", Condition = "PLAYER_CONDITION", ChestBits = "CHEST_BIT",
-	AIState = "MON_AI_STATE"}
+	AIState = "MON_AI_STATE", Spells = "SPELL"}
 local consts, header, source = {}, {}, {}
 function processConst(name)
 	if not consts[6] then
@@ -2047,16 +2047,23 @@ function processConst(name)
 			end
 		end
 	end
-	local function formatName(name)
-		name = name:gsub("([a-z])([A-Z0-9])", "%1_%2")
-		name = prefix .. "_" .. name:upper()
+	local function formatName(name, pr)
+		pr = pr or prefix
+		name = name:gsub("([a-z])([A-Z0-9])", "%1_%2"):gsub("'", ""):gsub(" ", "_")
+		name = pr .. "_" .. name:upper()
 		return name
 	end
+	local vector = format("std::vector<int> %s", formatName(name, "ALL"))
 	local forwardDecl = {"extern int"}
 	for i, k in ipairs(allKeys) do
 		table.insert(forwardDecl, "\t" .. formatName(k) .. (i == #allKeys and ";" or ","))
 	end
-	table.insert(forwardDecl, "") -- becomes newline after concat
+	multipleInsert(forwardDecl, #forwardDecl + 1, {
+		"",
+		"extern " .. vector .. ";",
+		""
+	})
+	
 	for _, i in ipairs{6, 7, 8} do
 		table.insert(forwardDecl, string.format("extern void makeEnum%s_%d();", name, i))
 	end
@@ -2070,27 +2077,28 @@ function processConst(name)
 	for _, k in ipairs(allKeys) do
 		table.insert(source, string.format("\t%s = INVALID_ID%s", formatName(k), k == last and ";" or ","))
 	end
-	table.insert(source, "")
+	multipleInsert(source, #source + 1, {
+		"",
+		vector .. ";",
+		""
+	})
 	
 	for _, i in ipairs{6, 7, 8} do
 		table.insert(source, string.format("void makeEnum%s_%d()", name, i))
 		table.insert(source, "{")
+		local vals = {}
 		for v, k in sortpairs(table.invert(consts[i][name])) do
 			table.insert(source, string.format("\t%s = %d;", formatName(k), v))
+			table.insert(vals, formatName(k))
 		end
-		
-		table.insert(source, "}")
-		table.insert(source, "")
+		multipleInsert(source, #source + 1, {
+			"",
+			format("\t%s = { %s };", formatName(name, "ALL"), table.concat(vals, ", ")),
+			"}",
+			"",
+		})
 	end
 	table.insert(source, "")
 end
 
-local constsToProcess = {"Stats", "Skills", "Damage", "ItemType", "ItemSlot", "PlayerBuff", "PartyBuff", "MonsterBits", "MonsterBuff", "MonsterBonus", "MonsterKind", "HouseType", "HouseScreens", "FacetBits", "FaceAnimation", "Condition", "ChestBits", "AIState"}
-function writeConsts()
-	for _, const in ipairs(constsToProcess) do
-		processConst(const)
-	end
-	io.save("constHeader.h", table.concat(header, "\n"))
-	io.save("constSource.cpp", table.concat(source, "\n"))
-	header, source = {}, {}
-end
+local constsToProcess = {"Stats"--[[, "Skills"]], "Damage", "ItemType", "ItemSlot", "PlayerBuff", "PartyBuff", "MonsterBits", "MonsterBuff", "MonsterBonus", "Mo
