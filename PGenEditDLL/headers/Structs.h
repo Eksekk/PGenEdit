@@ -196,11 +196,11 @@ template struct GameSpecificStructsBase<mm6::Game>;
 template struct GameSpecificStructsBase<mm7::Game>;
 template struct GameSpecificStructsBase<mm8::Game>;
 
+#define SAME_BASE(a, b) std::is_same<std::decay_t<a>, b>
 #define genDef(name) using Any##name##Variant = std::variant<mm6::name*, mm7::name*, mm8::name*>;\
-namespace mm6\
-{\
-	using name = mm6::name;\
-}
+template<typename T>\
+concept Any##name##Struct = SAME(T, mm6::name) || SAME(T, mm7::name) || SAME(T, mm8::name)
+
 genDef(Item);
 genDef(Player);
 genDef(Lod);
@@ -211,3 +211,4 @@ genDef(GameParty);
 genDef(GameMap);
 
 #undef genDef
+#undef SAME_BASE

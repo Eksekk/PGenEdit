@@ -644,7 +644,7 @@ void codeMemoryFullFree()
 	}
 }
 
-uint32_t copyCode(uint32_t source, uint32_t size, bool writeJumpBack)
+uint32_t copyCode(uint32_t source, uint32_t size, bool writeJumpBack, uint32_t dest)
 {
     std::vector<int> rel32Positions; // to fix calls/jumps
 	int sizeReal = getRealHookSize(source, size); // TODO: skip this call and use below loop to compute effective size?
@@ -696,7 +696,7 @@ uint32_t copyCode(uint32_t source, uint32_t size, bool writeJumpBack)
 		throw std::logic_error("Short jump outside in code");
 	}
 	uint32_t newCodeSize = size + (writeJumpBack ? 5 : 0);
-    uint32_t mem = codeMemoryAlloc(newCodeSize);
+    uint32_t mem = dest ? dest : codeMemoryAlloc(newCodeSize);
     // copy code to newly allocated memory
     DWORD tmp;
     VirtualProtect((void*)mem, newCodeSize, PAGE_EXECUTE_READWRITE, &tmp);
@@ -715,6 +715,35 @@ uint32_t copyCode(uint32_t source, uint32_t size, bool writeJumpBack)
 	return mem;
 }
 
+void* asmhookCommon(uint32_t addr, const std::string& code, std::vector<uint8_t>* storeAt, int size, bool before)
+{
+    size = getRealHookSize(addr, size, 5);
+    storeBytes(storeAt, addr, size);
+    std::string_view codeBytes = compileAsm(code);
+    uint32_t mem = codeMemoryAlloc(size + codeBytes.size() + 5); // 5 = jump size
+	if (before)
+	{
+        copyCode((uint32_t)codeBytes.data(), codeBytes.size(), false, mem);
+        copyCode(addr, size, true, mem + codeBytes.size());
+	}
+	else
+    {
+        copyCode(addr, size, true, mem + codeBytes.size());
+        copyCode((uint32_t)codeBytes.data(), codeBytes.size(), false, mem);
+	}
+    return (void*)mem;
+}
+
+void* asmhookBefore(uint32_t addr, const std::string& code, std::vector<uint8_t>* storeAt, int size /*= 5*/)
+{
+	asmhookCommon(addr, code, storeAt, size, true);
+}
+
+void* asmhookAfter(uint32_t addr, const std::string& code, std::vector<uint8_t>* storeAt, int size /*= 5*/)
+{
+	asmhookCommon(addr, code, storeAt, size, false);
+}
+
 void unhookReplaceCall(uint32_t addr, std::vector<uint8_t>& restoreData)
 {
 	unhookCall(addr, restoreData);
@@ -724,6 +753,13 @@ void unhookHookFunction(uint32_t addr, std::vector<uint8_t>& restoreData, void* 
 {
 	unhookCall(addr, restoreData);
 	codeMemoryFree(copiedCode);
+}
+
+void unhookAsmhook(uint32_t addr, std::vector<uint8_t>& restoreData, void*& copiedCode)
+{
+	codeMemoryFree(copiedCode);
+	copiedCode = nullptr;
+	patchBytes(addr, restoreData.data(), restoreData.size());
 }
 
 void removeHooks()
@@ -846,8 +882,14 @@ void g()
 	hookReplaceCall<short, 1, int, char*, bool>(0xFEDECEBE, 2, f);
 }
 
-std::unique_ptr<uint8_t> fasmMemoryBlock = std::make_unique<uint8_t>(200);
-Fasm_Assemble fasm_Assemble;
+uint8_t fasmMemoryBlock[FASM_MEMORY_BLOCK_SIZE];
+FASM_STATE* fasmState = reinterpret_cast<FASM_STATE*>(fasmMemoryBlock);
+Fasm_Assemble fasm_Assemble; // initialized inside "init()" function in dllApi.cpp
+
+FasmAssembleReturn fasm_Assemble_str(const std::string& src, uint8_t* memoryBlock, int memoryBlockSize, int passes, uint32_t displayPipeHandle)
+{
+	return fasm_Assemble(src.c_str(), memoryBlock, memoryBlockSize, passes, displayPipeHandle);
+}
 
 const std::map<FasmErrorCode, std::string> fasmErrorCodeToText =
 {
@@ -890,3 +932,36 @@ const std::map<FasmErrorCode, std::string> fasmErrorCodeToText =
 	{FASMERR_USER_ERROR, "user error"},
 	{FASMERR_ASSERTION_FAILED, "assertion failed"},
 };
+
+std::string_view compileAsm(const std::string& code)
+{
+	std::string useCode = "use32\n" + code; // 32-bit
+	FasmAssembleReturn ret = fasm_Assemble(useCode.c_str(), fasmMemoryBlock, FASM_MEMORY_BLOCK_SIZE, 100, 0);
+	switch (ret)
+	{
+	case FASM_OK:
+	case FASM_WORKING:
+		return std::string_view((const char*)fasmState->output_data, fasmState->output_length);
+		break;
+	case FASM_ERROR:
+	case FASM_INVALID_PARAMETER:
+	case FASM_OUT_OF_MEMORY:
+	case FASM_STACK_OVERFLOW:
+	case FASM_SOURCE_NOT_FOUND:
+	case FASM_UNEXPECTED_END_OF_SOURCE:
+	case FASM_CANNOT_GENERATE_CODE:
+	case FASM_FORMAT_LIMITATIONS_EXCEDDED:
+	case FASM_WRITE_FAILED:
+	case FASM_INVALID_DEFINITION:
+	{
+		wxString errorMsg = wxString::Format("[ASM ERROR, line %d]: %s", fasmState->error_line, fasmErrorCodeToText.at(fasmState->error_code));
+		wxLogError(errorMsg);
+		wxLog::FlushActive();
+		return "";
+	}
+		break;
+	default:
+		break;
+
+	}
+}
