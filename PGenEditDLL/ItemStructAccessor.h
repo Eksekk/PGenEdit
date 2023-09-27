@@ -22,7 +22,7 @@ public:
     [[nodiscard]] virtual mm7::Item convertToMM7Item() = 0;
     virtual ~ItemStructAccessor();
 
-    template<typename Function>
+    /*template<typename Function>
     static void forEachItemDo(void* item, int n, Function callback)
     {
         if (MMVER == 6)
@@ -37,20 +37,31 @@ public:
         {
             TemplatedItemStructAccessor<mm8::Item>::forEachItemDo(item, n, callback);
         }
-    }
+    }*/
 
     template<typename Function>
     auto forItemIndexDo(void* ptr, int index, Function&& func)
     {
-        return StructAccessorGenericFor::genericForSingleArrayIndexExecute(ptr, index, std::forward<Function>(func));
+        return StructAccessorGenericFor::genericForSingleArrayIndexExecute<Function, mm6::Item, mm7::Item, mm8::Item>(ptr, index, std::forward<Function>(func));
+    }
+
+    template<typename Function>
+    auto forItemDo(void* ptr, Function&& func)
+    {
+        return StructAccessorGenericFor::genericForItemExecute<Function, mm6::Item, mm7::Item, mm8::Item>(ptr, std::forward<Function>(func));
+    }
+
+    template<typename Function>
+    auto forEachItemDo(void* ptr, int count, Function&& func)
+    {
+        return StructAccessorGenericFor::genericForEachDo<Function, mm6::Item, mm7::Item, mm8::Item>(ptr, count, std::forward<Function>(func));
     }
 
     template<typename Function>
     void forEachItemTxtDo(Function&& func)
     {
         ArrayData data = gameAccessor->getItemsTxtArrayData();
-        StructAccessorGenericFor::genericForEachDo<Function, mm6::ItemsTxtItem, mm7::ItemsTxtItem, mm8::ItemsTxtItem,
-            TemplatedItemStructAccessor>(data.ptr(), data.size(), std::forward<Function>(func));
+        StructAccessorGenericFor::genericForEachDo<Function, mm6::ItemsTxtItem, mm7::ItemsTxtItem, mm8::ItemsTxtItem>(data.ptr(), data.size(), std::forward<Function>(func));
     }
 
     template<typename Function>
@@ -58,16 +69,14 @@ public:
     {
         ArrayData data = gameAccessor->getItemsTxtArrayData();
         data.checkIndex(index);
-        return StructAccessorGenericFor::genericForSingleArrayIndexExecute<Function, mm6::ItemsTxtItem, mm7::ItemsTxtItem, mm8::ItemsTxtItem,
-            TemplatedItemStructAccessor>(data.ptr(), index, std::forward<Function>(func));
+        return StructAccessorGenericFor::genericForSingleArrayIndexExecute<Function, mm6::ItemsTxtItem, mm7::ItemsTxtItem, mm8::ItemsTxtItem>(data.ptr(), index, std::forward<Function>(func));
     }
 
     template<typename Function>
     void forEachSpcItemTxtDo(Function&& func)
     {
         ArrayData data = gameAccessor->getSpcItemsTxtArrayData();
-        StructAccessorGenericFor::genericForEachDo<Function, mm6::SpcItemsTxtItem, mm7::SpcItemsTxtItem, mm8::SpcItemsTxtItem,
-            TemplatedItemStructAccessor>(data.ptr(), data.size(), std::forward<Function>(func));
+        StructAccessorGenericFor::genericForEachDo<Function, mm6::SpcItemsTxtItem, mm7::SpcItemsTxtItem, mm8::SpcItemsTxtItem>(data.ptr(), data.size(), std::forward<Function>(func));
     }
 
     template<typename Function>
@@ -76,15 +85,14 @@ public:
         ArrayData data = gameAccessor->getSpcItemsTxtArrayData();
         data.checkIndex(index);
         return StructAccessorGenericFor::genericForSingleArrayIndexExecute<Function, mm6::SpcItemsTxtItem, mm7::SpcItemsTxtItem,
-            mm8::SpcItemsTxtItem, TemplatedItemStructAccessor>(data.ptr(), index, std::forward<Function>(func));
+            mm8::SpcItemsTxtItem>(data.ptr(), index, std::forward<Function>(func));
     }
 
     template<typename Function>
     void forEachStdItemTxtDo(Function&& func)
     {
         ArrayData data = gameAccessor->getStdItemsTxtArrayData();
-        StructAccessorGenericFor::genericForEachDo<Function, mm6::StdItemsTxtItem, mm7::StdItemsTxtItem, mm8::StdItemsTxtItem,
-            TemplatedItemStructAccessor>(data.ptr(), data.size(), std::forward<Function>(func));
+        StructAccessorGenericFor::genericForEachDo<Function, mm6::StdItemsTxtItem, mm7::StdItemsTxtItem, mm8::StdItemsTxtItem>(data.ptr(), data.size(), std::forward<Function>(func));
     }
 
     template<typename Function>
@@ -92,8 +100,7 @@ public:
     {
         ArrayData data = gameAccessor->getStdItemsTxtArrayData();
         data.checkIndex(index);
-        return StructAccessorGenericFor::genericForSingleArrayIndexExecute<Function, mm6::StdItemsTxtItem, mm7::StdItemsTxtItem, mm8::StdItemsTxtItem,
-            TemplatedItemStructAccessor>(data.ptr(), index, std::forward<Function>(func));
+        return StructAccessorGenericFor::genericForSingleArrayIndexExecute<Function, mm6::StdItemsTxtItem, mm7::StdItemsTxtItem, mm8::StdItemsTxtItem>(data.ptr(), index, std::forward<Function>(func));
     }
 
     // pure virtual function forEachItemDo(void* items, Callback callback)
@@ -135,7 +142,7 @@ public:
             }
             return changed;
         }
-    }
+    }/*
 
     template<typename Function>
     static void forEachItemDo(void* item, int n, Function callback)
@@ -145,7 +152,7 @@ public:
         {
             callback(items + i);
         }
-    }
+    }*/
 
     void forEachItemDo2(void* items, int n, std::function<void(std::variant<mm6::Item*, mm7::Item*, mm8::Item*> variant)> callback);
 };

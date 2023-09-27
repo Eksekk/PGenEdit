@@ -4,6 +4,7 @@
 #include "PlayerSkill.h"
 #include "Enum_const.h"
 #include "ItemGenerationData.h"
+#include "ItemStructAccessor.h"
 
 class PlayerItem // holds generic item data, one entry per each item id
 {
@@ -30,6 +31,10 @@ public:
 
 	void loadAndConvertBitmap(const wxString& name);
 	std::string getItemTypeName() const;
-
+	template<typename Function>
+	auto forItemTxtDo(Function&& func) const
+	{
+		return itemAccessor->forItemTxtIndexDo(id, std::forward<Function>(func));
+	}
 };
 

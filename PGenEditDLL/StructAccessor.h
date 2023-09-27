@@ -58,6 +58,11 @@ public:
         {
             return **val;
         }
+        else
+        {
+            wxFAIL;
+            return 1;
+        }
     }
 
     inline void checkIndex(int index) const
@@ -90,20 +95,20 @@ public:
 class StructAccessorGenericFor
 {
 public:
-    template<typename Function, typename Type6, typename Type7, typename Type8, template<typename> typename Subclass>
+    template<typename Function, typename Type6, typename Type7, typename Type8>
     static auto genericForEachDo(void* ptr, int n, Function&& func)
     {
         if (MMVER == 6)
         {
-            Subclass<Type6>::genericForEachDoSpecialized(reinterpret_cast<Type6*>(ptr), n, std::forward<Function>(func));
+            return genericForEachDoSpecialized(reinterpret_cast<Type6*>(ptr), n, std::forward<Function>(func));
         }
         else if (MMVER == 7)
         {
-            Subclass<Type7>::genericForEachDoSpecialized(reinterpret_cast<Type7*>(ptr), n, std::forward<Function>(func));
+            return genericForEachDoSpecialized(reinterpret_cast<Type7*>(ptr), n, std::forward<Function>(func));
         }
         else if (MMVER == 8)
         {
-            Subclass<Type8>::genericForEachDoSpecialized(reinterpret_cast<Type8*>(ptr), n, std::forward<Function>(func));
+            return genericForEachDoSpecialized(reinterpret_cast<Type8*>(ptr), n, std::forward<Function>(func));
         }
         else
         {
@@ -120,20 +125,20 @@ public:
         }
     }
 
-    template<typename Function, typename Type6, typename Type7, typename Type8, template<typename> typename Subclass>
+    template<typename Function, typename Type6, typename Type7, typename Type8>
     static auto genericForItemExecute(void* ptr, Function&& func)
     {
         if (MMVER == 6)
         {
-            return Subclass<Type6>::genericForItemExecuteSpecialized(reinterpret_cast<Type6*>(ptr), std::forward<Function>(func));
+            return genericForItemExecuteSpecialized(reinterpret_cast<Type6*>(ptr), std::forward<Function>(func));
         }
         else if (MMVER == 7)
         {
-            return Subclass<Type7>::genericForItemExecuteSpecialized(reinterpret_cast<Type7*>(ptr), std::forward<Function>(func));
+            return genericForItemExecuteSpecialized(reinterpret_cast<Type7*>(ptr), std::forward<Function>(func));
         }
         else if (MMVER == 8)
         {
-            return Subclass<Type8>::genericForItemExecuteSpecialized(reinterpret_cast<Type8*>(ptr), std::forward<Function>(func));
+            return genericForItemExecuteSpecialized(reinterpret_cast<Type8*>(ptr), std::forward<Function>(func));
         }
         else
         {
@@ -149,25 +154,24 @@ public:
     }
 
     // to be used for example with items.txt - where there is one array only, so if you need item id 5 data, you don't need to calculate pointer
-    template<typename Function, typename Type6, typename Type7, typename Type8, template<typename> typename Subclass>
+    template<typename Function, typename Type6, typename Type7, typename Type8>
     static auto genericForSingleArrayIndexExecute(void* ptr, int index, Function&& func)
     {
         if (MMVER == 6)
         {
-            return Subclass<Type6>::genericForItemExecuteSpecialized(reinterpret_cast<Type6*>(ptr) + index, std::forward<Function>(func));
+            return genericForItemExecuteSpecialized(reinterpret_cast<Type6*>(ptr) + index, std::forward<Function>(func));
         }
         else if (MMVER == 7)
         {
-            return Subclass<Type7>::genericForItemExecuteSpecialized(reinterpret_cast<Type7*>(ptr) + index, std::forward<Function>(func));
+            return genericForItemExecuteSpecialized(reinterpret_cast<Type7*>(ptr) + index, std::forward<Function>(func));
         }
         else if (MMVER == 8)
         {
-            return Subclass<Type8>::genericForItemExecuteSpecialized(reinterpret_cast<Type8*>(ptr) + index, std::forward<Function>(func));
+            return genericForItemExecuteSpecialized(reinterpret_cast<Type8*>(ptr) + index, std::forward<Function>(func));
         }
         else
         {
             wxFAIL;
         }
-        return false;
     }
 };

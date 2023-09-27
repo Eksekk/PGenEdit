@@ -476,13 +476,13 @@ void ItemTableViewModel::GetValue(wxVariant& variant, const wxDataViewItem& item
     const PlayerItem* playerItem = reinterpret_cast<const PlayerItem*>(&item);
     switch (col)
     {
-    case 0:
+    case 0: // id
         variant = (long)playerItem->id;
         break;
-    case 1:
-        variant = playerItem->getItemTypeName(); // TODO: stringize item type (equip stat) as category
+    case 1: // name
+        variant = playerItem->name;
         break;
-    case 2:
+    case 2: // category (skill name)
     {
         PlayerSkill* sk = playerItem->skill;
         if (sk)
@@ -492,23 +492,23 @@ void ItemTableViewModel::GetValue(wxVariant& variant, const wxDataViewItem& item
         else
         {
             variant = "None";
-        } // TODO: stringize item type (equip stat) as category
+        }
         break;
     }
-    case 3:
-        variant = playerItem->name;
+    case 3: // type
+        variant = playerItem->getItemTypeName();
         break;
-    case 4:
-        variant = playerItem->name;
+    case 4: // mod
+        variant = ""; // TODO
         break;
-    case 5:
-        variant = playerItem->name;
+    case 5: // material
+        variant = (long)playerItem->forItemTxtDo([](auto itemTxt) { return itemTxt->material; });
         break;
-    case 6:
-        variant = playerItem->name;
+    case 6: // extra
+        variant = ""; // TODO
         break;
-    case 7:
-        variant = playerItem->name;
+    case 7: // image
+        variant << *playerItem->image; // bitmaps require "shift left" operator
         break;
     }
 }
@@ -531,6 +531,7 @@ bool ItemTableViewModel::IsContainer(const wxDataViewItem& item) const
 unsigned int ItemTableViewModel::GetChildren(const wxDataViewItem& item, wxDataViewItemArray& children) const
 {
     //itemAccessor->for
+    return 0;
 }
 
 unsigned int ItemTableViewModel::GetColumnCount() const
