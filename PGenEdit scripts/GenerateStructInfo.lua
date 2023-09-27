@@ -2053,7 +2053,10 @@ function processConst(name)
 		name = pr .. "_" .. name:upper()
 		return name
 	end
-	local vector = format("std::vector<int64_t> %s", formatName(name, "ALL"))
+	local vectorName = formatName(name, "ALL")
+	local vector = format("std::vector<int64_t> %s", vectorName)
+	local mapName = formatName(name, "ENUM_TO_STRING")
+	local map = format("std::map<int64_t, std::string> %s", mapName)
 	local forwardDecl = {"extern int64_t"}
 	for i, k in ipairs(allKeys) do
 		table.insert(forwardDecl, "\t" .. formatName(k) .. (i == #allKeys and ";" or ","))
@@ -2061,6 +2064,7 @@ function processConst(name)
 	multipleInsert(forwardDecl, #forwardDecl + 1, {
 		"",
 		"extern " .. vector .. ";",
+		"extern " .. map .. ";",
 		""
 	})
 	
@@ -2080,20 +2084,25 @@ function processConst(name)
 	multipleInsert(source, #source + 1, {
 		"",
 		vector .. ";",
+		map .. ";",
 		""
 	})
 	
-	for _, i in ipairs{6, 7, 8} do
-		table.insert(source, string.format("void makeEnum%s_%d()", name, i))
+	for _, gameVer in ipairs{6, 7, 8} do
+		table.insert(source, string.format("void makeEnum%s_%d()", name, gameVer))
 		table.insert(source, "{")
-		local vals = {}
-		for v, k in sortpairs(table.invert(consts[i][name])) do
+		local vectorVals = {}
+		local mapVals = {}
+		for v, k in sortpairs(table.invert(consts[gameVer][name])) do
 			table.insert(source, string.format("\t%s = %d;", formatName(k), v))
-			table.insert(vals, formatName(k))
+			table.insert(vectorVals, formatName(k))
+			mapVals[#mapVals+1] = format("{%s, %q}", formatName(k), k)
 		end
 		multipleInsert(source, #source + 1, {
 			"",
-			format("\t%s = { %s };", formatName(name, "ALL"), table.concat(vals, ", ")),
+			format("\t%s = { %s };", vectorName, table.concat(vectorVals, ", ")),
+			"",
+			format("\t%s = { %s };", mapName, table.concat(mapVals, ", ")),
 			"}",
 			"",
 		})

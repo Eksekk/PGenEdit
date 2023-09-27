@@ -174,7 +174,8 @@ using ItemStructAccessor_6 = TemplatedItemStructAccessor<mm6::Item>;
 using ItemStructAccessor_7 = TemplatedItemStructAccessor<mm7::Item>;
 using ItemStructAccessor_8 = TemplatedItemStructAccessor<mm8::Item>;
 
+/*
 auto f = [](auto&& a) -> int {return 5; };
 int x = itemAccessor->genericForItemExecute<decltype(std::move(f)), mm6::Item, mm7::Item, mm8::Item, TemplatedItemStructAccessor>((void*)0, std::move(f));
 auto f2 = [](auto&& a) -> bool {return false; };
-bool x2 = itemAccessor->genericForItemExecute<decltype(std::move(f2)), mm6::Item, mm7::Item, mm8::Item, TemplatedItemStructAccessor>((void*)0, std::move(f2));
+bool x2 = itemAccessor->genericForItemExecute<decltype(std::move(f2)), mm6::Item, mm7::Item, mm8::Item, TemplatedItemStructAccessor>((void*)0, std::move(f2));*/

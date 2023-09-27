@@ -14,8 +14,13 @@ void PlayerItem::loadAndConvertBitmap(const wxString& name)
 
 }
 
-std::string PlayerItem::getCategoryName() const
+std::string PlayerItem::getItemTypeName() const
 {
-	int itemType = itemAccessor->forItemTxtIndexDo(id - 1, [](auto ptr) -> int { return ptr->equipStat; });
-
+    int type = itemAccessor->forItemTxtIndexDo(id, [](auto itemTxt) { return itemTxt->equipStat; }) + 1;
+    if (type == 0)
+    {
+        wxLogError("Invalid item equip stat 0");
+        return "invalid";
+    }
+    return ENUM_TO_STRING_ITEM_SLOT.at(type);
 }

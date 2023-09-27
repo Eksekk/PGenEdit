@@ -216,7 +216,10 @@ extern std::vector<int> STATS_SKILLS;
 extern std::vector<int> STATS_OTHER;
 extern std::vector<int> STATS_ALL;
 
-extern int
+void checkStatValidity(int stat);
+void checkDamageTypeValidity(int dmg);
+
+extern int64_t
 DMG_PHYS,
 DMG_MAGIC,
 DMG_FIRE,
@@ -234,14 +237,12 @@ DMG_LIGHT,
 DMG_DARK,
 DMG_DRAGON;
 
+extern std::vector<int64_t> ALL_DAMAGE;
+extern std::map<int64_t, std::string> ENUM_TO_STRING_DAMAGE;
+
 extern void makeEnumDamage_6();
 extern void makeEnumDamage_7();
 extern void makeEnumDamage_8();
-
-extern std::vector<int> DAMAGE_ALL_TYPES;
-
-void checkStatValidity(int stat);
-void checkDamageTypeValidity(int dmg);
 
 extern int64_t
 ITEM_TYPE_ANY,
@@ -295,6 +296,7 @@ ITEM_TYPE_GEMS_2,
 ITEM_TYPE_GOLD_;
 
 extern std::vector<int64_t> ALL_ITEM_TYPE;
+extern std::map<int64_t, std::string> ENUM_TO_STRING_ITEM_TYPE;
 
 extern void makeEnumItemType_6();
 extern void makeEnumItemType_7();
@@ -319,6 +321,7 @@ ITEM_SLOT_RING_5,
 ITEM_SLOT_RING_6;
 
 extern std::vector<int64_t> ALL_ITEM_SLOT;
+extern std::map<int64_t, std::string> ENUM_TO_STRING_ITEM_SLOT;
 
 extern void makeEnumItemSlot_6();
 extern void makeEnumItemSlot_7();
@@ -355,6 +358,7 @@ PLAYER_BUFF_LEVITATE,
 PLAYER_BUFF_MISFORM;
 
 extern std::vector<int64_t> ALL_PLAYER_BUFF;
+extern std::map<int64_t, std::string> ENUM_TO_STRING_PLAYER_BUFF;
 
 extern void makeEnumPlayerBuff_6();
 extern void makeEnumPlayerBuff_7();
@@ -388,6 +392,7 @@ PARTY_BUFF_STONESKIN,
 PARTY_BUFF_WATER_RESISTANCE;
 
 extern std::vector<int64_t> ALL_PARTY_BUFF;
+extern std::map<int64_t, std::string> ENUM_TO_STRING_PARTY_BUFF;
 
 extern void makeEnumPartyBuff_6();
 extern void makeEnumPartyBuff_7();
@@ -405,6 +410,7 @@ MON_BIT_SHOW_AS_HOSTILE,
 MON_BIT_IS_OBELISK_CHEST;
 
 extern std::vector<int64_t> ALL_MONSTER_BITS;
+extern std::map<int64_t, std::string> ENUM_TO_STRING_MONSTER_BITS;
 
 extern void makeEnumMonsterBits_6();
 extern void makeEnumMonsterBits_7();
@@ -441,6 +447,7 @@ MON_BUFF_WANDER,
 MON_BUFF_MISTFORM;
 
 extern std::vector<int64_t> ALL_MONSTER_BUFF;
+extern std::map<int64_t, std::string> ENUM_TO_STRING_MONSTER_BUFF;
 
 extern void makeEnumMonsterBuff_6();
 extern void makeEnumMonsterBuff_7();
@@ -472,6 +479,7 @@ MON_BONUS_DRAINSP,
 MON_BONUS_AFRAID;
 
 extern std::vector<int64_t> ALL_MONSTER_BONUS;
+extern std::map<int64_t, std::string> ENUM_TO_STRING_MONSTER_BONUS;
 
 extern void makeEnumMonsterBonus_6();
 extern void makeEnumMonsterBonus_7();
@@ -491,6 +499,7 @@ MON_KIND_OGRE,
 MON_KIND_ELEMENTAL;
 
 extern std::vector<int64_t> ALL_MONSTER_KIND;
+extern std::map<int64_t, std::string> ENUM_TO_STRING_MONSTER_KIND;
 
 extern void makeEnumMonsterKind_6();
 extern void makeEnumMonsterKind_7();
@@ -510,7 +519,7 @@ HOUSE_TYPE_MIND_GUILD,
 HOUSE_TYPE_BODY_GUILD,
 HOUSE_TYPE_LIGHT_GUILD,
 HOUSE_TYPE_DARK_GUILD,
-HOUSE_TYPE_SPELL_SHOP,
+HOUSE_TYPE_ELEMENTAL_GUILD,
 HOUSE_TYPE_SELF_GUILD,
 HOUSE_TYPE_THIEVES_GUILD,
 HOUSE_TYPE_MERC_GUILD,
@@ -519,8 +528,8 @@ HOUSE_TYPE_THRONE,
 HOUSE_TYPE_TAVERN,
 HOUSE_TYPE_BANK,
 HOUSE_TYPE_TEMPLE,
-HOUSE_TYPE_CASTLE_ENTRANCE,
-HOUSE_TYPE_DUNGEON_ENT,
+HOUSE_TYPE_CASTLE_ENT,
+HOUSE_TYPE_DUNGEON_ENTRANCE,
 HOUSE_TYPE_SEER_EVIL,
 HOUSE_TYPE_STABLES,
 HOUSE_TYPE_BOATS,
@@ -531,6 +540,7 @@ HOUSE_TYPE_CIRCUS,
 HOUSE_TYPE_THE_ADVENTURERS_INN;
 
 extern std::vector<int64_t> ALL_HOUSE_TYPE;
+extern std::map<int64_t, std::string> ENUM_TO_STRING_HOUSE_TYPE;
 
 extern void makeEnumHouseType_6();
 extern void makeEnumHouseType_7();
@@ -543,7 +553,7 @@ HOUSE_SCREENS_MAIN,
 HOUSE_SCREENS_BUY_STANDARD,
 HOUSE_SCREENS_SELL,
 HOUSE_SCREENS_IDENTIFY,
-HOUSE_SCREENS_BUY_SPECIAL,
+HOUSE_SCREENS_BUY_SPECIAL_MM6,
 HOUSE_SCREENS_BANK_DEPOSIT,
 HOUSE_SCREENS_BANK_WITHDRAW,
 HOUSE_SCREENS_HEAL,
@@ -618,7 +628,6 @@ HOUSE_SCREENS_STREET_NPC,
 HOUSE_SCREENS_LACK_FAME,
 HOUSE_SCREENS_BEG_THREAT_BRIBE,
 HOUSE_SCREENS_THREAT_BRIBE,
-HOUSE_SCREENS_BUY_SPECIAL_MM6,
 HOUSE_SCREENS_D,
 HOUSE_SCREENS_E,
 HOUSE_SCREENS_F,
@@ -629,6 +638,7 @@ HOUSE_SCREENS_ARMSMASTER,
 HOUSE_SCREENS_STEALING,
 HOUSE_SCREENS_ALCHEMY,
 HOUSE_SCREENS_DISPLAY_INVENTORY,
+HOUSE_SCREENS_BUY_SPECIAL,
 HOUSE_SCREENS_LEARN_SKILLS,
 HOUSE_SCREENS_BOUNTY_HUNT,
 HOUSE_SCREENS_PAY_FINE,
@@ -654,6 +664,7 @@ HOUSE_SCREENS_JOIN_ROSTER,
 HOUSE_SCREENS_JOIN_ROSTER_NO;
 
 extern std::vector<int64_t> ALL_HOUSE_SCREENS;
+extern std::map<int64_t, std::string> ENUM_TO_STRING_HOUSE_SCREENS;
 
 extern void makeEnumHouseScreens_6();
 extern void makeEnumHouseScreens_7();
@@ -693,6 +704,7 @@ FACET_BIT_DISABLE_EVENT_BY_CTRL_CLICK,
 FACET_BIT_EVENT_DISABLED_BY_CTRL_CLICK;
 
 extern std::vector<int64_t> ALL_FACET_BITS;
+extern std::map<int64_t, std::string> ENUM_TO_STRING_FACET_BITS;
 
 extern void makeEnumFacetBits_6();
 extern void makeEnumFacetBits_7();
@@ -802,6 +814,7 @@ PLAYER_FACE_ANIMATION_NOT_ENOUGH_FOOD,
 PLAYER_FACE_ANIMATION_DEATH_BLOW;
 
 extern std::vector<int64_t> ALL_FACE_ANIMATION;
+extern std::map<int64_t, std::string> ENUM_TO_STRING_FACE_ANIMATION;
 
 extern void makeEnumFaceAnimation_6();
 extern void makeEnumFaceAnimation_7();
@@ -829,6 +842,7 @@ PLAYER_CONDITION_GOOD,
 PLAYER_CONDITION_ZOMBIE;
 
 extern std::vector<int64_t> ALL_CONDITION;
+extern std::map<int64_t, std::string> ENUM_TO_STRING_CONDITION;
 
 extern void makeEnumCondition_6();
 extern void makeEnumCondition_7();
@@ -840,6 +854,7 @@ CHEST_BIT_ITEMS_PLACED,
 CHEST_BIT_IDENTIFIED;
 
 extern std::vector<int64_t> ALL_CHEST_BITS;
+extern std::map<int64_t, std::string> ENUM_TO_STRING_CHEST_BITS;
 
 extern void makeEnumChestBits_6();
 extern void makeEnumChestBits_7();
@@ -868,6 +883,7 @@ MON_AI_STATE_RANGED_ATTACK_4,
 MON_AI_STATE_INVISIBLE;
 
 extern std::vector<int64_t> ALL_AISTATE;
+extern std::map<int64_t, std::string> ENUM_TO_STRING_AISTATE;
 
 extern void makeEnumAIState_6();
 extern void makeEnumAIState_7();
@@ -1005,6 +1021,7 @@ SPELL_CONTROL_UNDEAD,
 SPELL_PAIN_REFLECTION,
 SPELL_SACRIFICE,
 SPELL_SOULDRINKER,
+SPELL_SUMMON_WISP,
 SPELL_DARK_GRASP,
 SPELL_GLAMOUR,
 SPELL_TRAVELERS_BOON,
@@ -1021,6 +1038,7 @@ SPELL_SHOOT_CANNON_BALL,
 SPELL_SHOOT_DRAGON;
 
 extern std::vector<int64_t> ALL_SPELLS;
+extern std::map<int64_t, std::string> ENUM_TO_STRING_SPELLS;
 
 extern void makeEnumSpells_6();
 extern void makeEnumSpells_7();
