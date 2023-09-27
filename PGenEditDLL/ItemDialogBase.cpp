@@ -32,6 +32,10 @@ ItemDialogBase::ItemDialogBase(wxWindow* parent, wxWindowID id, const wxString& 
     colMaterial = itemTable->AppendTextColumn(_("Material"), wxDATAVIEW_CELL_INERT, -1, static_cast<wxAlignment>(wxALIGN_LEFT), wxDATAVIEW_COL_RESIZABLE);
     colExtra = itemTable->AppendTextColumn(_("Extra"), wxDATAVIEW_CELL_INERT, -1, static_cast<wxAlignment>(wxALIGN_LEFT), wxDATAVIEW_COL_RESIZABLE);
     colImage = itemTable->AppendIconTextColumn(_("Image"), wxDATAVIEW_CELL_INERT, -1, static_cast<wxAlignment>(wxALIGN_LEFT), wxDATAVIEW_COL_RESIZABLE);
+
+    itemTableViewModel = new ItemTableViewModel(*this);
+    itemTableViewModel->DecRef();
+    itemTable->AssociateModel(itemTableViewModel);
     sizerChooseItem->Add(itemTable, 0, wxALL | wxEXPAND, 5);
 
     sizerMain->Add(sizerChooseItem, 1, wxEXPAND, 5);
@@ -536,11 +540,13 @@ unsigned int ItemTableViewModel::GetChildren(const wxDataViewItem& item, wxDataV
 
 unsigned int ItemTableViewModel::GetColumnCount() const
 {
-    return 0;
+    // NOT NEEDED, is not called because of deprecation
+    return 8;
 }
 
 wxString ItemTableViewModel::GetColumnType(unsigned int col) const
 {
+    // NOT NEEDED, is not called because of deprecation
     return wxString();
 }
 

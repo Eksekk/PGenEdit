@@ -124,7 +124,8 @@ public:
             func(ptr + i);
         }
     }
-
+#pragma warning(push)
+#pragma warning(disable : 4715) // "not all control paths return a value"
     template<typename Function, typename Type6, typename Type7, typename Type8>
     static auto genericForItemExecute(void* ptr, Function&& func)
     {
@@ -146,13 +147,15 @@ public:
         }
         return false;
     }
+#pragma warning(pop)
 
     template<typename Function, typename T>
     static auto genericForItemExecuteSpecialized(T* ptr, Function&& func)
     {
         return func(ptr);
     }
-
+#pragma warning(push)
+#pragma warning(disable : 4715) // "not all control paths return a value"
     // to be used for example with items.txt - where there is one array only, so if you need item id 5 data, you don't need to calculate pointer
     template<typename Function, typename Type6, typename Type7, typename Type8>
     static auto genericForSingleArrayIndexExecute(void* ptr, int index, Function&& func)
@@ -174,4 +177,5 @@ public:
             wxFAIL;
         }
     }
+#pragma warning(pop)
 };

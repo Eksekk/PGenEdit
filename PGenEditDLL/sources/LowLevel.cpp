@@ -845,3 +845,48 @@ void g()
 {
 	hookReplaceCall<short, 1, int, char*, bool>(0xFEDECEBE, 2, f);
 }
+
+std::unique_ptr<uint8_t> fasmMemoryBlock = std::make_unique<uint8_t>(200);
+Fasm_Assemble fasm_Assemble;
+
+const std::map<FasmErrorCode, std::string> fasmErrorCodeToText =
+{
+	{FASMERR_FILE_NOT_FOUND, "file not found"},
+	{FASMERR_ERROR_READING_FILE, "error reading file"},
+	{FASMERR_INVALID_FILE_FORMAT, "invalid file format"},
+	{FASMERR_INVALID_MACRO_ARGUMENTS, "invalid macro arguments"},
+	{FASMERR_INCOMPLETE_MACRO, "incomplete macro"},
+	{FASMERR_UNEXPECTED_CHARACTERS, "unexpected characters"},
+	{FASMERR_INVALID_ARGUMENT, "invalid argument"},
+	{FASMERR_ILLEGAL_INSTRUCTION, "illegal instruction"},
+	{FASMERR_INVALID_OPERAND, "invalid operand"},
+	{FASMERR_INVALID_OPERAND_SIZE, "invalid operand size"},
+	{FASMERR_OPERAND_SIZE_NOT_SPECIFIED, "operand size not specified"},
+	{FASMERR_OPERAND_SIZES_DO_NOT_MATCH, "operand sizes do not match"},
+	{FASMERR_INVALID_ADDRESS_SIZE, "invalid address size"},
+	{FASMERR_ADDRESS_SIZES_DO_NOT_AGREE, "address sizes do not agree"},
+	{FASMERR_DISALLOWED_COMBINATION_OF_REGISTERS, "disallowed combination of registers"},
+	{FASMERR_LONG_IMMEDIATE_NOT_ENCODABLE, "long immediate not encodable"},
+	{FASMERR_RELATIVE_JUMP_OUT_OF_RANGE, "relative jump out of range"},
+	{FASMERR_INVALID_EXPRESSION, "invalid expression"},
+	{FASMERR_INVALID_ADDRESS, "invalid address"},
+	{FASMERR_INVALID_VALUE, "invalid value"},
+	{FASMERR_VALUE_OUT_OF_RANGE, "value out of range"},
+	{FASMERR_UNDEFINED_SYMBOL, "undefined symbol"},
+	{FASMERR_INVALID_USE_OF_SYMBOL, "invalid use of symbol"},
+	{FASMERR_NAME_TOO_LONG, "name too long"},
+	{FASMERR_INVALID_NAME, "invalid name"},
+	{FASMERR_RESERVED_WORD_USED_AS_SYMBOL, "reserved word used as symbol"},
+	{FASMERR_SYMBOL_ALREADY_DEFINED, "symbol already defined"},
+	{FASMERR_MISSING_END_QUOTE, "missing end quote"},
+	{FASMERR_MISSING_END_DIRECTIVE, "missing end directive"},
+	{FASMERR_UNEXPECTED_INSTRUCTION, "unexpected instruction"},
+	{FASMERR_EXTRA_CHARACTERS_ON_LINE, "extra characters on line"},
+	{FASMERR_SECTION_NOT_ALIGNED_ENOUGH, "section not aligned enough"},
+	{FASMERR_SETTING_ALREADY_SPECIFIED, "setting already specified"},
+	{FASMERR_DATA_ALREADY_DEFINED, "data already defined"},
+	{FASMERR_TOO_MANY_REPEATS, "too many repeats"},
+	{FASMERR_SYMBOL_OUT_OF_SCOPE, "symbol out of scope"},
+	{FASMERR_USER_ERROR, "user error"},
+	{FASMERR_ASSERTION_FAILED, "assertion failed"},
+};

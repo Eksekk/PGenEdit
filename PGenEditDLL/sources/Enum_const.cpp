@@ -40,6 +40,16 @@ int nextFreeCustomId()
 	return id++;
 }
 
+void checkStatValidity(int stat)
+{
+    wxASSERT_MSG(existsInVector(STATS_ALL, stat), wxString::Format("Stat %d doesn't exist in game version %d", stat, MMVER));
+}
+
+void checkDamageTypeValidity(int dmgType)
+{
+    wxASSERT_MSG(existsInVector(ALL_DAMAGE, (int64_t)dmgType), wxString::Format("Damage type %d doesn't exist in game version %d", dmgType, MMVER));
+}
+
 int
 STAT_MIGHT = INVALID_ID,
 STAT_INTELLECT = INVALID_ID,

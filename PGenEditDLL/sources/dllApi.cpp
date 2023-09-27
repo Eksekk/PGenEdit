@@ -80,6 +80,8 @@ void updatePartySizeAndPlayerPtrs()
     }
 }
 
+HMODULE fasmDll;
+
 extern "C"
 {
 	DLL_EXPORT void __stdcall setPlayerPointers(void** ptrs, int count);
@@ -149,7 +151,25 @@ extern "C"
     DLL_EXPORT void __stdcall init()
     {
         uint32_t playerSize, playerStart, playerCount;
+
+        // system info for hook code allocations
         GetNativeSystemInfo(&systemInfo);
+
+        // load fasm dll and its main assemble function
+        if (std::filesystem::exists(".\\fasm.dll"))
+        {
+            fasmDll = LoadLibraryA(".\\fasm.dll");
+        }
+        else if (std::filesystem::exists(".\\ExeMods\\MMExtension\\fasm.dll"))
+        {
+            fasmDll = LoadLibraryA(".\\ExeMods\\MMExtension\\fasm.dll");
+        }
+        else
+        {
+            wxLogFatalError("FASM dll not found");
+        }
+        fasm_Assemble = (Fasm_Assemble)GetProcAddress(fasmDll, "fasm_Assemble");
+
         if (MMVER == 6)
         {
             PlayerStructAccessor_6::_initMaps();
@@ -301,6 +321,7 @@ extern "C"
     DLL_EXPORT void __stdcall unloadCleanup()
     {
         unloadCleanupStarted = true;
+        FreeLibrary(fasmDll);
 		delete mainUpdateTimer;
 		delete generator;
 		delete playerAccessor;

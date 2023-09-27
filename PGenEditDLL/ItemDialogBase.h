@@ -37,6 +37,7 @@ class ItemDialogBase : public wxDialog
 private:
 
 protected:
+    ItemTableViewModel* itemTableViewModel;
     // window content
     wxCheckBox* checkboxItemIsFree;
     wxCheckBox* checkboxUseFilters;
