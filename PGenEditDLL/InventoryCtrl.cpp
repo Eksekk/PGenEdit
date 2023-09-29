@@ -340,7 +340,7 @@ bool InventoryCtrl::reloadReferencedItems()
     else if (const PlayerInventoryRef* ref = std::get_if<PlayerInventoryRef>(&inventoryType))
     {
         // add items from player
-        auto callback = [&]<typename AnyItemStruct>(AnyItemStruct* item)
+        auto callback = [&](AnyItemStruct auto* item)
         {
             mm7::Item convertedItem = itemAccessor->forItem(item)->convertToMM7Item();
             if (convertedItem.number != 0)

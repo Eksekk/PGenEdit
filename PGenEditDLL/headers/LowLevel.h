@@ -226,6 +226,28 @@ void* asmhookBefore(uint32_t addr, const std::string& code, std::vector<uint8_t>
 // new code is called after overwritten code
 void* asmhookAfter(uint32_t addr, const std::string& code, std::vector<uint8_t>* storeAt, int size = 5);
 
+void unhookAsmhook(uint32_t addr, const std::vector<uint8_t>& restoreData, void*& copiedCode);
+
+/*
+template<typename T, typename std::enable_if_t<>
+struct classToAddress
+{
+
+};*/
+
+template<typename T>
+auto getAddress(T&& t)
+{
+    if constexpr (std::is_class_v<T>)
+    {
+        return &t;
+    }
+    else
+    {
+        return t;
+    }
+}
+
 // TODO: a version that uses registers from stack (for use in hookfunction or hookcall, to call a function with particular set of register values)
 template<typename ReturnType, typename Address, typename... Args>
 ReturnType callMemoryAddress(Address address, int registerParamsNum, Args... args) // NO rvalue reference, because it passes arguments by address
@@ -246,6 +268,7 @@ ReturnType callMemoryAddress(Address address, int registerParamsNum, Args... arg
     if (registerParamsNum == -1)
     {
         typedef ReturnType(__cdecl* Function)(Args...);
+        //typedef ReturnType(__cdecl* Function)(decltype(getAddress(replacements))...);
         return reinterpret_cast<Function>(ptr)(args...);
     }
     else if (registerParamsNum == 0)
@@ -377,6 +400,8 @@ enum HookElementType
 	HOOK_ELEM_TYPE_AUTOHOOK,
     HOOK_ELEM_TYPE_REPLACE_CALL,
     HOOK_ELEM_TYPE_HOOKFUNCTION,
+    HOOK_ELEM_TYPE_ASMHOOK_BEFORE,
+    HOOK_ELEM_TYPE_ASMHOOK_AFTER,
 };
 
 // different games may need some extra elements for a particular hook, or less
@@ -391,7 +416,7 @@ public:
 	HookElementType type;
 	uint32_t address;
 	uint32_t target;
-	const char* patchDataStr;
+	const char* patchDataStr; // TODO: string_view instead of separate data/size fields
 	uint32_t hookSize;
 	uint32_t dataSize;
 	std::vector<uint8_t> restoreData;
@@ -416,6 +441,8 @@ public:
 	HookElement();
     HookElement(const HookElement&) = default; // TODO: check (extraData)
     HookElement(HookElement&&) = default;
+    HookElement& operator=(const HookElement& elem) = default;
+    HookElement& operator=(HookElement&& elem) = default;
 	~HookElement();
 };
 
@@ -678,4 +705,6 @@ struct LINE_HEADER
     uint32_t macro_line;
 };
 
+// need own function, because std::format and wxString::Format use position-based arguments, not name-based
+std::string formatAsmCode(const std::string& code, const std::unordered_map<std::string, std::variant<uint32_t, int32_t, std::string, void*>>& replacements);
 std::string_view compileAsm(const std::string& code);

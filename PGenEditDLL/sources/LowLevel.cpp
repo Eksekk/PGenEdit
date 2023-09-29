@@ -91,6 +91,12 @@ void HookElement::enable(bool enable)
 			setCallableFunctionHook();
 		}
 		break;
+		case HOOK_ELEM_TYPE_ASMHOOK_BEFORE:
+			extraData = asmhookBefore(address, std::string(patchDataStr, dataSize), &restoreData, hookSize);
+			break;
+		case HOOK_ELEM_TYPE_ASMHOOK_AFTER:
+            extraData = asmhookAfter(address, std::string(patchDataStr, dataSize), &restoreData, hookSize);
+			break;
 		case HOOK_ELEM_TYPE_DISABLED:
 			break;
 		default:
@@ -121,8 +127,14 @@ void HookElement::enable(bool enable)
 		case HOOK_ELEM_TYPE_HOOKFUNCTION:
 			unsetCallableFunctionHook();
             break;
+		case HOOK_ELEM_TYPE_ASMHOOK_BEFORE:
+		case HOOK_ELEM_TYPE_ASMHOOK_AFTER:
+			unhookAsmhook(address, restoreData, extraData);
+			break;
         case HOOK_ELEM_TYPE_DISABLED:
             break;
+		default:
+			wxFAIL_MSG(wxString::Format("Unknown hook type %d", (int)type));
 		}
 	}
 }
@@ -728,20 +740,21 @@ void* asmhookCommon(uint32_t addr, const std::string& code, std::vector<uint8_t>
 	}
 	else
     {
-        copyCode(addr, size, true, mem + codeBytes.size());
-        copyCode((uint32_t)codeBytes.data(), codeBytes.size(), false, mem);
+        copyCode(addr, size, false, mem);
+        copyCode((uint32_t)codeBytes.data(), codeBytes.size(), true, mem + size);
 	}
+	hookJumpRaw(addr, (void*)mem, nullptr);
     return (void*)mem;
 }
 
 void* asmhookBefore(uint32_t addr, const std::string& code, std::vector<uint8_t>* storeAt, int size /*= 5*/)
 {
-	asmhookCommon(addr, code, storeAt, size, true);
+	return asmhookCommon(addr, code, storeAt, size, true);
 }
 
 void* asmhookAfter(uint32_t addr, const std::string& code, std::vector<uint8_t>* storeAt, int size /*= 5*/)
 {
-	asmhookCommon(addr, code, storeAt, size, false);
+	return asmhookCommon(addr, code, storeAt, size, false);
 }
 
 void unhookReplaceCall(uint32_t addr, std::vector<uint8_t>& restoreData)
@@ -755,7 +768,7 @@ void unhookHookFunction(uint32_t addr, std::vector<uint8_t>& restoreData, void* 
 	codeMemoryFree(copiedCode);
 }
 
-void unhookAsmhook(uint32_t addr, std::vector<uint8_t>& restoreData, void*& copiedCode)
+void unhookAsmhook(uint32_t addr, const std::vector<uint8_t>& restoreData, void*& copiedCode)
 {
 	codeMemoryFree(copiedCode);
 	copiedCode = nullptr;
@@ -871,7 +884,7 @@ void HookData::push(uint32_t val)
 void HookData::ret(int stackNum)
 {
     uint32_t ret = dword(esp); // backup return address
-    esp += stackNum * 4; // pop stack args
+    esp += stackNum * 4; // pop stack replacements
     dword(esp) = ret; // restore backed up return address
 }
 
@@ -933,6 +946,63 @@ const std::map<FasmErrorCode, std::string> fasmErrorCodeToText =
 	{FASMERR_ASSERTION_FAILED, "assertion failed"},
 };
 
+std::string formatAsmCode(const std::string& code, const std::unordered_map<std::string, std::variant<uint32_t, int32_t, std::string, void*>>& replacements)
+{
+	static const std::regex regex("%.*?%");
+	std::string newCode;
+	auto iterAfterLastMatch = code.begin();
+	std::sregex_iterator regexItr(code.begin(), code.end(), regex);
+	std::sregex_iterator end;
+	while (regexItr != end)
+	{
+		const std::smatch& match = *regexItr;
+		const std::ssub_match& submatch = match[0];
+
+		if (submatch.first - iterAfterLastMatch > 0)
+		{
+			newCode += std::string(iterAfterLastMatch, submatch.first);
+		}
+		// try to find parameter
+		if (std::distance(submatch.first, submatch.second) <= 2) // %%
+		{
+			newCode += "%";
+		}
+		else
+		{
+			std::string ident = std::string(submatch.first + 1, submatch.second - 1);
+            auto mapItr = replacements.find(ident);
+            if (mapItr != replacements.end())
+            {
+                std::visit([&](auto& val)
+                    {
+                        if constexpr (SAME(std::string, decay_fully<decltype(val)>))
+                        {
+                            newCode += val;
+                        }
+                        else if constexpr (SAME(void, decay_fully<decltype(val)>))
+                        {
+                            newCode += std::to_string((uint32_t)val);
+                        }
+                        else
+                        {
+                            newCode += std::to_string(val);
+                        }
+                    }, mapItr->second);
+            }
+            else
+            {
+                wxLogError("Couldn't find replace placeholder for '%s' for code '%s'", ident, code);
+                wxLog::FlushActive();
+            }
+        }
+        iterAfterLastMatch = submatch.second;
+		++regexItr;
+	}
+	newCode += std::string(iterAfterLastMatch, code.end());
+
+	return newCode;
+}
+
 std::string_view compileAsm(const std::string& code)
 {
 	std::string useCode = "use32\n" + code; // 32-bit
@@ -961,7 +1031,9 @@ std::string_view compileAsm(const std::string& code)
 	}
 		break;
 	default:
-		break;
+		wxLogError("Unknown FASM return code: %d", (int)ret);
+        wxLog::FlushActive();
+		return "";
 
 	}
 }

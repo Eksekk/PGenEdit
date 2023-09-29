@@ -148,6 +148,7 @@ extern "C"
         return TRUE; // successful
     }
     
+    static bool dontFreeFasmDll = false;
     DLL_EXPORT void __stdcall init()
     {
         uint32_t playerSize, playerStart, playerCount;
@@ -156,7 +157,11 @@ extern "C"
         GetNativeSystemInfo(&systemInfo);
 
         // load fasm dll and its main assemble function
-        if (std::filesystem::exists(".\\fasm.dll"))
+        if (fasmDll = GetModuleHandleA("fasm.dll"))
+        {
+            dontFreeFasmDll = true;
+        }
+        else if (std::filesystem::exists(".\\fasm.dll"))
         {
             fasmDll = LoadLibraryA(".\\fasm.dll");
         }
@@ -321,7 +326,10 @@ extern "C"
     DLL_EXPORT void __stdcall unloadCleanup()
     {
         unloadCleanupStarted = true;
-        FreeLibrary(fasmDll);
+        if (!dontFreeFasmDll)
+        {
+            FreeLibrary(fasmDll);
+        }
 		delete mainUpdateTimer;
 		delete generator;
 		delete playerAccessor;

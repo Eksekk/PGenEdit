@@ -855,6 +855,57 @@ static std::vector<wxString> HookTests::testAdvancedHookFunctionality()
     return myasserter.errors;
 }
 
+namespace
+{
+    namespace asmhookTests
+    {
+        int returnCode;
+    }
+}
+
+__declspec(naked) static bool asmhookTest1(bool before)
+{
+    using namespace asmhookTests;
+    _asm
+    {
+        and returnCode, 0
+        xor eax, eax
+        // hook here (adds 5 to eax)
+        nop
+        shl eax, 1
+        nop
+        nop
+        // hook end
+        test byte ptr[esp + 4], 0xFF
+        jne $before
+            // should have 2 in eax
+            cmp eax, 2
+            jmp $tested
+        $before:
+        cmp eax, 5
+
+        $tested:
+        sete al
+        movzx eax, al
+
+        ret
+    }
+}
+
+std::vector<wxString> HookTests::testAsmHookFunctions()
+{
+    Asserter myasserter("Asm hook tests");
+    auto code = compileAsm("add eax, 5");
+    Hook hook(HookElementBuilder().address(findCode(asmhookTest1, "\x90", 1)).size(5).type(HOOK_ELEM_TYPE_ASMHOOK_BEFORE).patchDataStr(code.data()).dataSize(code.size()).build());
+    hook.enable();
+    myassertf(asmhookTest1(true), "[before asmhook] test failed");
+    hook.disable();
+    hook.elements[0] = std::move(HookElementBuilder().address(findCode(asmhookTest1, "\x90", 1)).size(5).type(HOOK_ELEM_TYPE_ASMHOOK_AFTER).patchDataStr(code.data()).dataSize(code.size()).build());
+    hook.enable();
+    myassertf(asmhookTest1(false), "[after asmhook] test failed");
+    return myasserter.errors;
+}
+
 INSTANTIATE_TEMPLATES_MM_GAMES(std::vector<wxString>, HookTests::testAdvancedHookFunctionality);
 
 struct HookSizeTest
@@ -1242,6 +1293,35 @@ const std::map<void(*)(), FindCallTest> findCallTests =
     },
 };
 
+struct FormatAsmCodeTest
+{
+    std::string code, expected;
+    std::unordered_map<std::string, std::variant<uint32_t, int32_t, std::string, void*>> params;
+};
+
+std::vector<FormatAsmCodeTest> formatAsmCodeTests =
+{
+    {
+        .code = "mov eax, %eax%; add ecx, %d%; %s%;%%", .expected = "mov eax, 5; add ecx, 100000; cmp al, dh;%", .params = { {"eax", 5U}, {"d", 100000U}, {"s", "cmp al, dh"} },
+    },
+    {
+.code = "imul %1%, %2%, %3%", .expected = "imul eax, ebx, 5", .params = {{"1", "eax"}, {"2", "ebx"}, {"3", 5U}}
+},
+    {
+.code = R"(cmp ecx, edx
+    jne %dest%
+    %op% edx, ecx ; %%%%%%%
+    push %d%
+@here:
+)", .expected = R"(cmp ecx, edx
+    jne @here
+    sbb edx, ecx ; %%%%
+    push 255
+@here:
+)", .params = {{"dest", "@here"}, {"op", "sbb"}, {"d", 255U}}
+}
+};
+
 template<typename Player, typename Game>
 static std::vector<wxString>
 HookTests::testMiscFunctions()
@@ -1366,6 +1446,15 @@ HookTests::testMiscFunctions()
             myassertf(result == desiredFull, "[find call, %s, test id %d] Tried to find address 0x%X at 0x%X, received 0x%X", data.name, i, findFull, test.address, desiredFull);
             ++i;
         }
+    }
+
+    // formatAsmCode
+    int i = 0;
+    for (const FormatAsmCodeTest& test : formatAsmCodeTests)
+    {
+        auto result = formatAsmCode(test.code, test.params);
+        myassertf(result == test.expected, "[format asm code] test #%d failed (actual result: %s)", i, result);
+        ++i;
     }
     
     return myasserter.errors;

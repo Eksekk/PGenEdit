@@ -196,19 +196,27 @@ template struct GameSpecificStructsBase<mm6::Game>;
 template struct GameSpecificStructsBase<mm7::Game>;
 template struct GameSpecificStructsBase<mm8::Game>;
 
+#define GET_MACRO(_1, _2, name, ...) name
 #define SAME_BASE(a, b) std::is_same<std::decay_t<a>, b>
-#define genDef(name) using Any##name##Variant = std::variant<mm6::name*, mm7::name*, mm8::name*>;\
+
+#define GEN_DEF_1(name) GEN_DEF_2(name, name)
+#define GEN_DEF_2(name, codeName) using Any##name##Variant = std::variant<mm6::codeName*, mm7::codeName*, mm8::codeName*>;\
 template<typename T>\
-concept Any##name##Struct = SAME(T, mm6::name) || SAME(T, mm7::name) || SAME(T, mm8::name)
+concept Any##name##Struct = SAME(T, mm6::codeName) || SAME(T, mm7::codeName) || SAME(T, mm8::codeName)
 
-genDef(Item);
-genDef(Player);
-genDef(Lod);
-genDef(LodBitmap);
-genDef(GameStructure);
-genDef(SpellBuff);
-genDef(GameParty);
-genDef(GameMap);
+#define GEN_DEF(...) GET_MACRO(__VA_ARGS__, GEN_DEF_2, GEN_DEF_1)(__VA_ARGS__)
 
-#undef genDef
+GEN_DEF(Item);
+GEN_DEF(Player);
+GEN_DEF(Lod);
+GEN_DEF(LodBitmap);
+GEN_DEF(Game, GameStructure);
+GEN_DEF(SpellBuff);
+GEN_DEF(Party, GameParty);
+GEN_DEF(Map, GameMap);
+
+#undef GEN_DEF
+#undef GEN_DEF_1
+#undef GEN_DEF_2
+#undef GET_MACRO
 #undef SAME_BASE

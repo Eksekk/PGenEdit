@@ -41,6 +41,7 @@
 #include <ranges>
 #include <functional>
 #include <variant>
+#include <regex>
 
 extern "C"
 {
