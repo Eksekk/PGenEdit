@@ -1305,21 +1305,40 @@ std::vector<FormatAsmCodeTest> formatAsmCodeTests =
         .code = "mov eax, %eax%; add ecx, %d%; %s%;%%", .expected = "mov eax, 5; add ecx, 100000; cmp al, dh;%", .params = { {"eax", 5U}, {"d", 100000U}, {"s", "cmp al, dh"} },
     },
     {
-.code = "imul %1%, %2%, %3%", .expected = "imul eax, ebx, 5", .params = {{"1", "eax"}, {"2", "ebx"}, {"3", 5U}}
-},
+        .code = "imul %1%, %2%, %3%", .expected = "imul eax, ebx, 5", .params = {{"1", "eax"}, {"2", "ebx"}, {"3", 5U}}
+    },
     {
-.code = R"(cmp ecx, edx
-    jne %dest%
-    %op% edx, ecx ; %%%%%%%
-    push %d%
-@here:
-)", .expected = R"(cmp ecx, edx
-    jne @here
-    sbb edx, ecx ; %%%%
-    push 255
-@here:
-)", .params = {{"dest", "@here"}, {"op", "sbb"}, {"d", 255U}}
-}
+        .code = R"(cmp ecx, edx
+            jne %dest%
+            %op% edx, ecx ; %%%%%%%
+            push %d%
+        @here:
+        )", .expected = R"(cmp ecx, edx
+            jne @here
+            sbb edx, ecx ; %%%%
+            push 255
+        @here:
+        )", .params = {{"dest", "@here"}, {"op", "sbb"}, {"d", 255U}}
+    },
+    {
+        .code = "%a%%b%", .expected = "23", .params = {{"a", 2U}, {"b", 3U}},
+    },
+    {
+        .code = "%", .expected = "%", .params = {},
+    },
+    {
+        .code = R"(%x%
+        %gg% %f% %t%
+        %averylongidentifier%%
+        mov edx, ecx
+        %x% %f%
+)", .expected = R"(%%
+        %gg% 555555555 eax ax ah al
+        abc%
+        mov edx, ecx
+        %% 555555555
+)", .params = {{"x", "%%"}, {"gg", "%gg%"}, {"f", 555555555U}, {"t", "eax ax ah al"}, {"averylongidentifier", "abc"}},
+    }
 };
 
 template<typename Player, typename Game>
