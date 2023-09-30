@@ -250,7 +250,7 @@ HookElementBuilder& HookElementBuilder::gameVersions(const std::vector<int>& gam
 	return *this;
 }
 
-HookElementBuilder& HookElementBuilder::codeReplacementArgs(const std::unordered_map<std::string, CodeReplacementArg>& args)
+HookElementBuilder& HookElementBuilder::codeReplacementArgs(const CodeReplacementArgs& args)
 {
 	elem.codeReplacementArgs = args;
 	return *this;
@@ -777,6 +777,53 @@ void* asmhookAfter(uint32_t addr, const std::string& code, std::vector<uint8_t>*
 	return asmhookCommon(addr, code, storeAt, size, false);
 }
 
+void* asmhookBefore(uint32_t addr, const std::string& code, const CodeReplacementArgs& args, std::vector<uint8_t>* storeAt, int size = 5)
+{
+	return asmhookBefore(addr, formatAsmCode(code, args), storeAt, size);
+}
+
+void* asmhookAfter(uint32_t addr, const std::string& code, const CodeReplacementArgs& args, std::vector<uint8_t>* storeAt, int size = 5)
+{
+	return asmhookAfter(addr, formatAsmCode(code, args), storeAt, size);
+}
+
+void* asmpatch(uint32_t addr, const std::string& code, std::vector<uint8_t>* storeAt, int size, bool writeJumpBack)
+{
+	// asmpatch("inc eax");
+	// asmpatch("add ebx, 5");
+    // asmpatch("call dword [0x52525252]")
+    std::string_view compiled = compileAsm(code);
+    size = getRealHookSize(addr, size, size);
+    storeBytes(storeAt, addr, size);
+	if (compiled.size() <= size) // inline
+	{
+		copyCode((uint32_t)compiled.data(), compiled.size(), false, addr);
+		uint32_t remaining = size - (int)compiled.size();
+		if (remaining > 0)
+        {
+			eraseCode(addr + compiled.size(), remaining, nullptr);
+		}
+		return nullptr;
+	}
+	else // jump out
+	{
+		void* mem = (void*)codeMemoryAlloc(compiled.size() + (writeJumpBack ? 5 : 0));
+		copyCode((uint32_t)compiled.data(), compiled.size(), false, (uint32_t)mem);
+		if (writeJumpBack)
+        {
+            hookJumpRaw((uint32_t)mem + compiled.size(), (void*)(addr + size), nullptr);
+		}
+		eraseCode(addr, size, storeAt);
+		hookJumpRaw(addr, mem, nullptr);
+		return mem;
+	}
+}
+
+void* asmpatch(uint32_t addr, const std::string& code, const CodeReplacementArgs& args, std::vector<uint8_t>* storeAt, int size, bool writeJumpBack)
+{
+	return asmpatch(addr, formatAsmCode(code, args), storeAt, size, writeJumpBack);
+}
+
 void unhookReplaceCall(uint32_t addr, std::vector<uint8_t>& restoreData)
 {
 	unhookCall(addr, restoreData);
@@ -966,7 +1013,7 @@ const std::map<FasmErrorCode, std::string> fasmErrorCodeToText =
 	{FASMERR_ASSERTION_FAILED, "assertion failed"},
 };
 
-std::string formatAsmCode(const std::string& code, const std::unordered_map<std::string, CodeReplacementArg>& replacements)
+std::string formatAsmCode(const std::string& code, const CodeReplacementArgs& replacements)
 {
 	static const std::regex regex("%.*?%");
 	std::string newCode;

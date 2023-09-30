@@ -115,6 +115,9 @@ enum HookReturnCode
 int getInstructionSize(void* addr);
 int getInstructionSize(uint32_t addr);
 
+template<typename T>
+concept Address = std::is_same_v<T, uint32_t> || std::is_same_v<T, void*>;
+
 // returns address of next instruction after max(size, minSize) bytes
 // minSize parameter intended to allow correct behavior for call hooks (min 5) and something like erase code (min 1)
 int getRealHookSize(uint32_t addr, uint32_t size, uint32_t minSize = 5);
@@ -228,10 +231,17 @@ void* asmhookAfter(uint32_t addr, const std::string& code, std::vector<uint8_t>*
 
 void unhookAsmhook(uint32_t addr, const std::vector<uint8_t>& restoreData, void*& copiedCode);
 
+void* asmhookBefore(uint32_t addr, const std::string& code, const CodeReplacementArgs& args, std::vector<uint8_t>* storeAt, int size = 5);
+void* asmhookAfter(uint32_t addr, const std::string& code, const CodeReplacementArgs& args, std::vector<uint8_t>* storeAt, int size = 5);
+
+void* asmpatch(uint32_t addr, const std::string& code, std::vector<uint8_t>* storeAt, int size = 1, bool writeJumpBack = true);
+void* asmpatch(uint32_t addr, const std::string& code, const CodeReplacementArgs& args, std::vector<uint8_t>* storeAt, int size = 1, bool writeJumpBack = true);
+
 using CodeReplacementArg = std::variant<uint32_t, int32_t, std::string, void*>;
+using CodeReplacementArgs = std::unordered_map<std::string, CodeReplacementArg>;
 
 // need own function, because std::format and wxString::Format use position-based arguments, not name-based
-std::string formatAsmCode(const std::string& code, const std::unordered_map<std::string, CodeReplacementArg>& replacements);
+std::string formatAsmCode(const std::string& code, const CodeReplacementArgs& replacements);
 
 /*
 template<typename T, typename std::enable_if_t<>
@@ -422,7 +432,7 @@ public:
 	uint32_t address;
 	uint32_t target;
 	const char* patchDataStr; // TODO: string_view instead of separate data/size fields
-    std::unordered_map<std::string, CodeReplacementArg> codeReplacementArgs;
+    CodeReplacementArgs codeReplacementArgs;
 	uint32_t hookSize;
 	uint32_t dataSize;
 	std::vector<uint8_t> restoreData;
@@ -535,7 +545,7 @@ public:
 	HookElementBuilder& description(const std::string& desc);
 	HookElementBuilder& patchUseNops(bool on);
 	HookElementBuilder& gameVersions(const std::vector<int>& gameVersions);
-	HookElementBuilder& codeReplacementArgs(const std::unordered_map<std::string, CodeReplacementArg>& args);
+	HookElementBuilder& codeReplacementArgs(const CodeReplacementArgs& args);
     template<typename ReturnType, int cc, typename... Args>
     HookElementBuilder& callableFunctionHookFunc(CallableFunctionHookFunc<ReturnType, Args...> func);
     HookElement build();

@@ -892,6 +892,52 @@ __declspec(naked) static bool asmhookTest1(bool before)
     }
 }
 
+__declspec(naked) static bool asmpatchTest1()
+{
+    _asm
+    {
+        repne cmpsb
+        add edx, dword ptr[ebp + 4]
+        clc
+        imul eax, 15
+        std
+        fld dword ptr [esp]
+        ret
+    }
+
+    /*
+    0:  f2 a6                   repnz cmps BYTE PTR ds:[esi],BYTE PTR es:[edi]
+    2:  03 55 04                add    edx,DWORD PTR [ebp+0x4]
+    5:  f8                      clc
+    6:  6b c0 0f                imul   eax,eax,0xf
+    9:  fd                      std
+    a:  d9 04 24                fld    DWORD PTR [esp]
+    d:  c3                      ret
+*/
+}
+
+__declspec(naked) static bool asmpatchTest2()
+{
+    _asm
+    {
+        xor ah, dl
+        setne byte ptr [esp + 0x20]
+        call $+0
+        sub eax, eax
+        sbb edx, edx
+        btr eax, edx
+    }
+
+    /*
+    0:  30 d4                   xor    ah,dl
+    2:  0f 95 44 24 20          setne  BYTE PTR [esp+0x20]
+    7:  e8 fb ff ff ff          call   7 <_main+0x7>
+    c:  29 c0                   sub    eax,eax
+    e:  19 d2                   sbb    edx,edx
+    10: 0f b3 d0                btr    eax,edx
+*/
+}
+
 std::vector<wxString> HookTests::testAsmHookFunctions()
 {
     Asserter myasserter("Asm hook tests");
@@ -1296,7 +1342,7 @@ const std::map<void(*)(), FindCallTest> findCallTests =
 struct FormatAsmCodeTest
 {
     std::string code, expected;
-    std::unordered_map<std::string, CodeReplacementArg> params;
+    CodeReplacementArgs params;
 };
 
 std::vector<FormatAsmCodeTest> formatAsmCodeTests =
@@ -1344,7 +1390,7 @@ std::vector<FormatAsmCodeTest> formatAsmCodeTests =
 struct CompileAsmTest
 {
     std::string code, expected;
-    std::optional<std::unordered_map<std::string, CodeReplacementArg>> args;
+    std::optional<CodeReplacementArgs> args;
 };
 
 std::vector<CompileAsmTest> compileAsmTests =
