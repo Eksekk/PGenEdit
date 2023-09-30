@@ -631,3 +631,11 @@ getmetatable(1).__index.clamp = math.clamp
 function arrayEndPtr(arr)
 	return (arr["?ptr"] + arr.Limit * arr.ItemSize):tohex()
 end
+
+function nthNext(tbl, n)
+	local key, val
+	for i = 1, n do
+		key, val = next(tbl, key)
+	end
+	return key, val
+end

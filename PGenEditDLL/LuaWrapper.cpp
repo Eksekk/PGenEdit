@@ -78,6 +78,6 @@ bool LuaWrapper::getPath(const std::string& path)
     }
     // set first added stack value to result and pop all others
     lua_replace(L, -n);
-    lua_pop(L, n - 1);
+    lua_pop(L, std::max(0, n - 2));
     return true;
 }

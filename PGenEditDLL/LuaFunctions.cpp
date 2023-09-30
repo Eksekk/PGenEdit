@@ -75,7 +75,7 @@ extern "C"
 			lua_pop(Lua, 1);
 		}*/
 		setupGameSaveHandler();
-		// fillGameStaticPointersAndSizes();
+		fillGameStaticPointersAndSizes();
 	}
 
 	bool checkIsInGame()
@@ -108,11 +108,11 @@ template<AnyGameStruct GameStructure>
 std::vector<StructArray> arraysBase =
 {
 	{ "Game.ItemsTxt", (void*&)(GameStructure::itemsTxt), std::ref((uint32_t*&)(GameStructure::itemsTxt_sizePtr)) },
-	{ "Game.StdItemsTxt", (void*&)(GameStructure::stdItemsTxt), std::ref((uint32_t*&)(GameStructure::stdItemsTxt_size)) },
-	{ "Game.SpcItemsTxt", (void*&)(GameStructure::spcItemsTxt), std::ref((uint32_t*&)(GameStructure::spcItemsTxt_size)) },
-	{ "Game.SpcItemsTxt", (void*&)(GameStructure::spcItemsTxt), std::ref((uint32_t*&)(GameStructure::spcItemsTxt_size)) },
-	{ "Game.SpcItemsTxt", (void*&)(GameStructure::spcItemsTxt), std::ref((uint32_t*&)(GameStructure::spcItemsTxt_size)) },
-	{ "Game.SpcItemsTxt", (void*&)(GameStructure::spcItemsTxt), std::ref((uint32_t*&)(GameStructure::spcItemsTxt_size)) },
+	{ "Game.StdItemsTxt", (void*&)(GameStructure::stdItemsTxt), std::ref((uint32_t&)(GameStructure::stdItemsTxt_size)) },
+	{ "Game.SpcItemsTxt", (void*&)(GameStructure::spcItemsTxt), std::ref((uint32_t&)(GameStructure::spcItemsTxt_size)) },
+	{ "Game.SpcItemsTxt", (void*&)(GameStructure::spcItemsTxt), std::ref((uint32_t&)(GameStructure::spcItemsTxt_size)) },
+	{ "Game.SpcItemsTxt", (void*&)(GameStructure::spcItemsTxt), std::ref((uint32_t&)(GameStructure::spcItemsTxt_size)) },
+	{ "Game.SpcItemsTxt", (void*&)(GameStructure::spcItemsTxt), std::ref((uint32_t&)(GameStructure::spcItemsTxt_size)) },
 };
 
 /*
@@ -143,18 +143,18 @@ void fillGameStaticPointersAndSizes()
 	lua_getglobal(Lua, "internal");
 	lua_getfield(Lua, -1, "GetArrayUpval");
 	lua_replace(Lua, -2);
-	lua_pop(Lua, 1);
 
 	int stackPos = lua_gettop(Lua);
 	for (auto& [path, dataPtr, sizeVariant] : arraysBase<mm7::Game>)
 	{
 		luaWrapper.getPath(path);
-		lua_getfield(Lua, -1, "?sizePtr");
+		lua_getfield(Lua, -1, "?ptr");
 		dataPtr = reinterpret_cast<void*>((uint32_t)lua_tonumber(Lua, -1));
 		lua_pop(Lua, 1);
+		lua_pushvalue(Lua, -2); // GetArrayUpval
+        lua_pushvalue(Lua, -2); // array
 		if (std::reference_wrapper<uint32_t*>* sizePtr = std::get_if<std::reference_wrapper<uint32_t*>>(&sizeVariant))
 		{
-			lua_pushvalue(Lua, -1); // array
 			lua_pushstring(Lua, "lenP");
 			int error = lua_pcall(Lua, 2, 1, 0);
 			if (error)
@@ -164,16 +164,15 @@ void fillGameStaticPointersAndSizes()
 				return;
 			}
 			sizePtr->get() = reinterpret_cast<uint32_t*>((uint32_t)lua_tonumber(Lua, -1));
-			if (dataPtr) // add offset
+			/*if (dataPtr) // add offset
 			{
 				wxLogInfo("Adding nonzero data offset (0x%X) to lenP of array '%s'", (uint32_t)dataPtr, path);
 				wxLog::FlushActive();
 				sizePtr->get() += (uint32_t)dataPtr;
-			}
+			}*/
 		}
 		else if (std::reference_wrapper<uint32_t>* size = std::get_if<std::reference_wrapper<uint32_t>>(&sizeVariant))
 		{
-			lua_pushvalue(Lua, -1);
 			lua_pushstring(Lua, "count");
             int error = lua_pcall(Lua, 2, 1, 0);
             if (error)
@@ -182,9 +181,11 @@ void fillGameStaticPointersAndSizes()
                 lua_settop(Lua, stackPos);
                 return;
             }
+			size->get() = lua_tonumber(Lua, -1);
 		}
+		lua_settop(Lua, stackPos);
 	}
-	lua_settop(Lua, stackPos);
+	lua_settop(Lua, stackPos - 1);
 }
 
 extern "C" static int saveGameHandler(lua_State* L)

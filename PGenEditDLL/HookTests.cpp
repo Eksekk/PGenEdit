@@ -938,6 +938,24 @@ __declspec(naked) static bool asmpatchTest2()
 */
 }
 
+// real example, will be called
+__declspec(naked) static bool asmpatchTest3()
+{
+    _asm
+    {
+        push ebp
+        xor ebp, ebp
+        // patch here, sets bp to 0x1000
+        mov ebp, 0x13131313
+        cmp ebp, 0x1000
+        sete al
+        movzx eax, al
+        pop ebp
+        ret
+    }
+
+}
+
 std::vector<wxString> HookTests::testAsmHookFunctions()
 {
     Asserter myasserter("Asm hook tests");

@@ -777,12 +777,12 @@ void* asmhookAfter(uint32_t addr, const std::string& code, std::vector<uint8_t>*
 	return asmhookCommon(addr, code, storeAt, size, false);
 }
 
-void* asmhookBefore(uint32_t addr, const std::string& code, const CodeReplacementArgs& args, std::vector<uint8_t>* storeAt, int size = 5)
+void* asmhookBefore(uint32_t addr, const std::string& code, const CodeReplacementArgs& args, std::vector<uint8_t>* storeAt, int size)
 {
 	return asmhookBefore(addr, formatAsmCode(code, args), storeAt, size);
 }
 
-void* asmhookAfter(uint32_t addr, const std::string& code, const CodeReplacementArgs& args, std::vector<uint8_t>* storeAt, int size = 5)
+void* asmhookAfter(uint32_t addr, const std::string& code, const CodeReplacementArgs& args, std::vector<uint8_t>* storeAt, int size)
 {
 	return asmhookAfter(addr, formatAsmCode(code, args), storeAt, size);
 }

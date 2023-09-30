@@ -224,6 +224,9 @@ void codeMemoryFullFree();
 // copies code
 uint32_t copyCode(uint32_t source, uint32_t size, bool writeJumpBack = true, uint32_t dest = 0);
 
+using CodeReplacementArg = std::variant<uint32_t, int32_t, std::string, void*>;
+using CodeReplacementArgs = std::unordered_map<std::string, CodeReplacementArg>;
+
 // new code is called before overwritten code
 void* asmhookBefore(uint32_t addr, const std::string& code, std::vector<uint8_t>* storeAt, int size = 5);
 // new code is called after overwritten code
@@ -236,9 +239,6 @@ void* asmhookAfter(uint32_t addr, const std::string& code, const CodeReplacement
 
 void* asmpatch(uint32_t addr, const std::string& code, std::vector<uint8_t>* storeAt, int size = 1, bool writeJumpBack = true);
 void* asmpatch(uint32_t addr, const std::string& code, const CodeReplacementArgs& args, std::vector<uint8_t>* storeAt, int size = 1, bool writeJumpBack = true);
-
-using CodeReplacementArg = std::variant<uint32_t, int32_t, std::string, void*>;
-using CodeReplacementArgs = std::unordered_map<std::string, CodeReplacementArg>;
 
 // need own function, because std::format and wxString::Format use position-based arguments, not name-based
 std::string formatAsmCode(const std::string& code, const CodeReplacementArgs& replacements);

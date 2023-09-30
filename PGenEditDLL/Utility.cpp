@@ -119,9 +119,10 @@ std::vector<std::string> splitString(const std::string& text, const std::string&
 	size_t pos = 0, foundPos;
 	while ((foundPos = useText.find(useDelimiter, pos)) != std::string::npos)
 	{
-		strings.push_back(text.substr(pos, foundPos - pos + 1));
+		strings.push_back(text.substr(pos, foundPos - pos));
 		pos = foundPos + useDelimiter.size();
 	}
+	strings.push_back(text.substr(pos));
 	return strings;
 }
 
