@@ -177,5 +177,28 @@ public:
             wxFAIL;
         }
     }
+
+    template<typename Function, typename Type6, typename Type7, typename Type8>
+    static auto genericForSingleStructExecute(void* ptr, Function&& func)
+    {
+        if (MMVER == 6)
+        {
+            return func(reinterpret_cast<Type6*>(ptr));
+        }
+        else if (MMVER == 7)
+        {
+            return func(reinterpret_cast<Type7*>(ptr));
+        }
+        else if (MMVER == 8)
+        {
+            return func(reinterpret_cast<Type8*>(ptr));
+        }
+        else
+        {
+            wxFAIL;
+        }
+    }
+
+
 #pragma warning(pop)
 };

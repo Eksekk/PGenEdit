@@ -31,19 +31,19 @@ int indexInVector(const std::vector<T>& vec, const T& val)
 }
 
 template<typename T>
-const T& mmv(const T& e6, const T& e7, const T& e8)
+T&& mmv(T&& e6, T&& e7, T&& e8)
 {
 	if (MMVER == 6)
 	{
-		return e6;
+		return std::forward<T>(e6);
 	}
 	else if (MMVER == 7)
 	{
-		return e7;
+		return std::forward<T>(e7);
 	}
 	else if (MMVER == 8)
 	{
-		return e8;
+		return std::forward<T>(e8);
 	}
 	else
 	{

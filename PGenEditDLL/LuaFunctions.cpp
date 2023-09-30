@@ -3,6 +3,7 @@
 #include "Structs.h"
 #include "SaveGameData.h"
 #include "LuaWrapper.h"
+#include "Utility.h"
 
 extern "C"
 {
@@ -104,37 +105,58 @@ struct StructArray
 	std::variant<std::monostate, std::reference_wrapper<uint32_t*>, std::reference_wrapper<uint32_t>> size; // reference to either unchangeable size or ptr to size
 };
 
-template<AnyGameStruct GameStructure>
-std::vector<StructArray> arraysBase =
+using StructVector = std::vector<StructArray>;
+
+template<typename T>
+void*& dataRef(T& t)
 {
-	{ "Game.ItemsTxt", (void*&)(GameStructure::itemsTxt), std::ref((uint32_t*&)(GameStructure::itemsTxt_sizePtr)) },
-	{ "Game.StdItemsTxt", (void*&)(GameStructure::stdItemsTxt), std::ref((uint32_t&)(GameStructure::stdItemsTxt_size)) },
-	{ "Game.SpcItemsTxt", (void*&)(GameStructure::spcItemsTxt), std::ref((uint32_t&)(GameStructure::spcItemsTxt_size)) },
-	{ "Game.SpcItemsTxt", (void*&)(GameStructure::spcItemsTxt), std::ref((uint32_t&)(GameStructure::spcItemsTxt_size)) },
-	{ "Game.SpcItemsTxt", (void*&)(GameStructure::spcItemsTxt), std::ref((uint32_t&)(GameStructure::spcItemsTxt_size)) },
-	{ "Game.SpcItemsTxt", (void*&)(GameStructure::spcItemsTxt), std::ref((uint32_t&)(GameStructure::spcItemsTxt_size)) },
+	return (void*&)t;
+}
+
+template<typename T>
+auto sizeRef(T& t)
+{
+	if constexpr (std::is_pointer_v<T>)
+    {
+		return std::ref((uint32_t*&)t);
+	}
+	else
+	{
+		return std::ref((uint32_t&)t);
+	}
+}
+template<AnyGameStruct Game>
+StructVector arraysBase =
+{
+	{ "Game.ItemsTxt", dataRef(Game::itemsTxt), sizeRef(Game::itemsTxt_sizePtr)},
+	{ "Game.StdItemsTxt", dataRef(Game::stdItemsTxt), sizeRef(Game::stdItemsTxt_size) },
+	{ "Game.SpcItemsTxt", dataRef(Game::spcItemsTxt), sizeRef(Game::spcItemsTxt_size) },
 };
 
-/*
- // ArmorPicsCoords::Belts, dataPtr name: "Belts"
-// ArmorPicsCoords::cloaks, size field/dataPtr name: "cloaks_size"
-// ArmorPicsCoords::Cloaks, dataPtr name: "Cloaks"
-// ArmorPicsCoords::boots, size field/dataPtr name: "boots_size"
-// ArmorPicsCoords::belts, size field/dataPtr name: "belts_size"
-// ArmorPicsCoords::helms, size field/dataPtr name: "helms_size"
-// ArmorPicsCoords::Helms, dataPtr name: "Helms"
-// ArmorPicsCoords::Boots, dataPtr name: "Boots"
-// ArmorPicsCoords::Armors, dataPtr name: "Armors"
-// ArmorPicsCoords::armors, size field/dataPtr name: "armors_size"
-// CharacterVoices::Sounds, dataPtr name: "Sounds"
-// CharacterVoices::avail, size field/dataPtr name: "avail_size"
-// CharacterVoices::Avail, dataPtr name: "Avail"
-// CharacterVoices::sounds, size field/dataPtr name: "sounds_size"
- **/
 using Game8 = mm8::GameStructure;
-std::vector<StructArray> arraysMerge =
+StructVector arraysMerge =
 {
-	{"Game.ArmorPicsCoords.Belts", (void*&)Game8::armorPicsCoords->belts, std::monostate()},
+	{"Game.ArmorPicsCoords.Belts", dataRef(Game8::armorPicsCoords->belts), sizeRef(Game8::armorPicsCoords->belts_size)},
+	{"Game.ArmorPicsCoords.Cloaks", dataRef(Game8::armorPicsCoords->cloaks), sizeRef(Game8::armorPicsCoords->cloaks_size)},
+	{"Game.ArmorPicsCoords.Boots", dataRef(Game8::armorPicsCoords->boots), sizeRef(Game8::armorPicsCoords->boots_size)},
+	{"Game.ArmorPicsCoords.Helms", dataRef(Game8::armorPicsCoords->helms), sizeRef(Game8::armorPicsCoords->helms_size)},
+	{"Game.ArmorPicsCoords.Armors", dataRef(Game8::armorPicsCoords->armors), sizeRef(Game8::armorPicsCoords->armors_size)},
+
+	{"Game.CharacterVoices.Sounds", dataRef(Game8::characterVoices->sounds), sizeRef(Game8::characterVoices->sounds_size)},
+	{"Game.CharacterVoices.Avail", dataRef(Game8::characterVoices->avail), sizeRef(Game8::characterVoices->avail_size)},
+
+	{"Game.HouseRules.WeaponShopsStandart", dataRef(Game8::houseRules->weaponShopsStandart), sizeRef(Game8::houseRules->weaponShopsStandart_size)},
+    {"Game.HouseRules.WeaponShopsSpecial", dataRef(Game8::houseRules->weaponShopsSpecial), sizeRef(Game8::houseRules->weaponShopsSpecial_size)},
+    {"Game.HouseRules.ArmorShopsStandart", dataRef(Game8::houseRules->armorShopsStandart), sizeRef(Game8::houseRules->armorShopsStandart_size)},
+    {"Game.HouseRules.ArmorShopsSpecial", dataRef(Game8::houseRules->armorShopsSpecial), sizeRef(Game8::houseRules->armorShopsSpecial_size)},
+    {"Game.HouseRules.MagicShopsStandart", dataRef(Game8::houseRules->magicShopsStandart), sizeRef(Game8::houseRules->magicShopsStandart_size)},
+    {"Game.HouseRules.MagicShopsSpecial", dataRef(Game8::houseRules->magicShopsSpecial), sizeRef(Game8::houseRules->magicShopsSpecial_size)},
+    {"Game.HouseRules.AlchemistsStandart", dataRef(Game8::houseRules->alchemistsStandart), sizeRef(Game8::houseRules->alchemistsStandart_size)},
+    {"Game.HouseRules.AlchemistsSpecial", dataRef(Game8::houseRules->alchemistsSpecial), sizeRef(Game8::houseRules->alchemistsSpecial_size)},
+    {"Game.HouseRules.Arcomage", dataRef(Game8::houseRules->arcomage), sizeRef(Game8::houseRules->arcomage_size)},
+    {"Game.HouseRules.ArcomageTexts", dataRef(Game8::houseRules->arcomageTexts), sizeRef(Game8::houseRules->arcomageTexts_size)},
+    {"Game.HouseRules.SpellbookShops", dataRef(Game8::houseRules->spellbookShops), sizeRef(Game8::houseRules->spellbookShops_size)},
+    {"Game.HouseRules.Training", dataRef(Game8::houseRules->training), sizeRef(Game8::houseRules->training_size)},
 };
 
 void fillGameStaticPointersAndSizes()
@@ -145,7 +167,7 @@ void fillGameStaticPointersAndSizes()
 	lua_replace(Lua, -2);
 
 	int stackPos = lua_gettop(Lua);
-	for (auto& [path, dataPtr, sizeVariant] : arraysBase<mm7::Game>)
+	for (auto& [path, dataPtr, sizeVariant] : mmv(arraysBase<mm6::Game>, arraysBase<mm7::Game>, arraysBase<mm8::Game>))
 	{
 		luaWrapper.getPath(path);
 		lua_getfield(Lua, -1, "?ptr");
@@ -153,6 +175,7 @@ void fillGameStaticPointersAndSizes()
 		lua_pop(Lua, 1);
 		lua_pushvalue(Lua, -2); // GetArrayUpval
         lua_pushvalue(Lua, -2); // array
+		uint32_t sizeValue = 0;
 		if (std::reference_wrapper<uint32_t*>* sizePtr = std::get_if<std::reference_wrapper<uint32_t*>>(&sizeVariant))
 		{
 			lua_pushstring(Lua, "lenP");
@@ -164,7 +187,8 @@ void fillGameStaticPointersAndSizes()
 				return;
 			}
 			sizePtr->get() = reinterpret_cast<uint32_t*>((uint32_t)lua_tonumber(Lua, -1));
-			/*if (dataPtr) // add offset
+			sizeValue = (uint32_t)sizePtr->get();
+			/*if (dataPtr) // add offset // disabled, because since these arrays are at 0 pos, lenP uses full pointer, so result would be wrong
 			{
 				wxLogInfo("Adding nonzero data offset (0x%X) to lenP of array '%s'", (uint32_t)dataPtr, path);
 				wxLog::FlushActive();
@@ -182,8 +206,16 @@ void fillGameStaticPointersAndSizes()
                 return;
             }
 			size->get() = lua_tonumber(Lua, -1);
+			sizeValue = size->get();
+		}
+		else // std::monostate
+		{
+			sizeValue = 1;
 		}
 		lua_settop(Lua, stackPos);
+		wxASSERT_MSG(dataPtr && sizeValue, wxString::Format("[Array '%s'] invalid values: dataPtr is 0x%X, %s is 0x%X",
+			path, dataPtr, std::holds_alternative<std::reference_wrapper<uint32_t*>>(sizeVariant) ? "sizePtr" : "size", sizeValue
+		));
 	}
 	lua_settop(Lua, stackPos - 1);
 }

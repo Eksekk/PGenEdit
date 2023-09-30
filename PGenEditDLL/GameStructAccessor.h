@@ -5,7 +5,7 @@
 
 class GameStructAccessor;
 extern GameStructAccessor* gameAccessor;
-class GameStructAccessor
+class GameStructAccessor : StructAccessorGenericFor
 {
 public:
 	virtual HWND getWindowHandle() = 0;
@@ -17,6 +17,12 @@ public:
 	virtual ArrayData getSpcItemsTxtArrayData() = 0;
 	virtual int64_t getTime() = 0;
 	virtual void setTime(int64_t time) = 0;
+
+	template<typename Function>
+	static auto forAnyGameStructExecute(Function&& func)
+	{
+		return StructAccessorGenericFor::genericForSingleStructExecute<Function, mm6::Game, mm7::Game, mm8::Game>(nullptr, std::forward<Function>(func));
+	}
 
 	virtual ~GameStructAccessor();
 };
