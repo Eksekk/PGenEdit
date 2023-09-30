@@ -9,3 +9,7 @@
 # Code
 * Auto convert structure parameters in hookFunction and hookReplaceCall to their addresses
 * Json persisting methods boolean return values should indicate actual error in all cases, not empty data or error
+
+# Low level
+* bytecode hooks
+* asmhook versions taking format args

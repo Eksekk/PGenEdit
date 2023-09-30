@@ -228,6 +228,11 @@ void* asmhookAfter(uint32_t addr, const std::string& code, std::vector<uint8_t>*
 
 void unhookAsmhook(uint32_t addr, const std::vector<uint8_t>& restoreData, void*& copiedCode);
 
+using CodeReplacementArg = std::variant<uint32_t, int32_t, std::string, void*>;
+
+// need own function, because std::format and wxString::Format use position-based arguments, not name-based
+std::string formatAsmCode(const std::string& code, const std::unordered_map<std::string, CodeReplacementArg>& replacements);
+
 /*
 template<typename T, typename std::enable_if_t<>
 struct classToAddress
@@ -417,6 +422,7 @@ public:
 	uint32_t address;
 	uint32_t target;
 	const char* patchDataStr; // TODO: string_view instead of separate data/size fields
+    std::unordered_map<std::string, CodeReplacementArg> codeReplacementArgs;
 	uint32_t hookSize;
 	uint32_t dataSize;
 	std::vector<uint8_t> restoreData;
@@ -529,6 +535,7 @@ public:
 	HookElementBuilder& description(const std::string& desc);
 	HookElementBuilder& patchUseNops(bool on);
 	HookElementBuilder& gameVersions(const std::vector<int>& gameVersions);
+	HookElementBuilder& codeReplacementArgs(const std::unordered_map<std::string, CodeReplacementArg>& args);
     template<typename ReturnType, int cc, typename... Args>
     HookElementBuilder& callableFunctionHookFunc(CallableFunctionHookFunc<ReturnType, Args...> func);
     HookElement build();
@@ -645,7 +652,7 @@ extern const std::map<FasmErrorCode, std::string> fasmErrorCodeToText;
 const int FASM_MEMORY_BLOCK_SIZE = 50000;
 extern uint8_t fasmMemoryBlock[FASM_MEMORY_BLOCK_SIZE];
 
-extern "C" typedef FasmAssembleReturn(*Fasm_Assemble)(const char* src, uint8_t* memoryBlock, int memoryBlockSize, int passes, uint32_t displayPipeHandle);
+extern "C" typedef FasmAssembleReturn(__stdcall *Fasm_Assemble)(const char* src, uint8_t* memoryBlock, int memoryBlockSize, int passes, uint32_t displayPipeHandle);
 
 extern Fasm_Assemble fasm_Assemble;
 FasmAssembleReturn fasm_Assemble_str(const std::string& src, uint8_t* memoryBlock, int memoryBlockSize, int passes, uint32_t displayPipeHandle);
@@ -662,6 +669,7 @@ FasmAssembleReturn fasm_Assemble_str(const std::string& src, uint8_t* memoryBloc
 // LINE_HEADER structure, providing information about the line that caused
 // the error.
 
+struct LINE_HEADER;
 struct FASM_STATE
 {
     uint32_t condition;
@@ -673,7 +681,7 @@ struct FASM_STATE
     union
     {
         void* output_data;
-        uint32_t error_line;
+        LINE_HEADER* error_line;
     };
 };
 
@@ -704,7 +712,4 @@ struct LINE_HEADER
     };
     uint32_t macro_line;
 };
-
-// need own function, because std::format and wxString::Format use position-based arguments, not name-based
-std::string formatAsmCode(const std::string& code, const std::unordered_map<std::string, std::variant<uint32_t, int32_t, std::string, void*>>& replacements);
 std::string_view compileAsm(const std::string& code);

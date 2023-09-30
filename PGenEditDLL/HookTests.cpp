@@ -872,16 +872,16 @@ __declspec(naked) static bool asmhookTest1(bool before)
         xor eax, eax
         // hook here (adds 5 to eax)
         nop
-        shl eax, 1
+        shr eax, 1
         nop
         nop
         // hook end
         test byte ptr[esp + 4], 0xFF
-        jne $before
+        je $after
             // should have 2 in eax
             cmp eax, 2
             jmp $tested
-        $before:
+        $after:
         cmp eax, 5
 
         $tested:
@@ -895,7 +895,7 @@ __declspec(naked) static bool asmhookTest1(bool before)
 std::vector<wxString> HookTests::testAsmHookFunctions()
 {
     Asserter myasserter("Asm hook tests");
-    auto code = compileAsm("add eax, 5");
+    std::string code = "add eax, 5";
     Hook hook(HookElementBuilder().address(findCode(asmhookTest1, "\x90", 1)).size(5).type(HOOK_ELEM_TYPE_ASMHOOK_BEFORE).patchDataStr(code.data()).dataSize(code.size()).build());
     hook.enable();
     myassertf(asmhookTest1(true), "[before asmhook] test failed");
@@ -1296,7 +1296,7 @@ const std::map<void(*)(), FindCallTest> findCallTests =
 struct FormatAsmCodeTest
 {
     std::string code, expected;
-    std::unordered_map<std::string, std::variant<uint32_t, int32_t, std::string, void*>> params;
+    std::unordered_map<std::string, CodeReplacementArg> params;
 };
 
 std::vector<FormatAsmCodeTest> formatAsmCodeTests =
@@ -1339,6 +1339,42 @@ std::vector<FormatAsmCodeTest> formatAsmCodeTests =
         %% 555555555
 )", .params = {{"x", "%%"}, {"gg", "%gg%"}, {"f", 555555555U}, {"t", "eax ax ah al"}, {"averylongidentifier", "abc"}},
     }
+};
+
+struct CompileAsmTest
+{
+    std::string code, expected;
+    std::optional<std::unordered_map<std::string, CodeReplacementArg>> args;
+};
+
+std::vector<CompileAsmTest> compileAsmTests =
+{
+    {
+        .code = R"(
+        nop
+        shl eax, 1
+        nop
+        )", .expected = "\x90\xD1\xE0\x90", .args = {std::nullopt}
+    },
+    {
+        .code = R"(
+        cmp ebp, edx
+        add esp, 5
+        aaa
+        )", .expected = "\x39\xD5\x83\xC4\x05\x37", .args = {std::nullopt}
+    },
+    {
+        .code = R"(
+        add %s%, 4
+        add ebx, 4
+        add ecx, %num%
+        jmp short @%l%
+        test dx, ax
+        @label:
+        popcnt eax, ebx
+        )", .expected = "\x83\xC0\x04\x83\xC3\x04\x83\xC1\x05\xEB\x03\x66\x85\xC2\xF3\x0F\xB8\xC3",
+        .args = {{{"s", "eax"}, {"l", "label"}, {"num", 5}}}
+    },
 };
 
 template<typename Player, typename Game>
@@ -1472,7 +1508,31 @@ HookTests::testMiscFunctions()
     for (const FormatAsmCodeTest& test : formatAsmCodeTests)
     {
         auto result = formatAsmCode(test.code, test.params);
-        myassertf(result == test.expected, "[format asm code] test #%d failed (actual result: %s)", i, result);
+        myassertf(result == test.expected, "[format asm compiled] test #%d failed (actual result: %s)", i, result);
+        ++i;
+    }
+
+    // compileAsm
+    i = 0;
+    for (const auto& [compiled, expected, args] : compileAsmTests)
+    {
+        std::string codeNew = compiled;
+        if (args)
+        {
+            codeNew = formatAsmCode(compiled, args.value());
+        }
+        std::string_view compiled = compileAsm(codeNew);
+        if (compiled.size() != expected.size())
+        {
+            myassertf(false, "[compile asm, test #%d] binary compiled sizes (compiled: %d, expected: %d) do not match", i, compiled.size(), expected.size());
+        }
+        else
+        {
+            myassertf(memcmp(compiled.data(), expected.data(), compiled.size()) == 0,
+                "[compile asm, test #%d] generated code is not the same (actual: '%s', expected: '%s')",
+                i, codeToSemiReadableString((std::string)compiled), codeToSemiReadableString(expected)
+            );
+        }
         ++i;
     }
     
@@ -1489,7 +1549,7 @@ template std::vector<wxString> HookTests::testBasicHookFunctionalityAndHookManag
 template<typename Player, typename Game>
 static std::vector<wxString> HookTests::run()
 {
-    return mergeVectors({ testHookPlacingAndSize<Player, Game>(), testMiscFunctions<Player, Game>(), testBasicHookFunctionalityAndHookManager<Player, Game>(), testAdvancedHookFunctionality<Player, Game>()});
+    return mergeVectors({ testHookPlacingAndSize<Player, Game>(), testMiscFunctions<Player, Game>(), testBasicHookFunctionalityAndHookManager<Player, Game>(), testAdvancedHookFunctionality<Player, Game>(), testAsmHookFunctions()});
 }
 
 template std::vector<wxString> HookTests::run<mm6::Player, mm6::Game>();

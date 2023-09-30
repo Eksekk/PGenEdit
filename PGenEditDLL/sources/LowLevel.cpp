@@ -91,12 +91,24 @@ void HookElement::enable(bool enable)
 			setCallableFunctionHook();
 		}
 		break;
-		case HOOK_ELEM_TYPE_ASMHOOK_BEFORE:
-			extraData = asmhookBefore(address, std::string(patchDataStr, dataSize), &restoreData, hookSize);
-			break;
-		case HOOK_ELEM_TYPE_ASMHOOK_AFTER:
-            extraData = asmhookAfter(address, std::string(patchDataStr, dataSize), &restoreData, hookSize);
-			break;
+        case HOOK_ELEM_TYPE_ASMHOOK_BEFORE:
+        case HOOK_ELEM_TYPE_ASMHOOK_AFTER:
+		{
+			std::string code(patchDataStr, dataSize);
+			if (!codeReplacementArgs.empty())
+			{
+				code = formatAsmCode(code, codeReplacementArgs);
+			}
+			if (type == HOOK_ELEM_TYPE_ASMHOOK_BEFORE)
+            {
+                extraData = asmhookBefore(address, code, &restoreData, hookSize);
+			}
+			else
+			{
+				extraData = asmhookAfter(address, code, &restoreData, hookSize);
+			}
+            break;
+        }
 		case HOOK_ELEM_TYPE_DISABLED:
 			break;
 		default:
@@ -235,6 +247,12 @@ HookElementBuilder& HookElementBuilder::patchUseNops(bool on)
 HookElementBuilder& HookElementBuilder::gameVersions(const std::vector<int>& gameVersions)
 {
 	elem.gameVersions = gameVersions;
+	return *this;
+}
+
+HookElementBuilder& HookElementBuilder::codeReplacementArgs(const std::unordered_map<std::string, CodeReplacementArg>& args)
+{
+	elem.codeReplacementArgs = args;
 	return *this;
 }
 
@@ -659,7 +677,7 @@ void codeMemoryFullFree()
 uint32_t copyCode(uint32_t source, uint32_t size, bool writeJumpBack, uint32_t dest)
 {
     std::vector<int> rel32Positions; // to fix calls/jumps
-	int sizeReal = getRealHookSize(source, size); // TODO: skip this call and use below loop to compute effective size?
+	int sizeReal = getRealHookSize(source, size, size); // TODO: skip this call and use below loop to compute effective size?
 	if (sizeReal != size)
     {
 		wxLogWarning("Tried to copy 0x%X code bytes at 0x%X, breaking an instruction due to too small code size (computed minimum is 0x%X)", size, source, sizeReal);
@@ -741,7 +759,9 @@ void* asmhookCommon(uint32_t addr, const std::string& code, std::vector<uint8_t>
 	else
     {
         copyCode(addr, size, false, mem);
-        copyCode((uint32_t)codeBytes.data(), codeBytes.size(), true, mem + size);
+        copyCode((uint32_t)codeBytes.data(), codeBytes.size(), false, mem + size);
+		// manual jump hook, because if codeBytes one was true, it would generate jump to fasm code block, not original code
+		hookJumpRaw(mem + size + codeBytes.size(), (void*)(addr + size), nullptr);
 	}
 	hookJumpRaw(addr, (void*)mem, nullptr);
     return (void*)mem;
@@ -946,7 +966,7 @@ const std::map<FasmErrorCode, std::string> fasmErrorCodeToText =
 	{FASMERR_ASSERTION_FAILED, "assertion failed"},
 };
 
-std::string formatAsmCode(const std::string& code, const std::unordered_map<std::string, std::variant<uint32_t, int32_t, std::string, void*>>& replacements)
+std::string formatAsmCode(const std::string& code, const std::unordered_map<std::string, CodeReplacementArg>& replacements)
 {
 	static const std::regex regex("%.*?%");
 	std::string newCode;
@@ -1024,9 +1044,8 @@ std::string_view compileAsm(const std::string& code)
 	case FASM_WRITE_FAILED:
 	case FASM_INVALID_DEFINITION:
 	{
-		wxString errorMsg = wxString::Format("[ASM ERROR, line %d]: %s", fasmState->error_line, fasmErrorCodeToText.at(fasmState->error_code));
-		wxLogError(errorMsg);
-		wxLog::FlushActive();
+		// assert to show stack traceback
+		wxASSERT_MSG(false, wxString::Format("[ASM ERROR, line %d]: %s", fasmState->error_line->line_number & 0x7FFFFFFFU, fasmErrorCodeToText.at(fasmState->error_code))); // first bit is not line number, but flag
 		return "";
 	}
 		break;

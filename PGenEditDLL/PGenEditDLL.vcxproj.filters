@@ -625,5 +625,6 @@
     <None Include="Lib.def">
       <Filter>Pliki zasobów</Filter>
     </None>
+    <None Include="..\todo.md" />
   </ItemGroup>
 </Project>
