@@ -16,9 +16,13 @@ public:
     LuaWrapper& pop(int n);
     LuaWrapper& pushvalue(int pos);
     LuaWrapper& getfield(int idx, const char* key);
+    LuaWrapper& pushString(const std::string& str);
+    int pcall(int nargs, int nresults, int errfunc);
+    LuaWrapper& call(int nargs, int nresults);
     // tries to get sequence of tables corresponding to given path separated with dots, uses global environment for first part
     // returns true if successful and only adds to the stack requested object, otherwise returns false and stack is fully restored
-    bool getPath(const std::string& path);
+    // if "create" is true, acts like "tget" function
+    bool getPath(const std::string& path, bool lastMustBeTable = false, bool create = false);
     
 
 

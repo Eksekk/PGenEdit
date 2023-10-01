@@ -125,15 +125,54 @@ auto sizeRef(T& t)
 		return std::ref((uint32_t&)t);
 	}
 }
+// struct "GameClasses", field name "StartingStats", dataPtr name: "StartingStats"
+// struct "GameClasses", field name "HPFactor", size field/dataPtr name: "HPFactor_size"
+// struct "GameClasses", field name "SPBase", size field/dataPtr name: "SPBase_size"
+// struct "GameClasses", field name "startingStats", size field/dataPtr name: "startingStats_size"
+// struct "GameClasses", field name "SPFactor", size field/dataPtr name: "SPFactor_size"
+// struct "GameClasses", field name "SPFactor", dataPtr name: "SPFactor"
+// struct "GameClasses", field name "skills", size field/dataPtr name: "skills_size"
+// struct "GameClasses", field name "Skills", dataPtr name: "Skills"
+// struct "GameClasses", field name "SPBase", dataPtr name: "SPBase"
+// struct "GameClasses", field name "HPBase", size field/dataPtr name: "HPBase_size"
+// struct "GameClasses", field name "HPBase", dataPtr name: "HPBase"
+// struct "GameClasses", field name "SPStats", dataPtr name: "SPStats"
+// struct "GameClasses", field name "SPStats", size field/dataPtr name: "SPStats_size"
+// struct "GameClasses", field name "HPFactor", dataPtr name: "HPFactor"
+// struct "GameClassKinds", field name "StartingSkills", dataPtr name: "StartingSkills"
+// struct "GameClassKinds", field name "startingSkills", size field/dataPtr name: "startingSkills_size"
 template<AnyGameStruct Game>
 StructVector arraysBase =
 {
 	{ "Game.ItemsTxt", dataRef(Game::itemsTxt), sizeRef(Game::itemsTxt_sizePtr)},
 	{ "Game.StdItemsTxt", dataRef(Game::stdItemsTxt), sizeRef(Game::stdItemsTxt_size) },
 	{ "Game.SpcItemsTxt", dataRef(Game::spcItemsTxt), sizeRef(Game::spcItemsTxt_size) },
+	{ "Game.Classes.HPFactor", dataRef(Game::classes->HPFactor), sizeRef(Game::classes->HPFactor_size) },
+	{ "Game.Classes.SPFactor", dataRef(Game::classes->SPFactor), sizeRef(Game::classes->SPFactor_size) },
+	{ "Game.Classes.SPStats", dataRef(Game::classes->SPStats), sizeRef(Game::classes->SPStats_size) },
 };
 
+using Game6 = mm6::GameStructure;
+using Game7 = mm7::GameStructure;
 using Game8 = mm8::GameStructure;
+
+StructVector arraysMm6 =
+{
+
+};
+
+StructVector arraysMm7 =
+{
+
+};
+
+StructVector arraysMm8 =
+{
+    { "Game.Classes.HPBase", dataRef(Game8::classes->HPBase), sizeRef(Game8::classes->HPBase_size) },
+    { "Game.Classes.SPBase", dataRef(Game8::classes->SPBase), sizeRef(Game8::classes->SPBase_size) },
+    { "Game.Classes.StartingSkills", dataRef(Game8::classes->SPBase), sizeRef(Game8::classes->SPBase_size) },
+};
+
 StructVector arraysMerge =
 {
 	{"Game.ArmorPicsCoords.Belts", dataRef(Game8::armorPicsCoords->belts), sizeRef(Game8::armorPicsCoords->belts_size)},
@@ -161,13 +200,16 @@ StructVector arraysMerge =
 
 void fillGameStaticPointersAndSizes()
 {
-	mm7::GameStructure* game = (mm7::GameStructure*)nullptr;
-	lua_getglobal(Lua, "internal");
-	lua_getfield(Lua, -1, "GetArrayUpval");
-	lua_replace(Lua, -2);
+	luaWrapper.getPath("internal.GetArrayUpval");
+	StructVector& singleGameSpecific = mmv(arraysMm6, arraysMm7, arraysMm8);
+	std::ranges::copy(arraysBase<mm7::Game>, std::back_inserter(singleGameSpecific));
+	if (IS_MERGE)
+	{
+		std::ranges::copy(arraysMerge, std::back_inserter(singleGameSpecific));
+	}
 
 	int stackPos = lua_gettop(Lua);
-	for (auto& [path, dataPtr, sizeVariant] : mmv(arraysBase<mm6::Game>, arraysBase<mm7::Game>, arraysBase<mm8::Game>))
+	for (auto& [path, dataPtr, sizeVariant] : singleGameSpecific)
 	{
 		luaWrapper.getPath(path);
 		lua_getfield(Lua, -1, "?ptr");
@@ -305,22 +347,6 @@ void removeGameSaveHandler()
     lua_pop(Lua, 4); // type, result, pgenedit, events
 }
 /*
-// struct "GameClasses", field name "StartingStats", dataPtr name: "StartingStats"
-// struct "GameClasses", field name "HPFactor", size field/dataPtr name: "HPFactor_size"
-// struct "GameClasses", field name "SPBase", size field/dataPtr name: "SPBase_size"
-// struct "GameClasses", field name "startingStats", size field/dataPtr name: "startingStats_size"
-// struct "GameClasses", field name "SPFactor", size field/dataPtr name: "SPFactor_size"
-// struct "GameClasses", field name "SPFactor", dataPtr name: "SPFactor"
-// struct "GameClasses", field name "skills", size field/dataPtr name: "skills_size"
-// struct "GameClasses", field name "Skills", dataPtr name: "Skills"
-// struct "GameClasses", field name "SPBase", dataPtr name: "SPBase"
-// struct "GameClasses", field name "HPBase", size field/dataPtr name: "HPBase_size"
-// struct "GameClasses", field name "HPBase", dataPtr name: "HPBase"
-// struct "GameClasses", field name "SPStats", dataPtr name: "SPStats"
-// struct "GameClasses", field name "SPStats", size field/dataPtr name: "SPStats_size"
-// struct "GameClasses", field name "HPFactor", dataPtr name: "HPFactor"
-// struct "GameClassKinds", field name "StartingSkills", dataPtr name: "StartingSkills"
-// struct "GameClassKinds", field name "startingSkills", size field/dataPtr name: "startingSkills_size"
 // struct "SpritesLod", field name "spritesSW", size field/dataPtr name: "spritesSW_size"
 // struct "SpritesLod", field name "SpritesSW", dataPtr name: "SpritesSW"
 // struct "GameStructure", field name "NPCDataTxt", dataPtr name: "NPCDataTxt"
