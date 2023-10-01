@@ -126,6 +126,7 @@ struct StructArray
 	std::string arrayPath; // from global environment
 	void*& ptr; // reference to ptr to data
 	std::variant<std::monostate, std::reference_wrapper<uint32_t*>, std::reference_wrapper<uint32_t>> size; // reference to either dummy value, unchangeable size, or ptr to size
+	bool customType = false; // if set, path is of form "structs.o.GameStructure.TitleTrackOffset", because custom types don't have useful upvalues
 };
 
 using StructVector = std::vector<StructArray>;
@@ -148,6 +149,8 @@ auto sizeRef(T& t)
 		return std::ref((uint32_t&)t);
 	}
 }
+
+// struct "GameStructure", field name "CustomLods", dataPtr name: "CustomLods"
 
 template<AnyGameStruct Game>
 StructVector arraysBase =
@@ -181,7 +184,7 @@ StructVector arraysBase =
 	{ "Game.ShopSpecialItems", dataRef(Game::shopSpecialItems), sizeRef(Game::shopSpecialItems_size) },
 	{ "Game.GuildItems", dataRef(Game::guildItems), sizeRef(Game::guildItems_size) },
 	{ "Game.GlobalEvtLines", dataRef(Game::globalEvtLines), sizeRef(Game::globalEvtLines_sizePtr) },
-	{ "Game.TitleTrackOffset", dataRef(Game::titleTrackOffset), sizeRef(Game::titleTrackOffset_size) }, // TODO: this is not array, add boolean member to StructArray
+	{ "structs.o.GameStructure.TitleTrackOffset", dataRef(Game::titleTrackOffset), std::monostate(), true},
 	{ "Game.MapDoorSound", dataRef(Game::mapDoorSound), sizeRef(Game::mapDoorSound_size) },
 
 	{ "Game.Classes.HPFactor", dataRef(Game::classes->HPFactor), sizeRef(Game::classes->HPFactor_size) },
@@ -190,7 +193,12 @@ StructVector arraysBase =
 
 	{ "Game.SpritesLod.SpritesSW", dataRef(((Game*)nullptr)->spritesLod.spritesSW), sizeRef(((Game*)nullptr)->spritesLod.spritesSW_sizePtr)},
 
-	{ "Party.QBits", dataRef(decay_fully<decltype(Game::party)>::QBits), sizeRef(decay_fully<decltype(Game::party)>::QBits_size) }
+	{ "Game.CustomLods", dataRef(Game::customLods), std::monostate()},
+
+
+	{ "Party.QBits", dataRef(decay_fully<decltype(Game::party)>::QBits), sizeRef(decay_fully<decltype(Game::party)>::QBits_size) },
+
+	{ "Game.DialogLogic.List", dataRef(decay_fully<decltype(Game::dialogLogic)>::list), sizeRef(decay_fully<decltype(Game::dialogLogic)>::list_sizePtr) },
 };
 
 using Game6 = mm6::GameStructure;
@@ -282,15 +290,32 @@ void fillGameStaticPointersAndSizes()
 	}
 
 	int stackPos = lua_gettop(Lua);
-	for (auto& [path, dataPtr, sizeVariant] : singleGameSpecific)
+	for (auto& [path, dataPtr, sizeVariant, customType] : singleGameSpecific)
 	{
 		luaWrapper.getPath(path);
-		lua_getfield(Lua, -1, "?ptr");
+		if (!customType) // otherwise path directly refers to offset
+		{
+            lua_getfield(Lua, -1, "pptr"); // parray
+            if (lua_type(Lua, -1) == LUA_TNUMBER)
+            {
+                //wxLogWarning("Array '%s' has 'pptr' field, using this instead of '?ptr'", path);
+            }
+            else
+            {
+                lua_getfield(Lua, -2, "?ptr");
+                lua_replace(Lua, -2);
+            }
+		}
 		dataPtr = reinterpret_cast<void*>((uint32_t)lua_tonumber(Lua, -1));
 		lua_pop(Lua, 1);
+		if (customType)
+		{
+			continue; // only offset
+		}
 		lua_pushvalue(Lua, -2); // GetArrayUpval
         lua_pushvalue(Lua, -2); // array
 		uint32_t sizeValue = 0;
+		// TODO: can use simply getfield instead of extracting upvalues
 		if (std::reference_wrapper<uint32_t*>* sizePtr = std::get_if<std::reference_wrapper<uint32_t*>>(&sizeVariant))
 		{
 			lua_pushstring(Lua, "lenP");
@@ -329,7 +354,7 @@ void fillGameStaticPointersAndSizes()
 		}
 		lua_settop(Lua, stackPos);
 		wxASSERT_MSG(dataPtr && sizeValue, wxString::Format("[Array '%s'] invalid values: dataPtr is 0x%X, %s is 0x%X",
-			path, dataPtr, std::holds_alternative<std::reference_wrapper<uint32_t*>>(sizeVariant) ? "sizePtr" : "size", sizeValue
+			path, (uint32_t)dataPtr, std::holds_alternative<std::reference_wrapper<uint32_t*>>(sizeVariant) ? "sizePtr" : "size", sizeValue
 		));
 	}
 	lua_settop(Lua, stackPos - 1);
@@ -419,24 +444,3 @@ void removeGameSaveHandler()
     wxASSERT_MSG(type == LUA_TFUNCTION, wxString::Format("Couldn't remove save game handler, received lua type %d", type));
     lua_pop(Lua, 4); // type, result, pgenedit, events
 }
-// struct "GameStructure", field name "NPC", size field/dataPtr name: "NPC_size"
-// struct "GameStructure", field name "missileSetup", size field/dataPtr name: "missileSetup_size"
-// struct "GameStructure", field name "NPCTopic", dataPtr name: "NPCTopic"
-// struct "GameStructure", field name "NPCGreet", dataPtr name: "NPCGreet"
-// struct "GameStructure", field name "AutonoteTxt", dataPtr name: "AutonoteTxt"
-// struct "GameStructure", field name "MapStats", dataPtr name: "MapStats"
-// struct "GameStructure", field name "CharacterDollTypes", dataPtr name: "CharacterDollTypes"
-// struct "GameStructure", field name "housesExtra", size field/dataPtr name: "housesExtra_size"
-// struct "GameStructure", field name "CustomLods", dataPtr name: "CustomLods"
-// struct "GameStructure", field name "PlaceMonTxt", dataPtr name: "PlaceMonTxt"
-// struct "GameStructure", field name "NPCNews", size field/dataPtr name: "NPCNews_size"
-// struct "GameStructure", field name "guildNextRefill2", size field/dataPtr name: "guildNextRefill2_size"
-// struct "GameStructure", field name "reagentSettings", size field/dataPtr name: "reagentSettings_size"
-// struct "GameStructure", field name "houseMovies", size field/dataPtr name: "houseMovies_size"
-// struct "GameStructure", field name "GuildItems", dataPtr name: "GuildItems"
-// struct "GameStructure", field name "awardsSort", size field/dataPtr name: "awardsSort_size"
-// struct "GameStructure", field name "HostileTxt", dataPtr name: "HostileTxt"
-// struct "GameStructure", field name "classNames", size field/dataPtr name: "classNames_size"
-// struct "GameStructure", field name "shopNextRefill", size field/dataPtr name: "shopNextRefill_size"
-// struct "DialogLogic", field name "List", dataPtr name: "List"
-// struct "DialogLogic", field name "list", size field/dataPtr name: "list_size"
