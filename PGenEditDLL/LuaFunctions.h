@@ -15,4 +15,5 @@ extern "C"
 	void removeGameSaveHandler();
 }
 
+bool detectIfIsMerge();
 void fillGameStaticPointersAndSizes();

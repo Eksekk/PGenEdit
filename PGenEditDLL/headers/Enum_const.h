@@ -25,6 +25,21 @@ enum Mastery
 	MASTERY_GRAND_MASTER = 4,
 };
 
+enum StartingSkills6
+{
+	START_SKILL_NOT_AVAILABLE = 0,
+	START_SKILL_GIVEN_ON_START_6 = 1,
+	START_SKILL_CAN_CHOOSE_6 = 2,
+	START_SKILL_CAN_LEARN = 3,
+};
+
+enum StartingSkills78
+{
+    START_SKILL_CANNOT_CHOOSE = 0,
+    START_SKILL_CAN_CHOOSE_78 = 1,
+    START_SKILL_GIVEN_ON_START_78 = 2,
+};
+
 extern Mastery MAX_MASTERY; // 3 in mm6, 4 in mm7+
 extern SkillCombineMode SKILL_COMBINE_MODE;
 extern int SKILL_BITS;

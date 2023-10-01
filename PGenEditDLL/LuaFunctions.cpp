@@ -75,6 +75,7 @@ extern "C"
 		{
 			lua_pop(Lua, 1);
 		}*/
+		detectIfIsMerge();
 		setupGameSaveHandler();
 		fillGameStaticPointersAndSizes();
 	}
@@ -97,12 +98,34 @@ extern "C"
 	}
 }
 
+bool detectIfIsMerge()
+{
+	if (MMVER != 8)
+	{
+		IS_MERGE = false;
+		return false;
+	}
+	lua_getglobal(Lua, "Merge");
+	bool r = false;
+	if (lua_type(Lua, -1) != LUA_TNIL)
+	{
+		r = true;
+	}
+	else
+	{
+		r = false;
+	}
+	lua_pop(Lua, 1);
+	IS_MERGE = r;
+	return r;
+}
+
 // can be no array but single dataPtr (patchOptions, frameCounter etc.)
 struct StructArray
 {
 	std::string arrayPath; // from global environment
 	void*& ptr; // reference to ptr to data
-	std::variant<std::monostate, std::reference_wrapper<uint32_t*>, std::reference_wrapper<uint32_t>> size; // reference to either unchangeable size or ptr to size
+	std::variant<std::monostate, std::reference_wrapper<uint32_t*>, std::reference_wrapper<uint32_t>> size; // reference to either dummy value, unchangeable size, or ptr to size
 };
 
 using StructVector = std::vector<StructArray>;
@@ -125,31 +148,49 @@ auto sizeRef(T& t)
 		return std::ref((uint32_t&)t);
 	}
 }
-// struct "GameClasses", field name "StartingStats", dataPtr name: "StartingStats"
-// struct "GameClasses", field name "HPFactor", size field/dataPtr name: "HPFactor_size"
-// struct "GameClasses", field name "SPBase", size field/dataPtr name: "SPBase_size"
-// struct "GameClasses", field name "startingStats", size field/dataPtr name: "startingStats_size"
-// struct "GameClasses", field name "SPFactor", size field/dataPtr name: "SPFactor_size"
-// struct "GameClasses", field name "SPFactor", dataPtr name: "SPFactor"
-// struct "GameClasses", field name "skills", size field/dataPtr name: "skills_size"
-// struct "GameClasses", field name "Skills", dataPtr name: "Skills"
-// struct "GameClasses", field name "SPBase", dataPtr name: "SPBase"
-// struct "GameClasses", field name "HPBase", size field/dataPtr name: "HPBase_size"
-// struct "GameClasses", field name "HPBase", dataPtr name: "HPBase"
-// struct "GameClasses", field name "SPStats", dataPtr name: "SPStats"
-// struct "GameClasses", field name "SPStats", size field/dataPtr name: "SPStats_size"
-// struct "GameClasses", field name "HPFactor", dataPtr name: "HPFactor"
-// struct "GameClassKinds", field name "StartingSkills", dataPtr name: "StartingSkills"
-// struct "GameClassKinds", field name "startingSkills", size field/dataPtr name: "startingSkills_size"
+
 template<AnyGameStruct Game>
 StructVector arraysBase =
 {
 	{ "Game.ItemsTxt", dataRef(Game::itemsTxt), sizeRef(Game::itemsTxt_sizePtr)},
 	{ "Game.StdItemsTxt", dataRef(Game::stdItemsTxt), sizeRef(Game::stdItemsTxt_size) },
 	{ "Game.SpcItemsTxt", dataRef(Game::spcItemsTxt), sizeRef(Game::spcItemsTxt_size) },
+	{ "Game.AwardsTxt", dataRef(Game::awardsTxt), sizeRef(Game::awardsTxt_size) },
+	{ "Game.MonstersTxt", dataRef(Game::monstersTxt), sizeRef(Game::monstersTxt_sizePtr) },
+	{ "Game.TransTxt", dataRef(Game::transTxt), sizeRef(Game::transTxt_size) },
+	{ "Game.Houses", dataRef(Game::houses), sizeRef(Game::houses_size) },
+    { "Game.QuestsTxt", dataRef(Game::questsTxt), sizeRef(Game::questsTxt_size) },
+    { "Game.AutonoteTxt", dataRef(Game::autonoteTxt), sizeRef(Game::autonoteTxt_size) },
+    { "Game.MapStats", dataRef(Game::mapStats), sizeRef(Game::mapStats_sizePtr) },
+
+    { "Game.NPCNews", dataRef(Game::NPCNews), sizeRef(Game::NPCNews_size) },
+    { "Game.NPCDataTxt", dataRef(Game::NPCDataTxt), sizeRef(Game::NPCDataTxt_size) },
+    { "Game.NPCTopic", dataRef(Game::NPCTopic), sizeRef(Game::NPCTopic_size) },
+    { "Game.NPCText", dataRef(Game::NPCText), sizeRef(Game::NPCText_size) },
+
+	{ "Game.ClassNames", dataRef(Game::classNames), sizeRef(Game::classNames_size) },
+	{ "Game.HouseMovies", dataRef(Game::houseMovies), sizeRef(Game::houseMovies_size) },
+	{ "Game.ShopNextRefill", dataRef(Game::shopNextRefill), sizeRef(Game::shopNextRefill_size) },
+	{ "Game.PatchOptions", dataRef(Game::patchOptions), std::monostate()},
+    { "Game.MissileSetup", dataRef(Game::missileSetup), sizeRef(Game::missileSetup_sizePtr) },
+    { "Game.MapFogChances", dataRef(Game::mapFogChances), sizeRef(Game::mapFogChances_size) },
+
+	{ "Game.TransportLocations", dataRef(Game::transportLocations), sizeRef(Game::transportLocations_size) },
+	{ "Game.TransportIndex", dataRef(Game::transportIndex), sizeRef(Game::transportIndex_size) },
+	{ "Game.ShopItems", dataRef(Game::shopItems), sizeRef(Game::shopItems_size) },
+	{ "Game.ShopSpecialItems", dataRef(Game::shopSpecialItems), sizeRef(Game::shopSpecialItems_size) },
+	{ "Game.GuildItems", dataRef(Game::guildItems), sizeRef(Game::guildItems_size) },
+	{ "Game.GlobalEvtLines", dataRef(Game::globalEvtLines), sizeRef(Game::globalEvtLines_sizePtr) },
+	{ "Game.TitleTrackOffset", dataRef(Game::titleTrackOffset), sizeRef(Game::titleTrackOffset_size) }, // TODO: this is not array, add boolean member to StructArray
+	{ "Game.MapDoorSound", dataRef(Game::mapDoorSound), sizeRef(Game::mapDoorSound_size) },
+
 	{ "Game.Classes.HPFactor", dataRef(Game::classes->HPFactor), sizeRef(Game::classes->HPFactor_size) },
 	{ "Game.Classes.SPFactor", dataRef(Game::classes->SPFactor), sizeRef(Game::classes->SPFactor_size) },
 	{ "Game.Classes.SPStats", dataRef(Game::classes->SPStats), sizeRef(Game::classes->SPStats_size) },
+
+	{ "Game.SpritesLod.SpritesSW", dataRef(((Game*)nullptr)->spritesLod.spritesSW), sizeRef(((Game*)nullptr)->spritesLod.spritesSW_sizePtr)},
+
+	{ "Party.QBits", dataRef(decay_fully<decltype(Game::party)>::QBits), sizeRef(decay_fully<decltype(Game::party)>::QBits_size) }
 };
 
 using Game6 = mm6::GameStructure;
@@ -158,12 +199,24 @@ using Game8 = mm8::GameStructure;
 
 StructVector arraysMm6 =
 {
-
+    { "Game.AwardsSort", dataRef(Game6::awardsSort), sizeRef(Game6::awardsSort_sizePtr) },
+    { "Game.NPC", dataRef(Game6::NPC), sizeRef(Game6::NPC_sizePtr) },
 };
 
 StructVector arraysMm7 =
 {
+    { "Game.Classes.Skills", dataRef(Game7::classes->skills), sizeRef(Game7::classes->skills_size) },
 
+    { "Game.ShopTheftExpireTime", dataRef(Game7::shopTheftExpireTime), sizeRef(Game7::shopTheftExpireTime_size) },
+    { "Game.HostileTxt", dataRef(Game7::hostileTxt), sizeRef(Game7::hostileTxt_size) },
+    { "Game.AwardsSort", dataRef(Game7::awardsSort), sizeRef(Game7::awardsSort_size) },
+    { "Game.MonsterKinds", dataRef(Game7::monsterKinds), sizeRef(Game7::monsterKinds_sizePtr) },
+    { "Game.AutonoteCategory", dataRef(Game7::autonoteCategory), sizeRef(Game7::autonoteCategory_size) },
+    { "Game.PlaceMonTxt", dataRef(Game7::placeMonTxt), sizeRef(Game7::placeMonTxt_sizePtr) },
+
+    { "Game.NPC", dataRef(Game7::NPC), sizeRef(Game7::NPC_sizePtr) },
+    { "Game.NPCGreet", dataRef(Game7::NPCGreet), sizeRef(Game7::NPCGreet_size) },
+    { "Game.NPCGroup", dataRef(Game7::NPCGroup), sizeRef(Game7::NPCGroup_size) },
 };
 
 StructVector arraysMm8 =
@@ -171,6 +224,18 @@ StructVector arraysMm8 =
     { "Game.Classes.HPBase", dataRef(Game8::classes->HPBase), sizeRef(Game8::classes->HPBase_size) },
     { "Game.Classes.SPBase", dataRef(Game8::classes->SPBase), sizeRef(Game8::classes->SPBase_size) },
     { "Game.Classes.StartingSkills", dataRef(Game8::classes->SPBase), sizeRef(Game8::classes->SPBase_size) },
+    { "Game.Classes.Skills", dataRef(Game8::classes->skills), sizeRef(Game8::classes->skills_size) },
+
+    { "Game.ShopTheftExpireTime", dataRef(Game8::shopTheftExpireTime), sizeRef(Game8::shopTheftExpireTime_size) },
+    { "Game.HostileTxt", dataRef(Game8::hostileTxt), sizeRef(Game8::hostileTxt_size) },
+    { "Game.AwardsSort", dataRef(Game8::awardsSort), sizeRef(Game8::awardsSort_size) },
+    { "Game.MonsterKinds", dataRef(Game8::monsterKinds), sizeRef(Game8::monsterKinds_sizePtr) },
+    { "Game.AutonoteCategory", dataRef(Game8::autonoteCategory), sizeRef(Game8::autonoteCategory_size) },
+    { "Game.PlaceMonTxt", dataRef(Game8::placeMonTxt), sizeRef(Game8::placeMonTxt_sizePtr) },
+
+    { "Game.NPC", dataRef(Game8::NPC), sizeRef(Game8::NPC_size) },
+    { "Game.NPCGreet", dataRef(Game8::NPCGreet), sizeRef(Game8::NPCGreet_size) },
+    { "Game.NPCGroup", dataRef(Game8::NPCGroup), sizeRef(Game8::NPCGroup_size) },
 };
 
 StructVector arraysMerge =
@@ -196,13 +261,21 @@ StructVector arraysMerge =
     {"Game.HouseRules.ArcomageTexts", dataRef(Game8::houseRules->arcomageTexts), sizeRef(Game8::houseRules->arcomageTexts_size)},
     {"Game.HouseRules.SpellbookShops", dataRef(Game8::houseRules->spellbookShops), sizeRef(Game8::houseRules->spellbookShops_size)},
     {"Game.HouseRules.Training", dataRef(Game8::houseRules->training), sizeRef(Game8::houseRules->training_size)},
+
+    { "Game.HousesExtra", dataRef(Game8::housesExtra), sizeRef(Game8::housesExtra_size) },
+    { "Game.GuildNextRefill2", dataRef(Game8::guildNextRefill2), sizeRef(Game8::guildNextRefill2_size) },
+    { "Game.CharacterPortraits", dataRef(Game8::characterPortraits), sizeRef(Game8::characterPortraits_size) },
+    { "Game.CharacterDollTypes", dataRef(Game8::characterDollTypes), sizeRef(Game8::characterDollTypes_size) },
+
+    { "Game.MixPotions", dataRef(Game8::mixPotions), sizeRef(Game8::mixPotions_size) },
+    { "Game.ReagentSettings", dataRef(Game8::reagentSettings), sizeRef(Game8::reagentSettings_size) },
 };
 
 void fillGameStaticPointersAndSizes()
 {
 	luaWrapper.getPath("internal.GetArrayUpval");
 	StructVector& singleGameSpecific = mmv(arraysMm6, arraysMm7, arraysMm8);
-	std::ranges::copy(arraysBase<mm7::Game>, std::back_inserter(singleGameSpecific));
+	std::ranges::copy(mmv(arraysBase<mm6::Game>, arraysBase<mm7::Game>, arraysBase<mm8::Game>), std::back_inserter(singleGameSpecific));
 	if (IS_MERGE)
 	{
 		std::ranges::copy(arraysMerge, std::back_inserter(singleGameSpecific));
@@ -346,70 +419,6 @@ void removeGameSaveHandler()
     wxASSERT_MSG(type == LUA_TFUNCTION, wxString::Format("Couldn't remove save game handler, received lua type %d", type));
     lua_pop(Lua, 4); // type, result, pgenedit, events
 }
-/*
-// struct "SpritesLod", field name "spritesSW", size field/dataPtr name: "spritesSW_size"
-// struct "SpritesLod", field name "SpritesSW", dataPtr name: "SpritesSW"
-// struct "GameStructure", field name "NPCDataTxt", dataPtr name: "NPCDataTxt"
-// struct "GameStructure", field name "transportLocations", size field/dataPtr name: "transportLocations_size"
-// struct "GameStructure", field name "titleTrackOffset", size field/dataPtr name: "titleTrackOffset_size"
-// struct "GameStructure", field name "hostileTxt", size field/dataPtr name: "hostileTxt_size"
-// struct "GameStructure", field name "NPCGroup", dataPtr name: "NPCGroup"
-// struct "GameStructure", field name "monstersTxt", size field/dataPtr name: "monstersTxt_size"
-// struct "GameStructure", field name "TransTxt", dataPtr name: "TransTxt"
-// struct "GameStructure", field name "MonsterKinds", dataPtr name: "MonsterKinds"
-// struct "GameStructure", field name "shopSpecialItems", size field/dataPtr name: "shopSpecialItems_size"
-// struct "GameStructure", field name "ShopTheftExpireTime", dataPtr name: "ShopTheftExpireTime"
-// struct "GameStructure", field name "transTxt", size field/dataPtr name: "transTxt_size"
-// struct "GameStructure", field name "guildItems", size field/dataPtr name: "guildItems_size"
-// struct "GameStructure", field name "shopItems", size field/dataPtr name: "shopItems_size"
-// struct "GameStructure", field name "questsTxt", size field/dataPtr name: "questsTxt_size"
-// struct "GameStructure", field name "GlobalEvtLines", dataPtr name: "GlobalEvtLines"
-// struct "GameStructure", field name "TransportIndex", dataPtr name: "TransportIndex"
-// struct "GameStructure", field name "Houses", dataPtr name: "Houses"
-// struct "GameStructure", field name "AwardsSort", dataPtr name: "AwardsSort"
-// struct "GameStructure", field name "NPCGroup", size field/dataPtr name: "NPCGroup_size"
-// struct "GameStructure", field name "NPCNews", dataPtr name: "NPCNews"
-// struct "GameStructure", field name "autonoteCategory", size field/dataPtr name: "autonoteCategory_size"
-// struct "GameStructure", field name "globalEvtLines", size field/dataPtr name: "globalEvtLines_size"
-// struct "GameStructure", field name "ShopItems", dataPtr name: "ShopItems"
-// struct "GameStructure", field name "QuestsTxt", dataPtr name: "QuestsTxt"
-// struct "GameStructure", field name "ShopSpecialItems", dataPtr name: "ShopSpecialItems"
-// struct "GameStructure", field name "AutonoteCategory", dataPtr name: "AutonoteCategory"
-// struct "GameStructure", field name "TitleTrackOffset", dataPtr name: "TitleTrackOffset"
-// struct "GameStructure", field name "ClassNames", dataPtr name: "ClassNames"
-// struct "GameStructure", field name "HousesExtra", dataPtr name: "HousesExtra"
-// struct "GameStructure", field name "HouseMovies", dataPtr name: "HouseMovies"
-// struct "GameStructure", field name "GuildNextRefill2", dataPtr name: "GuildNextRefill2"
-// struct "GameStructure", field name "ShopNextRefill", dataPtr name: "ShopNextRefill"
-// struct "GameStructure", field name "monsterKinds", size field/dataPtr name: "monsterKinds_size"
-// struct "GameStructure", field name "CharacterPortraits", dataPtr name: "CharacterPortraits"
-// struct "GameStructure", field name "transportIndex", size field/dataPtr name: "transportIndex_size"
-// struct "GameStructure", field name "mapDoorSound", size field/dataPtr name: "mapDoorSound_size"
-// struct "GameStructure", field name "NPCDataTxt", size field/dataPtr name: "NPCDataTxt_size"
-// struct "GameStructure", field name "TransportLocations", dataPtr name: "TransportLocations"
-// struct "GameStructure", field name "NPCText", dataPtr name: "NPCText"
-// struct "GameStructure", field name "MonstersTxt", dataPtr name: "MonstersTxt"
-// struct "GameStructure", field name "placeMonTxt", size field/dataPtr name: "placeMonTxt_size"
-// struct "GameStructure", field name "PatchOptions", dataPtr name: "PatchOptions"
-// struct "GameStructure", field name "itemsTxt", size field/dataPtr name: "itemsTxt_size"
-// struct "GameStructure", field name "shopTheftExpireTime", size field/dataPtr name: "shopTheftExpireTime_size"
-// struct "GameStructure", field name "ItemsTxt", dataPtr name: "ItemsTxt"
-// struct "GameStructure", field name "autonoteTxt", size field/dataPtr name: "autonoteTxt_size"
-// struct "GameStructure", field name "NPCTopic", size field/dataPtr name: "NPCTopic_size"
-// struct "GameStructure", field name "NPC", dataPtr name: "NPC"
-// struct "GameStructure", field name "MapDoorSound", dataPtr name: "MapDoorSound"
-// struct "GameStructure", field name "mixPotions", size field/dataPtr name: "mixPotions_size"
-// struct "GameStructure", field name "houses", size field/dataPtr name: "houses_size"
-// struct "GameStructure", field name "characterDollTypes", size field/dataPtr name: "characterDollTypes_size"
-// struct "GameStructure", field name "characterPortraits", size field/dataPtr name: "characterPortraits_size"
-// struct "GameStructure", field name "MixPotions", dataPtr name: "MixPotions"
-// struct "GameStructure", field name "ReagentSettings", dataPtr name: "ReagentSettings"
-// struct "GameStructure", field name "NPCGreet", size field/dataPtr name: "NPCGreet_size"
-// struct "GameStructure", field name "NPCText", size field/dataPtr name: "NPCText_size"
-// struct "GameStructure", field name "mapFogChances", size field/dataPtr name: "mapFogChances_size"
-// struct "GameStructure", field name "MissileSetup", dataPtr name: "MissileSetup"
-// struct "GameStructure", field name "MapFogChances", dataPtr name: "MapFogChances"
-// struct "GameStructure", field name "mapStats", size field/dataPtr name: "mapStats_size"
 // struct "GameStructure", field name "NPC", size field/dataPtr name: "NPC_size"
 // struct "GameStructure", field name "missileSetup", size field/dataPtr name: "missileSetup_size"
 // struct "GameStructure", field name "NPCTopic", dataPtr name: "NPCTopic"
@@ -431,4 +440,3 @@ void removeGameSaveHandler()
 // struct "GameStructure", field name "shopNextRefill", size field/dataPtr name: "shopNextRefill_size"
 // struct "DialogLogic", field name "List", dataPtr name: "List"
 // struct "DialogLogic", field name "list", size field/dataPtr name: "list_size"
-*/
