@@ -110,6 +110,14 @@ enum HookReturnCode
     HOOK_RETURN_AUTOHOOK_NO_PUSH
 };
 
+struct HookRestoreData
+{
+    std::vector<uint8_t> bytes;
+    void* extraData = nullptr;
+};
+
+extern std::map<uint32_t, HookRestoreData> hookRestoreDataMap;
+
 // BASE FUNCTIONS
 
 int getInstructionSize(void* addr);
@@ -183,9 +191,10 @@ void hookCall(uint32_t addr, HookFunc func, std::vector<uint8_t>* storeAt, uint3
 void unhookCall(uint32_t addr, std::vector<uint8_t>& restoreData);
 
 // mmext-like autohook
-uint32_t autohookCall(uint32_t addr, HookFunc func, std::vector<uint8_t>* storeAt, uint32_t size = 5);
+uint32_t autohookBefore(uint32_t addr, HookFunc func, std::vector<uint8_t>* storeAt, uint32_t size = 5);
+uint32_t autohookAfter(uint32_t addr, HookFunc func, std::vector<uint8_t>* storeAt, uint32_t size = 5);
 // unhook, also sets passed extra data pointer to nullptr
-void unhookAutohookCall(uint32_t addr, std::vector<uint8_t>& restoreData, void*& allocatedCode);
+void unhookAutohook(uint32_t addr, std::vector<uint8_t>& restoreData, void*& allocatedCode);
 /*
 struct f
 {
@@ -203,7 +212,20 @@ void patchWord(uint32_t addr, uint16_t val, std::vector<uint8_t>* storeAt);
 void patchDword(uint32_t addr, uint32_t val, std::vector<uint8_t>* storeAt);
 void patchQword(uint32_t addr, uint64_t val, std::vector<uint8_t>* storeAt);
 
+template<typename valType>
+void genericPatch(uint32_t addr, valType val, std::vector<uint8_t>* storeAt)
+{
+    storeBytes(storeAt, addr, sizeof (valType));
+    DWORD tmp;
+    VirtualProtect((void*)addr, sizeof (valType), PAGE_EXECUTE_READWRITE, &tmp);
+    *(valType*)addr = val;
+    VirtualProtect((void*)addr, sizeof (valType), tmp, &tmp);
+}
+
+void patchSByte(uint32_t addr, int8_t val, std::vector<uint8_t>* storeAt);
+void patchSWord(uint32_t addr, int16_t val, std::vector<uint8_t>* storeAt);
 void patchSDword(uint32_t addr, int32_t val, std::vector<uint8_t>* storeAt);
+void patchSQword(uint32_t addr, int64_t val, std::vector<uint8_t>* storeAt);
 
 // erases code (NOPs), writing jump forward if number of bytes erased is high enough
 void eraseCode(uint32_t addr, uint32_t size, std::vector<uint8_t>* storeAt);
@@ -227,21 +249,38 @@ uint32_t copyCode(uint32_t source, uint32_t size, bool writeJumpBack = true, uin
 using CodeReplacementArg = std::variant<uint32_t, int32_t, std::string, void*>;
 using CodeReplacementArgs = std::unordered_map<std::string, CodeReplacementArg>;
 
+// need own function, because std::format and wxString::Format use position-based arguments, not name-based
+std::string formatAsmCode(const std::string& code, const CodeReplacementArgs& replacements);
+
+// replaces instructions, jumping out if needed
+void* bytecodePatch(uint32_t addr, std::string_view bytecode, std::vector<uint8_t>* storeAt, int size, bool writeJumpBack = true);
+void unhookBytecodePatch(uint32_t addr, const std::vector<uint8_t>& restoreData, void*& copiedCode);
+
+// new code is called before overwritten code
+void* bytecodeHookBefore(uint32_t addr, std::string_view code, std::vector<uint8_t>* storeAt, int size);
+
+// new code is called after overwritten code
+void* bytecodeHookAfter(uint32_t addr, std::string_view code, std::vector<uint8_t>* storeAt, int size);
+void unhookBytecodeHook(uint32_t addr, const std::vector<uint8_t>& restoreData, void*& copiedCode);
+
 // new code is called before overwritten code
 void* asmhookBefore(uint32_t addr, const std::string& code, std::vector<uint8_t>* storeAt, int size = 5);
+// this version formats code
+void* asmhookBefore(uint32_t addr, const std::string& code, const CodeReplacementArgs& args, std::vector<uint8_t>* storeAt, int size = 5);
+
 // new code is called after overwritten code
 void* asmhookAfter(uint32_t addr, const std::string& code, std::vector<uint8_t>* storeAt, int size = 5);
+// this version formats code
+void* asmhookAfter(uint32_t addr, const std::string& code, const CodeReplacementArgs& args, std::vector<uint8_t>* storeAt, int size = 5);
 
 void unhookAsmhook(uint32_t addr, const std::vector<uint8_t>& restoreData, void*& copiedCode);
 
-void* asmhookBefore(uint32_t addr, const std::string& code, const CodeReplacementArgs& args, std::vector<uint8_t>* storeAt, int size = 5);
-void* asmhookAfter(uint32_t addr, const std::string& code, const CodeReplacementArgs& args, std::vector<uint8_t>* storeAt, int size = 5);
+// replaces instructions, jumping out if needed
+void* asmpatch(uint32_t addr, const std::string& code, std::vector<uint8_t>* storeAt, int size, bool writeJumpBack);
+// this version formats code
+void* asmpatch(uint32_t addr, const std::string& code, const CodeReplacementArgs& args, std::vector<uint8_t>* storeAt, int size, bool writeJumpBack = true);
 
-void* asmpatch(uint32_t addr, const std::string& code, std::vector<uint8_t>* storeAt, int size = 1, bool writeJumpBack = true);
-void* asmpatch(uint32_t addr, const std::string& code, const CodeReplacementArgs& args, std::vector<uint8_t>* storeAt, int size = 1, bool writeJumpBack = true);
-
-// need own function, because std::format and wxString::Format use position-based arguments, not name-based
-std::string formatAsmCode(const std::string& code, const CodeReplacementArgs& replacements);
+void unhookAsmpatch(uint32_t addr, const std::vector<uint8_t>& restoreData, void*& copiedCode);
 
 /*
 template<typename T, typename std::enable_if_t<>
@@ -412,11 +451,13 @@ enum HookElementType
 	HOOK_ELEM_TYPE_JUMP,
 	HOOK_ELEM_TYPE_PATCH_DATA,
 	HOOK_ELEM_TYPE_ERASE_CODE,
-	HOOK_ELEM_TYPE_AUTOHOOK,
+	HOOK_ELEM_TYPE_AUTOHOOK_BEFORE,
+    HOOK_ELEM_TYPE_AUTOHOOK_AFTER,
     HOOK_ELEM_TYPE_REPLACE_CALL,
     HOOK_ELEM_TYPE_HOOKFUNCTION,
     HOOK_ELEM_TYPE_ASMHOOK_BEFORE,
     HOOK_ELEM_TYPE_ASMHOOK_AFTER,
+    HOOK_ELEM_TYPE_ASMPATCH,
 };
 
 // different games may need some extra elements for a particular hook, or less
@@ -432,12 +473,12 @@ public:
 	uint32_t address;
 	uint32_t target;
 	const char* patchDataStr; // TODO: string_view instead of separate data/size fields
+    const char* asmText;
     CodeReplacementArgs codeReplacementArgs;
 	uint32_t hookSize;
 	uint32_t dataSize;
 	std::vector<uint8_t> restoreData;
 	HookFunc func;
-	bool needUnprotect;
 	std::string description;
 	bool patchUseNops;
 	void* extraData; // like copied code for autohook
@@ -536,19 +577,20 @@ class HookElementBuilder
 public:
 	HookElementBuilder& type(HookElementType type);
 	HookElementBuilder& address(uint32_t address);
+	HookElementBuilder& address(void* address);
 	HookElementBuilder& target(uint32_t target);
 	HookElementBuilder& size(uint32_t size);
 	HookElementBuilder& dataSize(uint32_t dataSize);
     HookElementBuilder& func(HookFunc func);
     HookElementBuilder& patchDataStr(const char* patchDataStr);
-    HookElementBuilder& needUnprotect(bool needUnprotect);
+    HookElementBuilder& asmText(const char* asmText);
 	HookElementBuilder& description(const std::string& desc);
 	HookElementBuilder& patchUseNops(bool on);
 	HookElementBuilder& gameVersions(const std::vector<int>& gameVersions);
 	HookElementBuilder& codeReplacementArgs(const CodeReplacementArgs& args);
     template<typename ReturnType, int cc, typename... Args>
     HookElementBuilder& callableFunctionHookFunc(CallableFunctionHookFunc<ReturnType, Args...> func);
-    HookElement build();
+    HookElement&& build();
 };
 
 template<typename ReturnType, int cc, typename... Args>

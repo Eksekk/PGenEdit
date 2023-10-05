@@ -31,6 +31,7 @@ public:
 
 	void loadAndConvertBitmap(const wxString& name);
 	std::string getItemTypeName() const;
+	std::string getItemModString() const; // weapons have "damage: 2d5+4", armor has "AC: +15" etc.
 	template<typename Function>
 	auto forItemTxtDo(Function&& func) const
 	{

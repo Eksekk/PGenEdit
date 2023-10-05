@@ -32,6 +32,7 @@ class wxDataViewColumn;
 class wxSpinCtrl;
 class wxGridBagSizer;
 
+// base class for "generate random item", "edit item" and "create item" dialog
 class ItemDialogBase : public wxDialog
 {
 private:

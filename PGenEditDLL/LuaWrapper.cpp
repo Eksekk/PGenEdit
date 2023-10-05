@@ -58,7 +58,7 @@ bool LuaWrapper::getPath(const std::string& path, bool lastMustBeTable, bool cre
     if (create)
     {
         lua_getglobal(L, "tget");
-        lua_getglobal(L, "_G");
+        lua_pushvalue(L, LUA_GLOBALSINDEX);
         for (const auto& part : parts)
         {
             pushString(part);

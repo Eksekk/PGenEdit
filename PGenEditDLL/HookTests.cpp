@@ -472,9 +472,10 @@ static std::vector<wxString> HookTests::testBasicHookFunctionalityAndHookManager
             elems.push_back(HookElementBuilder().address(firstHookPos).type(HOOK_ELEM_TYPE_CALL).func(doNothing).build());
             elems.push_back(HookElementBuilder().address(secondHookPos).type(HOOK_ELEM_TYPE_CALL).func(myHookFunc).build());
             break;
-        case HOOK_ELEM_TYPE_AUTOHOOK:
-            elems.push_back(HookElementBuilder().address(firstHookPos).type(HOOK_ELEM_TYPE_AUTOHOOK).func(doNothing).build());
-            elems.push_back(HookElementBuilder().address(secondHookPos).type(HOOK_ELEM_TYPE_AUTOHOOK).func(myHookFuncAutohook).build());
+        case HOOK_ELEM_TYPE_AUTOHOOK_BEFORE:
+        case HOOK_ELEM_TYPE_AUTOHOOK_AFTER:
+            elems.push_back(HookElementBuilder().address(firstHookPos).type(type).func(doNothing).build());
+            elems.push_back(HookElementBuilder().address(secondHookPos).type(type).func(myHookFuncAutohook).build());
             //hookCall(firstHookPos, doNothing);
             //hookCall(secondHookPos, myHookFunc);
             break;
@@ -518,7 +519,7 @@ static std::vector<wxString> HookTests::testBasicHookFunctionalityAndHookManager
             // no code to set register values - must fail, but after "nothing changed" check
             myassert(result >= 6, wxString::Format("[call raw hook] received invalid fail reason %d", result));
             break;
-        case HOOK_ELEM_TYPE_AUTOHOOK:
+        case HOOK_ELEM_TYPE_AUTOHOOK_BEFORE:
             result = expectRegisterValues();
             myassert(result == 0, wxString::Format("[autohook] received fail reason %d", result));
             break;
@@ -554,7 +555,7 @@ static std::vector<wxString> HookTests::testBasicHookFunctionalityAndHookManager
         myassert(memcmp(expectRegisterValues, copy.data(), copy.size()) == 0, "Memory comparison after disabling hook failed");
     };
 
-    for (auto type : { HOOK_ELEM_TYPE_CALL_RAW, HOOK_ELEM_TYPE_CALL, HOOK_ELEM_TYPE_AUTOHOOK, HOOK_ELEM_TYPE_JUMP, HOOK_ELEM_TYPE_PATCH_DATA, HOOK_ELEM_TYPE_ERASE_CODE, HOOK_ELEM_TYPE_HOOKFUNCTION })
+    for (auto type : { HOOK_ELEM_TYPE_CALL_RAW, HOOK_ELEM_TYPE_CALL, HOOK_ELEM_TYPE_AUTOHOOK_BEFORE, HOOK_ELEM_TYPE_JUMP, HOOK_ELEM_TYPE_PATCH_DATA, HOOK_ELEM_TYPE_ERASE_CODE, HOOK_ELEM_TYPE_HOOKFUNCTION })
     {
         doTest(type);
     }
@@ -839,8 +840,8 @@ static std::vector<wxString> HookTests::testAdvancedHookFunctionality()
     {
         HookElementBuilder().address((uint32_t)hookFunctionTest1).size(5).type(HOOK_ELEM_TYPE_HOOKFUNCTION).callableFunctionHookFunc<int, 2, int, int, unsigned char>(hookFunctionFunc).build(),
         HookElementBuilder().address(findCall(replaceCallHookTestOuter, replaceCallHookTestInner)).size(5).type(HOOK_ELEM_TYPE_REPLACE_CALL).callableFunctionHookFunc<int, 0, unsigned char>(replaceCallFunc).build(),
-        HookElementBuilder().address((uint32_t)findCode(autohookTest, NOP)).type(HOOK_ELEM_TYPE_AUTOHOOK).size(6).func(autohookFunc1).build(),
-        HookElementBuilder().address((uint32_t)findCode(autohookTest, "\x66\x0F\x1F\x00", 4)).type(HOOK_ELEM_TYPE_AUTOHOOK).size(5).func(autohookFunc2).build(),
+        HookElementBuilder().address((uint32_t)findCode(autohookTest, NOP)).type(HOOK_ELEM_TYPE_AUTOHOOK_BEFORE).size(6).func(autohookFunc1).build(),
+        HookElementBuilder().address((uint32_t)findCode(autohookTest, "\x66\x0F\x1F\x00", 4)).type(HOOK_ELEM_TYPE_AUTOHOOK_BEFORE).size(5).func(autohookFunc2).build(),
     };
     hook.enable();
     int r = hookFunctionTest1(0x5555, 0x2, 0x44);
@@ -953,20 +954,87 @@ __declspec(naked) static bool asmpatchTest3()
         pop ebp
         ret
     }
-
 }
 
 std::vector<wxString> HookTests::testAsmHookFunctions()
 {
+    // asmhook
     Asserter myasserter("Asm hook tests");
     std::string code = "add eax, 5";
-    Hook hook(HookElementBuilder().address(findCode(asmhookTest1, "\x90", 1)).size(5).type(HOOK_ELEM_TYPE_ASMHOOK_BEFORE).patchDataStr(code.data()).dataSize(code.size()).build());
+    Hook hook(HookElementBuilder().address(findCode(asmhookTest1, "\x90", 1)).size(5).type(HOOK_ELEM_TYPE_ASMHOOK_BEFORE).asmText(code.c_str()).build());
     hook.enable();
     myassertf(asmhookTest1(true), "[before asmhook] test failed");
     hook.disable();
-    hook.elements[0] = std::move(HookElementBuilder().address(findCode(asmhookTest1, "\x90", 1)).size(5).type(HOOK_ELEM_TYPE_ASMHOOK_AFTER).patchDataStr(code.data()).dataSize(code.size()).build());
+    hook.elements[0] = std::move(HookElementBuilder().address(findCode(asmhookTest1, "\x90", 1)).size(5).type(HOOK_ELEM_TYPE_ASMHOOK_AFTER).asmText(code.c_str()).build());
     hook.enable();
     myassertf(asmhookTest1(false), "[after asmhook] test failed");
+
+    // asmpatch
+
+    /*
+    0:  39 d1                   cmp    ecx,edx
+    2:  0f 95 c0                setne  al
+    5:  66 85 d0                test   ax,dx
+    8:  74 07                   je     11 <jmp>
+    a:  48                      dec    eax
+    b:  69 c0 e8 03 00 00       imul   eax,eax,0x3e8
+     */
+    std::string_view compiledAsmpatchCode = compileAsm(R"(
+    cmp ecx, edx
+    setne al
+    test ax, dx
+    je @jmp
+    dec eax
+    imul eax, eax, 1000
+    @jmp:
+)");
+
+    /*
+    0:  aa                      stos   BYTE PTR es:[edi],al
+    1:  87 ca                   xchg   edx,ecx
+     **/
+    std::string_view patch1 = R"(
+    stosb
+    xchg edx, ecx
+)";
+
+    std::string_view patch1Compiled = compileAsm(std::string(patch1));
+
+    /*
+    0:  bb 50 50 50 50          mov    ebx,0x50505050
+    5:  f7 fe                   idiv   esi
+    7:  83 c0 1e                add    eax,0x1e
+    a:  c3                      ret
+     **/
+    std::string_view patch2 = R"(
+    mov ebx, 0x50505050
+    idiv esi
+    add eax, 30
+    ret
+)";
+
+    std::string_view patch2Compiled = compileAsm(std::string(patch2));
+
+    hook.disable();
+    hook.elements[0] = std::move(HookElementBuilder().address((uint32_t)compiledAsmpatchCode.data() + 2).type(HOOK_ELEM_TYPE_ASMPATCH).asmText(patch1.data()).size(patch1Compiled.size()).build());
+    hook.enable();
+    myassertf(memcmp(compiledAsmpatchCode.data() + 2, patch1Compiled.data(), patch1Compiled.size()) == 0, "Asmpatch test #1 memory compare #1 failed");
+    myassertf(memcmp(compiledAsmpatchCode.data() + 5, "\x66\x85", 2) == 0, "Asmpatch test #1 memory compare #2 failed");
+
+    hook.disable();
+    hook.elements[0] = std::move(HookElementBuilder().address((uint32_t)compiledAsmpatchCode.data() + 5).type(HOOK_ELEM_TYPE_ASMPATCH).asmText("nop").size(1).build());
+    hook.enable();
+    myassertf(memcmp(compiledAsmpatchCode.data() + 5, "\x90\x90\x90", 1) == 0, "Asmpatch test #2 memory compare #1 failed");
+    myassertf(memcmp(compiledAsmpatchCode.data() + 8, "\x74\x07\x48", 3) == 0, "Asmpatch test #2 memory compare #2 failed");
+
+    hook.disable();
+    hook.elements[0] = std::move(HookElementBuilder().address((uint32_t)compiledAsmpatchCode.data()).type(HOOK_ELEM_TYPE_ASMPATCH).asmText(patch2.data()).size(5).build());
+    hook.enable();
+    myassertf(byte((uint32_t)compiledAsmpatchCode.data()) == 0xE9, "Asmpatch test #3 memory compare #1 failed - first byte is not near jump opcode");
+    myassertf(memcmp(compiledAsmpatchCode.data() + 5, "\x66\x85\xD0\x74\x07\x48", 6) == 0, "Asmpatch test #3 memory compare #2 failed - instructions after jump are changed");
+    uint32_t dest = sdword(compiledAsmpatchCode.data() + 1) + (uint32_t)compiledAsmpatchCode.data() + 5;
+    myassertf(memcmp((void*)dest, patch2Compiled.data(), patch2Compiled.size()) == 0, "Asmpatch test #3 memory compare #3 failed - jump destination is invalid");
+
     return myasserter.errors;
 }
 

@@ -12,7 +12,7 @@ ItemDialogBase::ItemDialogBase(wxWindow* parent, wxWindowID id, const wxString& 
     this->SetSizeHints(wxDefaultSize, wxDefaultSize);
 
     sizerMain = new wxBoxSizer(wxVERTICAL);
-
+    
     checkboxItemIsFree = new wxCheckBox(this, wxID_ANY, _("Item is free"), wxDefaultPosition, wxDefaultSize, 0);
     checkboxItemIsFree->SetToolTip(_("If this is checked, guaranteed item won't decrease available \"item points\" pool (will essentially be free)"));
 
@@ -412,8 +412,9 @@ void ItemDialogBase::createItemFilters()
 
 void ItemDialogBase::reapplyFilters()
 {
-
+    //itemTable->
 }
+
 void ItemDialogBase::setControlsEnabledState()
 {
     bool filtersEnabled = checkboxUseFilters->IsChecked();
@@ -491,7 +492,7 @@ void ItemTableViewModel::GetValue(wxVariant& variant, const wxDataViewItem& item
         PlayerSkill* sk = playerItem->skill;
         if (sk)
         {
-            variant = GameData::skills.at(sk->id).name;
+            variant = sk->name;
         }
         else
         {

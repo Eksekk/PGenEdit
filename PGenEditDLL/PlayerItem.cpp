@@ -24,3 +24,8 @@ std::string PlayerItem::getItemTypeName() const
     }
     return ENUM_TO_STRING_ITEM_SLOT.at(type);
 }
+std::string PlayerItem::getItemModString() const
+{
+    // TODO
+    return "";
+}

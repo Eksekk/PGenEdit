@@ -198,6 +198,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="..\todo.md" />
+    <None Include="cpp.hint" />
     <None Include="Lib.def" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

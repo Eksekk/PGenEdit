@@ -116,14 +116,14 @@ void setupHooks() {
     };
     hooks.emplace(3, Hook
         ({
-            HookElementBuilder().address(mmv(0, 0x462AFC, 0)).type(HOOK_ELEM_TYPE_AUTOHOOK).func(func).build(),
-            HookElementBuilder().address(mmv(0, 0x463309, 0)).type(HOOK_ELEM_TYPE_AUTOHOOK).func(func).build(),
-            HookElementBuilder().address(mmv(0, 0x4975C3, 0)).type(HOOK_ELEM_TYPE_AUTOHOOK).func(func).build(),
-            HookElementBuilder().address(mmv(0, 0x497CC1, 0)).type(HOOK_ELEM_TYPE_AUTOHOOK).func(func).build(),
-            HookElementBuilder().address(mmv(0, 0x4BE762, 0)).type(HOOK_ELEM_TYPE_AUTOHOOK).func(func).build(),
-            HookElementBuilder().address(mmv(0, 0x4BE838, 0)).type(HOOK_ELEM_TYPE_AUTOHOOK).func(func).build(),
-            HookElementBuilder().address(mmv(0, 0x4BFCA5, 0)).type(HOOK_ELEM_TYPE_AUTOHOOK).func(func).build(),
-            HookElementBuilder().address(mmv(0, 0x4BFCFC, 0)).type(HOOK_ELEM_TYPE_AUTOHOOK).func(func).build(),
+            HookElementBuilder().address(mmv(0, 0x462AFC, 0)).type(HOOK_ELEM_TYPE_AUTOHOOK_BEFORE).func(func).build(),
+            HookElementBuilder().address(mmv(0, 0x463309, 0)).type(HOOK_ELEM_TYPE_AUTOHOOK_BEFORE).func(func).build(),
+            HookElementBuilder().address(mmv(0, 0x4975C3, 0)).type(HOOK_ELEM_TYPE_AUTOHOOK_BEFORE).func(func).build(),
+            HookElementBuilder().address(mmv(0, 0x497CC1, 0)).type(HOOK_ELEM_TYPE_AUTOHOOK_BEFORE).func(func).build(),
+            HookElementBuilder().address(mmv(0, 0x4BE762, 0)).type(HOOK_ELEM_TYPE_AUTOHOOK_BEFORE).func(func).build(),
+            HookElementBuilder().address(mmv(0, 0x4BE838, 0)).type(HOOK_ELEM_TYPE_AUTOHOOK_BEFORE).func(func).build(),
+            HookElementBuilder().address(mmv(0, 0x4BFCA5, 0)).type(HOOK_ELEM_TYPE_AUTOHOOK_BEFORE).func(func).build(),
+            HookElementBuilder().address(mmv(0, 0x4BFCFC, 0)).type(HOOK_ELEM_TYPE_AUTOHOOK_BEFORE).func(func).build(),
         }));
     // doesn't solve any problems I intended to solve (tooltips and creation time); keeping it, because it may prove useful later
     // hooks.at(3).enable(); // FIXME! crashes on dll unload

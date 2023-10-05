@@ -40,6 +40,8 @@ void testMemberFunctions()
 	};
 }
 
+std::map<uint32_t, HookRestoreData> hookRestoreDataMap;
+
 void HookElement::enable(bool enable)
 {
 	if (!existsInVector(gameVersions, MMVER))
@@ -69,10 +71,15 @@ void HookElement::enable(bool enable)
 			hookCall(address, func, &restoreData, hookSize);
 		}
 		break;
-		case HOOK_ELEM_TYPE_AUTOHOOK:
+		case HOOK_ELEM_TYPE_AUTOHOOK_BEFORE:
 		{
-			extraData = (void*)autohookCall(address, func, &restoreData, hookSize);
-		}
+			extraData = (void*)autohookBefore(address, func, &restoreData, hookSize);
+        }
+        break;
+        case HOOK_ELEM_TYPE_AUTOHOOK_AFTER:
+        {
+            extraData = (void*)autohookAfter(address, func, &restoreData, hookSize);
+        }
 		break;
 		case HOOK_ELEM_TYPE_JUMP:
         {
@@ -93,20 +100,20 @@ void HookElement::enable(bool enable)
 		break;
         case HOOK_ELEM_TYPE_ASMHOOK_BEFORE:
         case HOOK_ELEM_TYPE_ASMHOOK_AFTER:
+        case HOOK_ELEM_TYPE_ASMPATCH:
 		{
-			std::string code(patchDataStr, dataSize);
-			if (!codeReplacementArgs.empty())
-			{
-				code = formatAsmCode(code, codeReplacementArgs);
-			}
-			if (type == HOOK_ELEM_TYPE_ASMHOOK_BEFORE)
+            if (type == HOOK_ELEM_TYPE_ASMHOOK_BEFORE)
             {
-                extraData = asmhookBefore(address, code, &restoreData, hookSize);
-			}
-			else
-			{
-				extraData = asmhookAfter(address, code, &restoreData, hookSize);
-			}
+                extraData = asmhookBefore(address, asmText, codeReplacementArgs, &restoreData, hookSize);
+            }
+            else if (type == HOOK_ELEM_TYPE_ASMHOOK_AFTER)
+            {
+                extraData = asmhookAfter(address, asmText, codeReplacementArgs, &restoreData, hookSize);
+            }
+            else
+            {
+                extraData = asmpatch(address, asmText, codeReplacementArgs, &restoreData, hookSize);
+            }
             break;
         }
 		case HOOK_ELEM_TYPE_DISABLED:
@@ -133,7 +140,9 @@ void HookElement::enable(bool enable)
 		case HOOK_ELEM_TYPE_PATCH_DATA:
 			patchBytes(address, restoreData.data(), restoreData.size(), nullptr, this->patchUseNops);
 			break;
-		case HOOK_ELEM_TYPE_AUTOHOOK: unhookAutohookCall(address, restoreData, extraData);
+		case HOOK_ELEM_TYPE_AUTOHOOK_BEFORE:
+		case HOOK_ELEM_TYPE_AUTOHOOK_AFTER:
+			unhookAutohook(address, restoreData, extraData);
 			break;
 		case HOOK_ELEM_TYPE_REPLACE_CALL:
 		case HOOK_ELEM_TYPE_HOOKFUNCTION:
@@ -142,6 +151,9 @@ void HookElement::enable(bool enable)
 		case HOOK_ELEM_TYPE_ASMHOOK_BEFORE:
 		case HOOK_ELEM_TYPE_ASMHOOK_AFTER:
 			unhookAsmhook(address, restoreData, extraData);
+			break;
+		case HOOK_ELEM_TYPE_ASMPATCH:
+			unhookBytecodePatch(address, restoreData, extraData);
 			break;
         case HOOK_ELEM_TYPE_DISABLED:
             break;
@@ -166,8 +178,7 @@ inline bool HookElement::isActive() const
 	return _active;
 }
 
-HookElement::HookElement() : _active(false), type(HOOK_ELEM_TYPE_CALL_RAW), address(0), target(0), hookSize(5), dataSize(0), func(0), patchDataStr(0),
-	needUnprotect(false), description(""), patchUseNops(false), extraData(nullptr), gameVersions{6, 7, 8}
+HookElement::HookElement() : _active(false), type(HOOK_ELEM_TYPE_CALL_RAW), address(0), target(0), hookSize(5), dataSize(0), func(0), patchDataStr(0), description(""), patchUseNops(false), extraData(nullptr), gameVersions{6, 7, 8}, asmText(nullptr)
 {
 }
 
@@ -193,6 +204,12 @@ HookElementBuilder& HookElementBuilder::type(HookElementType type)
 HookElementBuilder& HookElementBuilder::address(uint32_t address)
 {
     elem.address = address;
+    return *this;
+}
+
+HookElementBuilder& HookElementBuilder::address(void* address)
+{
+    elem.address = (uint32_t)address;
     return *this;
 }
 
@@ -226,9 +243,9 @@ HookElementBuilder& HookElementBuilder::patchDataStr(const char* patchDataStr)
 	return *this;
 }
 
-HookElementBuilder& HookElementBuilder::needUnprotect(bool needUnprotect)
+HookElementBuilder& HookElementBuilder::asmText(const char* asmText)
 {
-    elem.needUnprotect = needUnprotect;
+    elem.asmText = asmText;
     return *this;
 }
 
@@ -256,7 +273,7 @@ HookElementBuilder& HookElementBuilder::codeReplacementArgs(const CodeReplacemen
 	return *this;
 }
 
-HookElement HookElementBuilder::build()
+HookElement&& HookElementBuilder::build()
 {
     // hook properties: type, address, dataSize, hookSize, target, func, needUnprotect, description, patchUseNops (only for patch data)
     // hook types: jump, call raw, call, patch data, erase code
@@ -287,6 +304,18 @@ HookElement HookElementBuilder::build()
             wxFAIL_MSG("Patch data hook: target and patch str can't both be set");
         }
 	}
+	// asmhooks need asmText
+	if (elem.type == HOOK_ELEM_TYPE_ASMHOOK_BEFORE || elem.type == HOOK_ELEM_TYPE_ASMHOOK_AFTER || elem.type == HOOK_ELEM_TYPE_ASMPATCH)
+	{
+        if (!elem.asmText)
+        {
+            wxFAIL_MSG("Asm hooks: asm text is not set");
+        }
+		else if (elem.patchDataStr) // to not mistake both, this one is for precompiled code
+		{
+			wxFAIL_MSG("Asm hooks: patchDataStr is for compiled code");
+		}
+	}
 	// erase code needs size
 	if (elem.type == HOOK_ELEM_TYPE_ERASE_CODE)
 	{
@@ -296,12 +325,12 @@ HookElement HookElementBuilder::build()
         }
 	}
     // call and autohook needs func (call raw jumps to any code, not using hook proc)
-    if ((elem.type == HOOK_ELEM_TYPE_CALL || elem.type == HOOK_ELEM_TYPE_AUTOHOOK) && elem.func == 0)
+    if ((elem.type == HOOK_ELEM_TYPE_CALL || elem.type == HOOK_ELEM_TYPE_AUTOHOOK_BEFORE || elem.type == HOOK_ELEM_TYPE_AUTOHOOK_AFTER) && elem.func == 0)
     {
         wxFAIL_MSG("Call hook/autohook: function not set");
     }
     // call/call raw/jump/autohook/callable function hooks need hook size >= 5
-	static const std::vector<HookElementType> minimumSize5 = { HOOK_ELEM_TYPE_JUMP, HOOK_ELEM_TYPE_CALL, HOOK_ELEM_TYPE_CALL_RAW, HOOK_ELEM_TYPE_AUTOHOOK, HOOK_ELEM_TYPE_REPLACE_CALL, HOOK_ELEM_TYPE_HOOKFUNCTION };
+	static const std::vector<HookElementType> minimumSize5 = { HOOK_ELEM_TYPE_JUMP, HOOK_ELEM_TYPE_CALL, HOOK_ELEM_TYPE_CALL_RAW, HOOK_ELEM_TYPE_AUTOHOOK_BEFORE, HOOK_ELEM_TYPE_REPLACE_CALL, HOOK_ELEM_TYPE_HOOKFUNCTION, HOOK_ELEM_TYPE_AUTOHOOK_AFTER, HOOK_ELEM_TYPE_ASMHOOK_BEFORE, HOOK_ELEM_TYPE_ASMHOOK_AFTER };
     if (existsInVector(minimumSize5, elem.type) && elem.hookSize < 5)
     {
         wxFAIL_MSG("Hook size can't be less than 5");
@@ -317,7 +346,7 @@ HookElement HookElementBuilder::build()
 		wxFAIL_MSG("Callable function hook: hook function not provided");
 	}
 
-    return elem;
+    return std::move(elem);
 }
 
 void Hook::enable(bool enable)
@@ -508,7 +537,7 @@ void unhookCall(uint32_t addr, std::vector<uint8_t>& restoreData)
     hookFuncMap.erase(addr);
 }
 
-uint32_t autohookCall(uint32_t addr, HookFunc func, std::vector<uint8_t>* storeAt, uint32_t size)
+uint32_t autohookBefore(uint32_t addr, HookFunc func, std::vector<uint8_t>* storeAt, uint32_t size)
 {
 	// copy code with jump back
 	// setup call hook
@@ -530,8 +559,28 @@ uint32_t autohookCall(uint32_t addr, HookFunc func, std::vector<uint8_t>* storeA
 	return code;
 }
 
+uint32_t autohookAfter(uint32_t addr, HookFunc func, std::vector<uint8_t>* storeAt, uint32_t size)
+{
+    size = getRealHookSize(addr, size, 5);
+    checkOverlap(addr, size);
+
+	void* mem = (void*)codeMemoryAlloc(size + 5);
+    uint32_t code = copyCode(addr, size, false, (uint32_t)mem);
+    auto wrapperFunc = [code, func, addr, size](HookData* d) -> int {
+        d->esp = d->esp + 4;
+        if (func(d) != HOOK_RETURN_AUTOHOOK_NO_PUSH)
+        {
+            d->push(addr + size);
+        }
+        return HOOK_RETURN_SUCCESS;
+        };
+    hookCall((uint32_t)mem + size, wrapperFunc, nullptr, 5);
+	hookJumpRaw(addr, mem, storeAt, size);
+    return code;
+}
+
 // TODO: all unhooks could also store all required data by themselves, to not require passing unnecessary arguments
-void unhookAutohookCall(uint32_t addr, std::vector<uint8_t>& restoreData, void*& allocatedCode)
+void unhookAutohook(uint32_t addr, std::vector<uint8_t>& restoreData, void*& allocatedCode)
 {
 	unhookCall(addr, restoreData);
 	codeMemoryFree(allocatedCode);
@@ -575,6 +624,16 @@ void patchQword(uint32_t addr, uint64_t val, std::vector<uint8_t>* storeAt)
 	VirtualProtect((void*)addr, 8, tmp, &tmp);
 }
 
+void patchSByte(uint32_t addr, int8_t val, std::vector<uint8_t>* storeAt)
+{
+	genericPatch(addr, val, storeAt);
+}
+
+void patchSWord(uint32_t addr, int16_t val, std::vector<uint8_t>* storeAt)
+{
+	genericPatch(addr, val, storeAt);
+}
+
 void patchSDword(uint32_t addr, int32_t val, std::vector<uint8_t>* storeAt)
 {
     storeBytes(storeAt, addr, 4);
@@ -582,6 +641,11 @@ void patchSDword(uint32_t addr, int32_t val, std::vector<uint8_t>* storeAt)
     VirtualProtect((void*)addr, 4, PAGE_EXECUTE_READWRITE, &tmp);
     sdword(addr) = val;
     VirtualProtect((void*)addr, 4, tmp, &tmp);
+}
+
+void patchSQword(uint32_t addr, int64_t val, std::vector<uint8_t>* storeAt)
+{
+	genericPatch(addr, val, storeAt);
 }
 
 void eraseCode(uint32_t addr, uint32_t size, std::vector<uint8_t>* storeAt)
@@ -745,36 +809,57 @@ uint32_t copyCode(uint32_t source, uint32_t size, bool writeJumpBack, uint32_t d
 	return mem;
 }
 
-void* asmhookCommon(uint32_t addr, const std::string& code, std::vector<uint8_t>* storeAt, int size, bool before)
+void* bytecodeHookCommon(uint32_t addr, std::string_view bytecode, std::vector<uint8_t>* storeAt, int size, bool before)
 {
-    size = getRealHookSize(addr, size, 5);
+    size = getRealHookSize(addr, size, size);
     storeBytes(storeAt, addr, size);
-    std::string_view codeBytes = compileAsm(code);
-    uint32_t mem = codeMemoryAlloc(size + codeBytes.size() + 5); // 5 = jump size
+    uint32_t mem = codeMemoryAlloc(size + bytecode.size() + 5); // 5 = jump size
 	if (before)
 	{
-        copyCode((uint32_t)codeBytes.data(), codeBytes.size(), false, mem);
-        copyCode(addr, size, true, mem + codeBytes.size());
+        copyCode((uint32_t)bytecode.data(), bytecode.size(), false, mem);
+        copyCode(addr, size, true, mem + bytecode.size());
 	}
 	else
     {
         copyCode(addr, size, false, mem);
-        copyCode((uint32_t)codeBytes.data(), codeBytes.size(), false, mem + size);
-		// manual jump hook, because if codeBytes one was true, it would generate jump to fasm code block, not original code
-		hookJumpRaw(mem + size + codeBytes.size(), (void*)(addr + size), nullptr);
+        copyCode((uint32_t)bytecode.data(), bytecode.size(), false, mem + size);
+		// manual jump hook, because if bytecode one was true, it would generate jump to fasm code block, not original code
+		hookJumpRaw(mem + size + bytecode.size(), (void*)(addr + size), nullptr);
 	}
 	hookJumpRaw(addr, (void*)mem, nullptr);
     return (void*)mem;
 }
 
+void* bytecodeHookBefore(uint32_t addr, std::string_view code, std::vector<uint8_t>* storeAt, int size)
+{
+    return bytecodeHookCommon(addr, code, storeAt, size, true);
+}
+
+void* bytecodeHookAfter(uint32_t addr, std::string_view code, std::vector<uint8_t>* storeAt, int size)
+{
+    return bytecodeHookCommon(addr, code, storeAt, size, false);
+}
+
+void unhookBytecodeHook(uint32_t addr, const std::vector<uint8_t>& restoreData, void*& copiedCode)
+{
+	patchBytes(addr, restoreData.data(), restoreData.size());
+    if (copiedCode)
+    {
+        codeMemoryFree(copiedCode);
+        copiedCode = nullptr;
+    }
+}
+
 void* asmhookBefore(uint32_t addr, const std::string& code, std::vector<uint8_t>* storeAt, int size /*= 5*/)
 {
-	return asmhookCommon(addr, code, storeAt, size, true);
+    std::string_view codeBytes = compileAsm(code);
+	return bytecodeHookBefore(addr, codeBytes, storeAt, size);
 }
 
 void* asmhookAfter(uint32_t addr, const std::string& code, std::vector<uint8_t>* storeAt, int size /*= 5*/)
 {
-	return asmhookCommon(addr, code, storeAt, size, false);
+    std::string_view codeBytes = compileAsm(code);
+	return bytecodeHookAfter(addr, codeBytes, storeAt, size);
 }
 
 void* asmhookBefore(uint32_t addr, const std::string& code, const CodeReplacementArgs& args, std::vector<uint8_t>* storeAt, int size)
@@ -787,31 +872,32 @@ void* asmhookAfter(uint32_t addr, const std::string& code, const CodeReplacement
 	return asmhookAfter(addr, formatAsmCode(code, args), storeAt, size);
 }
 
-void* asmpatch(uint32_t addr, const std::string& code, std::vector<uint8_t>* storeAt, int size, bool writeJumpBack)
+void unhookAsmhook(uint32_t addr, const std::vector<uint8_t>& restoreData, void*& copiedCode)
 {
-	// asmpatch("inc eax");
-	// asmpatch("add ebx, 5");
-    // asmpatch("call dword [0x52525252]")
-    std::string_view compiled = compileAsm(code);
+    unhookBytecodeHook(addr, restoreData, copiedCode);
+}
+
+void* bytecodePatch(uint32_t addr, std::string_view bytecode, std::vector<uint8_t>* storeAt, int size, bool writeJumpBack)
+{
     size = getRealHookSize(addr, size, size);
     storeBytes(storeAt, addr, size);
-	if (compiled.size() <= size) // inline
+	if (bytecode.size() <= (size_t)size) // inline
 	{
-		copyCode((uint32_t)compiled.data(), compiled.size(), false, addr);
-		uint32_t remaining = size - (int)compiled.size();
+		copyCode((uint32_t)bytecode.data(), bytecode.size(), false, addr);
+		int32_t remaining = size - (int)bytecode.size();
 		if (remaining > 0)
         {
-			eraseCode(addr + compiled.size(), remaining, nullptr);
+			eraseCode(addr + bytecode.size(), remaining, nullptr);
 		}
 		return nullptr;
 	}
 	else // jump out
 	{
-		void* mem = (void*)codeMemoryAlloc(compiled.size() + (writeJumpBack ? 5 : 0));
-		copyCode((uint32_t)compiled.data(), compiled.size(), false, (uint32_t)mem);
+		void* mem = (void*)codeMemoryAlloc(bytecode.size() + (writeJumpBack ? 5 : 0));
+		copyCode((uint32_t)bytecode.data(), bytecode.size(), false, (uint32_t)mem);
 		if (writeJumpBack)
         {
-            hookJumpRaw((uint32_t)mem + compiled.size(), (void*)(addr + size), nullptr);
+            hookJumpRaw((uint32_t)mem + bytecode.size(), (void*)(addr + size), nullptr);
 		}
 		eraseCode(addr, size, storeAt);
 		hookJumpRaw(addr, mem, nullptr);
@@ -819,9 +905,30 @@ void* asmpatch(uint32_t addr, const std::string& code, std::vector<uint8_t>* sto
 	}
 }
 
+void* asmpatch(uint32_t addr, const std::string& code, std::vector<uint8_t>* storeAt, int size /*= 5*/, bool writeJumpBack)
+{
+    std::string_view codeBytes = compileAsm(code);
+    return bytecodePatch(addr, codeBytes, storeAt, size, writeJumpBack);
+}
+
 void* asmpatch(uint32_t addr, const std::string& code, const CodeReplacementArgs& args, std::vector<uint8_t>* storeAt, int size, bool writeJumpBack)
 {
-	return asmpatch(addr, formatAsmCode(code, args), storeAt, size, writeJumpBack);
+    return asmpatch(addr, formatAsmCode(code, args), storeAt, size, writeJumpBack);
+}
+
+void unhookBytecodePatch(uint32_t addr, const std::vector<uint8_t>& restoreData, void*& copiedCode)
+{
+	patchBytes(addr, restoreData.data(), restoreData.size(), nullptr);
+	if (copiedCode)
+	{
+		codeMemoryFree(copiedCode);
+		copiedCode = nullptr;
+	}
+}
+
+void unhookAsmpatch(uint32_t addr, const std::vector<uint8_t>& restoreData, void*& copiedCode)
+{
+	unhookBytecodePatch(addr, restoreData, copiedCode);
 }
 
 void unhookReplaceCall(uint32_t addr, std::vector<uint8_t>& restoreData)
@@ -833,13 +940,6 @@ void unhookHookFunction(uint32_t addr, std::vector<uint8_t>& restoreData, void* 
 {
 	unhookCall(addr, restoreData);
 	codeMemoryFree(copiedCode);
-}
-
-void unhookAsmhook(uint32_t addr, const std::vector<uint8_t>& restoreData, void*& copiedCode)
-{
-	codeMemoryFree(copiedCode);
-	copiedCode = nullptr;
-	patchBytes(addr, restoreData.data(), restoreData.size());
 }
 
 void removeHooks()

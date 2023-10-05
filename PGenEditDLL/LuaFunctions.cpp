@@ -54,10 +54,10 @@ extern "C"
 
 	void luaInit()
 	{
-		lua_getglobal(Lua, "pgen");
+		lua_getglobal(Lua, "pgenedit");
 		if (lua_type(Lua, -1) == LUA_TNIL)
 		{
-			luaL_openlib(Lua, "pgen", lib, 0);
+			luaL_openlib(Lua, "pgenedit", lib, 0);
 			lua_pop(Lua, 2);
 		}
 		else
@@ -150,10 +150,8 @@ auto sizeRef(T& t)
 	}
 }
 
-// struct "GameStructure", field name "CustomLods", dataPtr name: "CustomLods"
-
 template<AnyGameStruct Game>
-StructVector arraysBase =
+const StructVector arraysBase =
 {
 	{ "Game.ItemsTxt", dataRef(Game::itemsTxt), sizeRef(Game::itemsTxt_sizePtr)},
 	{ "Game.StdItemsTxt", dataRef(Game::stdItemsTxt), sizeRef(Game::stdItemsTxt_size) },
@@ -205,13 +203,13 @@ using Game6 = mm6::GameStructure;
 using Game7 = mm7::GameStructure;
 using Game8 = mm8::GameStructure;
 
-StructVector arraysMm6 =
+const StructVector arraysMm6 =
 {
     { "Game.AwardsSort", dataRef(Game6::awardsSort), sizeRef(Game6::awardsSort_sizePtr) },
     { "Game.NPC", dataRef(Game6::NPC), sizeRef(Game6::NPC_sizePtr) },
 };
 
-StructVector arraysMm7 =
+const StructVector arraysMm7 =
 {
     { "Game.Classes.Skills", dataRef(Game7::classes->skills), sizeRef(Game7::classes->skills_size) },
 
@@ -227,7 +225,7 @@ StructVector arraysMm7 =
     { "Game.NPCGroup", dataRef(Game7::NPCGroup), sizeRef(Game7::NPCGroup_size) },
 };
 
-StructVector arraysMm8 =
+const StructVector arraysMm8 =
 {
     { "Game.Classes.HPBase", dataRef(Game8::classes->HPBase), sizeRef(Game8::classes->HPBase_size) },
     { "Game.Classes.SPBase", dataRef(Game8::classes->SPBase), sizeRef(Game8::classes->SPBase_size) },
@@ -246,7 +244,7 @@ StructVector arraysMm8 =
     { "Game.NPCGroup", dataRef(Game8::NPCGroup), sizeRef(Game8::NPCGroup_size) },
 };
 
-StructVector arraysMerge =
+const StructVector arraysMerge =
 {
 	{"Game.ArmorPicsCoords.Belts", dataRef(Game8::armorPicsCoords->belts), sizeRef(Game8::armorPicsCoords->belts_size)},
 	{"Game.ArmorPicsCoords.Cloaks", dataRef(Game8::armorPicsCoords->cloaks), sizeRef(Game8::armorPicsCoords->cloaks_size)},
@@ -282,7 +280,7 @@ StructVector arraysMerge =
 void fillGameStaticPointersAndSizes()
 {
 	luaWrapper.getPath("internal.GetArrayUpval");
-	StructVector& singleGameSpecific = mmv(arraysMm6, arraysMm7, arraysMm8);
+	StructVector singleGameSpecific = mmv(arraysMm6, arraysMm7, arraysMm8);
 	std::ranges::copy(mmv(arraysBase<mm6::Game>, arraysBase<mm7::Game>, arraysBase<mm8::Game>), std::back_inserter(singleGameSpecific));
 	if (IS_MERGE)
 	{
@@ -410,6 +408,7 @@ void luaDeInit()
 
 void removeGameSaveHandler()
 {
+	int stackPos = lua_gettop(Lua);
     lua_getglobal(Lua, "events"); // 1
 	lua_getglobal(Lua, "pgenedit"); // 2
 	if (lua_type(Lua, -1) != LUA_TTABLE)
@@ -437,10 +436,10 @@ void removeGameSaveHandler()
 	{
 		wxLogError("Lua pcall to remove save game handler failed (error code %d, message: '%s')", result, lua_tostring(Lua, -1));
 		wxLog::FlushActive();
-		lua_pop(Lua, 3); // error msg, pgenedit, events
+		lua_settop(Lua, stackPos);
 		return;
 	}
     int type = lua_type(Lua, -1); // if removed successfully, returns function, otherwise nothing (nil)
     wxASSERT_MSG(type == LUA_TFUNCTION, wxString::Format("Couldn't remove save game handler, received lua type %d", type));
-    lua_pop(Lua, 4); // type, result, pgenedit, events
+	lua_settop(Lua, stackPos);
 }

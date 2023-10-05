@@ -626,5 +626,6 @@
       <Filter>Pliki zasobów</Filter>
     </None>
     <None Include="..\todo.md" />
+    <None Include="cpp.hint" />
   </ItemGroup>
 </Project>
