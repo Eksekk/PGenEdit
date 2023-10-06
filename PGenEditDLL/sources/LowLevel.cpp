@@ -881,15 +881,17 @@ void* bytecodePatch(uint32_t addr, std::string_view bytecode, std::vector<uint8_
 {
     size = getRealHookSize(addr, size, size);
     storeBytes(storeAt, addr, size);
-	if (bytecode.size() <= (size_t)size) // inline
+
+	size_t sizeMin5 = std::max(size, 5); // if code size exceeds hook size, but the former is less than 5 in total, don't jump out
+	if (bytecode.size() <= sizeMin5) // inline
 	{
 		copyCode((uint32_t)bytecode.data(), bytecode.size(), false, addr);
-		int32_t remaining = size - (int)bytecode.size();
+		int32_t remaining = (int)sizeMin5 - (int)bytecode.size();
 		if (remaining > 0)
         {
 			eraseCode(addr + bytecode.size(), remaining, nullptr);
 		}
-		return nullptr;
+		return (void*)addr;
 	}
 	else // jump out
 	{
@@ -899,7 +901,7 @@ void* bytecodePatch(uint32_t addr, std::string_view bytecode, std::vector<uint8_
         {
             hookJumpRaw((uint32_t)mem + bytecode.size(), (void*)(addr + size), nullptr);
 		}
-		eraseCode(addr, size, storeAt);
+		eraseCode(addr, size, nullptr);
 		hookJumpRaw(addr, mem, nullptr);
 		return mem;
 	}
@@ -1178,7 +1180,7 @@ std::string_view compileAsm(const std::string& code)
 	{
 	case FASM_OK:
 	case FASM_WORKING:
-		return std::string_view((const char*)fasmState->output_data, fasmState->output_length);
+		return std::string_view(fasmState->output_data, fasmState->output_length);
 		break;
 	case FASM_ERROR:
 	case FASM_INVALID_PARAMETER:

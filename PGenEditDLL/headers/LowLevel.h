@@ -732,7 +732,7 @@ struct FASM_STATE
     };
     union
     {
-        void* output_data;
+        const char* output_data;
         LINE_HEADER* error_line;
     };
 };

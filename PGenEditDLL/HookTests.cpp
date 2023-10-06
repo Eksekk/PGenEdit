@@ -4,6 +4,8 @@
 
 static const char NOP[] = "\x90";
 
+using BasicFuncType = void(*)(); // function returning void and without arguments
+
 // dst, src, size
 std::vector<uint8_t> memcpyVector(void* src, uint32_t size)
 {
@@ -956,6 +958,82 @@ __declspec(naked) static bool asmpatchTest3()
     }
 }
 
+struct MemoryCompareItem
+{
+    uint32_t address;
+    std::string expected;
+};
+
+struct AsmHookTest
+{
+    // either
+    // compare memory so it is unchanged before and after
+    // compare new code to that it is patched inline or a jump is emitted
+    // check new code destination and its equality to provided code
+    
+    uint32_t address, size;
+    std::string code;
+};
+
+struct AsmpatchTest
+{
+    uint32_t offset, size;
+    uint32_t expectedSize; // expected inline, so for a jump out will be not less than 5
+    std::string code;
+    bool shouldBeInline;
+};
+
+std::map<BasicFuncType, std::vector<AsmpatchTest>> asmpatchTestsBasic =
+{
+    {
+        /*
+            0:  f2 a6                   repnz cmps BYTE PTR ds:[esi],BYTE PTR es:[edi]
+            2:  03 55 04                add    edx,DWORD PTR [ebp+0x4]
+            5:  f8                      clc
+            6:  6b c0 0f                imul   eax,eax,0xf
+            9:  fd                      std
+            a:  d9 04 24                fld    DWORD PTR [esp]
+            d:  c3                      ret
+        */
+        (BasicFuncType)asmpatchTest1,
+        { // vector
+            { /* vector item */ .offset = 0, .size = 1, .expectedSize = 2, .code = "nop", .shouldBeInline = true },
+            { .offset = 0, .size = 6, .expectedSize = 6, .code = "mov eax, 0x40404040\npush esi", .shouldBeInline = true },
+            /*
+            0:  39 d6                   cmp    esi,edx
+            2:  fe c0                   inc    al
+            4:  00 c4                   add    ah,al
+            6:  0f 94 c3                sete   bl
+            */
+            { .offset = 0, .size = 1, .expectedSize = 9, .code = R"(
+                cmp esi, edx
+                inc al
+                add ah, al
+                sete bl)",
+                .shouldBeInline = true
+            },
+            { .offset = 0, .size = 6, .expectedSize = 6, .code = R"(
+                cmp esi, edx
+                inc al
+                add ah, al
+                sete bl
+                fld dword ptr [ebp + 20])", // 9:  d9 45 14                fld    DWORD PTR [ebp+0x14]
+                .shouldBeInline = false
+            },
+            { .offset = 0, .size = 4, .expectedSize = 5, .code = rep("nop\n", 14), .shouldBeInline = false },
+            /*
+            0:  66 af                   scas   ax,WORD PTR es:[edi]
+            2:  66 11 d8                adc    ax,bx
+            */
+            { .offset = 5, .size = 5, .expectedSize = 5, .code = R"(
+                scasw
+                adc ax, bx)",
+                .shouldBeInline = true
+            },
+        }
+    }
+};
+
 std::vector<wxString> HookTests::testAsmHookFunctions()
 {
     // asmhook
@@ -1034,6 +1112,35 @@ std::vector<wxString> HookTests::testAsmHookFunctions()
     myassertf(memcmp(compiledAsmpatchCode.data() + 5, "\x66\x85\xD0\x74\x07\x48", 6) == 0, "Asmpatch test #3 memory compare #2 failed - instructions after jump are changed");
     uint32_t dest = sdword(compiledAsmpatchCode.data() + 1) + (uint32_t)compiledAsmpatchCode.data() + 5;
     myassertf(memcmp((void*)dest, patch2Compiled.data(), patch2Compiled.size()) == 0, "Asmpatch test #3 memory compare #3 failed - jump destination is invalid");
+
+    AsmpatchTest te;
+    // predefined tests
+    int i = 1;
+    auto relJumpCallTarget = [](uint32_t addr) -> uint32_t { return addr + 5 + sdword(addr + 1); };
+    for (auto& [func, data] : asmpatchTestsBasic)
+    {
+        for (const AsmpatchTest& test : data)
+        {
+            const auto& [offset, size, expectedSize, code, shouldBeInline] = test;
+            std::vector<uint8_t> backup;
+            uint32_t addr = (uint32_t)func + offset;
+            void* newCode = asmpatch(addr, code, &backup, size, true);
+            bool isInline = byte(addr) != 0xE9 || relJumpCallTarget(addr) != (uint32_t)newCode;
+            if (shouldBeInline)
+            {
+                // theoretically, first byte could be jump opcode in other valid code, so also checking jump target
+                myassertf(isInline, "[Asmpatch predefined test #%d] patch marked as inline was converted to jump out", i);
+            }
+            else
+            {
+                myassertf(!isInline, "[Asmpatch predefined test #%d] patch marked as jump out is inline", i);
+            }
+            patchBytes(addr, backup.data(), backup.size(), nullptr);
+            // backup function code and test that only provided bytes are changed
+            // more...
+            ++i;
+        }
+    }
 
     return myasserter.errors;
 }
