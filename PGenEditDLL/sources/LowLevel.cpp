@@ -178,7 +178,7 @@ inline bool HookElement::isActive() const
 	return _active;
 }
 
-HookElement::HookElement() : _active(false), type(HOOK_ELEM_TYPE_CALL_RAW), address(0), target(0), hookSize(5), dataSize(0), func(0), patchDataStr(0), description(""), patchUseNops(false), extraData(nullptr), gameVersions{6, 7, 8}, asmText(nullptr)
+HookElement::HookElement() : _active(false), type(HOOK_ELEM_TYPE_CALL_RAW), address(0), target(0), hookSize(5), dataSize(0), func(0), patchDataStr(0), description(""), patchUseNops(false), extraData(nullptr), gameVersions{6, 7, 8}, asmText("")
 {
 }
 
@@ -243,7 +243,7 @@ HookElementBuilder& HookElementBuilder::patchDataStr(const char* patchDataStr)
 	return *this;
 }
 
-HookElementBuilder& HookElementBuilder::asmText(const char* asmText)
+HookElementBuilder& HookElementBuilder::asmText(const std::string& asmText)
 {
     elem.asmText = asmText;
     return *this;
@@ -307,7 +307,7 @@ HookElement&& HookElementBuilder::build()
 	// asmhooks need asmText
 	if (elem.type == HOOK_ELEM_TYPE_ASMHOOK_BEFORE || elem.type == HOOK_ELEM_TYPE_ASMHOOK_AFTER || elem.type == HOOK_ELEM_TYPE_ASMPATCH)
 	{
-        if (!elem.asmText)
+        if (elem.asmText.empty())
         {
             wxFAIL_MSG("Asm hooks: asm text is not set");
         }
@@ -915,7 +915,8 @@ void* asmpatch(uint32_t addr, const std::string& code, std::vector<uint8_t>* sto
 
 void* asmpatch(uint32_t addr, const std::string& code, const CodeReplacementArgs& args, std::vector<uint8_t>* storeAt, int size, bool writeJumpBack)
 {
-    return asmpatch(addr, formatAsmCode(code, args), storeAt, size, writeJumpBack);
+	std::string_view codeBytes = compileAsm(formatAsmCode(code, args));
+    return bytecodePatch(addr, codeBytes, storeAt, size, writeJumpBack);
 }
 
 std::string_view asmproc(const std::string& code)
@@ -1195,8 +1196,8 @@ static const std::string asmPrologue = R"(
 
 static const std::string absolutePrologue = "absolute equ near -%p + ";
 
-static const int asmPrologueLines = stringSplit(asmPrologue, "\n").size() + 1;
-static const int absolutePrologueLines = stringSplit(absolutePrologue, "\n").size() + 1;
+static const int asmPrologueLines = 2; // only nonempty
+static const int absolutePrologueLines = 1;
 
 static void fail(int extraLinesCount)
 {

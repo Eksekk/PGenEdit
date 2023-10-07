@@ -478,7 +478,7 @@ public:
 	uint32_t address;
 	uint32_t target;
 	const char* patchDataStr; // TODO: string_view instead of separate data/size fields
-    const char* asmText;
+    std::string asmText;
     CodeReplacementArgs codeReplacementArgs;
 	uint32_t hookSize;
 	uint32_t dataSize;
@@ -588,7 +588,7 @@ public:
 	HookElementBuilder& dataSize(uint32_t dataSize);
     HookElementBuilder& func(HookFunc func);
     HookElementBuilder& patchDataStr(const char* patchDataStr);
-    HookElementBuilder& asmText(const char* asmText);
+    HookElementBuilder& asmText(const std::string& asmText);
 	HookElementBuilder& description(const std::string& desc);
 	HookElementBuilder& patchUseNops(bool on);
 	HookElementBuilder& gameVersions(const std::vector<int>& gameVersions);
