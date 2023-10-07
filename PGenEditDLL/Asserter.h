@@ -41,7 +41,7 @@ bool Asserter::operator()(const char* func, const char* file, int line, const wx
 	wxString errorMsg = rawErrorMsg;
 	if constexpr (sizeof...(args) > 0)
 	{
-		errorMsg << ("\nExtra data:" + rep("\n%s", sizeof...(args)));
+		errorMsg << ("\nExtra data:" + stringRep("\n%s", sizeof...(args)));
 		errorMsg = wxString::Format(errorMsg, my_to_string(std::forward<Args>(args))...);
 	}
 	wxString str = wxString::Format(errorFormat, func, file2, line, errorMsg);

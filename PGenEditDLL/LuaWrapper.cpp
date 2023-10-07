@@ -54,7 +54,7 @@ std::string luaTypeToStr(lua_State* L, int idx)
 
 bool LuaWrapper::getPath(const std::string& path, bool lastMustBeTable, bool create)
 {
-    auto parts = splitString(path, ".");
+    auto parts = stringSplit(path, ".");
     if (create)
     {
         lua_getglobal(L, "tget");

@@ -80,7 +80,7 @@ bool GameData::processClassDataJson(const char* str)
             }
             if (classEntry.contains("alignment"))
             {
-                std::string str = tolowerStr(classEntry["alignment"]);
+                std::string str = stringToLower(classEntry["alignment"]);
                 auto itr = alignmentStringToId.find(str);
                 if (itr != alignmentStringToId.end())
                 {
@@ -355,11 +355,11 @@ void GameData::fillInItemImages()
     std::map<std::string, std::vector<int>> imageIdToNameMap;
     for (auto& [id, item] : items)
     {
-        imageIdToNameMap[tolowerStr(item->pictureName)].push_back(id);
+        imageIdToNameMap[stringToLower(item->pictureName)].push_back(id);
     }
     LodStructAccessor::forEachLodBitmapDo([&](auto bitmapPtr)
         {
-            std::string name = tolowerStr(bitmapPtr->name.data());
+            std::string name = stringToLower(bitmapPtr->name.data());
             int width = bitmapPtr->width, height = bitmapPtr->height;
             wxASSERT(imageIdToNameMap.contains(name));
             uint8_t* palettePtr;

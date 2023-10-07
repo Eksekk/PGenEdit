@@ -1029,7 +1029,7 @@ std::map<BasicFuncType, AsmpatchTest> asmpatchTestsBasic =
                     fld dword [ebp + 20])", // 9:  d9 45 14                fld    DWORD PTR [ebp+0x14]
                     .shouldBeInline = false
                 },
-                {.offset = 0, .size = 4, .expectedSize = 5, .code = (std::string)rep("nop\n", 14), .shouldBeInline = false },
+                {.offset = 0, .size = 4, .expectedSize = 5, .code = (std::string)stringRep("nop\n", 14), .shouldBeInline = false },
         /*
         0:  66 af                   scas   ax,WORD PTR es:[edi]
         2:  66 11 d8                adc    ax,bx

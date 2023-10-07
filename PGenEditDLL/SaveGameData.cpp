@@ -106,7 +106,7 @@ bool SaveGameData::saveInventoryControl(const InventoryCtrl& ctrl)
         }
         else if (const MapChestRef* ref = std::get_if<MapChestRef>(&ctrl.inventoryType))
         {
-            Json& invCtrlJson = dest[JSON_KEY_MAP_CHESTS][tolowerStr(ref->mapName)][ref->chestId];
+            Json& invCtrlJson = dest[JSON_KEY_MAP_CHESTS][stringToLower(ref->mapName)][ref->chestId];
             ctrl.persist(invCtrlJson);
         }
         else
@@ -138,7 +138,7 @@ bool SaveGameData::loadInventoryControl(InventoryCtrl& ctrl)
         }
         else if (const MapChestRef* ref = std::get_if<MapChestRef>(&ctrl.inventoryType))
         {
-            std::string pointer = wxString::Format("%s/%s/%s", JSON_KEY_MAP_CHESTS, tolowerStr(ref->mapName), std::to_string(ref->chestId)).ToStdString();
+            std::string pointer = wxString::Format("%s/%s/%s", JSON_KEY_MAP_CHESTS, stringToLower(ref->mapName), std::to_string(ref->chestId)).ToStdString();
             if (src.contains(pointer))
             {
                 ctrl.unpersist(src.at(pointer));

@@ -68,7 +68,7 @@ wxString concatWxStrings(const Container<wxString, Extra...>& container, const w
 	return s;
 }
 
-std::string tolowerStr(const std::string& source);
+std::string stringToLower(const std::string& source);
 
 template<typename Vector>
 Vector mergeVectors(std::initializer_list<Vector> list)
@@ -202,7 +202,7 @@ void showDeducedType(T&&) {
 	deduced_type<T>::show;
 }
 
-wxString rep(const wxString& str, int n = 1);
+wxString stringRep(const wxString& str, int n = 1);
 
 template<typename T>
 wxString my_to_string(const T& t)
@@ -219,5 +219,5 @@ void redBlackGreenTextThreshold(wxWindow* win, int value, int threshold);
 void jsonEnsureIsObject(Json& json);
 void jsonEnsureIsArray(Json& json);
 
-std::vector<std::string> splitString(const std::string& text, const std::string& delimiter, bool ignoreCase = true);
-std::vector<std::string> splitString(const std::string& text, char delimiter, bool ignoreCase = true);
+std::vector<std::string> stringSplit(const std::string& text, const std::string& delimiter, bool ignoreCase = true);
+std::vector<std::string> stringSplit(const std::string& text, char delimiter, bool ignoreCase = true);

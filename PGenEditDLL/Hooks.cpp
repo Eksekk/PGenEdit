@@ -82,7 +82,7 @@ void setupHooks() {
         {
             result.pop_back();
         }
-        return tolowerStr(result);
+        return stringToLower(result);
     };
 
     typedef LRESULT(APIENTRY* WxWndProc)(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);

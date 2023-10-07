@@ -117,7 +117,7 @@ template<typename Variant> bool InventoryCtrl::unpersistItemLocationVariant(Vari
 {
     try
     {
-        std::string type = tolowerStr(json["type"]);
+        std::string type = stringToLower(json["type"]);
         if (type == ITEM_LOC_CHEST)
         {
             MapChestRef ref;

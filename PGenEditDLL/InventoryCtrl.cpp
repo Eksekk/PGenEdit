@@ -501,7 +501,7 @@ bool ItemStoreElement::isSameExceptPos(const ItemStoreElement& other) const
 bool MapChestRef::persist(Json& json) const
 {
     jsonEnsureIsObject(json);
-    auto mapLower = tolowerStr(mapName);
+    auto mapLower = stringToLower(mapName);
     // not sure yet which storage approach I take (one big array of map chests or tree indexed by map names and chest ids), so store both ways
     // LOCATION (current) -> flat?
     // ORIGIN (initial) -> flat?
@@ -564,7 +564,7 @@ bool StoredItemRef::unpersist(const Json& json)
 
 bool operator==(const MapChestRef& lhs, const MapChestRef& rhs)
 {
-    return lhs.chestId == rhs.chestId && tolowerStr(lhs.mapName) == tolowerStr(rhs.mapName);
+    return lhs.chestId == rhs.chestId && stringToLower(lhs.mapName) == stringToLower(rhs.mapName);
 }
 
 bool operator==(const PlayerInventoryRef& lhs, const PlayerInventoryRef& rhs)

@@ -2,7 +2,7 @@
 #include "main.h"
 #include "Utility.h"
 
-std::string tolowerStr(const std::string& source)
+std::string stringToLower(const std::string& source)
 {
 	std::string out = source;
 	for (char& c : out)
@@ -75,7 +75,7 @@ Bounds getBounds(int size)
 	return Bounds{ low, high };
 }
 
-wxString rep(const wxString& str, int n)
+wxString stringRep(const wxString& str, int n)
 {
 	wxString ret = str;
 	ret.reserve(str.size() * n);
@@ -112,10 +112,10 @@ void jsonEnsureIsArray(Json& json)
     json = !json.is_array() ? Json::array() : json;
 }
 
-std::vector<std::string> splitString(const std::string& text, const std::string& delimiter, bool ignoreCase)
+std::vector<std::string> stringSplit(const std::string& text, const std::string& delimiter, bool ignoreCase)
 {
-	std::string useText = ignoreCase ? tolowerStr(text) : text;
-	std::string useDelimiter = ignoreCase ? tolowerStr(delimiter) : delimiter;
+	std::string useText = ignoreCase ? stringToLower(text) : text;
+	std::string useDelimiter = ignoreCase ? stringToLower(delimiter) : delimiter;
 	std::vector<std::string> strings;
 	size_t pos = 0, foundPos;
 	while ((foundPos = useText.find(useDelimiter, pos)) != std::string::npos)
@@ -127,9 +127,9 @@ std::vector<std::string> splitString(const std::string& text, const std::string&
 	return strings;
 }
 
-std::vector<std::string> splitString(const std::string& text, char delimiter, bool ignoreCase)
+std::vector<std::string> stringSplit(const std::string& text, char delimiter, bool ignoreCase)
 {
 	std::string s;
 	s.push_back(delimiter);
-	return splitString(text, s, ignoreCase);
+	return stringSplit(text, s, ignoreCase);
 }
