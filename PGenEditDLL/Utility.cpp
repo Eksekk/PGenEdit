@@ -2,6 +2,8 @@
 #include "main.h"
 #include "Utility.h"
 
+// string functions
+
 std::string stringToLower(const std::string& source)
 {
 	std::string out = source;
@@ -12,12 +14,74 @@ std::string stringToLower(const std::string& source)
 	return out;
 }
 
+std::vector<std::string> stringSplit(const std::string& text, const std::string& delimiter, bool ignoreCase)
+{
+    std::string useText = ignoreCase ? stringToLower(text) : text;
+    std::string useDelimiter = ignoreCase ? stringToLower(delimiter) : delimiter;
+    std::vector<std::string> strings;
+    size_t pos = 0, foundPos;
+    while ((foundPos = useText.find(useDelimiter, pos)) != std::string::npos)
+    {
+        strings.push_back(text.substr(pos, foundPos - pos));
+        pos = foundPos + useDelimiter.size();
+    }
+    strings.push_back(text.substr(pos));
+    return strings;
+}
+
+std::vector<std::string> stringSplit(const std::string& text, char delimiter, bool ignoreCase)
+{
+    std::string s;
+    s.push_back(delimiter);
+    return stringSplit(text, s, ignoreCase);
+}
+
+wxString stringRep(const wxString& str, int n)
+{
+    wxString ret = str;
+    ret.reserve(str.size() * n);
+    for (int i = 0; i < n - 1; ++i)
+    {
+        ret << str;
+    }
+    return ret;
+}
+
 wxString getTimeStr()
 {
 	auto endTime = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
 	return wxString(std::ctime(&endTime));
 }
 
+// json functions
+void jsonEnsureIsObject(Json& json)
+{
+    json = !json.is_object() ? Json::object() : json;
+}
+
+void jsonEnsureIsArray(Json& json)
+{
+    json = !json.is_array() ? Json::array() : json;
+}
+
+// wxWidgets functions
+void redBlackGreenTextThreshold(wxWindow* win, int value, int threshold)
+{
+    if (value < threshold)
+    {
+        win->SetOwnForegroundColour(*wxRED);
+    }
+    else if (value > threshold)
+    {
+        win->SetOwnForegroundColour(*wxGREEN);
+    }
+    else
+    {
+        win->SetOwnForegroundColour(*wxBLACK);
+    }
+}
+
+// misc functions
 Bounds getBounds(int size)
 {
 	static const uint64_t
@@ -73,63 +137,4 @@ Bounds getBounds(int size)
 
 	}
 	return Bounds{ low, high };
-}
-
-wxString stringRep(const wxString& str, int n)
-{
-	wxString ret = str;
-	ret.reserve(str.size() * n);
-	for (int i = 0; i < n - 1; ++i)
-	{
-		ret << str;
-	}
-	return ret;
-}
-
-void redBlackGreenTextThreshold(wxWindow* win, int value, int threshold)
-{
-	if (value < threshold)
-	{
-		win->SetOwnForegroundColour(*wxRED);
-	}
-	else if (value > threshold)
-	{
-		win->SetOwnForegroundColour(*wxGREEN);
-	}
-	else
-	{
-		win->SetOwnForegroundColour(*wxBLACK);
-	}
-}
-
-void jsonEnsureIsObject(Json& json)
-{
-	json = !json.is_object() ? Json::object() : json;
-}
-
-void jsonEnsureIsArray(Json& json)
-{
-    json = !json.is_array() ? Json::array() : json;
-}
-
-std::vector<std::string> stringSplit(const std::string& text, const std::string& delimiter, bool ignoreCase)
-{
-	std::string useText = ignoreCase ? stringToLower(text) : text;
-	std::string useDelimiter = ignoreCase ? stringToLower(delimiter) : delimiter;
-	std::vector<std::string> strings;
-	size_t pos = 0, foundPos;
-	while ((foundPos = useText.find(useDelimiter, pos)) != std::string::npos)
-	{
-		strings.push_back(text.substr(pos, foundPos - pos));
-		pos = foundPos + useDelimiter.size();
-	}
-	strings.push_back(text.substr(pos));
-	return strings;
-}
-
-std::vector<std::string> stringSplit(const std::string& text, char delimiter, bool ignoreCase)
-{
-	std::string s;
-	s.push_back(delimiter);
-	return stringSplit(text, s, ignoreCase);
 }

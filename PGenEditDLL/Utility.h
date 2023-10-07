@@ -4,6 +4,54 @@
 #include "PlayerSkill.h"
 extern int MMVER;
 
+// string functions
+std::string stringToLower(const std::string& source);
+
+std::vector<std::string> stringSplit(const std::string& text, const std::string& delimiter, bool ignoreCase = true);
+std::vector<std::string> stringSplit(const std::string& text, char delimiter, bool ignoreCase = true);
+
+wxString stringRep(const wxString& str, int n = 1);
+
+wxString getTimeStr();
+
+template<typename T>
+wxString my_to_string(const T& t)
+{
+    return wxString().operator<<(t); // sorry for clever code, couldn't help myself!
+    // we are calling operator<< (which inserts argument into string) on temporary string,
+    // taking advantage that it returns modified string (intended to allow chaining,
+    // like str << "x" << "y" << 5)
+}
+
+template<template<typename, typename...> typename Container, typename... Extra>
+wxString concatWxStrings(const Container<wxString, Extra...>& container, const wxString& separator = "\n")
+{
+    wxString s;
+    const int size = container.size();
+    int i = 0;
+    for (const auto& val : container)
+    {
+        s << val;
+        if (i++ < size - 1)
+        {
+            s << separator;
+        }
+    }
+    return s;
+}
+
+// wxWidgets functions
+
+void redBlackGreenTextThreshold(wxWindow* win, int value, int threshold);
+
+// json functions
+
+// if argument is "null", converts it to empty object
+void jsonEnsureIsObject(Json& json);
+void jsonEnsureIsArray(Json& json);
+
+// misc functions
+
 template<typename T>
 bool existsInVector(const std::vector<T>& vec, const T& val)
 {
@@ -30,6 +78,34 @@ int indexInVector(const std::vector<T>& vec, const T& val)
 	return -1;
 }
 
+template<typename Vector>
+Vector mergeVectors(std::initializer_list<Vector> list)
+{
+    size_t n = 0;
+    for (auto& vec : list)
+    {
+        n += vec.size();
+    }
+    Vector out;
+    out.reserve(n);
+    for (auto& vec : list)
+    {
+        out.insert(out.end(), vec.begin(), vec.end());
+    }
+    return out;
+}
+
+template<template<typename, typename, typename...> typename Map, typename Key, typename Value, typename... Extra>
+Map<Value, Key> invertMap(const Map<Key, Value, Extra...>& map)
+{
+    Map<Value, Key> outMap;
+    for (const auto& [key, value] : map)
+    {
+        outMap[value] = key;
+    }
+    return outMap;
+}
+
 template<typename T>
 T&& mmv(T&& e6, T&& e7, T&& e8)
 {
@@ -50,55 +126,6 @@ T&& mmv(T&& e6, T&& e7, T&& e8)
 		throw std::runtime_error(std::format("Invalid MM version ({})!", MMVER));
 	}
 }
-
-template<template<typename, typename...> typename Container, typename... Extra>
-wxString concatWxStrings(const Container<wxString, Extra...>& container, const wxString& separator = "\n")
-{
-	wxString s;
-	const int size = container.size();
-	int i = 0;
-	for (const auto& val : container)
-	{
-		s << val;
-		if (i++ < size - 1)
-		{
-			s << separator;
-		}
-	}
-	return s;
-}
-
-std::string stringToLower(const std::string& source);
-
-template<typename Vector>
-Vector mergeVectors(std::initializer_list<Vector> list)
-{
-	size_t n = 0;
-	for (auto& vec : list)
-	{
-		n += vec.size();
-	}
-	Vector out;
-	out.reserve(n);
-	for (auto& vec: list)
-	{
-		out.insert(out.end(), vec.begin(), vec.end());
-	}
-	return out;
-}
-
-template<template<typename, typename, typename...> typename Map, typename Key, typename Value, typename... Extra>
-Map<Value, Key> invertMap(const Map<Key, Value, Extra...>& map)
-{
-	Map<Value, Key> outMap;
-	for (const auto& [key, value] : map)
-	{
-		outMap[value] = key;
-	}
-	return outMap;
-}
-
-wxString getTimeStr();
 
 struct BaseBonus
 {
@@ -201,23 +228,3 @@ void showDeducedType(T&&) {
 
 	deduced_type<T>::show;
 }
-
-wxString stringRep(const wxString& str, int n = 1);
-
-template<typename T>
-wxString my_to_string(const T& t)
-{
-	return wxString().operator<<(t); // sorry for clever code, couldn't help myself!
-	// we are calling operator<< (which inserts argument into string) on temporary string,
-	// taking advantage that it returns modified string (intended to allow chaining,
-	// like str << "x" << "y" << 5)
-}
-
-void redBlackGreenTextThreshold(wxWindow* win, int value, int threshold);
-
-// if argument is "null", converts it to empty object
-void jsonEnsureIsObject(Json& json);
-void jsonEnsureIsArray(Json& json);
-
-std::vector<std::string> stringSplit(const std::string& text, const std::string& delimiter, bool ignoreCase = true);
-std::vector<std::string> stringSplit(const std::string& text, char delimiter, bool ignoreCase = true);
