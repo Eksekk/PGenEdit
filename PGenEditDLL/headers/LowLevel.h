@@ -244,7 +244,7 @@ void codeMemoryFree(void* addr);
 void codeMemoryFullFree();
 
 // copies code
-uint32_t copyCode(uint32_t source, uint32_t size, bool writeJumpBack = true, uint32_t dest = 0);
+uint32_t copyCode(uint32_t source, uint32_t size, bool writeJumpBack = true, uint32_t dest = 0, uint32_t canJumpAfterCodeBytes = 0);
 
 using CodeReplacementArg = std::variant<uint32_t, int32_t, std::string, void*>;
 using CodeReplacementArgs = std::unordered_map<std::string, CodeReplacementArg>;
@@ -279,6 +279,11 @@ void unhookAsmhook(uint32_t addr, const std::vector<uint8_t>& restoreData, void*
 void* asmpatch(uint32_t addr, const std::string& code, std::vector<uint8_t>* storeAt, int size, bool writeJumpBack);
 // this version formats code
 void* asmpatch(uint32_t addr, const std::string& code, const CodeReplacementArgs& args, std::vector<uint8_t>* storeAt, int size, bool writeJumpBack = true);
+
+// creates asm code block (without "ret" instruction)
+std::string_view asmproc(const std::string& code);
+// this version formats code
+std::string_view asmproc(const std::string& code, const CodeReplacementArgs& args);
 
 void unhookAsmpatch(uint32_t addr, const std::vector<uint8_t>& restoreData, void*& copiedCode);
 
@@ -433,7 +438,7 @@ uint32_t hookFunction(uint32_t addr, uint32_t stackNum, CallableFunctionHookFunc
     static_assert(((std::is_standard_layout_v<Args>) && ...) && (std::is_standard_layout_v<ReturnType> || std::is_void_v<ReturnType>), "Arguments are non-POD");
     size = getRealHookSize(addr, size);
     checkOverlap(addr, size);
-    uint32_t dest = copyCode(addr, size, true);
+    uint32_t dest = copyCode(addr, size, true, 0, 1);
     callableHookCommon<ReturnType, cc, Args...>(addr, stackNum, func, storeAt, size, dest, true);
     return dest;
 }
@@ -764,4 +769,6 @@ struct LINE_HEADER
     };
     uint32_t macro_line;
 };
-std::string_view compileAsm(const std::string& code);
+
+// returns generated code with origin point (for relative calls/jumps) at provided runtime address, or if it's not provided, at fasm memory block (used to get size)
+std::string_view compileAsm(const std::string& code, uint32_t runtimeAddress = 0);

@@ -78,6 +78,7 @@ Bounds getBounds(int size)
 wxString rep(const wxString& str, int n)
 {
 	wxString ret = str;
+	ret.reserve(str.size() * n);
 	for (int i = 0; i < n - 1; ++i)
 	{
 		ret << str;

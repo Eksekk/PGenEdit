@@ -546,7 +546,7 @@ uint32_t autohookBefore(uint32_t addr, HookFunc func, std::vector<uint8_t>* stor
     size = getRealHookSize(addr, size, 5);
     checkOverlap(addr, size);
 
-	uint32_t code = copyCode(addr, size, true);
+	uint32_t code = copyCode(addr, size, true, 0, 1);
 	auto wrapperFunc = [code, func](HookData* d) -> int {
 		d->esp = d->esp + 4;
 		if (func(d) != HOOK_RETURN_AUTOHOOK_NO_PUSH)
@@ -565,7 +565,7 @@ uint32_t autohookAfter(uint32_t addr, HookFunc func, std::vector<uint8_t>* store
     checkOverlap(addr, size);
 
 	void* mem = (void*)codeMemoryAlloc(size + 5);
-    uint32_t code = copyCode(addr, size, false, (uint32_t)mem);
+    uint32_t code = copyCode(addr, size, false, (uint32_t)mem, 1);
     auto wrapperFunc = [code, func, addr, size](HookData* d) -> int {
         d->esp = d->esp + 4;
         if (func(d) != HOOK_RETURN_AUTOHOOK_NO_PUSH)
@@ -738,7 +738,7 @@ void codeMemoryFullFree()
 	}
 }
 
-uint32_t copyCode(uint32_t source, uint32_t size, bool writeJumpBack, uint32_t dest)
+uint32_t copyCode(uint32_t source, uint32_t size, bool writeJumpBack, uint32_t dest, uint32_t canJumpAfterCodeBytes)
 {
     std::vector<int> rel32Positions; // to fix calls/jumps
 	int sizeReal = getRealHookSize(source, size, size); // TODO: skip this call and use below loop to compute effective size?
@@ -751,14 +751,15 @@ uint32_t copyCode(uint32_t source, uint32_t size, bool writeJumpBack, uint32_t d
 	// check short jumps
     ZyanU64 runtimeAddr = (ZyanU64)source;
     ZydisDisassembledInstruction instr;
-	size_t n = 0;
+	// if canJumpAfterCodeBytes is > 0, this means code will have something (usually jump) appended, so a jump just outside the code can exist
+	size_t n = 0, acceptableJumpMax = source + size - 1 + canJumpAfterCodeBytes;
     bool hasShort = false;
 	while (n < size && ZYAN_SUCCESS(ZydisDisassembleIntel(ZYDIS_MACHINE_MODE_LEGACY_32, source + n, reinterpret_cast<void*>(source + n), 20, &instr)))
 	{
         if (instr.info.meta.branch_type == ZYDIS_BRANCH_TYPE_SHORT)
         {
-			uint32_t dest = n + 2 + byte(source + n + 1);
-			if (dest > source + size || dest < source) // jump outside code
+			uint32_t dest = source + n + 2 + sbyte(source + n + 1);
+			if (dest > acceptableJumpMax || dest < source) // jump outside code
 			{
 				hasShort = true;
 			}
@@ -779,14 +780,12 @@ uint32_t copyCode(uint32_t source, uint32_t size, bool writeJumpBack, uint32_t d
 
 	if (n < size) // Zydis error
 	{
-		wxLogError("Couldn't copy code from address 0x%X + 0x%X - zydis error", source, n);
-		wxLog::FlushActive();
+		wxFAIL_MSG(wxString::Format("Couldn't copy code from address 0x%X + 0x%X - zydis error", source, n));
 		throw std::logic_error("Zydis error");
 	}
 	else if (hasShort)
 	{
-		wxLogError("Code at 0x%X of size 0x%X has short jump leading outside", source, size);
-		wxLog::FlushActive();
+		wxFAIL_MSG(wxString::Format("Code at 0x%X of size 0x%X has short jump leading outside", source, size));
 		throw std::logic_error("Short jump outside in code");
 	}
 	uint32_t newCodeSize = size + (writeJumpBack ? 5 : 0);
@@ -816,13 +815,13 @@ void* bytecodeHookCommon(uint32_t addr, std::string_view bytecode, std::vector<u
     uint32_t mem = codeMemoryAlloc(size + bytecode.size() + 5); // 5 = jump size
 	if (before)
 	{
-        copyCode((uint32_t)bytecode.data(), bytecode.size(), false, mem);
-        copyCode(addr, size, true, mem + bytecode.size());
+        copyCode((uint32_t)bytecode.data(), bytecode.size(), false, mem, 1);
+        copyCode(addr, size, true, mem + bytecode.size(), 1);
 	}
 	else
     {
-        copyCode(addr, size, false, mem);
-        copyCode((uint32_t)bytecode.data(), bytecode.size(), false, mem + size);
+        copyCode(addr, size, false, mem, 0);
+        copyCode((uint32_t)bytecode.data(), bytecode.size(), false, mem + size, 1);
 		// manual jump hook, because if bytecode one was true, it would generate jump to fasm code block, not original code
 		hookJumpRaw(mem + size + bytecode.size(), (void*)(addr + size), nullptr);
 	}
@@ -885,18 +884,18 @@ void* bytecodePatch(uint32_t addr, std::string_view bytecode, std::vector<uint8_
 	size_t sizeMin5 = std::max(size, 5); // if code size exceeds hook size, but the former is less than 5 in total, don't jump out
 	if (bytecode.size() <= sizeMin5) // inline
 	{
-		copyCode((uint32_t)bytecode.data(), bytecode.size(), false, addr);
+		copyCode((uint32_t)bytecode.data(), bytecode.size(), false, addr, 256);
 		int32_t remaining = (int)sizeMin5 - (int)bytecode.size();
 		if (remaining > 0)
         {
 			eraseCode(addr + bytecode.size(), remaining, nullptr);
 		}
-		return (void*)addr;
+		return nullptr; // returning nullptr to indicate that returned address doesn't need to be freed
 	}
 	else // jump out
 	{
 		void* mem = (void*)codeMemoryAlloc(bytecode.size() + (writeJumpBack ? 5 : 0));
-		copyCode((uint32_t)bytecode.data(), bytecode.size(), false, (uint32_t)mem);
+		copyCode((uint32_t)bytecode.data(), bytecode.size(), false, (uint32_t)mem, writeJumpBack ? 1 : 0);
 		if (writeJumpBack)
         {
             hookJumpRaw((uint32_t)mem + bytecode.size(), (void*)(addr + size), nullptr);
@@ -916,6 +915,19 @@ void* asmpatch(uint32_t addr, const std::string& code, std::vector<uint8_t>* sto
 void* asmpatch(uint32_t addr, const std::string& code, const CodeReplacementArgs& args, std::vector<uint8_t>* storeAt, int size, bool writeJumpBack)
 {
     return asmpatch(addr, formatAsmCode(code, args), storeAt, size, writeJumpBack);
+}
+
+std::string_view asmproc(const std::string& code)
+{
+	std::string_view bytecode = compileAsm(code);
+	uint32_t mem = codeMemoryAlloc(bytecode.size());
+	copyCode((uint32_t)bytecode.data(), bytecode.size(), false, mem);
+    return std::string_view((const char*)mem, bytecode.size());
+}
+
+std::string_view asmproc(const std::string& code, const CodeReplacementArgs& args)
+{
+	return asmproc(formatAsmCode(code, args));
 }
 
 void unhookBytecodePatch(uint32_t addr, const std::vector<uint8_t>& restoreData, void*& copiedCode)
@@ -1172,36 +1184,49 @@ std::string formatAsmCode(const std::string& code, const CodeReplacementArgs& re
 	return newCode;
 }
 
-std::string_view compileAsm(const std::string& code)
+static void fail()
 {
-	std::string useCode = "use32\n" + code; // 32-bit
-	FasmAssembleReturn ret = fasm_Assemble(useCode.c_str(), fasmMemoryBlock, FASM_MEMORY_BLOCK_SIZE, 100, 0);
-	switch (ret)
-	{
-	case FASM_OK:
-	case FASM_WORKING:
-		return std::string_view(fasmState->output_data, fasmState->output_length);
-		break;
-	case FASM_ERROR:
-	case FASM_INVALID_PARAMETER:
-	case FASM_OUT_OF_MEMORY:
-	case FASM_STACK_OVERFLOW:
-	case FASM_SOURCE_NOT_FOUND:
-	case FASM_UNEXPECTED_END_OF_SOURCE:
-	case FASM_CANNOT_GENERATE_CODE:
-	case FASM_FORMAT_LIMITATIONS_EXCEDDED:
-	case FASM_WRITE_FAILED:
-	case FASM_INVALID_DEFINITION:
-	{
-		// assert to show stack traceback
-		wxASSERT_MSG(false, wxString::Format("[ASM ERROR, line %d]: %s", fasmState->error_line->line_number & 0x7FFFFFFFU, fasmErrorCodeToText.at(fasmState->error_code))); // first bit is not line number, but flag
-		return "";
-	}
-		break;
-	default:
-		wxLogError("Unknown FASM return code: %d", (int)ret);
-        wxLog::FlushActive();
-		return "";
+	wxASSERT_MSG(false, wxString::Format("[ASM ERROR, line %d]: %s", fasmState->error_line->line_number & 0x7FFFFFFFU, fasmErrorCodeToText.at(fasmState->error_code))); // first bit is not line number, but flag
+}
 
-	}
+// make code 32-bit, ignore "ptr" word for smoother coding, and enable "absolute" "keyword" as in mmext (if runtime address is provided, otherwise won't work)
+static const std::string asmPrologue = R"(
+	use32
+	ptr equ
+	absolute equ near -%p +
+)";
+
+// IMPORTANT: don't use "mov eax, dword ptr [ebx + 50]", use "mov eax, dword [ebx + 50]" or maybe (not tested) "mov eax, dword ptr [ds:ebx + 50]"
+std::string_view compileAsm(const std::string& code, uint32_t runtimeAddress)
+{
+
+	std::string useCode = "";
+	// TODO: replace ptr
+    FasmAssembleReturn ret = fasm_Assemble(useCode.c_str(), fasmMemoryBlock, FASM_MEMORY_BLOCK_SIZE, 100, 0);
+    switch (ret)
+    {
+    case FASM_OK:
+    case FASM_WORKING:
+        return std::string_view(fasmState->output_data, fasmState->output_length);
+        break;
+    case FASM_ERROR:
+    case FASM_INVALID_PARAMETER:
+    case FASM_OUT_OF_MEMORY:
+    case FASM_STACK_OVERFLOW:
+    case FASM_SOURCE_NOT_FOUND:
+    case FASM_UNEXPECTED_END_OF_SOURCE:
+    case FASM_CANNOT_GENERATE_CODE:
+    case FASM_FORMAT_LIMITATIONS_EXCEDDED:
+    case FASM_WRITE_FAILED:
+    case FASM_INVALID_DEFINITION:
+    {
+        fail();
+		return "";
+    }
+    break;
+    default:
+        wxLogError("Unknown FASM return code: %d", (int)ret);
+        wxLog::FlushActive();
+        return "";
+    }
 }

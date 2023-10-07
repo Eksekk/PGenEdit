@@ -194,9 +194,9 @@ static std::vector<wxString> HookTests::testHookPlacingAndSize()
                 int firstNopIndex = type == HOOK_ELEM_TYPE_PATCH_DATA ? hookSize : 5;
                 int minSize = firstNopIndex;
                 int realSize = getRealHookSize(oldCode, hookSize, minSize);
-                myassert(realSize == autoCodeCopy.size(), wxString::Format("%sReal hook size (%d) and auto code backup size (%d) don't match", basicInfoStr, realSize, autoCodeCopy.size()));
+                myassert(realSize == autoCodeCopy.size(), wxString::Format("%sReal hook size (%d) and auto code asmpatchBackup size (%d) don't match", basicInfoStr, realSize, autoCodeCopy.size()));
                 myassert(memcmp((void*)oldCodeVec.data(), (void*)autoCodeCopy.data(), realSize) == 0,
-                    wxString::Format("%sBackup memory and backup memory done by hook functions don't match: %s\t\t%s",
+                    wxString::Format("%sBackup memory and asmpatchBackup memory done by hook functions don't match: %s\t\t%s",
                         basicInfoStr, getCodeString((uint32_t)codeBackup[funcId].data(), realSize), getCodeString((uint32_t)autoCodeCopy.data(), realSize)
                     )
                 );
@@ -204,7 +204,7 @@ static std::vector<wxString> HookTests::testHookPlacingAndSize()
                 {
                     myassert(byte(newCode + i) == 0x90, wxString::Format("%sRequired byte is not NOP-ed (address 0x%X, byte index %d)", basicInfoStr, addr, i));
                 }
-                // restore backup code
+                // restore asmpatchBackup code
                 patchBytes(addr, codeBackup[funcId].data(), funcSize);
                 if (type == HOOK_ELEM_TYPE_CALL)
                 {
@@ -975,7 +975,7 @@ struct AsmHookTest
     std::string code;
 };
 
-struct AsmpatchTest
+struct AsmpatchTestItem
 {
     uint32_t offset, size;
     uint32_t expectedSize; // expected inline, so for a jump out will be not less than 5
@@ -983,7 +983,13 @@ struct AsmpatchTest
     bool shouldBeInline;
 };
 
-std::map<BasicFuncType, std::vector<AsmpatchTest>> asmpatchTestsBasic =
+struct AsmpatchTest
+{
+    int funcSize;
+    std::vector<AsmpatchTestItem> tests;
+};
+
+std::map<BasicFuncType, AsmpatchTest> asmpatchTestsBasic =
 {
     {
         /*
@@ -996,40 +1002,44 @@ std::map<BasicFuncType, std::vector<AsmpatchTest>> asmpatchTestsBasic =
             d:  c3                      ret
         */
         (BasicFuncType)asmpatchTest1,
-        { // vector
-            { /* vector item */ .offset = 0, .size = 1, .expectedSize = 2, .code = "nop", .shouldBeInline = true },
-            { .offset = 0, .size = 6, .expectedSize = 6, .code = "mov eax, 0x40404040\npush esi", .shouldBeInline = true },
-            /*
-            0:  39 d6                   cmp    esi,edx
-            2:  fe c0                   inc    al
-            4:  00 c4                   add    ah,al
-            6:  0f 94 c3                sete   bl
-            */
-            { .offset = 0, .size = 1, .expectedSize = 9, .code = R"(
-                cmp esi, edx
-                inc al
-                add ah, al
-                sete bl)",
-                .shouldBeInline = true
-            },
-            { .offset = 0, .size = 6, .expectedSize = 6, .code = R"(
-                cmp esi, edx
-                inc al
-                add ah, al
-                sete bl
-                fld dword ptr [ebp + 20])", // 9:  d9 45 14                fld    DWORD PTR [ebp+0x14]
-                .shouldBeInline = false
-            },
-            { .offset = 0, .size = 4, .expectedSize = 5, .code = rep("nop\n", 14), .shouldBeInline = false },
-            /*
-            0:  66 af                   scas   ax,WORD PTR es:[edi]
-            2:  66 11 d8                adc    ax,bx
-            */
-            { .offset = 5, .size = 5, .expectedSize = 5, .code = R"(
-                scasw
-                adc ax, bx)",
-                .shouldBeInline = true
-            },
+        {
+            .funcSize = 0xE,
+            .tests = 
+            { // vector
+                { /* vector item */ .offset = 0, .size = 1, .expectedSize = 2, .code = "nop", .shouldBeInline = true },
+                {.offset = 0, .size = 6, .expectedSize = 6, .code = "mov eax, 0x40404040\npush esi", .shouldBeInline = true },
+                /*
+                0:  39 d6                   cmp    esi,edx
+                2:  fe c0                   inc    al
+                4:  00 c4                   add    ah,al
+                6:  0f 94 c3                sete   bl
+                */
+                {.offset = 0, .size = 1, .expectedSize = 9, .code = R"(
+                    cmp esi, edx
+                    inc al
+                    add ah, al
+                    sete bl)",
+                    .shouldBeInline = true
+                },
+                {.offset = 0, .size = 6, .expectedSize = 6, .code = R"(
+                    cmp esi, edx
+                    inc al
+                    add ah, al
+                    sete bl
+                    fld dword [ebp + 20])", // 9:  d9 45 14                fld    DWORD PTR [ebp+0x14]
+                    .shouldBeInline = false
+                },
+                {.offset = 0, .size = 4, .expectedSize = 5, .code = (std::string)rep("nop\n", 14), .shouldBeInline = false },
+        /*
+        0:  66 af                   scas   ax,WORD PTR es:[edi]
+        2:  66 11 d8                adc    ax,bx
+        */
+        {.offset = 5, .size = 5, .expectedSize = 5, .code = R"(
+                    scasw
+                    adc ax, bx)",
+                    .shouldBeInline = true
+                },
+            }
         }
     }
 };
@@ -1057,7 +1067,7 @@ std::vector<wxString> HookTests::testAsmHookFunctions()
     a:  48                      dec    eax
     b:  69 c0 e8 03 00 00       imul   eax,eax,0x3e8
      */
-    std::string_view compiledAsmpatchCode = compileAsm(R"(
+    std::string_view compiledAsmpatchCode = asmproc(R"(
     cmp ecx, edx
     setne al
     test ax, dx
@@ -1065,6 +1075,7 @@ std::vector<wxString> HookTests::testAsmHookFunctions()
     dec eax
     imul eax, eax, 1000
     @jmp:
+    jmp near 0x50505050
 )");
 
     /*
@@ -1113,18 +1124,18 @@ std::vector<wxString> HookTests::testAsmHookFunctions()
     uint32_t dest = sdword(compiledAsmpatchCode.data() + 1) + (uint32_t)compiledAsmpatchCode.data() + 5;
     myassertf(memcmp((void*)dest, patch2Compiled.data(), patch2Compiled.size()) == 0, "Asmpatch test #3 memory compare #3 failed - jump destination is invalid");
 
-    AsmpatchTest te;
+    AsmpatchTestItem te;
     // predefined tests
     int i = 1;
     auto relJumpCallTarget = [](uint32_t addr) -> uint32_t { return addr + 5 + sdword(addr + 1); };
     for (auto& [func, data] : asmpatchTestsBasic)
     {
-        for (const AsmpatchTest& test : data)
+        for (const AsmpatchTestItem& test : data.tests)
         {
             const auto& [offset, size, expectedSize, code, shouldBeInline] = test;
-            std::vector<uint8_t> backup;
+            std::vector<uint8_t> asmpatchBackup, fullBackup(memcpyVector(func, data.funcSize));
             uint32_t addr = (uint32_t)func + offset;
-            void* newCode = asmpatch(addr, code, &backup, size, true);
+            void* newCode = asmpatch(addr, code, &asmpatchBackup, size, true);
             bool isInline = byte(addr) != 0xE9 || relJumpCallTarget(addr) != (uint32_t)newCode;
             if (shouldBeInline)
             {
@@ -1135,8 +1146,18 @@ std::vector<wxString> HookTests::testAsmHookFunctions()
             {
                 myassertf(!isInline, "[Asmpatch predefined test #%d] patch marked as jump out is inline", i);
             }
-            patchBytes(addr, backup.data(), backup.size(), nullptr);
-            // backup function code and test that only provided bytes are changed
+            int patchEnd = offset + size;
+            if (offset > 0)
+            {
+                myassertf(memcmp(func, fullBackup.data(), offset) == 0, "[Asmpatch predefined test #%d] bytes before patch are changed", i);
+            }
+            if (patchEnd < data.funcSize)
+            {
+                void* first = (void*)((uint32_t)func + patchEnd);
+                myassertf(memcmp(first, &fullBackup[patchEnd], data.funcSize - patchEnd) == 0, "[Asmpatch predefined test #%d] bytes after patch are changed", i);
+            }
+            // test that only provided bytes are changed
+            patchBytes(addr, asmpatchBackup.data(), asmpatchBackup.size(), nullptr);
             // more...
             ++i;
         }
