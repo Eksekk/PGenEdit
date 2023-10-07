@@ -32,13 +32,15 @@ public:
 
 	template<typename Player, typename Game>
 	static std::vector<wxString> testMisc();
+
+	static std::vector<wxString> testUtilityFunctions();
 };
 
 template<typename Player, typename Game>
 std::vector<wxString> Tests::run()
 {
 	testingNow = true;
-	auto ret = mergeVectors({ testMisc<Player, Game>(), testSkillFunctions()/*, testJson()*///, GUI_tests::testGui<Player, Game>()
+	auto ret = mergeVectors({ testMisc<Player, Game>(), testUtilityFunctions(), testSkillFunctions()/*, testJson()*///, GUI_tests::testGui<Player, Game>()
 		, testPlayerStructAccessor<Player, Game>(), HookTests::run<Player, Game>()
 	});
 	testingNow = false;

@@ -64,6 +64,55 @@ void jsonEnsureIsArray(Json& json)
     json = !json.is_array() ? Json::array() : json;
 }
 
+std::string stringReplace(const std::string& str, const std::string& replaceWhat, const std::string& replacement, bool plain /*= true*/)
+{
+	std::string newStr;
+	if (plain)
+	{
+		// important: no int, or infinite loop happens?
+		size_t pos = -1, afterEndOfLastMatch = 0;
+		while ((pos = str.find(replaceWhat, pos + 1)) != std::string::npos)
+		{
+			int skipped = (int)pos - (int)afterEndOfLastMatch;
+			if (skipped > 0)
+			{
+                newStr += str.substr(afterEndOfLastMatch, skipped);
+			}
+			newStr += replacement;
+			pos += replaceWhat.size() - 1;
+			afterEndOfLastMatch = pos + 1;
+		}
+		newStr += str.substr(afterEndOfLastMatch);
+		return newStr;
+	}
+	else
+	{
+		return stringReplace(str, replaceWhat, [&](const std::smatch& match) { return replacement; });
+	}
+}
+
+std::string stringReplace(const std::string& str, const std::string& replaceWhat, const StringReplaceFuncType& func)
+{
+    std::string newStr;
+    std::regex regex(replaceWhat);
+    std::sregex_iterator itr(str.begin(), str.end(), regex);
+    std::sregex_iterator end;
+    int afterEndOfLastMatch = 0;
+    while (itr != end)
+    {
+        const std::smatch& match = *itr;
+        if (match.position() > afterEndOfLastMatch)
+        {
+            newStr += str.substr(afterEndOfLastMatch, match.position() - afterEndOfLastMatch);
+        }
+        newStr += func(match);
+        afterEndOfLastMatch = match.position() + match[0].str().size();
+        ++itr;
+    }
+    newStr += str.substr(afterEndOfLastMatch);
+    return newStr;
+}
+
 // wxWidgets functions
 void redBlackGreenTextThreshold(wxWindow* win, int value, int threshold)
 {

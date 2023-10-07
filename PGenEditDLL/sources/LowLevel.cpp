@@ -810,7 +810,7 @@ uint32_t copyCode(uint32_t source, uint32_t size, bool writeJumpBack, uint32_t d
 
 void* bytecodeHookCommon(uint32_t addr, std::string_view bytecode, std::vector<uint8_t>* storeAt, int size, bool before)
 {
-    size = getRealHookSize(addr, size, size);
+    size = getRealHookSize(addr, size, 5);
     storeBytes(storeAt, addr, size);
     uint32_t mem = codeMemoryAlloc(size + bytecode.size() + 5); // 5 = jump size
 	if (before)
@@ -885,7 +885,7 @@ void* bytecodePatch(uint32_t addr, std::string_view bytecode, std::vector<uint8_
 	if (bytecode.size() <= sizeMin5) // inline
 	{
 		copyCode((uint32_t)bytecode.data(), bytecode.size(), false, addr, 256);
-		int32_t remaining = (int)sizeMin5 - (int)bytecode.size();
+		int32_t remaining = (int)size - (int)bytecode.size();
 		if (remaining > 0)
         {
 			eraseCode(addr + bytecode.size(), remaining, nullptr);
@@ -894,6 +894,7 @@ void* bytecodePatch(uint32_t addr, std::string_view bytecode, std::vector<uint8_
 	}
 	else // jump out
 	{
+		size = getRealHookSize(addr, 5); // least 5+ byte size
 		void* mem = (void*)codeMemoryAlloc(bytecode.size() + (writeJumpBack ? 5 : 0));
 		copyCode((uint32_t)bytecode.data(), bytecode.size(), false, (uint32_t)mem, writeJumpBack ? 1 : 0);
 		if (writeJumpBack)
@@ -1184,23 +1185,28 @@ std::string formatAsmCode(const std::string& code, const CodeReplacementArgs& re
 	return newCode;
 }
 
-static void fail()
-{
-	wxASSERT_MSG(false, wxString::Format("[ASM ERROR, line %d]: %s", fasmState->error_line->line_number & 0x7FFFFFFFU, fasmErrorCodeToText.at(fasmState->error_code))); // first bit is not line number, but flag
-}
+// FASM
 
 // make code 32-bit, ignore "ptr" word for smoother coding, and enable "absolute" "keyword" as in mmext (if runtime address is provided, otherwise won't work)
 static const std::string asmPrologue = R"(
 	use32
 	ptr equ
-	absolute equ near -%p +
 )";
+
+static const std::string absolutePrologue = "absolute equ near -%p + ";
+
+static const int asmPrologueLines = stringSplit(asmPrologue, "\n").size() + 1;
+static const int absolutePrologueLines = stringSplit(absolutePrologue, "\n").size() + 1;
+
+static void fail(int extraLinesCount)
+{
+    wxASSERT_MSG(false, wxString::Format("[ASM ERROR, line %d]: %s", (fasmState->error_line->line_number & 0x7FFFFFFFU) - extraLinesCount, fasmErrorCodeToText.at(fasmState->error_code))); // first bit is not line number, but flag
+}
 
 // IMPORTANT: don't use "mov eax, dword ptr [ebx + 50]", use "mov eax, dword [ebx + 50]" or maybe (not tested) "mov eax, dword ptr [ds:ebx + 50]"
 std::string_view compileAsm(const std::string& code, uint32_t runtimeAddress)
 {
-
-	std::string useCode = "";
+	std::string useCode = asmPrologue + (runtimeAddress ? stringReplace(absolutePrologue, "%p", std::to_string(runtimeAddress), true) + "\n" : "") + code;
 	// TODO: replace ptr
     FasmAssembleReturn ret = fasm_Assemble(useCode.c_str(), fasmMemoryBlock, FASM_MEMORY_BLOCK_SIZE, 100, 0);
     switch (ret)
@@ -1220,7 +1226,7 @@ std::string_view compileAsm(const std::string& code, uint32_t runtimeAddress)
     case FASM_WRITE_FAILED:
     case FASM_INVALID_DEFINITION:
     {
-        fail();
+        fail(asmPrologueLines + (runtimeAddress ? absolutePrologueLines : 0));
 		return "";
     }
     break;

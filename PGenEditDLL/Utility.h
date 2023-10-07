@@ -40,6 +40,14 @@ wxString concatWxStrings(const Container<wxString, Extra...>& container, const w
     return s;
 }
 
+using StringReplaceFuncType = std::function<std::string(const std::smatch&)>;
+
+// replaces all occurences of plain string or regex pattern in provided string
+std::string stringReplace(const std::string& str, const std::string& replaceWhat, const std::string& replacement, bool plain = true);
+
+// replaces all occurences of regex pattern, using value obtained from callback function as replacement
+std::string stringReplace(const std::string& str, const std::string& replaceWhat, const StringReplaceFuncType& func);
+
 // wxWidgets functions
 
 void redBlackGreenTextThreshold(wxWindow* win, int value, int threshold);

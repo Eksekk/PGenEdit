@@ -1014,12 +1014,12 @@ std::map<BasicFuncType, AsmpatchTest> asmpatchTestsBasic =
                 4:  00 c4                   add    ah,al
                 6:  0f 94 c3                sete   bl
                 */
-                {.offset = 0, .size = 1, .expectedSize = 9, .code = R"(
+                {.offset = 0, .size = 1, .expectedSize = 5, .code = R"(
                     cmp esi, edx
                     inc al
                     add ah, al
                     sete bl)",
-                    .shouldBeInline = true
+                    .shouldBeInline = false
                 },
                 {.offset = 0, .size = 6, .expectedSize = 6, .code = R"(
                     cmp esi, edx
@@ -1146,7 +1146,7 @@ std::vector<wxString> HookTests::testAsmHookFunctions()
             {
                 myassertf(!isInline, "[Asmpatch predefined test #%d] patch marked as jump out is inline", i);
             }
-            int patchEnd = offset + size;
+            int patchEnd = offset + expectedSize;
             if (offset > 0)
             {
                 myassertf(memcmp(func, fullBackup.data(), offset) == 0, "[Asmpatch predefined test #%d] bytes before patch are changed", i);

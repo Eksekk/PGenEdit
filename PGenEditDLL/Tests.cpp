@@ -802,6 +802,67 @@ std::vector<wxString> Tests::testMisc()
 
 	return myasserter.errors;
 }
+
+
+struct ReplaceInStringTest
+{
+	std::string str, replaceWhat;
+	std::variant<std::string, StringReplaceFuncType> replacement;
+	std::string expected;
+	bool plain = true;
+};
+
+const std::vector<ReplaceInStringTest> replaceInStringTests =
+{
+	{.str = "ababababa", .replaceWhat = "ab", .replacement = "b", .expected = "bbbba"},
+	{.str = "aaaaaaaaaaaaaaaaaaa", .replaceWhat = "aaa", .replacement = "c", .expected = "cccccca"},
+	{.str = "mytest1", .replaceWhat = "tes1", .replacement = "y", .expected = "mytest1"},
+	{.str = "int i;\nint j;\nint k;\nint f;", .replaceWhat = "int (\\w);",
+		.replacement = [](const std::smatch& match) -> std::string
+        {
+                return "int " + stringRep(match[1].str(), 3).ToStdString() + ";";
+        },
+        .expected = "int iii;\nint jjj;\nint kkk;\nint fff;"},
+
+    {.str = "fedcba", .replaceWhat = "(\\w)",
+        .replacement = [](const std::smatch& match) -> std::string
+        {
+			const auto& str = match[1].str();
+			if (str != "f")
+			{
+				return std::string(1, 'a' + ('e' - str[0]));
+			}
+			else
+			{
+				return "";
+			}
+        },
+        .expected = "abcde"},
+};
+
+std::vector<wxString> Tests::testUtilityFunctions()
+{
+	Asserter myasserter("utility functions");
+	// stringReplace
+	int i = 1;
+	for (const auto& [str, replaceWhat, replacement, expected, plain] : replaceInStringTests)
+	{
+		std::string result;
+		if (const std::string* repl = std::get_if<std::string>(&replacement))
+		{
+			result = stringReplace(str, replaceWhat, *repl, plain);
+		}
+		else if (const StringReplaceFuncType* repl = std::get_if<StringReplaceFuncType>(&replacement))
+		{
+			result = stringReplace(str, replaceWhat, *repl);
+		}
+		myassertf(result == expected, "[stringReplace test #%d] incorrect output (expected '%s', got '%s')", i, expected, result);
+		++i;
+	}
+
+	return myasserter.errors;
+}
+
 #pragma warning(pop)
 
 template std::vector<wxString> Tests::testMisc<mm6::Player, mm6::Game>();
