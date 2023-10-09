@@ -227,7 +227,7 @@ void EditorPlayerWindow::onTabChange(wxBookCtrlEvent& event)
         tabs->InsertPage(newSelInt + 1, new wxPanel(tabs, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL), getPanelNameByType(SPELLS_PANEL_INDEX));
         break;
 	case ITEMS_PANEL_INDEX:
-        tabs->InsertPage(newSelInt + 1, new EditorItemsPanel(tabs, 14, 9, PlayerInventoryRef{.rosterIndex = rosterIndex}, {}, playerIndex, rosterIndex), getPanelNameByType(ITEMS_PANEL_INDEX));
+        tabs->InsertPage(newSelInt + 1, new EditorItemsPanel(tabs, 14, 9, ItemRefPlayerInventory{.rosterIndex = rosterIndex}, {}, playerIndex, rosterIndex), getPanelNameByType(ITEMS_PANEL_INDEX));
         break;
 	case CONDITIONS_BUFFS_PANEL_INDEX:
         tabs->InsertPage(newSelInt + 1, new wxPanel(tabs, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL), getPanelNameByType(CONDITIONS_BUFFS_PANEL_INDEX));

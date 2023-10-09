@@ -479,6 +479,11 @@ int bitwiseUnsignedToInt(uint32_t val)
 	return res;
 }
 
+uint32_t relJumpCallTarget(uint32_t addr)
+{
+	return addr + 5 + sdword(addr + 1);
+}
+
 void hookCallRaw(uint32_t addr, void* func, std::vector<uint8_t>* storeAt, uint32_t size)
 {
 	size = getRealHookSize(addr, size, 5);
@@ -879,11 +884,11 @@ void unhookAsmhook(uint32_t addr, const std::vector<uint8_t>& restoreData, void*
 void* bytecodePatch(uint32_t addr, std::string_view bytecode, std::vector<uint8_t>* storeAt, int size, bool writeJumpBack)
 {
     size = getRealHookSize(addr, size, size);
-    storeBytes(storeAt, addr, size);
 
 	size_t sizeMin5 = std::max(size, 5); // if code size exceeds hook size, but the former is less than 5 in total, don't jump out
 	if (bytecode.size() <= sizeMin5) // inline
-	{
+    {
+        storeBytes(storeAt, addr, size);
 		copyCode((uint32_t)bytecode.data(), bytecode.size(), false, addr, 256);
 		int32_t remaining = (int)size - (int)bytecode.size();
 		if (remaining > 0)
@@ -895,6 +900,7 @@ void* bytecodePatch(uint32_t addr, std::string_view bytecode, std::vector<uint8_
 	else // jump out
 	{
 		size = getRealHookSize(addr, 5); // least 5+ byte size
+		storeBytes(storeAt, addr, size);
 		void* mem = (void*)codeMemoryAlloc(bytecode.size() + (writeJumpBack ? 5 : 0));
 		copyCode((uint32_t)bytecode.data(), bytecode.size(), false, (uint32_t)mem, writeJumpBack ? 1 : 0);
 		if (writeJumpBack)

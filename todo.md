@@ -12,3 +12,7 @@
 
 # Low level
 * automatically store hook restore data to abstract unhooking (see hookRestoreDataMap variable)
+* redoing asm compiling functions to two-pass system (compile, get size, alloc memory, compile again with origin at this memory), allowing to have "absolute" keyword as in MMExt
+
+# Design
+* simple "randomize item" dialog, where you would input item type, treasure level etc. and call vanilla function

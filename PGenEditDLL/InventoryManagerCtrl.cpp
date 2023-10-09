@@ -3,6 +3,7 @@
 #include "InventoryManagerCtrl.h"
 #include <wx/dataview.h>
 #include "ItemDialogBase.h"
+#include "CreateItemDialog.h"
 
 void InventoryManagerCtrl::onAddPress(wxCommandEvent& event)
 {
@@ -26,8 +27,11 @@ void InventoryManagerCtrl::onRestorePress(wxCommandEvent& event)
 
 void InventoryManagerCtrl::addItem()
 {
-    ItemDialogBase dialog(this);
-    mm7::Item item = dialog.getNewItemModal();
+    CreateItemDialog* dialog = new CreateItemDialog(this);
+    mm7::Item item = dialog->getNewItemModal();
+    ItemStoreElement elem(item);
+    // item store element ownership problem
+    inventoryCtrl->addItem(elem);
 }
 
 mm7::Item InventoryManagerCtrl::modifyItem(const mm7::Item& item)

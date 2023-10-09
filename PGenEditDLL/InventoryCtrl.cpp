@@ -223,11 +223,11 @@ bool InventoryCtrl::persistInventory(Json& json) const
             REMOVE_CHEST,
             REMOVE_PLAYER
         } removeMode;
-        if (std::holds_alternative<MapChestRef>(inventoryType))
+        if (std::holds_alternative<ItemRefMapChest>(inventoryType))
         {
             removeMode = REMOVE_CHEST;
         }
-        else if (std::holds_alternative<PlayerInventoryRef>(inventoryType))
+        else if (std::holds_alternative<ItemRefPlayerInventory>(inventoryType))
         {
             removeMode = REMOVE_PLAYER;
         }
@@ -239,7 +239,7 @@ bool InventoryCtrl::persistInventory(Json& json) const
             {
                 ItemLocationType tmp;
                 std::visit([&](auto& loc) { loc.unpersist(elem); }, tmp);
-                bool shouldRemove = (removeMode == REMOVE_CHEST && std::holds_alternative<MapChestRef>(tmp)) || (removeMode == REMOVE_PLAYER && std::holds_alternative<PlayerInventoryRef>(tmp));
+                bool shouldRemove = (removeMode == REMOVE_CHEST && std::holds_alternative<ItemRefMapChest>(tmp)) || (removeMode == REMOVE_PLAYER && std::holds_alternative<ItemRefPlayerInventory>(tmp));
                 return shouldRemove;
             });
         json.erase(r.begin(), json.end());
@@ -280,8 +280,8 @@ bool InventoryCtrl::unpersistInventory(const Json& json)
         {
             ItemStoreElement elem;
             elem.unpersist(entry);
-            hasChest = hasChest || std::holds_alternative<MapChestRef>(elem.origin);
-            hasPlayerInventory = hasPlayerInventory || std::holds_alternative<PlayerInventoryRef>(elem.origin);
+            hasChest = hasChest || std::holds_alternative<ItemRefMapChest>(elem.origin);
+            hasPlayerInventory = hasPlayerInventory || std::holds_alternative<ItemRefPlayerInventory>(elem.origin);
             elements.push_back(std::move(elem));
         }
     }
@@ -319,10 +319,10 @@ bool InventoryCtrl::reloadReferencedItems()
     ElementsContainer nextElements; // will be assigned to elements
     std::ranges::copy_if(elements, std::back_inserter(nextElements), [=](const ItemStoreElement& elem)
     {
-        return std::holds_alternative<StoredItemRef>(elem.origin);
+        return std::holds_alternative<ItemRefStored>(elem.origin);
     });
 
-    if (const MapChestRef* ref = std::get_if<MapChestRef>(&inventoryType))
+    if (const ItemRefMapChest* ref = std::get_if<ItemRefMapChest>(&inventoryType))
     {
         // add items from chest
         auto callback = [&](auto itemPtr)
@@ -330,14 +330,14 @@ bool InventoryCtrl::reloadReferencedItems()
             mm7::Item convertedItem = itemAccessor->forItem(itemPtr)->convertToMM7Item();
             if (convertedItem.number != 0)
             {
-                ItemStoreElement elem(convertedItem, { -1, -1 }, StoredItemRef{}, MapChestRef(*ref));
+                ItemStoreElement elem(convertedItem, ItemRefStored{}, ItemRefMapChest(*ref), { -1, -1 });
                 moveStoredItemToInventory(elem);
                 nextElements.push_back(std::move(elem));
             }
         };
         mapAccessor->forEachMapChestDo(callback);
     }
-    else if (const PlayerInventoryRef* ref = std::get_if<PlayerInventoryRef>(&inventoryType))
+    else if (const ItemRefPlayerInventory* ref = std::get_if<ItemRefPlayerInventory>(&inventoryType))
     {
         // add items from player
         auto callback = [&](AnyItemStruct auto* item)
@@ -345,7 +345,7 @@ bool InventoryCtrl::reloadReferencedItems()
             mm7::Item convertedItem = itemAccessor->forItem(item)->convertToMM7Item();
             if (convertedItem.number != 0)
             {
-                ItemStoreElement elem(convertedItem, { -1, -1 }, StoredItemRef{}, PlayerInventoryRef(*ref));
+                ItemStoreElement elem(convertedItem, ItemRefStored{}, ItemRefPlayerInventory(*ref), { -1, -1 });
                 moveStoredItemToInventory(elem);
                 nextElements.push_back(std::move(elem));
             }
@@ -372,7 +372,7 @@ void InventoryCtrl::onRightclick(wxMouseEvent& event)
 
 bool InventoryCtrl::moveStoredItemToInventory(ItemStoreElement& item, InventoryPosition pos)
 {
-    wxASSERT_MSG(std::holds_alternative<StoredItemRef>(item.location), "Expected item in storage");
+    wxASSERT_MSG(std::holds_alternative<ItemRefStored>(item.location), "Expected item in storage");
     auto visitor = [&](const auto& ref) {item.location = ref; }; // needed because inventoryType doesn't have stored item ref alternative
     item.pos = findFreePositionForItem(item);
     if (pos.x != -1 || item.pos.x != -1)
@@ -390,9 +390,9 @@ bool InventoryCtrl::moveStoredItemToInventory(ItemStoreElement& item, InventoryP
 
 bool InventoryCtrl::moveInventoryItemToStore(ItemStoreElement& item)
 {
-    wxASSERT_MSG(std::holds_alternative<PlayerInventoryRef>(item.location) || std::holds_alternative<MapChestRef>(item.location), "Expected item in player's or chest's inventory");
+    wxASSERT_MSG(std::holds_alternative<ItemRefPlayerInventory>(item.location) || std::holds_alternative<ItemRefMapChest>(item.location), "Expected item in player's or chest's inventory");
     item.pos = { -1, -1 };
-    item.location = StoredItemRef{};
+    item.location = ItemRefStored{};
     return true;
 }
 
@@ -406,17 +406,23 @@ ItemStoreElement* InventoryCtrl::chooseItemWithMouse(bool allowNone)
     return nullptr;
 }
 
-bool InventoryCtrl::addItem(const ItemStoreElement& item)
+bool InventoryCtrl::addItem(ItemStoreElement&& item)
 {
-    elements.push_back(item);
+    elements.push_back(std::make_unique<ItemStoreElement>(std::forward<ItemStoreElement>(item)));
     return true;
 }
 
-bool InventoryCtrl::removeItem(const ItemStoreElement& item)
+bool InventoryCtrl::addItem(const ItemStoreElement& item)
+{
+    elements.push_back(std::make_unique<ItemStoreElement>(item));
+    return true;
+}
+
+bool InventoryCtrl::removeItem(ItemStoreElement&& item)
 {
     for (size_t i = 0; i < elements.size(); ++i)
     {
-        if (item.isSameExceptPos(elements[i]))
+        if (item.isSameExceptPos(*elements[i]))
         {
             elements.erase(elements.begin() + i);
             return true;
@@ -425,7 +431,7 @@ bool InventoryCtrl::removeItem(const ItemStoreElement& item)
     return false;
 }
 
-bool InventoryCtrl::modifyItem(const ItemStoreElement& itemToModify, const ItemStoreElement& newItem)
+bool InventoryCtrl::modifyItem(const ItemStoreElement& itemToModify, ItemStoreElement&& newItem)
 {
     return false;
 }
@@ -453,7 +459,7 @@ InventoryCtrl::~InventoryCtrl()
     saveGameData.saveInventoryControl(*this);
 }
 
-ItemStoreElement::ItemStoreElement() : item{ 0 }, pos{ -1, -1 }, location{ PlayerInventoryRef{} }
+ItemStoreElement::ItemStoreElement() : item{ 0 }, pos{ -1, -1 }, location{ ItemRefPlayerInventory{} }
 {
 
 }
@@ -479,7 +485,7 @@ bool ItemStoreElement::unpersist(const Json& json)
     return true;
 }
 
-ItemStoreElement::ItemStoreElement(const mm7::Item& item, InventoryPosition pos, const ItemLocationType& location, const ItemLocationType& origin)
+ItemStoreElement::ItemStoreElement(const mm7::Item& item, const ItemLocationType& origin, const ItemLocationType& location, InventoryPosition pos)
     : item(item), pos(pos), location(location), origin(origin)
 {
 
@@ -498,7 +504,7 @@ bool ItemStoreElement::isSameExceptPos(const ItemStoreElement& other) const
     }
 }
 
-bool MapChestRef::persist(Json& json) const
+bool ItemRefMapChest::persist(Json& json) const
 {
     jsonEnsureIsObject(json);
     auto mapLower = stringToLower(mapName);
@@ -529,14 +535,14 @@ bool MapChestRef::persist(Json& json) const
     return true;
 }
 
-bool MapChestRef::unpersist(const Json& json)
+bool ItemRefMapChest::unpersist(const Json& json)
 {
     mapName = json["mapName"];
     chestId = json["chestId"];
     return true;
 }
 
-bool PlayerInventoryRef::persist(Json& json) const
+bool ItemRefPlayerInventory::persist(Json& json) const
 {
     jsonEnsureIsObject(json);
     json["type"] = ITEM_LOC_PLAYER;
@@ -544,35 +550,35 @@ bool PlayerInventoryRef::persist(Json& json) const
     return true;
 }
 
-bool PlayerInventoryRef::unpersist(const Json& json)
+bool ItemRefPlayerInventory::unpersist(const Json& json)
 {
     rosterIndex = json["rosterIndex"];
     return true;
 }
 
-bool StoredItemRef::persist(Json& json) const
+bool ItemRefStored::persist(Json& json) const
 {
     jsonEnsureIsObject(json);
     json["type"] = ITEM_LOC_STORED;
     return true;
 }
 
-bool StoredItemRef::unpersist(const Json& json)
+bool ItemRefStored::unpersist(const Json& json)
 {
     return true;
 }
 
-bool operator==(const MapChestRef& lhs, const MapChestRef& rhs)
+bool operator==(const ItemRefMapChest& lhs, const ItemRefMapChest& rhs)
 {
     return lhs.chestId == rhs.chestId && stringToLower(lhs.mapName) == stringToLower(rhs.mapName);
 }
 
-bool operator==(const PlayerInventoryRef& lhs, const PlayerInventoryRef& rhs)
+bool operator==(const ItemRefPlayerInventory& lhs, const ItemRefPlayerInventory& rhs)
 {
     return lhs.rosterIndex == rhs.rosterIndex;
 }
 
-bool operator==(const StoredItemRef& lhs, const StoredItemRef& rhs)
+bool operator==(const ItemRefStored& lhs, const ItemRefStored& rhs)
 {
     return true;
 }

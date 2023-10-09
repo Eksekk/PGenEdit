@@ -178,6 +178,8 @@ int bitwiseUnsignedToInt(uint32_t val);
 #define sdword(addr) (*(int32_t*)(addr))
 #define sqword(addr) (*(int64_t*)(addr))
 
+uint32_t relJumpCallTarget(uint32_t addr);
+
 // sets a call/jump hook (5-byte instruction) at given address transferring
 // control into given func, hook size can be given or omitted (5 assumed)
 void hookCallRaw(uint32_t addr, void* func, std::vector<uint8_t>* storeAt, uint32_t size = 5);
@@ -243,7 +245,7 @@ void codeMemoryFree(void* addr);
 // unallocates all memory allocated for code
 void codeMemoryFullFree();
 
-// copies code
+// copies code, fixing calls and jumps
 uint32_t copyCode(uint32_t source, uint32_t size, bool writeJumpBack = true, uint32_t dest = 0, uint32_t canJumpAfterCodeBytes = 0);
 
 using CodeReplacementArg = std::variant<uint32_t, int32_t, std::string, void*>;

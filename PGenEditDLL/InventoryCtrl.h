@@ -5,7 +5,7 @@
 
 extern const std::string ITEM_LOC_STORED, ITEM_LOC_CHEST, ITEM_LOC_PLAYER;
 
-struct MapChestRef
+struct ItemRefMapChest
 {
     std::string mapName;
     int chestId;
@@ -14,7 +14,7 @@ struct MapChestRef
     bool unpersist(const Json& json);
 };
 
-struct PlayerInventoryRef
+struct ItemRefPlayerInventory
 {
     int rosterIndex;
 
@@ -22,26 +22,27 @@ struct PlayerInventoryRef
     bool unpersist(const Json& json);
 };
 
-struct StoredItemRef
+struct ItemRefStored
 {
     bool persist(Json& json) const;
     bool unpersist(const Json& json);
 };
 
-static bool operator==(const MapChestRef& lhs, const MapChestRef& rhs);
-static bool operator==(const PlayerInventoryRef& lhs, const PlayerInventoryRef& rhs);
-static bool operator==(const StoredItemRef& lhs, const StoredItemRef& rhs);
+static bool operator==(const ItemRefMapChest& lhs, const ItemRefMapChest& rhs);
+static bool operator==(const ItemRefPlayerInventory& lhs, const ItemRefPlayerInventory& rhs);
+static bool operator==(const ItemRefStored& lhs, const ItemRefStored& rhs);
 
 struct InventoryPosition
 {
     int x, y;
 };
 
-using ItemLocationType = std::variant<StoredItemRef, MapChestRef, PlayerInventoryRef>;
-using InventoryType = std::variant<MapChestRef, PlayerInventoryRef>;
+using ItemLocationType = std::variant<ItemRefStored, ItemRefMapChest, ItemRefPlayerInventory>;
+using InventoryType = std::variant<ItemRefMapChest, ItemRefPlayerInventory>;
 
 struct ItemStoreElement
 {
+private:
     mm7::Item item; // mm7 item, because it has all required fields
     InventoryPosition pos;
     // TODO: automatically calculate cell width
@@ -52,7 +53,7 @@ struct ItemStoreElement
     bool persistItem(Json& json) const;
     bool unpersistItem(const Json& json);
     ItemStoreElement();
-    ItemStoreElement(const mm7::Item& item, InventoryPosition pos, const ItemLocationType& location, const ItemLocationType& origin);
+    ItemStoreElement(const mm7::Item& item, const ItemLocationType& origin = ItemRefStored{}, const ItemLocationType& location = ItemRefStored{}, InventoryPosition pos = {-1, -1});
 
     bool persist(Json& json) const;
     bool unpersist(const Json& json);
@@ -60,7 +61,7 @@ struct ItemStoreElement
     bool isSameExceptPos(const ItemStoreElement& other) const;
 };
 
-using ElementsContainer = std::vector<ItemStoreElement>;
+using ElementsContainer = std::vector<std::unique_ptr<ItemStoreElement>>;
 using ItemsVariant = std::variant<mm6::Item*, mm7::Item*, mm8::Item*>;
 
 class InventoryCtrl : public wxWindow
@@ -97,9 +98,10 @@ public:
     bool moveInventoryItemToStore(ItemStoreElement& item); // same as above
     ItemStoreElement* getMouseoverItem(); // pointer to allow null value (no item at mouse position) | FIXMEEEE: vector reallocation will cause problems if code holds valid pointer for long
     ItemStoreElement* chooseItemWithMouse(bool allowNone = true); // enters item selecting mode, after clicking returns clicked item
+    bool addItem(ItemStoreElement&& item);
     bool addItem(const ItemStoreElement& item);
-    bool removeItem(const ItemStoreElement& item);
-    bool modifyItem(const ItemStoreElement& itemToModify, const ItemStoreElement& newItem);
+    bool removeItem(ItemStoreElement&& item);
+    bool modifyItem(const ItemStoreElement& itemToModify, ItemStoreElement&& newItem);
 
     InventoryPosition findFreePositionForItem(const ItemStoreElement& elem);
     bool canItemBePlacedAtPosition(const ItemStoreElement& elem, InventoryPosition pos);
@@ -120,20 +122,20 @@ template<typename Variant> bool InventoryCtrl::unpersistItemLocationVariant(Vari
         std::string type = stringToLower(json["type"]);
         if (type == ITEM_LOC_CHEST)
         {
-            MapChestRef ref;
-            ref.unpersist(json, std::get<MapChestRef>(inventoryType));
+            ItemRefMapChest ref;
+            ref.unpersist(json, std::get<ItemRefMapChest>(inventoryType));
             loc = ref;
         }
         else if (type == ITEM_LOC_PLAYER)
         {
-            PlayerInventoryRef ref;
+            ItemRefPlayerInventory ref;
             ref.unpersist(json);
             loc = ref;
         }
         else if (type == ITEM_LOC_STORED)
         {
             // to have consistent code
-            StoredItemRef ref;
+            ItemRefStored ref;
             ref.unpersist(json);
             loc = ref;
         }

@@ -1104,8 +1104,6 @@ std::vector<wxString> HookTests::testAsmHookFunctions()
 
     std::string_view patch2Compiled = compileAsm(std::string(patch2));
 
-    auto relJumpCallTarget = [](uint32_t addr) -> uint32_t { return addr + 5 + sdword(addr + 1); };
-
     hook.disable();
     hook.elements[0] = std::move(HookElementBuilder().address((uint32_t)compiledAsmpatchCode.data() + 2).type(HOOK_ELEM_TYPE_ASMPATCH).asmText(patch1.data()).size(patch1Compiled.size()).build());
     hook.enable();
@@ -1166,7 +1164,7 @@ std::vector<wxString> HookTests::testAsmHookFunctions()
                 myassertf(memcmp(first, &fullBackup[patchEnd], data.funcSize - patchEnd) == 0, "[Asmpatch predefined test #%d] bytes after patch are changed", i);
             }
             // test that only provided bytes are changed
-            patchBytes((uint32_t)func, fullBackup.data(), fullBackup.size(), nullptr);
+            unhookAsmpatch(addr, asmpatchBackup, newCode);
             // more...
             ++i;
         }

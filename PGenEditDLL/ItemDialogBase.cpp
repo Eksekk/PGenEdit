@@ -43,21 +43,6 @@ ItemDialogBase::ItemDialogBase(wxWindow* parent, wxWindowID id, const wxString& 
 
     sizerMain->Add(0, 15, 0, wxEXPAND, 5);
 
-    wxBoxSizer* sizerItemCount;
-    sizerItemCount = new wxBoxSizer(wxHORIZONTAL);
-
-    labelItemCount = new wxStaticText(this, wxID_ANY, _("Count:"), wxDefaultPosition, wxDefaultSize, 0);
-    labelItemCount->Wrap(-1);
-    sizerItemCount->Add(labelItemCount, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
-
-    sliderItemCount = new wxSlider(this, wxID_ANY, 1, 1, 20, wxDefaultPosition, wxDefaultSize, wxSL_HORIZONTAL | wxSL_VALUE_LABEL);
-    sliderItemCount->SetMinSize(wxSize(300, -1));
-
-    sizerItemCount->Add(sliderItemCount, 0, wxALL, 5);
-
-
-    sizerMain->Add(sizerItemCount, 1, wxEXPAND, 5);
-
     createEnchantmentsStaticBox();
 
     sizerMain->Add(sizerEnchantments, 1, wxEXPAND, 5);
@@ -461,12 +446,6 @@ mm7::Item ItemDialogBase::buildItemFromControlValues()
         item.stolen = checkboxStolen->IsChecked();
     }
     return item;
-}
-
-mm7::Item ItemDialogBase::getNewItemModal()
-{
-    ShowModal();
-    return buildItemFromControlValues();
 }
 
 mm7::Item ItemDialogBase::editItemModal(const mm7::Item& item)

@@ -279,6 +279,7 @@ const StructVector arraysMerge =
 
 void fillGameStaticPointersAndSizes()
 {
+    int stackPos = lua_gettop(Lua);
 	luaWrapper.getPath("internal.GetArrayUpval");
 	StructVector singleGameSpecific = mmv(arraysMm6, arraysMm7, arraysMm8);
 	std::ranges::copy(mmv(arraysBase<mm6::Game>, arraysBase<mm7::Game>, arraysBase<mm8::Game>), std::back_inserter(singleGameSpecific));
@@ -287,7 +288,6 @@ void fillGameStaticPointersAndSizes()
 		std::ranges::copy(arraysMerge, std::back_inserter(singleGameSpecific));
 	}
 
-	int stackPos = lua_gettop(Lua);
 	for (auto& [path, dataPtr, sizeVariant, customType] : singleGameSpecific)
 	{
 		luaWrapper.getPath(path);

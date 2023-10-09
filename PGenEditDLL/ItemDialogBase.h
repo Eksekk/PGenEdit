@@ -36,11 +36,50 @@ class wxGridBagSizer;
 class ItemDialogBase : public wxDialog
 {
 private:
-
+    template<typename T>
+    bool insertAfterBeforeWindow(wxSizer* sizer, const T* before, wxSizerItem&& item, bool after)
+    {
+        const wxSizerItemList& list = sizer->GetChildren();
+        for (int i = 0; i < sizer->GetItemCount(); ++i)
+        {
+            const T* ptr = dynamic_cast<const T*>(list[i]);
+            if (ptr && ptr == before)
+            {
+                sizer->Insert(i + (after ? 1 : 0), &item);
+                return true;
+            }
+        }
+        return false;
+    }
 protected:
+    // rvalue reference to allow both temporaries (spacer) and modifiable lvalues
+    template<typename T>
+    bool insertBeforeWindow(wxSizer* sizer, const T* before, wxSizerItem&& item)
+    {
+        return insertAfterBeforeWindow(sizer, before, std::forward<wxSizerItem>(item), false);
+    }
+    template<typename T>
+    bool insertAfterWindow(wxSizer* sizer, const T* before, wxSizerItem&& item)
+    {
+        return insertAfterBeforeWindow(sizer, before, std::forward<wxSizerItem>(item), true);
+    }
+    // generator
+    wxCheckBox* checkboxItemIsFree;
+    wxCheckBox* checkboxWandChargesVaryWithStrength;
+    wxStaticText* m_staticText151;
+    wxSlider* sliderLowMaxCharges;
+    wxStaticText* m_staticText161;
+    wxSlider* sliderHighMaxCharges;
+
+    // generator
+    //wxStaticText* labelItemCount;
+    //wxSlider* sliderItemCount;
+
+    // create & edit
+    mm7::Item editItemModal(const mm7::Item& item);
+
     ItemTableViewModel* itemTableViewModel;
     // window content
-    wxCheckBox* checkboxItemIsFree;
     wxCheckBox* checkboxUseFilters;
     wxButton* buttonResetFilters;
     wxStaticText* labelItemCategory;
@@ -63,8 +102,6 @@ protected:
     wxDataViewColumn* colMaterial;
     wxDataViewColumn* colExtra;
     wxDataViewColumn* colImage;
-    wxStaticText* labelItemCount;
-    wxSlider* sliderItemCount;
     wxRadioButton* radioNoEnchantment;
     wxRadioButton* radioStandardEnchantment;
     wxStaticText* labelStandardEnchantmentType;
@@ -93,11 +130,6 @@ protected:
     wxSpinCtrl* valueMinutes;
     wxStaticText* m_staticText14;
     wxCheckBox* checkboxWandChargesManualAmount;
-    wxCheckBox* checkboxWandChargesVaryWithStrength;
-    wxStaticText* m_staticText151;
-    wxSlider* sliderLowMaxCharges;
-    wxStaticText* m_staticText161;
-    wxSlider* sliderHighMaxCharges;
     wxStaticText* m_staticText171;
     wxSlider* sliderChargesPercentage;
     wxPanel* panelFilters; // will contain controls to disable/enable all of them with single method call
@@ -113,13 +145,13 @@ protected:
     wxStaticBoxSizer* filtersSizer;
     wxBoxSizer* filterButtonsSizer;
 
-    void createItemConditionTemporaryBonusPanel();
-    void createWandSettings();
-    void createEnchantmentsStaticBox();
-    void createItemFilters();
-    void reapplyFilters();
-    void setControlsEnabledState();
-    void setControlValuesFromItem(const mm7::Item& item);
+    virtual void createItemConditionTemporaryBonusPanel();
+    virtual void createWandSettings();
+    virtual void createEnchantmentsStaticBox();
+    virtual void createItemFilters();
+    virtual void reapplyFilters();
+    virtual void setControlsEnabledState();
+    virtual void setControlValuesFromItem(const mm7::Item& item);
     mm7::Item buildItemFromControlValues();
 public:
 
@@ -130,9 +162,6 @@ public:
     };
     Mode mode;
     ItemDialogBase(wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = _("Create item"), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize(791, 794), long style = wxDEFAULT_DIALOG_STYLE);
-
-    mm7::Item getNewItemModal();
-    mm7::Item editItemModal(const mm7::Item& item);
 
     ~ItemDialogBase();
 
