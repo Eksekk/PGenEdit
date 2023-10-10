@@ -279,7 +279,7 @@ const StructVector arraysMerge =
 
 void fillGameStaticPointersAndSizes()
 {
-    int stackPos = lua_gettop(Lua);
+	int origStack = lua_gettop(Lua);
 	luaWrapper.getPath("internal.GetArrayUpval");
 	StructVector singleGameSpecific = mmv(arraysMm6, arraysMm7, arraysMm8);
 	std::ranges::copy(mmv(arraysBase<mm6::Game>, arraysBase<mm7::Game>, arraysBase<mm8::Game>), std::back_inserter(singleGameSpecific));
@@ -289,7 +289,8 @@ void fillGameStaticPointersAndSizes()
 	}
 
 	for (auto& [path, dataPtr, sizeVariant, customType] : singleGameSpecific)
-	{
+    {
+        int stackPos = lua_gettop(Lua);
 		luaWrapper.getPath(path);
 		if (!customType) // otherwise path directly refers to offset
 		{
@@ -321,7 +322,7 @@ void fillGameStaticPointersAndSizes()
 			if (error)
 			{
 				wxLogFatalError("Error while trying to get lenP of '%s' array: %s", path, lua_tostring(Lua, -1));
-				lua_settop(Lua, stackPos);
+				lua_settop(Lua, origStack);
 				return;
 			}
 			sizePtr->get() = reinterpret_cast<uint32_t*>((uint32_t)lua_tonumber(Lua, -1));
@@ -339,8 +340,8 @@ void fillGameStaticPointersAndSizes()
             int error = lua_pcall(Lua, 2, 1, 0);
             if (error)
             {
-                wxLogFatalError("Error while trying to get count of '%s' array: %s", path, lua_tostring(Lua, -1));
-                lua_settop(Lua, stackPos);
+                wxLogError("Error while trying to get count of '%s' array: %s", path, lua_tostring(Lua, -1));
+				lua_settop(Lua, origStack);
                 return;
             }
 			size->get() = lua_tonumber(Lua, -1);
@@ -355,7 +356,7 @@ void fillGameStaticPointersAndSizes()
 			path, (uint32_t)dataPtr, std::holds_alternative<std::reference_wrapper<uint32_t*>>(sizeVariant) ? "sizePtr" : "size", sizeValue
 		));
 	}
-	lua_settop(Lua, stackPos - 1);
+	lua_settop(Lua, origStack);
 }
 
 extern "C" static int saveGameHandler(lua_State* L)

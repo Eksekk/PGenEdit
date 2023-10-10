@@ -34,8 +34,9 @@ ItemDialogBase::ItemDialogBase(wxWindow* parent, wxWindowID id, const wxString& 
     colImage = itemTable->AppendIconTextColumn(_("Image"), wxDATAVIEW_CELL_INERT, -1, static_cast<wxAlignment>(wxALIGN_LEFT), wxDATAVIEW_COL_RESIZABLE);
 
     itemTableViewModel = new ItemTableViewModel(*this);
-    itemTableViewModel->DecRef();
+    // NECESSARILY before DecRef() call
     itemTable->AssociateModel(itemTableViewModel);
+    itemTableViewModel->DecRef();
     sizerChooseItem->Add(itemTable, 0, wxALL | wxEXPAND, 5);
 
     sizerMain->Add(sizerChooseItem, 1, wxEXPAND, 5);
@@ -290,23 +291,28 @@ void ItemDialogBase::createEnchantmentsStaticBox()
 }
 void ItemDialogBase::createItemFilters()
 {
-    filtersSizer = new wxStaticBoxSizer(new wxStaticBox(this, wxID_ANY, _("Filter item list")), wxVERTICAL);
+    sizerFiltersMain = new wxStaticBoxSizer(new wxStaticBox(this, wxID_ANY, _("Filter item list")), wxVERTICAL);
 
     filterButtonsSizer = new wxBoxSizer(wxHORIZONTAL);
 
-    checkboxUseFilters = new wxCheckBox(filtersSizer->GetStaticBox(), wxID_ANY, _("Enable filters"), wxDefaultPosition, wxDefaultSize, 0);
+    checkboxUseFilters = new wxCheckBox(sizerFiltersMain->GetStaticBox(), wxID_ANY, _("Enable filters"), wxDefaultPosition, wxDefaultSize, 0);
     filterButtonsSizer->Add(checkboxUseFilters, 0, wxALIGN_CENTER_VERTICAL | wxALL, 5);
 
-    buttonResetFilters = new wxButton(filtersSizer->GetStaticBox(), wxID_ANY, _("Reset"), wxDefaultPosition, wxDefaultSize, 0);
+    buttonResetFilters = new wxButton(sizerFiltersMain->GetStaticBox(), wxID_ANY, _("Reset"), wxDefaultPosition, wxDefaultSize, 0);
     filterButtonsSizer->Add(buttonResetFilters, 0, wxALL, 5);
 
 
-    filtersSizer->Add(filterButtonsSizer, 1, wxEXPAND, 5);
+    sizerFiltersMain->Add(filterButtonsSizer, 1, wxEXPAND, 5);
 
-    panelFilters = new wxPanel(filtersSizer->GetStaticBox());
+    panelFilters = new wxPanel(sizerFiltersMain->GetStaticBox());
+    sizerFiltersMain->Add(panelFilters);
     wxBoxSizer* sizerFiltersPanel = new wxBoxSizer(wxVERTICAL);
+    panelFilters->SetSizer(sizerFiltersPanel);
 
-    filtersSizer->Add(sizerFiltersPanel);
+    //sizerFiltersMain->Add(panelFilters);
+
+    //sizerFiltersMain->Add(sizerFiltersPanel);
+    // TOOLTIPS SHOW IN DIALOG
 
     wxBoxSizer* sizerItemFilterCategorySkill;
     sizerItemFilterCategorySkill = new wxBoxSizer(wxHORIZONTAL);
@@ -389,7 +395,7 @@ void ItemDialogBase::createItemFilters()
     sizerFiltersPanel->Add(sizerFilterLowestRow, 1, wxEXPAND, 5);
 
 
-    sizerMain->Add(filtersSizer, 0, wxEXPAND, 5);
+    sizerMain->Add(sizerFiltersMain, 0, wxEXPAND, 5);
 
 
     sizerMain->Add(0, 5, 0, wxEXPAND, 5);

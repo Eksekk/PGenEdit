@@ -7,7 +7,7 @@ mm7::Item CreateItemDialog::getNewItemModal()
     return buildItemFromControlValues();
 }
 
-CreateItemDialog::CreateItemDialog(wxWindow* parent) : ItemDialogBase(this)
+CreateItemDialog::CreateItemDialog(wxWindow* parent) : ItemDialogBase(parent)
 {
     wxBoxSizer* sizerItemCount;
     sizerItemCount = new wxBoxSizer(wxHORIZONTAL);
@@ -20,6 +20,7 @@ CreateItemDialog::CreateItemDialog(wxWindow* parent) : ItemDialogBase(this)
     sliderItemCount->SetMinSize(wxSize(300, -1));
 
     sizerItemCount->Add(sliderItemCount, 0, wxALL, 5);
-    assert(insertBeforeWindow(sizerMain, sizerEnchantments, sizerItemCount));
-    assert(insertBeforeWindow(sizerMain, sizerEnchantments, wxSizerItem(0, 15, 0, wxEXPAND, 5)));
+    // CRASHES
+    //assert(insertBeforeWindow(sizerMain, sizerEnchantments, sizerItemCount));
+    //assert(insertBeforeWindow(sizerMain, sizerEnchantments, wxSizerItem(0, 15, 0, wxEXPAND, 5)));
 }

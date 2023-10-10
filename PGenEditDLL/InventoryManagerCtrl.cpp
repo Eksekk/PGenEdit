@@ -7,6 +7,7 @@
 
 void InventoryManagerCtrl::onAddPress(wxCommandEvent& event)
 {
+    addItem();
 }
 
 void InventoryManagerCtrl::onDeletePress(wxCommandEvent& event)

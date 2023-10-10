@@ -346,7 +346,7 @@ bool InventoryCtrl::reloadReferencedItems()
             if (convertedItem.number != 0)
             {
                 // for make_unique need to explicitly specify InventoryPosition type, since it doesn't know that it's not an initializer list
-                auto elem = std::make_unique<ItemStoreElement>(convertedItem, ItemRefStored{}, ItemRefPlayerInventory(*ref), InventoryPosition{ -1, -1 });
+                auto elem = std::make_unique<ItemStoreElement>(convertedItem, ItemRefPlayerInventory(*ref), ItemRefStored{}, InventoryPosition{ -1, -1 });
                 moveStoredItemToInventory(*elem);
                 nextElements.push_back(std::move(elem));
             }

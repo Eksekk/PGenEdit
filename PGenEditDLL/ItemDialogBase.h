@@ -42,7 +42,16 @@ private:
         const wxSizerItemList& list = sizer->GetChildren();
         for (int i = 0; i < sizer->GetItemCount(); ++i)
         {
-            const T* ptr = dynamic_cast<const T*>(list[i]);
+            const T* ptr = nullptr;
+            if constexpr (std::is_base_of_v<wxWindow, T>)
+            {
+                ptr = dynamic_cast<const T*>(list[i]->GetWindow());
+            }
+            else if constexpr (std::is_base_of_v<wxSizer, T>)
+            {
+                ptr = dynamic_cast<const T*>(list[i]->GetSizer());
+            }
+
             if (ptr && ptr == before)
             {
                 sizer->Insert(i + (after ? 1 : 0), &item);
@@ -142,7 +151,7 @@ protected:
     wxBoxSizer* sizerMaxCharges;
     wxStaticBoxSizer* sizerCondition;
     wxStaticBoxSizer* sizerTemporaryBonus;
-    wxStaticBoxSizer* filtersSizer;
+    wxStaticBoxSizer* sizerFiltersMain;
     wxBoxSizer* filterButtonsSizer;
 
     virtual void createItemConditionTemporaryBonusPanel();
