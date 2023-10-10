@@ -2,7 +2,7 @@
 #include "EditorItemsPanel.h"
 #include "SaveGameData.h"
 
-EditorItemsPanel::EditorItemsPanel(wxWindow* parent, int CELLS_ROW, int CELLS_COL, InventoryType&& inventoryType, const ElementsContainer& elements, int playerIndex, int rosterIndex)
+EditorItemsPanel::EditorItemsPanel(wxWindow* parent, int CELLS_ROW, int CELLS_COL, InventoryType&& inventoryType, int playerIndex, int rosterIndex)
     : wxScrolledWindow(parent), EditorPlayerPanel(playerIndex, rosterIndex)
 {
     Freeze();
@@ -11,7 +11,7 @@ EditorItemsPanel::EditorItemsPanel(wxWindow* parent, int CELLS_ROW, int CELLS_CO
     Bind(wxEVT_ACTIVATE, &EditorItemsPanel::onActivateWindow, this);
     wxBoxSizer* sizer = new wxBoxSizer(wxVERTICAL);
     SetSizer(sizer);
-    inventoryManagerCtrl = new InventoryManagerCtrl(this, CELLS_ROW, CELLS_COL, std::forward<InventoryType>(inventoryType), elements);
+    inventoryManagerCtrl = new InventoryManagerCtrl(this, CELLS_ROW, CELLS_COL, std::forward<InventoryType>(inventoryType));
     sizer->Add(inventoryManagerCtrl, wxSizerFlags(0).Expand().Border(wxALL, 5));
 
     Layout();

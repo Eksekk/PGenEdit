@@ -27,11 +27,10 @@ void InventoryManagerCtrl::onRestorePress(wxCommandEvent& event)
 
 void InventoryManagerCtrl::addItem()
 {
-    CreateItemDialog* dialog = new CreateItemDialog(this);
-    mm7::Item item = dialog->getNewItemModal();
-    ItemStoreElement elem(item);
+    CreateItemDialog dialog(this);
+    mm7::Item item = dialog.getNewItemModal();
     // item store element ownership problem
-    inventoryCtrl->addItem(elem);
+    inventoryCtrl->addItem(item);
 }
 
 mm7::Item InventoryManagerCtrl::modifyItem(const mm7::Item& item)
@@ -40,8 +39,8 @@ mm7::Item InventoryManagerCtrl::modifyItem(const mm7::Item& item)
 }
 
 // PASSING RVALUE REFERENCES REQUIRES std::forward
-InventoryManagerCtrl::InventoryManagerCtrl(wxWindow* parent, int CELLS_ROW, int CELLS_COL, InventoryType&& inventoryType, const ElementsContainer& elements)
-    : wxPanel(parent), inventoryCtrl(new InventoryCtrl(this, CELLS_ROW, CELLS_COL, std::forward<InventoryType>(inventoryType), elements))
+InventoryManagerCtrl::InventoryManagerCtrl(wxWindow* parent, int CELLS_ROW, int CELLS_COL, InventoryType&& inventoryType)
+    : wxPanel(parent), inventoryCtrl(new InventoryCtrl(this, CELLS_ROW, CELLS_COL, std::forward<InventoryType>(inventoryType)))
 {
     wxBoxSizer* itemsMainSizer = new wxBoxSizer(wxVERTICAL);
     this->SetSizer(itemsMainSizer);

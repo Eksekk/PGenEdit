@@ -12,7 +12,7 @@ class EditorItemsPanel : public EditorPlayerPanel, public wxScrolledWindow
 public:
     InventoryManagerCtrl* inventoryManagerCtrl;
 
-    EditorItemsPanel(wxWindow* parent, int CELLS_ROW, int CELLS_COL, InventoryType&& inventoryType, const ElementsContainer& elements, int playerIndex, int rosterIndex);
+    EditorItemsPanel(wxWindow* parent, int CELLS_ROW, int CELLS_COL, InventoryType&& inventoryType, int playerIndex, int rosterIndex);
     ~EditorItemsPanel();
 
     // Inherited via EditorPlayerPanel

@@ -3,30 +3,31 @@
 #include "main.h"
 #include "StructAccessor.h"
 #include "LuaFunctions.h"
+#include "ItemStructAccessor.h"
 
 template<typename Map>
 class TemplatedMapStructAccessor;
 class MapStructAccessor;
 extern MapStructAccessor* mapAccessor;
 
-class MapStructAccessor
+class MapStructAccessor : public StructAccessorGenericFor
 {
 public:
     // any map
     template<typename Function>
-    static void forEachChestDo(void* chestsPtr, int n, Function func)
+    static void forEachChestDo(void* chestsPtr, int n, Function&& func)
     {
         if (MMVER == 6)
         {
-            TemplatedMapStructAccessor<mm6::GameMap>::forEachChestDo(chestsPtr, n, func);
+            TemplatedMapStructAccessor<mm6::GameMap>::forEachChestDo(chestsPtr, n, std::forward<Function>(func));
         }
         else if (MMVER == 7)
         {
-            TemplatedMapStructAccessor<mm7::GameMap>::forEachChestDo(chestsPtr, n, func);
+            TemplatedMapStructAccessor<mm7::GameMap>::forEachChestDo(chestsPtr, n, std::forward<Function>(func));
         }
         else if (MMVER == 8)
         {
-            TemplatedMapStructAccessor<mm8::GameMap>::forEachChestDo(chestsPtr, n, func);
+            TemplatedMapStructAccessor<mm8::GameMap>::forEachChestDo(chestsPtr, n, std::forward<Function>(func));
         }
         else
         {
@@ -34,25 +35,74 @@ public:
         }
     }
 
+    template<typename Function>
+    static void forChestDo(void* chestsPtr, Function&& func)
+    {
+        return forEachChestDo(chestsPtr, 1, std::forward<Function>(func));
+    }
+
+    template<typename Function>
+    static void forEachChestItemDo(void* chestsPtr, int n, Function&& func)
+    {
+        auto funcWrapper = [&](auto* chestPtr)
+            {
+                itemAccessor->forEachItemDo(chestPtr->items, n, std::forward<Function>(func));
+            };
+        
+        forEachChestDo(chestsPtr, n, funcWrapper);
+    }
+
     // current map only
     template<typename Function>
-    static void forEachMapChestDo(Function func)
+    static void forEachMapChestDo(Function&& func)
     {
         if (MMVER == 6)
         {
-            TemplatedMapStructAccessor<mm6::GameMap>::forEachMapChestDo(func);
+            TemplatedMapStructAccessor<mm6::GameMap>::forEachMapChestDo(std::forward<Function>(func));
         }
         else if (MMVER == 7)
         {
-            TemplatedMapStructAccessor<mm7::GameMap>::forEachMapChestDo(func);
+            TemplatedMapStructAccessor<mm7::GameMap>::forEachMapChestDo(std::forward<Function>(func));
         }
         else if (MMVER == 8)
         {
-            TemplatedMapStructAccessor<mm8::GameMap>::forEachMapChestDo(func);
+            TemplatedMapStructAccessor<mm8::GameMap>::forEachMapChestDo(std::forward<Function>(func));
         }
     }
 
+    template<typename Function>
+    static void forEachMapChestItemDo(Function&& func)
+    {
+        auto funcWrapper = [&](auto* chestPtr)
+            {
+                itemAccessor->forEachItemDo(chestPtr->items, chestPtr->items.size(), std::forward<Function>(func));
+            };
+
+        forEachMapChestDo(funcWrapper);
+    }
+    
+    template<typename Function>
+    static void forMapChestIndexDo(int index, Function&& func)
+    {
+        ArrayData data = mapAccessor->getMapChestsArrayData();
+        StructAccessorGenericFor::genericForSingleArrayIndexExecute<Function, mm6::MapChest, mm7::MapChest, mm8::MapChest>(data.ptr(), index, std::forward<Function>(func));
+    }
+
+    // FIXME: allow loading data of any map
+    template<typename Function>
+    static void forMapChestIndexItemsDo(int index, Function&& func)
+    {
+        auto wrapperFunc = [&](AnyMapChestStruct auto* chestPtr)
+            {
+                itemAccessor->forEachItemDo(chestPtr, chestPtr->items.size(), std::forward<Function>(func));
+            };
+        forMapChestIndexDo(index, wrapperFunc);
+    }
+
     virtual std::string getName() const = 0;
+    virtual ArrayData getMapChestsArrayData() = 0;
+    virtual ArrayData getMapMonstersArrayData() = 0;
+
     virtual ~MapStructAccessor();
 };
 
@@ -97,6 +147,16 @@ public:
         }
         lua_pop(Lua, 1);
         return (const char*)map->name.data();
+    }
+
+    // Inherited via MapStructAccessor
+    ArrayData getMapChestsArrayData() override
+    {
+        return ArrayData(map->chests.data(), map->chests.size());
+    }
+    ArrayData getMapMonstersArrayData() override
+    {
+        return ArrayData(map->monsters);
     }
 };
 

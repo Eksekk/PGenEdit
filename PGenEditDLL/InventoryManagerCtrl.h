@@ -34,7 +34,7 @@ public:
     // not instance and not smart pointer, because wxWidgets auto-deletes all windows and so it'd be deleted twice
     InventoryCtrl* const inventoryCtrl;
 
-    InventoryManagerCtrl(wxWindow* parent, int CELLS_ROW, int CELLS_COL, InventoryType&& inventoryType, const ElementsContainer& elements = ElementsContainer());
+    InventoryManagerCtrl(wxWindow* parent, int CELLS_ROW, int CELLS_COL, InventoryType&& inventoryType);
     ~InventoryManagerCtrl();
 
     bool persist(Json& json) const;

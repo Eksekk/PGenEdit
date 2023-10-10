@@ -5,7 +5,7 @@
 struct ArrayData // TODO: wrap all suitable dynamic arrays inside this class
 {
 private:
-    std::variant<int, int*, uint32_t*> countVariant;
+    std::variant<int, int*, uint32_t, uint32_t*> countVariant;
     void* myPtr;
 public:
 
@@ -33,6 +33,13 @@ public:
     }
 
     template<typename T>
+    ArrayData(T* data, uint32_t count)
+    {
+        myPtr = data;
+        countVariant = count;
+    }
+
+    template<typename T>
     ArrayData(T* data, uint32_t* count)
     {
         myPtr = data;
@@ -53,6 +60,10 @@ public:
         else if (int* const * val = std::get_if<int*>(&countVariant))
         {
             return **val;
+        }
+        else if (const uint32_t* val = std::get_if<uint32_t>(&countVariant))
+        {
+            return *val;
         }
         else if (uint32_t* const* val = std::get_if<uint32_t*>(&countVariant))
         {

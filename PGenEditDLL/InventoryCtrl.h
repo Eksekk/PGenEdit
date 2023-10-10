@@ -42,7 +42,6 @@ using InventoryType = std::variant<ItemRefMapChest, ItemRefPlayerInventory>;
 
 struct ItemStoreElement
 {
-private:
     mm7::Item item; // mm7 item, because it has all required fields
     InventoryPosition pos;
     // TODO: automatically calculate cell width
@@ -52,17 +51,20 @@ private:
 
     bool persistItem(Json& json) const;
     bool unpersistItem(const Json& json);
-    ItemStoreElement();
-    ItemStoreElement(const mm7::Item& item, const ItemLocationType& origin = ItemRefStored{}, const ItemLocationType& location = ItemRefStored{}, InventoryPosition pos = {-1, -1});
 
     bool persist(Json& json) const;
     bool unpersist(const Json& json);
 
     bool isSameExceptPos(const ItemStoreElement& other) const;
+    ItemStoreElement();
+    ItemStoreElement(const mm7::Item& item, const ItemLocationType& origin = ItemRefStored{}, const ItemLocationType& location = ItemRefStored{}, InventoryPosition pos = { -1, -1 });
+private:
+    friend class InventoryCtrl;
 };
 
 using ElementsContainer = std::vector<std::unique_ptr<ItemStoreElement>>;
 using ItemsVariant = std::variant<mm6::Item*, mm7::Item*, mm8::Item*>;
+using ItemStoreElementPtr = std::unique_ptr<ItemStoreElement>;
 
 class InventoryCtrl : public wxWindow
 {
@@ -98,15 +100,14 @@ public:
     bool moveInventoryItemToStore(ItemStoreElement& item); // same as above
     ItemStoreElement* getMouseoverItem(); // pointer to allow null value (no item at mouse position) | FIXMEEEE: vector reallocation will cause problems if code holds valid pointer for long
     ItemStoreElement* chooseItemWithMouse(bool allowNone = true); // enters item selecting mode, after clicking returns clicked item
-    bool addItem(ItemStoreElement&& item);
-    bool addItem(const ItemStoreElement& item);
+    ItemStoreElement* addItem(const mm7::Item& item, const ItemLocationType& origin = ItemRefStored{}, const ItemLocationType& location = ItemRefStored{}, InventoryPosition pos = { -1, -1 });
     bool removeItem(ItemStoreElement&& item);
     bool modifyItem(const ItemStoreElement& itemToModify, ItemStoreElement&& newItem);
 
     InventoryPosition findFreePositionForItem(const ItemStoreElement& elem);
     bool canItemBePlacedAtPosition(const ItemStoreElement& elem, InventoryPosition pos);
 
-    InventoryCtrl(wxWindow* parent, int CELLS_ROW, int CELLS_COL, InventoryType&& inventoryType, const ElementsContainer& elements = ElementsContainer());
+    InventoryCtrl(wxWindow* parent, int CELLS_ROW, int CELLS_COL, InventoryType&& inventoryType);
     ~InventoryCtrl();
 
     InventoryCtrl() = delete;

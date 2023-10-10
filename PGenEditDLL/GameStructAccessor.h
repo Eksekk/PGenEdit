@@ -53,11 +53,11 @@ public:
 	virtual ArrayData getStdItemsTxtArrayData() override
 	{
 		return ArrayData(game->stdItemsTxt, game->stdItemsTxt_size);
-	}
-	virtual ArrayData getSpcItemsTxtArrayData() override
-	{
-		return ArrayData(game->spcItemsTxt, game->spcItemsTxt_size);
-	}
+    }
+    virtual ArrayData getSpcItemsTxtArrayData() override
+    {
+        return ArrayData(game->spcItemsTxt, game->spcItemsTxt_size);
+    }
 };
 using GameStructAccessor_6 = TemplatedGameStructAccessor<mm6::Game>;
 using GameStructAccessor_7 = TemplatedGameStructAccessor<mm7::Game>;

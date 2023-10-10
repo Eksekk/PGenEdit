@@ -70,7 +70,7 @@ void InventoryCtrl::OnPaint(wxPaintEvent& event)
 
     for (const auto& elem : elements)
     {
-        drawItemAt(dc, elem, elem.pos.x * CELL_WIDTH, elem.pos.y * CELL_HEIGHT);
+        drawItemAt(dc, *elem, elem->pos.x * CELL_WIDTH, elem->pos.y * CELL_HEIGHT);
     }
     /*
      
@@ -246,7 +246,7 @@ bool InventoryCtrl::persistInventory(Json& json) const
         for (const auto& elem : elements)
         {
             Json j;
-            elem.persist(j);
+            elem->persist(j);
             json.push_back(std::move(j));
         }
     }
@@ -278,10 +278,10 @@ bool InventoryCtrl::unpersistInventory(const Json& json)
     {
         for (const Json& entry : json)
         {
-            ItemStoreElement elem;
-            elem.unpersist(entry);
-            hasChest = hasChest || std::holds_alternative<ItemRefMapChest>(elem.origin);
-            hasPlayerInventory = hasPlayerInventory || std::holds_alternative<ItemRefPlayerInventory>(elem.origin);
+            auto elem = std::make_unique<ItemStoreElement>();
+            elem->unpersist(entry);
+            hasChest = hasChest || std::holds_alternative<ItemRefMapChest>(elem->origin);
+            hasPlayerInventory = hasPlayerInventory || std::holds_alternative<ItemRefPlayerInventory>(elem->origin);
             elements.push_back(std::move(elem));
         }
     }
@@ -317,25 +317,25 @@ bool InventoryCtrl::drawItemAt(wxPaintDC& dc, const ItemStoreElement& elem, int 
 bool InventoryCtrl::reloadReferencedItems()
 {
     ElementsContainer nextElements; // will be assigned to elements
-    std::ranges::copy_if(elements, std::back_inserter(nextElements), [=](const ItemStoreElement& elem)
+    std::copy_if(std::make_move_iterator(elements.begin()), std::make_move_iterator(elements.end()), std::back_inserter(nextElements), [](const std::unique_ptr<ItemStoreElement>& elem)
     {
-        return std::holds_alternative<ItemRefStored>(elem.origin);
+        return std::holds_alternative<ItemRefStored>(elem->origin);
     });
 
     if (const ItemRefMapChest* ref = std::get_if<ItemRefMapChest>(&inventoryType))
     {
         // add items from chest
-        auto callback = [&](auto itemPtr)
+        auto callback = [&](AnyItemStruct auto* itemPtr)
         {
             mm7::Item convertedItem = itemAccessor->forItem(itemPtr)->convertToMM7Item();
             if (convertedItem.number != 0)
             {
-                ItemStoreElement elem(convertedItem, ItemRefStored{}, ItemRefMapChest(*ref), { -1, -1 });
-                moveStoredItemToInventory(elem);
+                auto elem = std::make_unique<ItemStoreElement>(convertedItem, ItemRefStored{}, ItemRefMapChest(*ref), InventoryPosition{ -1, -1 });
+                moveStoredItemToInventory(*elem);
                 nextElements.push_back(std::move(elem));
             }
         };
-        mapAccessor->forEachMapChestDo(callback);
+        mapAccessor->forMapChestIndexItemsDo(ref->chestId, callback);
     }
     else if (const ItemRefPlayerInventory* ref = std::get_if<ItemRefPlayerInventory>(&inventoryType))
     {
@@ -345,8 +345,9 @@ bool InventoryCtrl::reloadReferencedItems()
             mm7::Item convertedItem = itemAccessor->forItem(item)->convertToMM7Item();
             if (convertedItem.number != 0)
             {
-                ItemStoreElement elem(convertedItem, ItemRefStored{}, ItemRefPlayerInventory(*ref), { -1, -1 });
-                moveStoredItemToInventory(elem);
+                // for make_unique need to explicitly specify InventoryPosition type, since it doesn't know that it's not an initializer list
+                auto elem = std::make_unique<ItemStoreElement>(convertedItem, ItemRefStored{}, ItemRefPlayerInventory(*ref), InventoryPosition{ -1, -1 });
+                moveStoredItemToInventory(*elem);
                 nextElements.push_back(std::move(elem));
             }
         };
@@ -406,16 +407,12 @@ ItemStoreElement* InventoryCtrl::chooseItemWithMouse(bool allowNone)
     return nullptr;
 }
 
-bool InventoryCtrl::addItem(ItemStoreElement&& item)
+ItemStoreElement* InventoryCtrl::addItem(const mm7::Item& item, const ItemLocationType& origin, const ItemLocationType& location, InventoryPosition pos)
 {
-    elements.push_back(std::make_unique<ItemStoreElement>(std::forward<ItemStoreElement>(item)));
-    return true;
-}
-
-bool InventoryCtrl::addItem(const ItemStoreElement& item)
-{
-    elements.push_back(std::make_unique<ItemStoreElement>(item));
-    return true;
+    auto elem = std::make_unique<ItemStoreElement>(item, origin, location, pos);
+    ItemStoreElement* ptr = elem.get();
+    elements.push_back(std::move(elem));
+    return ptr;
 }
 
 bool InventoryCtrl::removeItem(ItemStoreElement&& item)
@@ -446,8 +443,8 @@ bool InventoryCtrl::canItemBePlacedAtPosition(const ItemStoreElement& elem, Inve
     return true;
 }
 
-InventoryCtrl::InventoryCtrl(wxWindow* parent, int CELLS_ROW, int CELLS_COL, InventoryType&& inventoryType, const ElementsContainer& elements)
-    : wxWindow(parent, wxID_ANY), CELLS_ROW(CELLS_ROW), CELLS_COL(CELLS_COL), inventoryType(inventoryType), elements(elements)
+InventoryCtrl::InventoryCtrl(wxWindow* parent, int CELLS_ROW, int CELLS_COL, InventoryType&& inventoryType)
+    : wxWindow(parent, wxID_ANY), CELLS_ROW(CELLS_ROW), CELLS_COL(CELLS_COL), inventoryType(inventoryType)
 {
     Bind(wxEVT_PAINT, &InventoryCtrl::OnPaint, this);
     SetSizeHints(DoGetBestClientSize());
