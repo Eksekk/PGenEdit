@@ -37,7 +37,7 @@ class ItemDialogBase : public wxDialog
 {
 private:
     template<typename T>
-    bool insertAfterBeforeWindow(wxSizer* sizer, const T* before, wxSizerItem&& item, bool after)
+    bool insertAfterBeforeWindow(wxSizer* sizer, const T* before, wxSizerItem* item, bool after)
     {
         const wxSizerItemList& list = sizer->GetChildren();
         for (size_t i = 0; i < sizer->GetItemCount(); ++i)
@@ -55,16 +55,16 @@ private:
             if (ptr && ptr == before) // found
             {
                 wxWindow* destinationParent = sizer->GetContainingWindow();
-                if (item.IsWindow())
+                if (item->IsWindow())
                 {
-                    wxSizer* sizerContainingItem = item.GetWindow()->GetSizer();
+                    wxSizer* sizerContainingItem = item->GetWindow()->GetSizer();
                     if (sizerContainingItem)
                     {
-                        sizerContainingItem->Detach(item.GetWindow());
+                        sizerContainingItem->Detach(item->GetWindow());
                     }
-                    item.GetWindow()->Reparent(destinationParent);
+                    item->GetWindow()->Reparent(destinationParent);
                 }
-                else if (wxSizer* const itemAsSizer = item.GetSizer())
+                else if (wxSizer* const itemAsSizer = item->GetSizer())
                 {
                     // sizer might have containing window or be a child of another sizer
                     // need to detach it from parent sizers or from containing window
@@ -105,17 +105,17 @@ private:
                     }
                 }
                 int idx = i + (after ? 1 : 0);
-                if (item.IsSpacer()) // rvalue reference leaves dangling references
+                if (item->IsSpacer()) // rvalue reference leaves dangling references
                 {
-                    const wxSize s = item.GetSpacer();
+                    const wxSize s = item->GetSpacer();
                     sizer->Insert(idx, s.GetWidth(), s.GetHeight());
                 }
-                else if (wxWindow* const w = item.GetWindow())
+                else if (wxWindow* const w = item->GetWindow())
                 {
                     // need to make a copy of sizer item, see above
                     sizer->Insert(idx, w);
                 }
-                else if (wxSizer* const s = item.GetSizer())
+                else if (wxSizer* const s = item->GetSizer())
                 {
                     // need to make a copy of sizer item, see above
                     sizer->Insert(idx, s);
@@ -132,18 +132,19 @@ private:
 protected:
     // rvalue reference to allow both temporaries (spacer) and modifiable lvalues
     // PROBLEM IS THAT IMPLICIT CONVERSION to rvalue reference makes a temporary
+
     template<typename T>
-    bool insertBeforeWindow(wxSizer* sizer, const T* before, wxSizerItem&& item)
+    bool insertBeforeWindow(wxSizer* sizer, const T* before, wxSizerItem* item)
     {
-        static_assert(!std::is_rvalue_reference_v<decltype(item)>, "Implicitly constructed wxSizerItem passed - this will break and leave dangling reference");
-        return insertAfterBeforeWindow(sizer, before, std::forward<wxSizerItem>(item), false);
+        return insertAfterBeforeWindow(sizer, before, item, false);
     }
+
     template<typename T>
-    bool insertAfterWindow(wxSizer* sizer, const T* before, wxSizerItem&& item)
+    bool insertAfterWindow(wxSizer* sizer, const T* before, wxSizerItem* item)
     {
-        static_assert(!std::is_rvalue_reference_v<decltype(item)>, "Implicitly constructed wxSizerItem passed - this will break and leave dangling reference");
-        return insertAfterBeforeWindow(sizer, before, std::forward<wxSizerItem>(item), true);
+        return insertAfterBeforeWindow(sizer, before, item, true);
     }
+
     // generator
     wxCheckBox* checkboxItemIsFree;
     wxCheckBox* checkboxWandChargesVaryWithStrength;

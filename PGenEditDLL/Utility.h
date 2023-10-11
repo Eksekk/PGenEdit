@@ -236,3 +236,25 @@ void showDeducedType(T&&) {
 
 	deduced_type<T>::show;
 }
+
+/*
+template<typename T>
+struct is_temporary
+{
+	static const bool value = false;
+};
+
+template<typename T, std::enable_if_t<!std::is_rvalue_reference_v<T>, bool> = true>
+struct is_temporary
+{
+    static const bool value = false;
+};
+
+template<typename T, std::enable_if_t<std::is_rvalue_reference_v<T>, bool> = true>
+struct is_temporary
+{
+	static const bool value = std::is_rvalue_reference_v<decltype(T)>;
+};
+
+template<typename T, bool>
+using is_temporary_v = is_temporary<T>::value;*/
