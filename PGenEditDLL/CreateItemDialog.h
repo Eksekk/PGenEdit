@@ -8,6 +8,7 @@ class CreateItemDialog : public ItemDialogBase
     // generator & create
     wxStaticText* labelItemCount;
     wxSlider* sliderItemCount;
+    wxBoxSizer* sizerItemCount;
 
 public:
     // create & edit

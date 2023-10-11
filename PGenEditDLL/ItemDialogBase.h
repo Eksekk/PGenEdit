@@ -40,7 +40,7 @@ private:
     bool insertAfterBeforeWindow(wxSizer* sizer, const T* before, wxSizerItem&& item, bool after)
     {
         const wxSizerItemList& list = sizer->GetChildren();
-        for (int i = 0; i < sizer->GetItemCount(); ++i)
+        for (size_t i = 0; i < sizer->GetItemCount(); ++i)
         {
             const T* ptr = nullptr;
             if constexpr (std::is_base_of_v<wxWindow, T>)
@@ -52,9 +52,78 @@ private:
                 ptr = dynamic_cast<const T*>(list[i]->GetSizer());
             }
 
-            if (ptr && ptr == before)
+            if (ptr && ptr == before) // found
             {
-                sizer->Insert(i + (after ? 1 : 0), &item);
+                wxWindow* destinationParent = sizer->GetContainingWindow();
+                if (item.IsWindow())
+                {
+                    wxSizer* sizerContainingItem = item.GetWindow()->GetSizer();
+                    if (sizerContainingItem)
+                    {
+                        sizerContainingItem->Detach(item.GetWindow());
+                    }
+                    item.GetWindow()->Reparent(destinationParent);
+                }
+                else if (wxSizer* const itemAsSizer = item.GetSizer())
+                {
+                    // sizer might have containing window or be a child of another sizer
+                    // need to detach it from parent sizers or from containing window
+                    if (wxWindow* w = itemAsSizer->GetContainingWindow())
+                    {
+                        if (w->GetSizer() == itemAsSizer)
+                        {
+                            w->SetSizer(nullptr, false);
+                        }
+                    }
+                    
+                    // need to take care to reparent every window that is reachable only through sizers (so child of reparented one won't be)
+                    std::vector<wxSizer*> sizersToCheck{ itemAsSizer };
+                    wxSizer* parentSizer = nullptr;
+                    while (!sizersToCheck.empty())
+                    {
+                        wxSizer* sizer = sizersToCheck.back();
+                        sizersToCheck.pop_back();
+                        for (wxSizerItem* sizerItem : sizer->GetChildren())
+                        {
+                            if (sizerItem->IsSizer())
+                            {
+                                sizersToCheck.push_back(sizerItem->GetSizer());
+                                if (sizerItem->GetSizer() == itemAsSizer)
+                                {
+                                    parentSizer = sizerItem->GetSizer();
+                                }
+                            }
+                            else if (sizerItem->IsWindow())
+                            {
+                                sizerItem->GetWindow()->Reparent(destinationParent);
+                            }
+                        }
+                    }
+                    if (parentSizer)
+                    {
+                        parentSizer->Detach(itemAsSizer);
+                    }
+                }
+                int idx = i + (after ? 1 : 0);
+                if (item.IsSpacer()) // rvalue reference leaves dangling references
+                {
+                    const wxSize s = item.GetSpacer();
+                    sizer->Insert(idx, s.GetWidth(), s.GetHeight());
+                }
+                else if (wxWindow* const w = item.GetWindow())
+                {
+                    // need to make a copy of sizer item, see above
+                    sizer->Insert(idx, w);
+                }
+                else if (wxSizer* const s = item.GetSizer())
+                {
+                    // need to make a copy of sizer item, see above
+                    sizer->Insert(idx, s);
+                }
+                else
+                {
+                    wxFAIL;
+                }
                 return true;
             }
         }
@@ -62,14 +131,17 @@ private:
     }
 protected:
     // rvalue reference to allow both temporaries (spacer) and modifiable lvalues
+    // PROBLEM IS THAT IMPLICIT CONVERSION to rvalue reference makes a temporary
     template<typename T>
     bool insertBeforeWindow(wxSizer* sizer, const T* before, wxSizerItem&& item)
     {
+        static_assert(!std::is_rvalue_reference_v<decltype(item)>, "Implicitly constructed wxSizerItem passed - this will break and leave dangling reference");
         return insertAfterBeforeWindow(sizer, before, std::forward<wxSizerItem>(item), false);
     }
     template<typename T>
     bool insertAfterWindow(wxSizer* sizer, const T* before, wxSizerItem&& item)
     {
+        static_assert(!std::is_rvalue_reference_v<decltype(item)>, "Implicitly constructed wxSizerItem passed - this will break and leave dangling reference");
         return insertAfterBeforeWindow(sizer, before, std::forward<wxSizerItem>(item), true);
     }
     // generator
@@ -89,6 +161,7 @@ protected:
 
     ItemTableViewModel* itemTableViewModel;
     // window content
+    wxScrolledWindow* panelMain;
     wxCheckBox* checkboxUseFilters;
     wxButton* buttonResetFilters;
     wxStaticText* labelItemCategory;
@@ -162,6 +235,8 @@ protected:
     virtual void setControlsEnabledState();
     virtual void setControlValuesFromItem(const mm7::Item& item);
     mm7::Item buildItemFromControlValues();
+
+    void onClose(wxCloseEvent& event);
 public:
 
     enum class Mode
@@ -170,7 +245,7 @@ public:
         EDIT
     };
     Mode mode;
-    ItemDialogBase(wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = _("Create item"), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize(791, 794), long style = wxDEFAULT_DIALOG_STYLE);
+    ItemDialogBase(wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = _("Create sizerItem"), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize(791, 794), long style = wxDEFAULT_DIALOG_STYLE);
 
     ~ItemDialogBase();
 

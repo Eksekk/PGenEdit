@@ -7,13 +7,21 @@
 #include "ItemStructAccessor.h"
 #include "GameData.h"
 
+enum class ShowModalReturn
+{
+    OK,
+    ABORTED
+};
+
 ItemDialogBase::ItemDialogBase(wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style) : wxDialog(parent, id, title, pos, size, style)
 {
     this->SetSizeHints(wxDefaultSize, wxDefaultSize);
 
+    panelMain = new wxScrolledWindow(this);
+    panelMain->SetScrollRate(10, 10);
     sizerMain = new wxBoxSizer(wxVERTICAL);
     
-    checkboxItemIsFree = new wxCheckBox(this, wxID_ANY, _("Item is free"), wxDefaultPosition, wxDefaultSize, 0);
+    checkboxItemIsFree = new wxCheckBox(panelMain, wxID_ANY, _("Item is free"), wxDefaultPosition, wxDefaultSize, 0);
     checkboxItemIsFree->SetToolTip(_("If this is checked, guaranteed item won't decrease available \"item points\" pool (will essentially be free)"));
 
     sizerMain->Add(checkboxItemIsFree, 0, wxALL, 10);
@@ -21,7 +29,7 @@ ItemDialogBase::ItemDialogBase(wxWindow* parent, wxWindowID id, const wxString& 
     createItemFilters();
 
     wxStaticBoxSizer* sizerChooseItem;
-    sizerChooseItem = new wxStaticBoxSizer(new wxStaticBox(this, wxID_ANY, _("Choose item")), wxVERTICAL);
+    sizerChooseItem = new wxStaticBoxSizer(new wxStaticBox(panelMain, wxID_ANY, _("Choose item")), wxVERTICAL);
 
     itemTable = new wxDataViewListCtrl(sizerChooseItem->GetStaticBox(), wxID_ANY, wxDefaultPosition, wxDefaultSize, 0);
     colNumber = itemTable->AppendTextColumn(_("#"), wxDATAVIEW_CELL_INERT, 50, static_cast<wxAlignment>(wxALIGN_LEFT), wxDATAVIEW_COL_RESIZABLE);
@@ -39,14 +47,14 @@ ItemDialogBase::ItemDialogBase(wxWindow* parent, wxWindowID id, const wxString& 
     itemTableViewModel->DecRef();
     sizerChooseItem->Add(itemTable, 0, wxALL | wxEXPAND, 5);
 
-    sizerMain->Add(sizerChooseItem, 1, wxEXPAND, 5);
+    sizerMain->Add(sizerChooseItem, 0, wxEXPAND, 5);
 
 
     sizerMain->Add(0, 15, 0, wxEXPAND, 5);
 
     createEnchantmentsStaticBox();
 
-    sizerMain->Add(sizerEnchantments, 1, wxEXPAND, 5);
+    sizerMain->Add(sizerEnchantments, 0, wxEXPAND, 5);
 
 
     sizerMain->Add(0, 5, 0, wxEXPAND, 5);
@@ -54,22 +62,25 @@ ItemDialogBase::ItemDialogBase(wxWindow* parent, wxWindowID id, const wxString& 
     createItemConditionTemporaryBonusPanel();
 
 
-    sizerMain->Add(sizerTemporaryBonus, 1, wxEXPAND, 5);
+    sizerMain->Add(sizerTemporaryBonus, 0, wxEXPAND, 5);
 
     createWandSettings();
 
-    sizerMain->Add(sizerWandSettings, 1, wxEXPAND, 5);
+    sizerMain->Add(sizerWandSettings, 0, wxEXPAND, 5);
 
 
-    this->SetSizer(sizerMain);
+    //this->SetSizer(sizerMain);
+    panelMain->SetSizer(sizerMain);
     this->Layout();
 
     this->Centre(wxBOTH);
+
+    Bind(wxEVT_CLOSE_WINDOW, &ItemDialogBase::onClose, this);
 }
 
 void ItemDialogBase::createItemConditionTemporaryBonusPanel()
 {
-    sizerCondition = new wxStaticBoxSizer(new wxStaticBox(this, wxID_ANY, _("Item condition")), wxHORIZONTAL);
+    sizerCondition = new wxStaticBoxSizer(new wxStaticBox(panelMain, wxID_ANY, _("Item condition")), wxHORIZONTAL);
 
     checkboxIdentified = new wxCheckBox(sizerCondition->GetStaticBox(), wxID_ANY, _("Identified"), wxDefaultPosition, wxDefaultSize, 0);
     checkboxIdentified->SetValue(true);
@@ -90,7 +101,7 @@ void ItemDialogBase::createItemConditionTemporaryBonusPanel()
 
     sizerMain->Add(0, 5, 0, wxEXPAND, 5);
 
-    sizerTemporaryBonus = new wxStaticBoxSizer(new wxStaticBox(this, wxID_ANY, _("Temporary bonus")), wxHORIZONTAL);
+    sizerTemporaryBonus = new wxStaticBoxSizer(new wxStaticBox(panelMain, wxID_ANY, _("Temporary bonus")), wxHORIZONTAL);
 
     labelTmpEnchantmentType = new wxStaticText(sizerTemporaryBonus->GetStaticBox(), wxID_ANY, _("Type:"), wxDefaultPosition, wxDefaultSize, 0);
     labelTmpEnchantmentType->Wrap(-1);
@@ -127,7 +138,7 @@ void ItemDialogBase::createItemConditionTemporaryBonusPanel()
 
 void ItemDialogBase::createWandSettings()
 {
-    sizerWandSettings = new wxStaticBoxSizer(new wxStaticBox(this, wxID_ANY, _("Wand-specific settings")), wxVERTICAL);
+    sizerWandSettings = new wxStaticBoxSizer(new wxStaticBox(panelMain, wxID_ANY, _("Wand-specific settings")), wxVERTICAL);
 
     sizerMaxCharges = new wxBoxSizer(wxVERTICAL);
 
@@ -196,7 +207,7 @@ void ItemDialogBase::createWandSettings()
 }
 void ItemDialogBase::createEnchantmentsStaticBox()
 {
-    sizerEnchantments = new wxStaticBoxSizer(new wxStaticBox(this, wxID_ANY, _("Enchantments")), wxVERTICAL);
+    sizerEnchantments = new wxStaticBoxSizer(new wxStaticBox(panelMain, wxID_ANY, _("Enchantments")), wxVERTICAL);
 
     sizerEnchantmentsInner = new wxGridBagSizer(0, 0);
     sizerEnchantmentsInner->SetFlexibleDirection(wxBOTH);
@@ -291,7 +302,7 @@ void ItemDialogBase::createEnchantmentsStaticBox()
 }
 void ItemDialogBase::createItemFilters()
 {
-    sizerFiltersMain = new wxStaticBoxSizer(new wxStaticBox(this, wxID_ANY, _("Filter item list")), wxVERTICAL);
+    sizerFiltersMain = new wxStaticBoxSizer(new wxStaticBox(panelMain, wxID_ANY, _("Filter item list")), wxVERTICAL);
 
     filterButtonsSizer = new wxBoxSizer(wxHORIZONTAL);
 
@@ -457,8 +468,20 @@ mm7::Item ItemDialogBase::buildItemFromControlValues()
 mm7::Item ItemDialogBase::editItemModal(const mm7::Item& item)
 {
     setControlValuesFromItem(item);
-    ShowModal();
-    return buildItemFromControlValues();
+    if ((ShowModalReturn)ShowModal() == ShowModalReturn::ABORTED)
+    {
+        mm7::Item it;
+        memset(&it, 0, sizeof(it));
+        return it;
+    }
+    else
+    {
+        return buildItemFromControlValues();
+    }
+}
+void ItemDialogBase::onClose(wxCloseEvent& event)
+{
+    EndModal((int)ShowModalReturn::ABORTED);
 }
 
 void ItemTableViewModel::GetValue(wxVariant& variant, const wxDataViewItem& item, unsigned int col) const
