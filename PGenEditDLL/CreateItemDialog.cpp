@@ -20,8 +20,9 @@ CreateItemDialog::CreateItemDialog(wxWindow* parent) : ItemDialogBase(parent)
 
     sizerItemCount->Add(sliderItemCount, 0, wxALL, 5);
     // CRASHES (when closing dialog)
-    assert(insertBeforeWindow(sizerMain, sizerEnchantments, new wxSizerItem(sizerItemCount)));
+    assert(insertBeforeWindow(sizerMain, sizerEnchantments, new wxSizerItem(sizerItemCount, wxSizerFlags(1).Border(wxALL, 5).Expand())));
     assert(insertBeforeWindow(sizerMain, sizerEnchantments, new wxSizerItem(0, 15, 0, wxEXPAND, 5)));
 
     Layout();
+    SendSizeEvent();
 }

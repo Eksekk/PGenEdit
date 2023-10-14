@@ -5,6 +5,7 @@
 #include "PlayerStructAccessor.h"
 #include "EditorPlayerWindow.h"
 #include "Profiler.h"
+#include "GuiApplication.h"
 
 EditorMainWindow::EditorMainWindow(wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style) : wxFrame(parent, id, title, pos, size, style)
 {
@@ -207,6 +208,16 @@ void EditorMainWindow::update(wxTimerEvent& event)
 
 void EditorMainWindow::onCloseWindow(wxCloseEvent& event)
 {
+	for (EditorPlayerWindow* win : playerWindows)
+	{
+		if (win)
+		{
+			win->Destroy();
+			// could also work (for fun)
+			// !win || win->Destroy();
+		}
+	}
+	wxGetApp().leaveLoop();
 	if (event.CanVeto())
 	{
 		event.Veto();
@@ -214,6 +225,13 @@ void EditorMainWindow::onCloseWindow(wxCloseEvent& event)
 		return;
 	}
 	Destroy();
+}
+
+void EditorMainWindow::showModalCustom()
+{
+	Show();
+    wxWindowDisabler dis(this);
+    wxGetApp().enterLoop();
 }
 
 EditorMainWindow::~EditorMainWindow()

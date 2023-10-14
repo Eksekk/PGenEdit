@@ -12,7 +12,7 @@ enum class ShowModalReturn
     OK,
     ABORTED
 };
-
+//auto x = wxGetMessageName(5);
 ItemDialogBase::ItemDialogBase(wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style) : wxDialog(parent, id, title, pos, size, style)
 {
     this->SetSizeHints(wxDefaultSize, wxDefaultSize);

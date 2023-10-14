@@ -46,6 +46,8 @@ public:
     void destroyPlayerWindow(int index);
     void update(wxTimerEvent& event);
     void onCloseWindow(wxCloseEvent& event);
+    // void onShowWindow(wxShowEvent& event);
+    void showModalCustom();
     ~EditorMainWindow();
 
     friend class GUI_tests;

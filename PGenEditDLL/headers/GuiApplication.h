@@ -1,6 +1,7 @@
 #pragma once
 #include "pch.h"
 #include "main.h"
+#include <wx/evtloop.h>
 
 class MainWindow;
 class EditorMainWindow;
@@ -14,10 +15,13 @@ public:
     ControlPanel* controlPanel;
     using wxApp::DeletePendingObjects; // protected -> public
     wxTimer* idleEventTimer;
+    wxGUIEventLoop* eventLoop;
 
     GuiApplication();
     virtual bool OnInit() override;
     virtual int OnExit() override;
+    void enterLoop();
+    void leaveLoop();
 /*
 private:
 	void OnShowWindow(wxThreadEvent& event);

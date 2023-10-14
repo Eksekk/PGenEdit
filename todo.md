@@ -3,7 +3,7 @@
 * wxChoice doesn't react to mouse clicks during testing
 
 # Misc
-* Tooltips don't show
+* Tooltips don't show - in wxDialog they do
 * Very long loading time for editor windows
 
 # Code
@@ -16,3 +16,4 @@
 
 # Design
 * simple "randomize item" dialog, where you would input item type, treasure level etc. and call vanilla function
+* use event loop when opening main window to make editor/generator modal for easier programming and more intuitive design

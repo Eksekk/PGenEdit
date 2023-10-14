@@ -313,8 +313,7 @@ extern "C"
 	{
 		if (checkBeforeShowingWindows())
 		{
-
-			wxGetApp().editorMainWindow->Show(visible);
+			wxGetApp().editorMainWindow->showModalCustom();
 		}
 	}
     

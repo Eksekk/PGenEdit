@@ -5,6 +5,7 @@
 #include "EditorMainWindow.h"
 #include "ControlPanel.h"
 #include "GameStructAccessor.h"
+#include "wx/evtloop.h"
 
 GuiApplication::GuiApplication()
 {
@@ -63,6 +64,7 @@ bool GuiApplication::OnInit()
     Bind(wxEVT_TIMER, [this](wxTimerEvent&) {this->ProcessIdle(); });
     idleEventTimer->Start(1000, wxTIMER_CONTINUOUS);
 	wxToolTip::Enable(true);
+    eventLoop = new wxGUIEventLoop;
     return true;
 }
 
@@ -70,6 +72,18 @@ int GuiApplication::OnExit()
 {
     delete idleEventTimer;
     return 0;
+}
+
+void GuiApplication::enterLoop()
+{
+    wxEventLoop::SetActive(eventLoop);
+    eventLoop->Run();
+}
+
+void GuiApplication::leaveLoop()
+{
+    eventLoop->Exit();
+    wxEventLoop::SetActive(nullptr);
 }
 
 wxIMPLEMENT_APP_NO_MAIN(GuiApplication);

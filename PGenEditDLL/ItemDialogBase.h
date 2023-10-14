@@ -105,33 +105,14 @@ private:
                     }
                 }
                 int idx = i + (after ? 1 : 0);
-                if (item->IsSpacer()) // rvalue reference leaves dangling references
-                {
-                    const wxSize s = item->GetSpacer();
-                    sizer->Insert(idx, s.GetWidth(), s.GetHeight());
-                }
-                else if (wxWindow* const w = item->GetWindow())
-                {
-                    // need to make a copy of sizer item, see above
-                    sizer->Insert(idx, w);
-                }
-                else if (wxSizer* const s = item->GetSizer())
-                {
-                    // need to make a copy of sizer item, see above
-                    sizer->Insert(idx, s);
-                }
-                else
-                {
-                    wxFAIL;
-                }
+                sizer->Insert(idx, item);
                 return true;
             }
         }
         return false;
     }
+
 protected:
-    // rvalue reference to allow both temporaries (spacer) and modifiable lvalues
-    // PROBLEM IS THAT IMPLICIT CONVERSION to rvalue reference makes a temporary
 
     template<typename T>
     bool insertBeforeWindow(wxSizer* sizer, const T* before, wxSizerItem* item)

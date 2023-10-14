@@ -96,6 +96,12 @@ void setupHooks() {
         char buffer[600];
         GetWindowModuleFileNameA(handle, buffer, 600);
         std::string name = getFileNameFromPath(buffer);
+        static const std::vector<int> tooltipMessages{0x401, 0x403, 0x40B};
+        if (existsInVector(tooltipMessages, (int)msg->message))
+        {
+            wxLogInfo("Received message 0x%X", msg->message);
+            wxLog::FlushActive();
+        }
         if (name == "pgenedit.dll" && msg->message != WM_TIMER)
         {
             wxWndProc(handle, msg->message, msg->wParam, msg->lParam);
@@ -126,7 +132,7 @@ void setupHooks() {
             HookElementBuilder().address(mmv(0, 0x4BFCFC, 0)).type(HOOK_ELEM_TYPE_AUTOHOOK_BEFORE).func(func).build(),
         }));
     // doesn't solve any problems I intended to solve (tooltips and creation time); keeping it, because it may prove useful later
-    // hooks.at(3).enable(); // FIXME! crashes on dll unload
+    //hooks.at(3).enable(); // FIXME! crashes on dll unload
 }
 // hooks[RECOVERY_MULTIPLIER] = Hook
 // ({
