@@ -60,7 +60,8 @@ public:
     void* getExtraData() const override;
     void enable(bool enable) override;
     void destroy() override;
-
+protected:
+    // constructors protected to disallow creating instances of this class
     HookElementAutohook();
     HookElementAutohook(bool isBefore, uint32_t address, HookFunc func, int size = 5);
 };
@@ -100,10 +101,11 @@ public:
     void* getExtraData() const override;
     void destroy() override;
     void ensureHasNoReplacementArgs();
-
+protected:
+    // constructors protected to disallow creating instances of this class
     HookElementAsmhookBase();
-    HookElementAsmhookBase(HookElementType type, uint32_t address, const std::string& asmCode, int size);
-    HookElementAsmhookBase(HookElementType type, uint32_t address, const std::string& asmCode, const CodeReplacementArgs& args, int size);
+    HookElementAsmhookBase(HookElementType type, uint32_t address, const std::string& asmCode, int size = 5);
+    HookElementAsmhookBase(HookElementType type, uint32_t address, const std::string& asmCode, const CodeReplacementArgs& args, int size = 5);
 };
 
 class HookElementAsmhookBefore : public HookElementAsmhookBase
@@ -154,11 +156,6 @@ public:
     HookElementCall(uint32_t address, HookFunc func, int size = 5);
 };
 
-class HookElementSimple
-{
-
-};
-
 class HookElementCallRaw : public HookElement2
 {
 protected:
@@ -185,4 +182,63 @@ public:
     HookElementJump();
     HookElementJump(uint32_t address, void* jumpTarget, int size = 5);
     HookElementJump(uint32_t address, uint32_t jumpTarget, int size = 5);
+};
+
+class HookElementEraseCode : public HookElement2
+{
+protected:
+    uint32_t address;
+    int size;
+public:
+    void enable(bool enable) override;
+
+    HookElementEraseCode();
+    HookElementEraseCode(uint32_t address, int size = 1); // without size argument replaces single instruction, as in MMExt
+};
+
+using PatchDataGetBytesFunc = std::function<ByteVector(uint32_t address)>;
+
+class HookElementPatchData : public HookElement2
+{
+protected:
+    uint32_t address;
+    int size;
+    std::variant<ByteVector, PatchDataGetBytesFunc> data;
+public:
+    void enable(bool enable) override;
+
+    HookElementPatchData();
+    HookElementPatchData(uint32_t address, const ByteVector& data, int size);
+    HookElementPatchData(uint32_t address, PatchDataGetBytesFunc getBytesFunc, int size);
+};
+
+class HookElementCallableFunction : HookElement2
+{
+protected:
+    uint32_t address;
+    int size;
+    std::function<void()> setCallableFunctionHook = nullptr, unsetCallableFunctionHook = nullptr;
+    // constructors protected to disallow creating instances of this class
+    HookElementCallableFunction(HookElementType type);
+    HookElementCallableFunction(HookElementType type, uint32_t address, int size = 5);
+    void enable(bool enable) override;
+};
+
+class HookElementReplaceCall : HookElementCallableFunction
+{
+public:
+    HookElementReplaceCall();
+    template<typename ReturnType, int cc, typename... Args>
+    HookElementReplaceCall(uint32_t address, CallableFunctionHookFunc<ReturnType, Args...> func) : HookElementCallableFunction(HOOK_ELEM_TYPE_REPLACE_CALL, address, 5)
+    {
+        constexpr int stackNum = sizeof...(Args) - std::clamp(cc, 0, 2);
+        setCallableFunctionHook = [=]()
+            {
+                hookReplaceCall<ReturnType, cc>(address, stackNum, func, &restorationData, 5);
+            };
+        unsetCallableFunctionHook = [=]()
+            {
+                unhookReplaceCall(address, restorationData);
+            };
+    }
 };

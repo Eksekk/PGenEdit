@@ -1,6 +1,16 @@
 #include "pch.h"
 #include "HookElement2.h"
 
+bool HookElement2::hasExtraData() const
+{
+    return false;
+}
+
+void* HookElement2::getExtraData() const
+{
+    return nullptr;
+}
+
 std::vector<uint8_t> HookElement2::getRestorationData() const
 {
     return restorationData;
@@ -15,6 +25,11 @@ HookElement2::~HookElement2()
 {
     disable();
     destroy();
+}
+
+void HookElement2::destroy()
+{
+    // dummy to allow destructor call
 }
 
 void HookElement2::disable()
@@ -36,7 +51,7 @@ HookElement2::HookElement2() : type(HOOK_ELEM_TYPE_DISABLED), active(false), ini
 {
 }
 
-HookElement2::HookElement2(HookElementType type) : type(type), active(false), initialized(true)
+HookElement2::HookElement2(HookElementType type) : type(type), active(false), initialized(true) // TODO: add extra "initialized" arg, this ctor is called always
 {
 }
 
@@ -278,17 +293,27 @@ HookElementAsmpatch::HookElementAsmpatch(uint32_t address, const std::string& as
 
 void HookElementJump::enable(bool enable)
 {
+    if (enable && !active)
+    {
+        active = true;
+        hookJumpRaw(address, jumpTarget, &restorationData, size);
+    }
+    else if (!enable && active)
+    {
+        active = false;
+        unhookJumpRaw(address, restorationData);
+    }
 }
 
-HookElementJump::HookElementJump()
+HookElementJump::HookElementJump() : HookElement2(HOOK_ELEM_TYPE_JUMP), address(0), jumpTarget(nullptr), size(5)
 {
 }
 
-HookElementJump::HookElementJump(uint32_t address, void* jumpTarget, int size)
+HookElementJump::HookElementJump(uint32_t address, void* jumpTarget, int size) : HookElement2(HOOK_ELEM_TYPE_JUMP), address(0), jumpTarget(jumpTarget), size(5)
 {
 }
 
-HookElementJump::HookElementJump(uint32_t address, uint32_t jumpTarget, int size)
+HookElementJump::HookElementJump(uint32_t address, uint32_t jumpTarget, int size) : HookElement2(HOOK_ELEM_TYPE_JUMP), address(0), jumpTarget((void*)jumpTarget), size(5)
 {
 }
 
@@ -296,17 +321,29 @@ HookElementJump::HookElementJump(uint32_t address, uint32_t jumpTarget, int size
 
 void HookElementCallRaw::enable(bool enable)
 {
+    if (enable && !active)
+    {
+        active = true;
+        hookCallRaw(address, callTarget, &restorationData, size);
+    }
+    else if (!enable && active)
+    {
+        active = false;
+        unhookCallRaw(address, restorationData);
+    }
 }
 
-HookElementCallRaw::HookElementCallRaw()
+HookElementCallRaw::HookElementCallRaw() : HookElement2(HOOK_ELEM_TYPE_CALL_RAW), address(0), callTarget(nullptr), size(5)
 {
 }
 
 HookElementCallRaw::HookElementCallRaw(uint32_t address, void* callTarget, int size)
+    : HookElement2(HOOK_ELEM_TYPE_CALL_RAW), address(address), callTarget(callTarget), size(size)
 {
 }
 
 HookElementCallRaw::HookElementCallRaw(uint32_t address, uint32_t callTarget, int size)
+    : HookElement2(HOOK_ELEM_TYPE_CALL_RAW), address(address), callTarget((void*)callTarget), size(size)
 {
 }
 
@@ -314,12 +351,110 @@ HookElementCallRaw::HookElementCallRaw(uint32_t address, uint32_t callTarget, in
 
 void HookElementCall::enable(bool enable)
 {
+    if (enable && !active)
+    {
+        active = true;
+        hookCall(address, func, &restorationData, size);
+    }
+    else if (!enable && active)
+    {
+        active = false;
+        unhookCall(address, restorationData);
+    }
 }
 
-HookElementCall::HookElementCall()
+HookElementCall::HookElementCall() : HookElement2(HOOK_ELEM_TYPE_CALL), address(0), func(nullptr), size(5)
 {
 }
 
 HookElementCall::HookElementCall(uint32_t address, HookFunc func, int size)
+    : HookElement2(HOOK_ELEM_TYPE_CALL), address(address), func(func), size(size)
+{
+}
+
+void HookElementEraseCode::enable(bool enable)
+{
+    if (enable && !active)
+    {
+        active = true;
+        eraseCode(address, size, &restorationData);
+    }
+    else if (!enable && active)
+    {
+        active = false;
+        patchBytes(address, restorationData.data(), restorationData.size(), nullptr, true);
+    }
+}
+
+HookElementEraseCode::HookElementEraseCode() : HookElement2(HOOK_ELEM_TYPE_ERASE_CODE), address(0), size(1)
+{
+}
+
+HookElementEraseCode::HookElementEraseCode(uint32_t address, int size)
+    : HookElement2(HOOK_ELEM_TYPE_ERASE_CODE), address(address), size(size)
+{
+}
+
+void HookElementPatchData::enable(bool enable)
+{
+    if (enable && !active)
+    {
+        active = true;
+        ByteVector patchData;
+        if (const ByteVector* vec = std::get_if<ByteVector>(&data))
+        {
+            patchData = *vec;
+        }
+        else if (const PatchDataGetBytesFunc* func = std::get_if<PatchDataGetBytesFunc>(&data))
+        {
+            patchData = (*func)(address); // probably overengineering
+        }
+        patchBytes(address, patchData, &restorationData, false);
+    }
+    else if (!enable && active)
+    {
+        active = false;
+        patchBytes(address, restorationData, nullptr, true);
+    }
+}
+
+HookElementPatchData::HookElementPatchData() : HookElement2(HOOK_ELEM_TYPE_PATCH_DATA), address(0), data(ByteVector{}), size(0)
+{
+}
+
+HookElementPatchData::HookElementPatchData(uint32_t address, const ByteVector& data, int size)
+    : HookElement2(HOOK_ELEM_TYPE_PATCH_DATA), address(address), data(data), size(size)
+{
+}
+
+HookElementPatchData::HookElementPatchData(uint32_t address, PatchDataGetBytesFunc getBytesFunc, int size)
+    : HookElement2(HOOK_ELEM_TYPE_PATCH_DATA), address(address), data(getBytesFunc), size(size)
+{
+}
+
+HookElementCallableFunction::HookElementCallableFunction(HookElementType type) : HookElement2(type), address(0), size(0)
+{
+}
+
+HookElementCallableFunction::HookElementCallableFunction(HookElementType type, uint32_t address, int size) : HookElement2(type), address(address), size(size)
+{
+}
+
+void HookElementCallableFunction::enable(bool enable)
+{
+    wxASSERT_MSG((bool)setCallableFunctionHook, "Callable function hook: set hook function not provided");
+    if (enable && !active)
+    {
+        active = true;
+        setCallableFunctionHook();
+    }
+    else if (!enable && active)
+    {
+        active = false;
+        unsetCallableFunctionHook();
+    }
+}
+
+HookElementReplaceCall::HookElementReplaceCall() : HookElementCallableFunction(HOOK_ELEM_TYPE_REPLACE_CALL)
 {
 }

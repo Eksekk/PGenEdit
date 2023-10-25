@@ -687,6 +687,11 @@ void patchBytes(uint32_t addr, const void* bytes, uint32_t size, std::vector<uin
 	VirtualProtect((void*)addr, realSize, tmp, &tmp);
 }
 
+void patchBytes(uint32_t addr, const ByteVector& bytes, std::vector<uint8_t>* storeAt, bool useNops)
+{
+	patchBytes(addr, bytes.data(), bytes.size(), storeAt, useNops);
+}
+
 uint32_t allocatedBlockSize = 0;
 void* allocatedBlock = nullptr;
 std::map<uint32_t, std::vector<void*>> freeAddressesBySize;

@@ -13,6 +13,8 @@
 // for me to understand such low level stuff
 // many functions taken/adapted from Tomsod's elemental mod
 
+using ByteVector = std::vector<uint8_t>;
+
 #pragma pack(push, 1)
 struct HookData
 {
@@ -234,6 +236,7 @@ void eraseCode(uint32_t addr, uint32_t size, std::vector<uint8_t>* storeAt);
 
 // patches sequence of bytes (unprotect/protect)
 void patchBytes(uint32_t addr, const void* bytes, uint32_t size, std::vector<uint8_t>* storeAt = nullptr, bool useNops = false);
+void patchBytes(uint32_t addr, const ByteVector& bytes, std::vector<uint8_t>* storeAt = nullptr, bool useNops = false);
 
 extern SYSTEM_INFO systemInfo;
 
