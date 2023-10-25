@@ -13,6 +13,8 @@ HookElementType HookElement2::getType() const
 
 HookElement2::~HookElement2()
 {
+    disable();
+    destroy();
 }
 
 void HookElement2::disable()
@@ -30,13 +32,15 @@ inline bool HookElement2::isActive() const
     return active;
 }
 
-HookElement2::HookElement2() : type(HOOK_ELEM_TYPE_DISABLED), active(false)
+HookElement2::HookElement2() : type(HOOK_ELEM_TYPE_DISABLED), active(false), initialized(false)
 {
 }
 
-HookElement2::HookElement2(HookElementType type) : type(type), active(false)
+HookElement2::HookElement2(HookElementType type) : type(type), active(false), initialized(true)
 {
 }
+
+// AUTOHOOK GENERIC
 
 bool HookElementAutohook::hasExtraData() const
 {
@@ -89,121 +93,29 @@ HookElementAutohook::HookElementAutohook(bool isBefore, uint32_t address, HookFu
 {
     initialized = true;
 }
-/*
-if (enable && !_active)
-    {
-        _active = true;
-        switch (type)
-        {
 
-        case HOOK_ELEM_TYPE_PATCH_DATA:
-        {
-            const void* target = patchDataStr ? (const void*)patchDataStr : (void*)this->target;
-            int dataSize = patchDataStr ? strlen(patchDataStr) : this->dataSize;
-            patchBytes(address, target, dataSize, &restoreData, this->patchUseNops);
-        }
-        break;
-        case HOOK_ELEM_TYPE_CALL_RAW:
-        {
-            hookCallRaw(address, reinterpret_cast<void*>(target), &restoreData, hookSize);
-        }
-        break;
-        case HOOK_ELEM_TYPE_CALL:
-        {
-            hookCall(address, func, &restoreData, hookSize);
-        }
-        break;
-        case HOOK_ELEM_TYPE_AUTOHOOK_BEFORE:
-        {
-            extraData = (void*)autohookBefore(address, func, &restoreData, hookSize);
-        }
-        break;
-        case HOOK_ELEM_TYPE_AUTOHOOK_AFTER:
-        {
-            extraData = (void*)autohookAfter(address, func, &restoreData, hookSize);
-        }
-        break;
-        case HOOK_ELEM_TYPE_JUMP:
-        {
-            hookJumpRaw(address, reinterpret_cast<void*>(target), &restoreData, hookSize);
-        }
-        break;
-        case HOOK_ELEM_TYPE_ERASE_CODE:
-        {
-            eraseCode(address, hookSize, &restoreData);
-        }
-        break;
-        case HOOK_ELEM_TYPE_REPLACE_CALL:
-        case HOOK_ELEM_TYPE_HOOKFUNCTION:
-        {
-            wxASSERT_MSG(setCallableFunctionHook, "Function to set hook is unavailable");
-            setCallableFunctionHook();
-        }
-        break;
-        case HOOK_ELEM_TYPE_ASMHOOK_BEFORE:
-        case HOOK_ELEM_TYPE_ASMHOOK_AFTER:
-        case HOOK_ELEM_TYPE_ASMPATCH:
-        {
-            if (type == HOOK_ELEM_TYPE_ASMHOOK_BEFORE)
-            {
-                extraData = asmhookBefore(address, asmText, codeReplacementArgs, &restoreData, hookSize);
-            }
-            else if (type == HOOK_ELEM_TYPE_ASMHOOK_AFTER)
-            {
-                extraData = asmhookAfter(address, asmText, codeReplacementArgs, &restoreData, hookSize);
-            }
-            else
-            {
-                extraData = asmpatch(address, asmText, codeReplacementArgs, &restoreData, hookSize);
-            }
-            break;
-        }
-        case HOOK_ELEM_TYPE_DISABLED:
-            break;
-        default:
-        {
-            wxFAIL_MSG(wxString::Format("Unknown hook type %d", (int)type));
-        }
+// AUTOHOOK BEFORE
 
-        }
-    }
-    else if (!enable && _active)
-    {
-        _active = false;
-        switch (type)
-        {
-        case HOOK_ELEM_TYPE_CALL_RAW: unhookCallRaw(address, restoreData);
-            break;
-        case HOOK_ELEM_TYPE_CALL: unhookCall(address, restoreData);
-            break;
-        case HOOK_ELEM_TYPE_JUMP: unhookJumpRaw(address, restoreData);
-            break;
-        case HOOK_ELEM_TYPE_ERASE_CODE:
-        case HOOK_ELEM_TYPE_PATCH_DATA:
-            patchBytes(address, restoreData.data(), restoreData.size(), nullptr, this->patchUseNops);
-            break;
-        case HOOK_ELEM_TYPE_AUTOHOOK_BEFORE:
-        case HOOK_ELEM_TYPE_AUTOHOOK_AFTER:
-            unhookAutohook(address, restoreData, extraData);
-            break;
-        case HOOK_ELEM_TYPE_REPLACE_CALL:
-        case HOOK_ELEM_TYPE_HOOKFUNCTION:
-            unsetCallableFunctionHook();
-            break;
-        case HOOK_ELEM_TYPE_ASMHOOK_BEFORE:
-        case HOOK_ELEM_TYPE_ASMHOOK_AFTER:
-            unhookAsmhook(address, restoreData, extraData);
-            break;
-        case HOOK_ELEM_TYPE_ASMPATCH:
-            unhookBytecodePatch(address, restoreData, extraData);
-            break;
-        case HOOK_ELEM_TYPE_DISABLED:
-            break;
-        default:
-            wxFAIL_MSG(wxString::Format("Unknown hook type %d", (int)type));
-        }
-    }
-*/
+HookElementAutohookBefore::HookElementAutohookBefore() : HookElementAutohook()
+{
+}
+
+HookElementAutohookBefore::HookElementAutohookBefore(uint32_t address, HookFunc func, int size) : HookElementAutohook(true, address, func, size)
+{
+}
+
+// AUTOHOOK AFTER
+
+HookElementAutohookAfter::HookElementAutohookAfter()
+{
+}
+
+HookElementAutohookAfter::HookElementAutohookAfter(uint32_t address, HookFunc func, int size) : HookElementAutohook(false, address, func, size)
+{
+}
+
+
+// ASMHOOK BASE
 
 bool HookElementAsmhookBase::hasExtraData() const
 {
@@ -214,54 +126,6 @@ void* HookElementAsmhookBase::getExtraData() const
 {
     return extraData;
 }
-
-/*
-void HookElementAsmhookBase::enable(bool enable)
-{
-    if (enable && !active)
-    {
-        active = true;
-        switch (type)
-        {
-        case AHT_HOOK_BEFORE:
-            if (std::holds_alternative<SubstitutableAsmCode>(asmCode))
-            {
-                SubstitutableAsmCode& sub = std::get<SubstitutableAsmCode>(asmCode);
-                extraData = asmhookBefore(address, sub.code, sub.args, &restorationData, size);
-            }
-            else
-            {
-                extraData = asmhookBefore(address, std::get<std::string>(asmCode), &restorationData, size);
-            }
-            break;
-        case AHT_HOOK_AFTER:
-            if (std::holds_alternative<SubstitutableAsmCode>(asmCode))
-            {
-                SubstitutableAsmCode& sub = std::get<SubstitutableAsmCode>(asmCode);
-                extraData = asmhookAfter(address, sub.code, sub.args, &restorationData, size);
-            }
-            else
-            {
-                extraData = asmhookAfter(address, std::get<std::string>(asmCode), &restorationData, size);
-            }
-            break;
-        case AHT_ASMPATCH:
-            if (std::holds_alternative<SubstitutableAsmCode>(asmCode))
-            {
-                SubstitutableAsmCode& sub = std::get<SubstitutableAsmCode>(asmCode);
-                extraData = asmhookBefore(address, sub.code, sub.args, &restorationData, size);
-            }
-            else
-            {
-                extraData = asmhookBefore(address, std::get<std::string>(asmCode), &restorationData, size);
-            }
-            break;
-        default:
-            break;
-
-        }
-    }
-}*/
 
 void HookElementAsmhookBase::ensureHasNoReplacementArgs()
 {
@@ -317,6 +181,8 @@ void HookElementAsmhookBefore::enable(bool enable)
     }
 }
 
+// ASMHOOK BEFORE
+
 HookElementAsmhookBefore::HookElementAsmhookBefore() : HookElementAsmhookBase(HOOK_ELEM_TYPE_ASMHOOK_BEFORE, 0, "", 5)
 {
 }
@@ -328,5 +194,132 @@ HookElementAsmhookBefore::HookElementAsmhookBefore(uint32_t address, const std::
 
 HookElementAsmhookBefore::HookElementAsmhookBefore(uint32_t address, const std::string& asmCode, const CodeReplacementArgs& args, int size)
     : HookElementAsmhookBase(HOOK_ELEM_TYPE_ASMHOOK_BEFORE, address, asmCode, args, size)
+{
+}
+
+// ASMHOOK AFTER
+
+void HookElementAsmhookAfter::enable(bool enable)
+{
+    if (enable && !active)
+    {
+        active = true;
+        if (std::holds_alternative<SubstitutableAsmCode>(asmCode))
+        {
+            SubstitutableAsmCode& code = std::get<SubstitutableAsmCode>(asmCode);
+            extraData = asmhookAfter(address, code.code, code.args, &restorationData, size);
+        }
+        else
+        {
+            extraData = asmhookAfter(address, std::get<std::string>(asmCode), &restorationData, size);
+        }
+    }
+    else if (!enable && active)
+    {
+        active = false;
+        unhookAsmhook(address, restorationData, extraData);
+    }
+}
+
+HookElementAsmhookAfter::HookElementAsmhookAfter() : HookElementAsmhookBase(HOOK_ELEM_TYPE_ASMHOOK_AFTER, 0, "", 5)
+{
+}
+
+HookElementAsmhookAfter::HookElementAsmhookAfter(uint32_t address, const std::string& asmCode, int size)
+    : HookElementAsmhookBase(HOOK_ELEM_TYPE_ASMHOOK_AFTER, address, asmCode, size)
+{
+}
+
+HookElementAsmhookAfter::HookElementAsmhookAfter(uint32_t address, const std::string& asmCode, const CodeReplacementArgs& args, int size)
+    : HookElementAsmhookBase(HOOK_ELEM_TYPE_ASMHOOK_AFTER, address, asmCode, args, size)
+{
+}
+
+// ASMPATCH
+
+void HookElementAsmpatch::enable(bool enable)
+{
+    if (enable && !active)
+    {
+        active = true;
+        if (std::holds_alternative<SubstitutableAsmCode>(asmCode))
+        {
+            SubstitutableAsmCode& code = std::get<SubstitutableAsmCode>(asmCode);
+            extraData = asmpatch(address, code.code, code.args, &restorationData, size, writeJumpBack);
+        }
+        else
+        {
+            assert(asmCode.index() <= 1); // <= 2 variant args
+            extraData = asmpatch(address, std::get<std::string>(asmCode), &restorationData, size, writeJumpBack);
+        }
+    }
+    else if (!enable && active)
+    {
+        active = false;
+        unhookAsmpatch(address, restorationData, extraData);
+    }
+}
+
+HookElementAsmpatch::HookElementAsmpatch() : HookElementAsmhookBase(HOOK_ELEM_TYPE_ASMPATCH, 0, "", 5), writeJumpBack(true)
+{
+}
+
+HookElementAsmpatch::HookElementAsmpatch(uint32_t address, const std::string& asmCode, int size, bool writeJumpBack)
+    : writeJumpBack(writeJumpBack), HookElementAsmhookBase(HOOK_ELEM_TYPE_ASMPATCH, address, asmCode, size)
+{
+}
+
+HookElementAsmpatch::HookElementAsmpatch(uint32_t address, const std::string& asmCode, const CodeReplacementArgs& args, int size, bool writeJumpBack)
+    : writeJumpBack(writeJumpBack), HookElementAsmhookBase(HOOK_ELEM_TYPE_ASMPATCH, address, asmCode, args, size)
+{
+}
+
+// JUMP
+
+void HookElementJump::enable(bool enable)
+{
+}
+
+HookElementJump::HookElementJump()
+{
+}
+
+HookElementJump::HookElementJump(uint32_t address, void* jumpTarget, int size)
+{
+}
+
+HookElementJump::HookElementJump(uint32_t address, uint32_t jumpTarget, int size)
+{
+}
+
+// CALL RAW
+
+void HookElementCallRaw::enable(bool enable)
+{
+}
+
+HookElementCallRaw::HookElementCallRaw()
+{
+}
+
+HookElementCallRaw::HookElementCallRaw(uint32_t address, void* callTarget, int size)
+{
+}
+
+HookElementCallRaw::HookElementCallRaw(uint32_t address, uint32_t callTarget, int size)
+{
+}
+
+// CALL
+
+void HookElementCall::enable(bool enable)
+{
+}
+
+HookElementCall::HookElementCall()
+{
+}
+
+HookElementCall::HookElementCall(uint32_t address, HookFunc func, int size)
 {
 }

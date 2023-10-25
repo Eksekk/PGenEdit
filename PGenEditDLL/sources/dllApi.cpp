@@ -205,8 +205,8 @@ extern "C"
             playerCount = 4;
             void* ptrs[]{ (void*)0xACD804, (void*)0xACF340, (void*)0xAD0E7C, (void*)0xAD29B8 };
             setPlayerPointers(ptrs, playerCount);
-            HookElement2* el = new HookElementAsmhookBefore(0x444441, "aaa\nstc");
-            el->enable();
+            //HookElement2* el = new HookElementAsmhookBefore(0x444441, "aaa\nstc");
+            //el->enable();
         }
         else if (MMVER == 8)
         {

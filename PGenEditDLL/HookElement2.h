@@ -62,7 +62,21 @@ public:
     void destroy() override;
 
     HookElementAutohook();
-    HookElementAutohook(bool isBefore, uint32_t address, HookFunc func, int size);
+    HookElementAutohook(bool isBefore, uint32_t address, HookFunc func, int size = 5);
+};
+
+class HookElementAutohookBefore : public HookElementAutohook
+{
+public:
+    HookElementAutohookBefore();
+    HookElementAutohookBefore(uint32_t address, HookFunc func, int size = 5);
+};
+
+class HookElementAutohookAfter : public HookElementAutohook
+{
+public:
+    HookElementAutohookAfter();
+    HookElementAutohookAfter(uint32_t address, HookFunc func, int size = 5);
 };
 
 struct SubstitutableAsmCode
@@ -101,4 +115,74 @@ public:
     HookElementAsmhookBefore();
     HookElementAsmhookBefore(uint32_t address, const std::string& asmCode, int size = 5);
     HookElementAsmhookBefore(uint32_t address, const std::string& asmCode, const CodeReplacementArgs& args, int size = 5);
+};
+
+class HookElementAsmhookAfter : public HookElementAsmhookBase
+{
+public:
+    // Inherited via HookElementAsmhookBase
+    void enable(bool enable) override;
+
+    HookElementAsmhookAfter();
+    HookElementAsmhookAfter(uint32_t address, const std::string& asmCode, int size = 5);
+    HookElementAsmhookAfter(uint32_t address, const std::string& asmCode, const CodeReplacementArgs& args, int size = 5);
+};
+
+class HookElementAsmpatch : public HookElementAsmhookBase
+{
+protected:
+    bool writeJumpBack;
+public:
+    // Inherited via HookElementAsmhookBase
+    void enable(bool enable) override;
+
+    HookElementAsmpatch();
+    HookElementAsmpatch(uint32_t address, const std::string& asmCode, int size = 5, bool writeJumpBack = true);
+    HookElementAsmpatch(uint32_t address, const std::string& asmCode, const CodeReplacementArgs& args, int size = 5, bool writeJumpBack = true);
+};
+
+class HookElementCall : public HookElement2
+{
+protected:
+    uint32_t address;
+    HookFunc func;
+    int size;
+public:
+    void enable(bool enable) override;
+
+    HookElementCall();
+    HookElementCall(uint32_t address, HookFunc func, int size = 5);
+};
+
+class HookElementSimple
+{
+
+};
+
+class HookElementCallRaw : public HookElement2
+{
+protected:
+    uint32_t address;
+    void* callTarget;
+    int size;
+public:
+    void enable(bool enable) override;
+
+    HookElementCallRaw();
+    HookElementCallRaw(uint32_t address, void* callTarget, int size = 5);
+    HookElementCallRaw(uint32_t address, uint32_t callTarget, int size = 5);
+};
+
+class HookElementJump : public HookElement2
+{
+protected:
+    uint32_t address;
+    void* jumpTarget;
+    int size;
+public:
+    void enable(bool enable) override;
+
+    HookElementJump();
+    HookElementJump(uint32_t address, void* jumpTarget, int size = 5);
+    HookElementJump(uint32_t address, uint32_t jumpTarget, int size = 5);
 };
