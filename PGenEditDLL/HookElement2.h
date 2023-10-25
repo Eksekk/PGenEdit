@@ -9,10 +9,12 @@ protected:
     HookElementType type;
     bool active;
     std::vector<uint8_t> restorationData;
+    bool initialized; // for debugging, probably need no arg constructor, but then the element is not initialized fully
+    // make sure than when enabling it is initialized
 public:
     virtual bool hasExtraData() const = 0;
     virtual void* getExtraData() const = 0;
-    std::vector<uint8_t> getRestorationData() const;
+    std::vector<uint8_t> getRestorationData() const; // intentionally returns a copy
     HookElementType getType() const;
     virtual void enable(bool enable = true) = 0;
     virtual void destroy() = 0; // requested to free all memory etc.
@@ -59,5 +61,44 @@ public:
     void enable(bool enable) override;
     void destroy() override;
 
+    HookElementAutohook();
     HookElementAutohook(bool isBefore, uint32_t address, HookFunc func, int size);
+};
+
+struct SubstitutableAsmCode
+{
+    std::string code;
+    CodeReplacementArgs args;
+};
+
+using AsmCodeVariant = std::variant<std::string, SubstitutableAsmCode>;
+
+class HookElementAsmhookBase : public HookElement2
+{
+protected:
+    uint32_t address;
+    AsmCodeVariant asmCode;
+    void* extraData;
+    int size;
+public:
+    // Inherited via HookElement2
+    bool hasExtraData() const override;
+    void* getExtraData() const override;
+    void destroy() override;
+    void ensureHasNoReplacementArgs();
+
+    HookElementAsmhookBase();
+    HookElementAsmhookBase(HookElementType type, uint32_t address, const std::string& asmCode, int size);
+    HookElementAsmhookBase(HookElementType type, uint32_t address, const std::string& asmCode, const CodeReplacementArgs& args, int size);
+};
+
+class HookElementAsmhookBefore : public HookElementAsmhookBase
+{
+public:
+    // Inherited via HookElementAsmhookBase
+    void enable(bool enable) override;
+
+    HookElementAsmhookBefore();
+    HookElementAsmhookBefore(uint32_t address, const std::string& asmCode, int size = 5);
+    HookElementAsmhookBefore(uint32_t address, const std::string& asmCode, const CodeReplacementArgs& args, int size = 5);
 };

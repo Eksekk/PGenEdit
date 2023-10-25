@@ -651,6 +651,12 @@ public:
     void addElement(HookElement element);
 };
 
+template<typename Elem>
+Hook singleElementHook(Elem&& elem)
+{
+    return Hook(std::forward<Elem>(elem));
+}
+
 extern std::unordered_map<int, Hook> hooks;
 extern std::unordered_map<uint32_t, HookFunc> hookFuncMap;
 

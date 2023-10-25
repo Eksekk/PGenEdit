@@ -375,6 +375,9 @@
     <ClInclude Include="ItemDialogBase.h">
       <Filter>Pliki nagłówkowe\Shared GUI\Item dialog</Filter>
     </ClInclude>
+    <ClInclude Include="HookElement2.h">
+      <Filter>Pliki nagłówkowe</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="sources\MainWindow.cpp">
@@ -625,6 +628,9 @@
     </ClCompile>
     <ClCompile Include="CreateItemDialog.cpp">
       <Filter>Pliki źródłowe\Shared GUI\Item dialog</Filter>
+    </ClCompile>
+    <ClCompile Include="HookElement2.cpp">
+      <Filter>Pliki źródłowe</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
