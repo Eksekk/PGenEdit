@@ -458,3 +458,60 @@ void HookElementCallableFunction::enable(bool enable)
 HookElementReplaceCall::HookElementReplaceCall() : HookElementCallableFunction(HOOK_ELEM_TYPE_REPLACE_CALL)
 {
 }
+
+bool HookElementHookFunction::hasExtraData() const
+{
+    return true;
+}
+
+void* HookElementHookFunction::getExtraData() const
+{
+    return extraData;
+}
+
+HookElementHookFunction::HookElementHookFunction() : HookElementCallableFunction(HOOK_ELEM_TYPE_HOOKFUNCTION, 0, 0)
+{
+}
+
+bool HookElementAsmproc::hasExtraData() const
+{
+    return true;
+}
+
+void* HookElementAsmproc::getExtraData() const
+{
+    return extraData;
+}
+
+void HookElementAsmproc::enable(bool enable)
+{
+    if (enable && !active)
+    {
+        active = true;
+        if (const std::string* str = std::get_if<std::string>(&asmCode))
+        {
+            extraData = (void*)asmproc(*str).data();
+        }
+        else if (const SubstitutableAsmCode* code = std::get_if<SubstitutableAsmCode>(&asmCode))
+        {
+            extraData = (void*)asmproc(code->code, code->args).data();
+        }
+    }
+    else if (!enable && active)
+    {
+        active = false;
+        codeMemoryFree(extraData);
+    }
+}
+
+HookElementAsmproc::HookElementAsmproc()
+{
+}
+
+HookElementAsmproc::HookElementAsmproc(const std::string& asmCode)
+{
+}
+
+HookElementAsmproc::HookElementAsmproc(const std::string& asmCode, const CodeReplacementArgs& args)
+{
+}

@@ -143,6 +143,20 @@ public:
     HookElementAsmpatch(uint32_t address, const std::string& asmCode, const CodeReplacementArgs& args, int size = 5, bool writeJumpBack = true);
 };
 
+class HookElementAsmproc : public HookElement2
+{
+    void* extraData;
+    AsmCodeVariant asmCode;
+public:
+    bool hasExtraData() const override;
+    void* getExtraData() const override;
+    void enable(bool enable) override;
+
+    HookElementAsmproc();
+    HookElementAsmproc(const std::string& asmCode);
+    HookElementAsmproc(const std::string& asmCode, const CodeReplacementArgs& args);
+};
+
 class HookElementCall : public HookElement2
 {
 protected:
@@ -229,7 +243,7 @@ class HookElementReplaceCall : HookElementCallableFunction
 public:
     HookElementReplaceCall();
     template<typename ReturnType, int cc, typename... Args>
-    HookElementReplaceCall(uint32_t address, CallableFunctionHookFunc<ReturnType, Args...> func) : HookElementCallableFunction(HOOK_ELEM_TYPE_REPLACE_CALL, address, 5)
+    void setCallableFunctionHookFunc(CallableFunctionHookFunc<ReturnType, Args...> func)
     {
         constexpr int stackNum = sizeof...(Args) - std::clamp(cc, 0, 2);
         setCallableFunctionHook = [=]()
@@ -240,5 +254,38 @@ public:
             {
                 unhookReplaceCall(address, restorationData);
             };
+    }
+    template<typename ReturnType, int cc, typename... Args>
+    HookElementReplaceCall(uint32_t address, CallableFunctionHookFunc<ReturnType, Args...> func) : HookElementCallableFunction(HOOK_ELEM_TYPE_REPLACE_CALL, address, 5)
+    {
+        setCallableFunctionHookFunc<ReturnType, cc>(func);
+    }
+};
+
+class HookElementHookFunction : HookElementCallableFunction
+{
+    void* extraData;
+public:
+    bool hasExtraData() const override;
+    void* getExtraData() const override;
+    HookElementHookFunction();
+    template<typename ReturnType, int cc, typename... Args>
+    void setCallableFunctionHookFunc(CallableFunctionHookFunc<ReturnType, Args...> func)
+    {
+        constexpr int stackNum = sizeof...(Args) - std::clamp(cc, 0, 2);
+        setCallableFunctionHook = [=]()
+            {
+                extraData = hookFunction<ReturnType, cc>(address, stackNum, func, &restorationData, 5);
+            };
+        unsetCallableFunctionHook = [=]()
+            {
+                unhookHookFunction(address, restorationData, extraData);
+            };
+    }
+    template<typename ReturnType, int cc, typename... Args>
+    HookElementHookFunction(uint32_t address, CallableFunctionHookFunc<ReturnType, Args...> func, int size = 5)
+        : HookElementCallableFunction(HOOK_ELEM_TYPE_HOOKFUNCTION, address, size)
+    {
+        setCallableFunctionHookFunc<ReturnType, cc>(func);
     }
 };
