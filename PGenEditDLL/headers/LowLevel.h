@@ -466,6 +466,22 @@ enum HookElementType
     HOOK_ELEM_TYPE_ASMHOOK_AFTER,
     HOOK_ELEM_TYPE_ASMPATCH,
 };
+// constructor parameters (type will be set automatically):
+// call raw: address, func, size
+// call: address, func, size
+// jump: address, jumpAddress, size
+// patch data: (address, dataPtr, dataSize, patchSize, patchUseNopInstructions [optional]) OR (address, std::string/std::string_view data, patchSize, patchUseNopInstructions [optional])
+// erase code: address, size
+// autohook: address, func, size
+// asmhooks/asmpatch: (address, asmCode, size) OR (address, asmCode, codeReplacementArgs, size)
+// ! in above, a method to change code replacement args!
+// bytecodehooks/bytecodepatch: (address, bytecodePtr, bytecodeSize, hookSize) OR (address, std::string/std::string_view bytecode, hookSize)
+// hookfunction/hookReplaceCall: address, func, size
+// asmproc: code OR (code, codeReplacementArgs), provide method to get generated code address (also in all other asmhooks/asmpatches)
+
+// all: description
+
+// each stores restoration data (defined in base class) and optional extra data field
 
 // different games may need some extra elements for a particular hook, or less
 // also can have same element, but just a bit different

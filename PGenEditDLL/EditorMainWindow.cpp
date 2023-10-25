@@ -229,9 +229,29 @@ void EditorMainWindow::onCloseWindow(wxCloseEvent& event)
 
 void EditorMainWindow::showModalCustom()
 {
+	// create beeps if clicked outside window
+	// just disabler and loop wouldn't play any sound (window wouldn't react still)
+	wxWindow* parent = GetParent();
+	bool enabled = parent->IsEnabled();
+	parent->Disable();
 	Show();
-    wxWindowDisabler dis(this);
-    wxGetApp().enterLoop();
+    //wxWindowDisabler dis(this);
+	auto handler = [this](wxActivateEvent& event)
+		{
+			POINT mouse;
+			GetCursorPos(&mouse);
+			if (!event.GetActive() && event.GetActivationReason() == wxActivateEvent::Reason_Mouse
+				&& HitTest(mouse.x, mouse.y) == wxHitTest::wxHT_WINDOW_OUTSIDE)
+			{
+				MessageBeep(MB_ICONWARNING);
+				FLASHWINFO flash{ sizeof(FLASHWINFO), static_cast<HWND>(GetHWND()), FLASHW_CAPTION, 8, 500 };
+				FlashWindowEx(&flash);
+			}
+		};
+	Bind(wxEVT_ACTIVATE, handler);
+	wxGetApp().enterLoop();
+	Unbind(wxEVT_ACTIVATE, handler);
+	parent->Enable(enabled);
 }
 
 EditorMainWindow::~EditorMainWindow()
