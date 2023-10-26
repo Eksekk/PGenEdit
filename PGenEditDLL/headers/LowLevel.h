@@ -285,6 +285,9 @@ void* asmpatch(uint32_t addr, const std::string& code, std::vector<uint8_t>* sto
 // this version formats code
 void* asmpatch(uint32_t addr, const std::string& code, const CodeReplacementArgs& args, std::vector<uint8_t>* storeAt, int size, bool writeJumpBack = true);
 
+// creates asm bytecode block (without "ret" instruction)
+std::string_view bytecodeproc(const std::string& bytecode);
+
 // creates asm code block (without "ret" instruction)
 std::string_view asmproc(const std::string& code);
 // this version formats code
@@ -468,7 +471,11 @@ enum HookElementType
     HOOK_ELEM_TYPE_ASMHOOK_BEFORE,
     HOOK_ELEM_TYPE_ASMHOOK_AFTER,
     HOOK_ELEM_TYPE_ASMPATCH,
-    HOOK_ELEM_TYPE_ASMPROC
+    HOOK_ELEM_TYPE_ASMPROC,
+    HOOK_ELEM_TYPE_BYTECODEHOOK_BEFORE,
+    HOOK_ELEM_TYPE_BYTECODEHOOK_AFTER,
+    HOOK_ELEM_TYPE_BYTECODEPATCH,
+    HOOK_ELEM_TYPE_BYTECODEPROC,
 };
 // constructor parameters (type will be set automatically):
 // call raw: address, func, size

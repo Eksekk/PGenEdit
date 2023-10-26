@@ -930,12 +930,17 @@ void* asmpatch(uint32_t addr, const std::string& code, const CodeReplacementArgs
     return bytecodePatch(addr, codeBytes, storeAt, size, writeJumpBack);
 }
 
+std::string_view bytecodeproc(const std::string& bytecode)
+{
+    uint32_t mem = codeMemoryAlloc(bytecode.size());
+    copyCode((uint32_t)bytecode.data(), bytecode.size(), false, mem);
+    return std::string_view((const char*)mem, bytecode.size());
+}
+
 std::string_view asmproc(const std::string& code)
 {
 	std::string_view bytecode = compileAsm(code);
-	uint32_t mem = codeMemoryAlloc(bytecode.size());
-	copyCode((uint32_t)bytecode.data(), bytecode.size(), false, mem);
-    return std::string_view((const char*)mem, bytecode.size());
+	return bytecodeproc((std::string)bytecode);
 }
 
 std::string_view asmproc(const std::string& code, const CodeReplacementArgs& args)

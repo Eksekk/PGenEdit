@@ -6,10 +6,9 @@
 #define makeAliases(name)\
 using name = HookElement ## name;\
 using HKE_ ## name = HookElement ## name;\
-namespace hooks\
+namespace hk\
 {\
-    using name = HookElement ## name;\
-    using HKE_ ## name = HookElement ## name;\
+    using name = name;\
 }
 
 class HookElement2
@@ -22,7 +21,7 @@ protected:
     // make sure than when enabling it is initialized
 public:
     void isInitialized() const;
-    virtual bool hasExtraData() const = 0;
+    virtual bool usesExtraData() const = 0;
     virtual void* getExtraData() const = 0;
     std::vector<uint8_t> getRestorationData() const; // intentionally returns a copy
     HookElementType getType() const;
@@ -65,7 +64,7 @@ protected:
     using HookElement2::initialized; // allow using protected member of superclass (HookElement2) in subclass (HookElementAutohookBefore)?? TODO: test it
 public:
     // Inherited via HookElement2
-    bool hasExtraData() const override;
+    bool usesExtraData() const override;
     void* getExtraData() const override;
     void destroy() override;
 protected:
@@ -79,7 +78,8 @@ class HookElementAutohookBefore : public HookElementAutohookBase
 public:
     void enable(bool enable) override;
     HookElementAutohookBefore();
-    HookElementAutohookBefore(uint32_t address, HookFunc func, int size = 5);
+    // using rvalue reference here, because copy will be made in superclass constructor
+    HookElementAutohookBefore(uint32_t address, HookFunc&& func, int size = 5);
 };
 
 makeAliases(AutohookBefore);
@@ -89,7 +89,8 @@ class HookElementAutohookAfter : public HookElementAutohookBase
 public:
     void enable(bool enable) override;
     HookElementAutohookAfter();
-    HookElementAutohookAfter(uint32_t address, HookFunc func, int size = 5);
+    // using rvalue reference here, because copy will be made in superclass constructor
+    HookElementAutohookAfter(uint32_t address, HookFunc&& func, int size = 5);
 };
 
 makeAliases(AutohookAfter);
@@ -102,18 +103,27 @@ struct SubstitutableAsmCode
 
 using AsmCodeVariant = std::variant<std::string, SubstitutableAsmCode>;
 
-class HookElementAsmhookBase : public HookElement2
+class HookElementAsmhookBytecodehookBase : public HookElement2
 {
 protected:
     uint32_t address;
-    AsmCodeVariant asmCode;
     void* extraData;
     int size;
 public:
     // Inherited via HookElement2
-    bool hasExtraData() const override;
+    bool usesExtraData() const override;
     void* getExtraData() const override;
     void destroy() override;
+
+    HookElementAsmhookBytecodehookBase(HookElementType type);
+    HookElementAsmhookBytecodehookBase(HookElementType type, uint32_t address, int size = 5);
+};
+
+class HookElementAsmhookBase : public HookElementAsmhookBytecodehookBase
+{
+protected:
+    AsmCodeVariant asmCode;
+public:
     void ensureHasNoReplacementArgs();
 protected:
     // constructors protected to disallow creating instances of this class
@@ -163,12 +173,59 @@ public:
 
 makeAliases(Asmpatch);
 
+class HookElementBytecodehookBase : public HookElementAsmhookBytecodehookBase
+{
+protected:
+    std::string bytecode;
+    // constructors protected to disallow creating instances of this class
+    HookElementBytecodehookBase(HookElementType type);
+    HookElementBytecodehookBase(HookElementType type, uint32_t address, const std::string& bytecode, int size = 5);
+};
+
+class HookElementBytecodehookBefore : public HookElementBytecodehookBase
+{
+public:
+    // Inherited via HookElementBytecodehookBase
+    void enable(bool enable) override;
+
+    HookElementBytecodehookBefore();
+    HookElementBytecodehookBefore(uint32_t address, const std::string& bytecode, int size = 5);
+};
+
+makeAliases(BytecodehookBefore);
+
+class HookElementBytecodehookAfter : public HookElementBytecodehookBase
+{
+public:
+    // Inherited via HookElementBytecodehookBase
+    void enable(bool enable) override;
+
+    HookElementBytecodehookAfter();
+    HookElementBytecodehookAfter(uint32_t address, const std::string& bytecode, int size = 5);
+};
+
+makeAliases(BytecodehookAfter);
+
+class HookElementBytecodepatch : public HookElementBytecodehookBase
+{
+protected:
+    bool writeJumpBack;
+public:
+    // Inherited via HookElementBytecodehookBase
+    void enable(bool enable) override;
+
+    HookElementBytecodepatch();
+    HookElementBytecodepatch(uint32_t address, const std::string& bytecode, int size = 5, bool writeJumpBack = true);
+};
+
+makeAliases(Bytecodepatch);
+
 class HookElementAsmproc : public HookElement2
 {
     void* extraData;
     AsmCodeVariant asmCode;
 public:
-    bool hasExtraData() const override;
+    bool usesExtraData() const override;
     void* getExtraData() const override;
     void enable(bool enable) override;
 
@@ -178,6 +235,21 @@ public:
 };
 
 makeAliases(Asmproc);
+
+class HookElementBytecodeproc : public HookElement2
+{
+    void* extraData;
+    std::string bytecode;
+public:
+    bool usesExtraData() const override;
+    void* getExtraData() const override;
+    void enable(bool enable) override;
+
+    HookElementBytecodeproc();
+    HookElementBytecodeproc(const std::string& bytecode);
+};
+
+makeAliases(Bytecodeproc);
 
 class HookElementCall : public HookElement2
 {
@@ -300,7 +372,7 @@ class HookElementHookFunction : HookElementCallableFunction
 {
     void* extraData;
 public:
-    bool hasExtraData() const override;
+    bool usesExtraData() const override;
     void* getExtraData() const override;
     HookElementHookFunction();
     template<typename ReturnType, int cc, typename... Args>

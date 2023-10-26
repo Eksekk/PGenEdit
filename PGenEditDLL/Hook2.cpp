@@ -47,22 +47,37 @@ bool Hook2::isFullyActive() const
     return yes;
 }
 
-Hook2::Hook2(HookElement2* el)
+Hook2::Hook2(HookElement2* el, const std::string& description, const std::vector<int> gameVersions)
+    : description(description), gameVersions(gameVersions)
 {
+    if (gameVersions.empty())
+    {
+        this->gameVersions = { 6, 7, 8 };
+    }
     // initializer_list in member initializer with unique_ptr breaks - tries to copy it
     elements.push_back(std::move(std::unique_ptr<HookElement2>(el)));
 }
 
-Hook2::Hook2(std::initializer_list<HookElement2*> elems)
+Hook2::Hook2(std::initializer_list<HookElement2*> elems, const std::string& description, const std::vector<int> gameVersions)
+    : description(description), gameVersions(gameVersions)
 {
+    if (gameVersions.empty())
+    {
+        this->gameVersions = { 6, 7, 8 };
+    }
     for (const auto& elem : elems)
     {
         elements.push_back(std::move(std::unique_ptr<HookElement2>(elem)));
     }
 }
 
-Hook2::Hook2(std::vector<HookElement2*>& elems)
+Hook2::Hook2(std::vector<HookElement2*>& elems, const std::string& description, const std::vector<int> gameVersions)
+    : description(description), gameVersions(gameVersions)
 {
+    if (gameVersions.empty())
+    {
+        this->gameVersions = { 6, 7, 8 };
+    }
     for (auto& elem : elems)
     {
         elements.push_back(std::move(std::unique_ptr<HookElement2>(elem)));

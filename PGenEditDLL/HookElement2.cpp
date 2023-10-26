@@ -10,7 +10,7 @@ void HookElement2::isInitialized() const
     }
 }
 
-bool HookElement2::hasExtraData() const
+bool HookElement2::usesExtraData() const
 {
     return false;
 }
@@ -74,7 +74,7 @@ HookElement2::HookElement2(HookElementType type, bool initialized) : type(type),
 
 // AUTOHOOK GENERIC
 
-bool HookElementAutohookBase::hasExtraData() const
+bool HookElementAutohookBase::usesExtraData() const
 {
     return true;
 }
@@ -127,7 +127,8 @@ HookElementAutohookBefore::HookElementAutohookBefore() : HookElementAutohookBase
 {
 }
 
-HookElementAutohookBefore::HookElementAutohookBefore(uint32_t address, HookFunc func, int size) : HookElementAutohookBase(HOOK_ELEM_TYPE_AUTOHOOK_BEFORE, address, func, size)
+HookElementAutohookBefore::HookElementAutohookBefore(uint32_t address, HookFunc&& func, int size)
+    : HookElementAutohookBase(HOOK_ELEM_TYPE_AUTOHOOK_BEFORE, address, std::forward<HookFunc>(func), size)
 {
 }
 
@@ -152,19 +153,20 @@ HookElementAutohookAfter::HookElementAutohookAfter() : HookElementAutohookBase(H
 {
 }
 
-HookElementAutohookAfter::HookElementAutohookAfter(uint32_t address, HookFunc func, int size) : HookElementAutohookBase(HOOK_ELEM_TYPE_AUTOHOOK_AFTER, address, func, size)
+HookElementAutohookAfter::HookElementAutohookAfter(uint32_t address, HookFunc&& func, int size)
+    : HookElementAutohookBase(HOOK_ELEM_TYPE_AUTOHOOK_AFTER, address, std::forward<HookFunc>(func), size)
 {
 }
 
 
 // ASMHOOK BASE
 
-bool HookElementAsmhookBase::hasExtraData() const
+bool HookElementAsmhookBytecodehookBase::usesExtraData() const
 {
     return true;
 }
 
-void* HookElementAsmhookBase::getExtraData() const
+void* HookElementAsmhookBytecodehookBase::getExtraData() const
 {
     return extraData;
 }
@@ -177,7 +179,7 @@ void HookElementAsmhookBase::ensureHasNoReplacementArgs()
     }
 }
 
-void HookElementAsmhookBase::destroy()
+void HookElementAsmhookBytecodehookBase::destroy()
 {
     disable();
     if (extraData)
@@ -187,17 +189,26 @@ void HookElementAsmhookBase::destroy()
     }
 }
 
-HookElementAsmhookBase::HookElementAsmhookBase(HookElementType type) : HookElement2(type, false)
+HookElementAsmhookBytecodehookBase::HookElementAsmhookBytecodehookBase(HookElementType type) : HookElement2(type, false)
+{
+}
+
+HookElementAsmhookBytecodehookBase::HookElementAsmhookBytecodehookBase(HookElementType type, uint32_t address, int size)
+    : HookElement2(type, true), address(address), size(size)
+{
+}
+
+HookElementAsmhookBase::HookElementAsmhookBase(HookElementType type) : HookElementAsmhookBytecodehookBase(type)
 {
 }
 
 HookElementAsmhookBase::HookElementAsmhookBase(HookElementType type, uint32_t address, const std::string& asmCode, int size)
-    : HookElement2(type, true), address(address), asmCode(asmCode), size(size)
+    : HookElementAsmhookBytecodehookBase(type, address, size), asmCode(asmCode)
 {
 }
 
 HookElementAsmhookBase::HookElementAsmhookBase(HookElementType type, uint32_t address, const std::string& asmCode, const CodeReplacementArgs& args, int size)
-    : HookElement2(type, true), address(address), asmCode(SubstitutableAsmCode{asmCode, args}), size(size)
+    : HookElementAsmhookBytecodehookBase(type, address, size), asmCode(SubstitutableAsmCode{asmCode, args})
 {
 }
 
@@ -316,6 +327,165 @@ HookElementAsmpatch::HookElementAsmpatch(uint32_t address, const std::string& as
 
 HookElementAsmpatch::HookElementAsmpatch(uint32_t address, const std::string& asmCode, const CodeReplacementArgs& args, int size, bool writeJumpBack)
     : writeJumpBack(writeJumpBack), HookElementAsmhookBase(HOOK_ELEM_TYPE_ASMPATCH, address, asmCode, args, size)
+{
+}
+
+HookElementBytecodehookBase::HookElementBytecodehookBase(HookElementType type) : HookElementAsmhookBytecodehookBase(type)
+{
+}
+
+HookElementBytecodehookBase::HookElementBytecodehookBase(HookElementType type, uint32_t address, const std::string& bytecode, int size)
+    : HookElementAsmhookBytecodehookBase(type, address, size), bytecode(bytecode)
+{
+}
+
+void HookElementBytecodehookBefore::enable(bool enable)
+{
+    HookElement2::enable(enable);
+    if (enable && !active)
+    {
+        active = true;
+        extraData = bytecodeHookBefore(address, bytecode, &restorationData, size);
+    }
+    else if (!enable && active)
+    {
+        active = false;
+        unhookBytecodeHook(address, restorationData, extraData);
+    }
+}
+
+HookElementBytecodehookBefore::HookElementBytecodehookBefore() : HookElementBytecodehookBase(HOOK_ELEM_TYPE_BYTECODEHOOK_BEFORE)
+{
+}
+
+HookElementBytecodehookBefore::HookElementBytecodehookBefore(uint32_t address, const std::string& bytecode, int size)
+    : HookElementBytecodehookBase(HOOK_ELEM_TYPE_BYTECODEHOOK_BEFORE, address, bytecode, size)
+{
+}
+
+void HookElementBytecodehookAfter::enable(bool enable)
+{
+    HookElement2::enable(enable);
+    if (enable && !active)
+    {
+        active = true;
+        extraData = bytecodeHookAfter(address, bytecode, &restorationData, size);
+    }
+    else if (!enable && active)
+    {
+        active = false;
+        unhookBytecodeHook(address, restorationData, extraData);
+    }
+}
+
+HookElementBytecodehookAfter::HookElementBytecodehookAfter() : HookElementBytecodehookBase(HOOK_ELEM_TYPE_BYTECODEHOOK_AFTER)
+{
+}
+
+HookElementBytecodehookAfter::HookElementBytecodehookAfter(uint32_t address, const std::string& bytecode, int size)
+    : HookElementBytecodehookBase(HOOK_ELEM_TYPE_BYTECODEHOOK_AFTER, address, bytecode, size)
+{
+}
+
+void HookElementBytecodepatch::enable(bool enable)
+{
+    HookElement2::enable(enable);
+    if (enable && !active)
+    {
+        active = true;
+        extraData = bytecodePatch(address, bytecode, &restorationData, size, writeJumpBack);
+    }
+    else if (!enable && active)
+    {
+        active = false;
+        unhookBytecodePatch(address, restorationData, extraData);
+    }
+}
+
+HookElementBytecodepatch::HookElementBytecodepatch() : HookElementBytecodehookBase(HOOK_ELEM_TYPE_BYTECODEPATCH)
+{
+}
+
+HookElementBytecodepatch::HookElementBytecodepatch(uint32_t address, const std::string& bytecode, int size, bool writeJumpBack)
+    : HookElementBytecodehookBase(HOOK_ELEM_TYPE_BYTECODEPATCH, address, bytecode, size), writeJumpBack(writeJumpBack)
+{
+}
+
+bool HookElementAsmproc::usesExtraData() const
+{
+    return true;
+}
+
+void* HookElementAsmproc::getExtraData() const
+{
+    return extraData;
+}
+
+void HookElementAsmproc::enable(bool enable)
+{
+    HookElement2::enable(enable);
+    if (enable && !active)
+    {
+        active = true;
+        if (const std::string* str = std::get_if<std::string>(&asmCode))
+        {
+            extraData = (void*)asmproc(*str).data();
+        }
+        else if (const SubstitutableAsmCode* code = std::get_if<SubstitutableAsmCode>(&asmCode))
+        {
+            extraData = (void*)asmproc(code->code, code->args).data();
+        }
+    }
+    else if (!enable && active)
+    {
+        active = false;
+        codeMemoryFree(extraData);
+    }
+}
+
+HookElementAsmproc::HookElementAsmproc() : HookElement2(HOOK_ELEM_TYPE_ASMPROC, false)
+{
+}
+
+HookElementAsmproc::HookElementAsmproc(const std::string& asmCode) : HookElement2(HOOK_ELEM_TYPE_ASMPROC, true), asmCode(asmCode)
+{
+}
+
+HookElementAsmproc::HookElementAsmproc(const std::string& asmCode, const CodeReplacementArgs& args)
+    : HookElement2(HOOK_ELEM_TYPE_ASMPROC, true), asmCode(SubstitutableAsmCode{ asmCode, args })
+{
+}
+
+bool HookElementBytecodeproc::usesExtraData() const
+{
+    return true;
+}
+
+void* HookElementBytecodeproc::getExtraData() const
+{
+    return extraData;
+}
+
+void HookElementBytecodeproc::enable(bool enable)
+{
+    HookElement2::enable(enable);
+    if (enable && !active)
+    {
+        active = true;
+        extraData = (void*)bytecodeproc(bytecode).data();
+    }
+    else if (!enable && active)
+    {
+        active = false;
+        codeMemoryFree(extraData);
+    }
+}
+
+HookElementBytecodeproc::HookElementBytecodeproc() : HookElement2(HOOK_ELEM_TYPE_BYTECODEPROC, false)
+{
+}
+
+HookElementBytecodeproc::HookElementBytecodeproc(const std::string& bytecode) : HookElement2(HOOK_ELEM_TYPE_BYTECODEPROC, true), bytecode(bytecode)
 {
 }
 
@@ -497,7 +667,7 @@ HookElementReplaceCall::HookElementReplaceCall() : HookElementCallableFunction(H
 {
 }
 
-bool HookElementHookFunction::hasExtraData() const
+bool HookElementHookFunction::usesExtraData() const
 {
     return true;
 }
@@ -508,50 +678,5 @@ void* HookElementHookFunction::getExtraData() const
 }
 
 HookElementHookFunction::HookElementHookFunction() : HookElementCallableFunction(HOOK_ELEM_TYPE_HOOKFUNCTION, 0, 0)
-{
-}
-
-bool HookElementAsmproc::hasExtraData() const
-{
-    return true;
-}
-
-void* HookElementAsmproc::getExtraData() const
-{
-    return extraData;
-}
-
-void HookElementAsmproc::enable(bool enable)
-{
-    HookElement2::enable(enable);
-    if (enable && !active)
-    {
-        active = true;
-        if (const std::string* str = std::get_if<std::string>(&asmCode))
-        {
-            extraData = (void*)asmproc(*str).data();
-        }
-        else if (const SubstitutableAsmCode* code = std::get_if<SubstitutableAsmCode>(&asmCode))
-        {
-            extraData = (void*)asmproc(code->code, code->args).data();
-        }
-    }
-    else if (!enable && active)
-    {
-        active = false;
-        codeMemoryFree(extraData);
-    }
-}
-
-HookElementAsmproc::HookElementAsmproc() : HookElement2(HOOK_ELEM_TYPE_ASMPROC, false)
-{
-}
-
-HookElementAsmproc::HookElementAsmproc(const std::string& asmCode) : HookElement2(HOOK_ELEM_TYPE_ASMPROC, true), asmCode(asmCode)
-{
-}
-
-HookElementAsmproc::HookElementAsmproc(const std::string& asmCode, const CodeReplacementArgs& args)
-    : HookElement2(HOOK_ELEM_TYPE_ASMPROC, true), asmCode(SubstitutableAsmCode{asmCode, args})
 {
 }
