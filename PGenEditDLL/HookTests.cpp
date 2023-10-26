@@ -449,7 +449,7 @@ static std::vector<wxString> HookTests::testBasicHookFunctionalityAndHookManager
     uint32_t firstHookPos = findCode(expectRegisterValues, "\x90"), secondHookPos = findCode(expectRegisterValues, "\x1E"); // nop, push ds
     char patch1[] = "\x03\xC3\x2B\xC3\x90"; // add eax, ebx; sub eax, ebx; nop
     char patch2[] = "\x0F\x18\x20\x90\x90"; // nop dword ptr [eax]; nop; nop
-    std::vector<HookElement> elems;
+    std::vector<HookElement2*> elems;
     CallableFunctionHookFunc<void> hookfunctionFunc = [=](HookData* d, CallableFunctionHookOrigFunc<void> def) -> uint32_t
     {
         myHookFunc(d);
@@ -473,27 +473,28 @@ static std::vector<wxString> HookTests::testBasicHookFunctionalityAndHookManager
             elems.push_back(new hk::EraseCode(secondHookPos, 5));
             break;
         case HOOK_ELEM_TYPE_CALL:
-            elems.push_back(HookElementBuilder().address(firstHookPos).type(HOOK_ELEM_TYPE_CALL).func(doNothing).build());
-            elems.push_back(HookElementBuilder().address(secondHookPos).type(HOOK_ELEM_TYPE_CALL).func(myHookFunc).build());
+            elems.push_back(new hk::Call(firstHookPos, doNothing));
+            elems.push_back(new hk::Call(secondHookPos, myHookFunc));
             break;
         case HOOK_ELEM_TYPE_AUTOHOOK_BEFORE:
+            elems.push_back(new hk::AutohookBefore(firstHookPos, doNothing).build());
+            elems.push_back(new hk::AutohookBefore(secondHookPos, myHookFuncAutohook));
+            break;
         case HOOK_ELEM_TYPE_AUTOHOOK_AFTER:
-            elems.push_back(HookElementBuilder().address(firstHookPos).type(type).func(doNothing).build());
-            elems.push_back(HookElementBuilder().address(secondHookPos).type(type).func(myHookFuncAutohook).build());
-            //hookCall(firstHookPos, doNothing);
-            //hookCall(secondHookPos, myHookFunc);
+            elems.push_back(new hk::AutohookAfter(firstHookPos, doNothing).build());
+            elems.push_back(new hk::AutohookAfter(secondHookPos, myHookFuncAutohook));
             break;
         case HOOK_ELEM_TYPE_JUMP:
-            elems.push_back(HookElementBuilder().address(firstHookPos).type(HOOK_ELEM_TYPE_JUMP).target((uint32_t)jumpDoNothing).build());
-            elems.push_back(HookElementBuilder().address(secondHookPos).type(HOOK_ELEM_TYPE_ERASE_CODE).size(5).build());
+            elems.push_back(new hk::Jump(firstHookPos, (uint32_t)jumpDoNothing));
+            elems.push_back(new hk::EraseCode(secondHookPos, 5));
             break;
         case HOOK_ELEM_TYPE_PATCH_DATA:
-            elems.push_back(HookElementBuilder().address(firstHookPos).type(HOOK_ELEM_TYPE_PATCH_DATA).target((uint32_t)patch1).dataSize(5).build());
-            elems.push_back(HookElementBuilder().address(secondHookPos).type(HOOK_ELEM_TYPE_PATCH_DATA).target((uint32_t)patch2).dataSize(5).build());
+            elems.push_back(new hk::PatchData(firstHookPos, std::string(patch1, 5)));
+            elems.push_back(new hk::PatchData(secondHookPos, std::string(patch2, 5)));
             break;
         case HOOK_ELEM_TYPE_ERASE_CODE:
-            elems.push_back(HookElementBuilder().address(firstHookPos).type(HOOK_ELEM_TYPE_ERASE_CODE).size(5).build());
-            elems.push_back(HookElementBuilder().address(secondHookPos).type(HOOK_ELEM_TYPE_ERASE_CODE).size(5).build());
+            elems.push_back(new hk::EraseCode(firstHookPos, 5));
+            elems.push_back(new hk::EraseCode(secondHookPos, 5));
             break;
         case HOOK_ELEM_TYPE_REPLACE_CALL:
             // ignore
@@ -841,12 +842,12 @@ static std::vector<wxString> HookTests::testAdvancedHookFunctionality()
     };
 
     Hook2 hook
-    {
+    { {
         new hk::HookFunction<int, 2, int, int, unsigned char>((uint32_t)hookFunctionTest1, hookFunctionFunc, 5),
         new hk::ReplaceCall<int, 0, unsigned char>(findCall(replaceCallHookTestOuter, replaceCallHookTestInner), replaceCallFunc, 5),
         new hk::AutohookBefore((uint32_t)findCode(autohookTest, NOP), autohookFunc1, 6),
         new hk::AutohookBefore((uint32_t)findCode(autohookTest, "\x66\x0F\x1F\x00", 4), autohookFunc2, 5),
-    };
+    } };
     hook.enable();
     int r = hookFunctionTest1(0x5555, 0x2, 0x44);
     myassert(r == HOOK_RETURN_SUCCESS, wxString::Format("Function call returned %d", r));

@@ -1,7 +1,7 @@
 #include "pch.h"
 #include "HookElement2.h"
 
-void HookElement2::isInitialized() const
+bool HookElement2::isInitialized() const
 {
     return initialized;
 }
@@ -609,27 +609,36 @@ void HookElementPatchData::enable(bool enable)
         {
             patchData = (*func)(address); // probably overengineering
         }
-        patchBytes(address, patchData, &restorationData, false);
+        patchBytes(address, patchData, &restorationData, useNops);
     }
     else if (!enable && active)
     {
         active = false;
-        patchBytes(address, restorationData, nullptr, true);
+        patchBytes(address, restorationData, nullptr, false); // here patch data might not be code, just in case don't use nops
     }
 }
 
-HookElementPatchData::HookElementPatchData() : HookElement2(HOOK_ELEM_TYPE_PATCH_DATA, false), address(0), data(ByteVector{}), size(0)
+HookElementPatchData::HookElementPatchData() : HookElement2(HOOK_ELEM_TYPE_PATCH_DATA, false), address(0), data(ByteVector{})
 {
 }
 
-HookElementPatchData::HookElementPatchData(uint32_t address, const ByteVector& data, int size)
-    : HookElement2(HOOK_ELEM_TYPE_PATCH_DATA, true), address(address), data(data), size(size)
+HookElementPatchData::HookElementPatchData(uint32_t address, const ByteVector& data, bool useNops)
+    : HookElement2(HOOK_ELEM_TYPE_PATCH_DATA, true), address(address), data(data), useNops(useNops)
+{
+    
+}
+
+HookElementPatchData::HookElementPatchData(uint32_t address, PatchDataGetBytesFunc getBytesFunc, bool useNops)
+    : HookElement2(HOOK_ELEM_TYPE_PATCH_DATA, true), address(address), data(getBytesFunc), useNops(useNops)
 {
 }
 
-HookElementPatchData::HookElementPatchData(uint32_t address, PatchDataGetBytesFunc getBytesFunc, int size)
-    : HookElement2(HOOK_ELEM_TYPE_PATCH_DATA, true), address(address), data(getBytesFunc), size(size)
+HookElementPatchData::HookElementPatchData(uint32_t address, const std::string& data, bool useNops)
+    : HookElement2(HOOK_ELEM_TYPE_PATCH_DATA, true), address(address), useNops(useNops)
 {
+    ByteVector v;
+    std::ranges::transform(data, std::back_insert_iterator(v), [](char c) { return std::bit_cast<uint8_t>(c); });
+    this->data = std::move(v);
 }
 
 HookElementCallableFunction::HookElementCallableFunction(HookElementType type) : HookElement2(type, false), address(0), size(0)

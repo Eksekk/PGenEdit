@@ -20,7 +20,7 @@ protected:
     bool initialized; // for debugging, probably need no arg constructor, but then the element is not initialized fully
     // make sure than when enabling it is initialized
 public:
-    void isInitialized() const;
+    bool isInitialized() const;
     virtual bool usesExtraData() const;
     virtual void* getExtraData() const;
     std::vector<uint8_t> getRestorationData() const; // intentionally returns a copy
@@ -318,14 +318,15 @@ class HookElementPatchData : public HookElement2
 {
 protected:
     uint32_t address;
-    int size;
     std::variant<ByteVector, PatchDataGetBytesFunc> data;
+    bool useNops; // patching code
 public:
     void enable(bool enable) override;
 
     HookElementPatchData();
-    HookElementPatchData(uint32_t address, const ByteVector& data, int size);
-    HookElementPatchData(uint32_t address, PatchDataGetBytesFunc getBytesFunc, int size);
+    HookElementPatchData(uint32_t address, const ByteVector& data, bool useNops = false);
+    HookElementPatchData(uint32_t address, const std::string& data, bool useNops = false);
+    HookElementPatchData(uint32_t address, PatchDataGetBytesFunc getBytesFunc, bool useNops = false);
 };
 
 makeAliases(PatchData);
@@ -362,11 +363,19 @@ public:
     template<typename ReturnType, int cc, typename... Args>
     HookElementReplaceCall(uint32_t address, CallableFunctionHookFunc<ReturnType, Args...> func) : HookElementCallableFunction(HOOK_ELEM_TYPE_REPLACE_CALL, address, 5)
     {
-        setCallableFunctionHookFunc<ReturnType, cc>(func);
+        setCallableFunctionHookFunc<ReturnType, cc, Args...>(func);
     }
 };
 
 makeAliases(ReplaceCall);
+
+namespace hk
+{
+    template<typename ReturnType, typename... Args>
+    using ReplaceCallHookOrigFunc = ::CallableFunctionHookOrigFunc<ReturnType, Args...>;
+    template<typename ReturnType, typename... Args>
+    using ReplaceCallHookFunc = ::CallableFunctionHookFunc<ReturnType, Args...>;
+}
 
 class HookElementHookFunction : HookElementCallableFunction
 {
@@ -395,6 +404,14 @@ public:
         setCallableFunctionHookFunc<ReturnType, cc>(func);
     }
 };
+
+namespace hk
+{
+    template<typename ReturnType, typename... Args>
+    using HookFunctionHookOrigFunc = ::CallableFunctionHookOrigFunc<ReturnType, Args...>;
+    template<typename ReturnType, typename... Args>
+    using HookFunctionHookFunc = ::CallableFunctionHookFunc<ReturnType, Args...>;
+}
 
 makeAliases(HookFunction);
 

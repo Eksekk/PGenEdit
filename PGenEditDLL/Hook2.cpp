@@ -48,7 +48,7 @@ bool Hook2::isFullyActive() const
 }
 
 Hook2::Hook2(HookElement2* el, const std::string& description, const std::vector<int> gameVersions)
-    : description(description), gameVersions(gameVersions)
+    : description(description), gameVersions(gameVersions), active(false)
 {
     if (gameVersions.empty())
     {
@@ -59,7 +59,7 @@ Hook2::Hook2(HookElement2* el, const std::string& description, const std::vector
 }
 
 Hook2::Hook2(std::initializer_list<HookElement2*> elems, const std::string& description, const std::vector<int> gameVersions)
-    : description(description), gameVersions(gameVersions)
+    : description(description), gameVersions(gameVersions), active(false)
 {
     if (gameVersions.empty())
     {
@@ -72,7 +72,7 @@ Hook2::Hook2(std::initializer_list<HookElement2*> elems, const std::string& desc
 }
 
 Hook2::Hook2(std::vector<HookElement2*>& elems, const std::string& description, const std::vector<int> gameVersions)
-    : description(description), gameVersions(gameVersions)
+    : description(description), gameVersions(gameVersions), active(false)
 {
     if (gameVersions.empty())
     {
