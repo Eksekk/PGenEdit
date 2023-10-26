@@ -21,12 +21,12 @@ protected:
     // make sure than when enabling it is initialized
 public:
     void isInitialized() const;
-    virtual bool usesExtraData() const = 0;
-    virtual void* getExtraData() const = 0;
+    virtual bool usesExtraData() const;
+    virtual void* getExtraData() const;
     std::vector<uint8_t> getRestorationData() const; // intentionally returns a copy
     HookElementType getType() const;
     virtual void enable(bool enable = true) = 0;
-    virtual void destroy() = 0; // requested to free all memory etc.
+    virtual void destroy(); // requested to free all memory etc.
     void disable();
     void toggle();
     bool isActive() const;
@@ -167,8 +167,8 @@ public:
     void enable(bool enable) override;
 
     HookElementAsmpatch();
-    HookElementAsmpatch(uint32_t address, const std::string& asmCode, int size = 5, bool writeJumpBack = true);
-    HookElementAsmpatch(uint32_t address, const std::string& asmCode, const CodeReplacementArgs& args, int size = 5, bool writeJumpBack = true);
+    HookElementAsmpatch(uint32_t address, const std::string& asmCode, int size = 1, bool writeJumpBack = true);
+    HookElementAsmpatch(uint32_t address, const std::string& asmCode, const CodeReplacementArgs& args, int size = 1, bool writeJumpBack = true);
 };
 
 makeAliases(Asmpatch);

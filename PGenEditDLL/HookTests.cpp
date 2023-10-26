@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "HookTests.h"
 #include "LowLevel.h"
+#include "Hook2.h"
 
 static const char NOP[] = "\x90";
 
@@ -467,8 +468,9 @@ static std::vector<wxString> HookTests::testBasicHookFunctionalityAndHookManager
         switch (type)
         {
         case HOOK_ELEM_TYPE_CALL_RAW:
-            elems.push_back(HookElementBuilder().address(firstHookPos).type(HOOK_ELEM_TYPE_CALL_RAW).target((uint32_t)callDoNothing).build());
-            elems.push_back(HookElementBuilder().address(secondHookPos).type(HOOK_ELEM_TYPE_ERASE_CODE).size(5).build());
+
+            elems.push_back(new hk::CallRaw(firstHookPos, (uint32_t)callDoNothing)),
+            elems.push_back(new hk::EraseCode(secondHookPos, 5));
             break;
         case HOOK_ELEM_TYPE_CALL:
             elems.push_back(HookElementBuilder().address(firstHookPos).type(HOOK_ELEM_TYPE_CALL).func(doNothing).build());
@@ -505,7 +507,7 @@ static std::vector<wxString> HookTests::testBasicHookFunctionalityAndHookManager
             break;
         }
 
-        Hook hook(elems);
+        Hook2 hook(elems);
         hook.enable();
         if (type == HOOK_ELEM_TYPE_JUMP)
         {
@@ -838,12 +840,12 @@ static std::vector<wxString> HookTests::testAdvancedHookFunctionality()
         return HOOK_RETURN_SUCCESS;
     };
 
-    Hook hook
+    Hook2 hook
     {
-        HookElementBuilder().address((uint32_t)hookFunctionTest1).size(5).type(HOOK_ELEM_TYPE_HOOKFUNCTION).callableFunctionHookFunc<int, 2, int, int, unsigned char>(hookFunctionFunc).build(),
-        HookElementBuilder().address(findCall(replaceCallHookTestOuter, replaceCallHookTestInner)).size(5).type(HOOK_ELEM_TYPE_REPLACE_CALL).callableFunctionHookFunc<int, 0, unsigned char>(replaceCallFunc).build(),
-        HookElementBuilder().address((uint32_t)findCode(autohookTest, NOP)).type(HOOK_ELEM_TYPE_AUTOHOOK_BEFORE).size(6).func(autohookFunc1).build(),
-        HookElementBuilder().address((uint32_t)findCode(autohookTest, "\x66\x0F\x1F\x00", 4)).type(HOOK_ELEM_TYPE_AUTOHOOK_BEFORE).size(5).func(autohookFunc2).build(),
+        new hk::HookFunction<int, 2, int, int, unsigned char>((uint32_t)hookFunctionTest1, hookFunctionFunc, 5),
+        new hk::ReplaceCall<int, 0, unsigned char>(findCall(replaceCallHookTestOuter, replaceCallHookTestInner), replaceCallFunc, 5),
+        new hk::AutohookBefore((uint32_t)findCode(autohookTest, NOP), autohookFunc1, 6),
+        new hk::AutohookBefore((uint32_t)findCode(autohookTest, "\x66\x0F\x1F\x00", 4), autohookFunc2, 5),
     };
     hook.enable();
     int r = hookFunctionTest1(0x5555, 0x2, 0x44);
@@ -1049,11 +1051,11 @@ std::vector<wxString> HookTests::testAsmHookFunctions()
     // asmhook
     Asserter myasserter("Asm hook tests");
     std::string code = "add eax, 5";
-    Hook hook(HookElementBuilder().address(findCode(asmhookTest1, "\x90", 1)).size(5).type(HOOK_ELEM_TYPE_ASMHOOK_BEFORE).asmText(code.c_str()).build());
+    Hook2 hook(new hk::AsmhookBefore(findCode(asmhookTest1, "\x90", 1), code.c_str(), 5));
     hook.enable();
     myassertf(asmhookTest1(true), "[before asmhook] test failed");
     hook.disable();
-    hook.elements[0] = std::move(HookElementBuilder().address(findCode(asmhookTest1, "\x90", 1)).size(5).type(HOOK_ELEM_TYPE_ASMHOOK_AFTER).asmText(code.c_str()).build());
+    hook.replaceElement(0, new hk::AsmhookAfter(findCode(asmhookTest1, "\x90", 1), code.c_str(), 5));
     hook.enable();
     myassertf(asmhookTest1(false), "[after asmhook] test failed");
 
@@ -1105,19 +1107,19 @@ std::vector<wxString> HookTests::testAsmHookFunctions()
     std::string_view patch2Compiled = compileAsm(std::string(patch2));
 
     hook.disable();
-    hook.elements[0] = std::move(HookElementBuilder().address((uint32_t)compiledAsmpatchCode.data() + 2).type(HOOK_ELEM_TYPE_ASMPATCH).asmText(patch1.data()).size(patch1Compiled.size()).build());
+    hook.replaceElement(0, new hk::Asmpatch((uint32_t)compiledAsmpatchCode.data() + 2, (std::string)patch1), patch1Compiled.size());
     hook.enable();
     myassertf(memcmp(compiledAsmpatchCode.data() + 2, patch1Compiled.data(), patch1Compiled.size()) == 0, "Asmpatch test #1 memory compare #1 failed");
     myassertf(memcmp(compiledAsmpatchCode.data() + 5, "\x66\x85", 2) == 0, "Asmpatch test #1 memory compare #2 failed");
 
     hook.disable();
-    hook.elements[0] = std::move(HookElementBuilder().address((uint32_t)compiledAsmpatchCode.data() + 5).type(HOOK_ELEM_TYPE_ASMPATCH).asmText("nop").size(1).build());
+    hook.replaceElement(0, new hk::Asmpatch((uint32_t)compiledAsmpatchCode.data() + 5, "nop", 1));
     hook.enable();
     myassertf(memcmp(compiledAsmpatchCode.data() + 5, "\x90\x90\x90", 1) == 0, "Asmpatch test #2 memory compare #1 failed");
     myassertf(memcmp(compiledAsmpatchCode.data() + 8, "\x74\x07\x48", 3) == 0, "Asmpatch test #2 memory compare #2 failed");
 
     hook.disable();
-    hook.elements[0] = std::move(HookElementBuilder().address((uint32_t)compiledAsmpatchCode.data()).type(HOOK_ELEM_TYPE_ASMPATCH).asmText(patch2.data()).size(5).build());
+    hook.replaceElement(0, new hk::Asmpatch((uint32_t)compiledAsmpatchCode.data(), (std::string)patch2, 5));
     hook.enable();
     myassertf(byte((uint32_t)compiledAsmpatchCode.data()) == 0xE9, "Asmpatch test #3 memory compare #1 failed - first byte is not near jump opcode");
     myassertf(memcmp(compiledAsmpatchCode.data() + 5, "\x66\x85\xD0\x74\x07\x48", 6) == 0, "Asmpatch test #3 memory compare #2 failed - instructions after jump are changed");
@@ -1125,7 +1127,7 @@ std::vector<wxString> HookTests::testAsmHookFunctions()
     myassertf(memcmp((void*)dest, patch2Compiled.data(), patch2Compiled.size()) == 0, "Asmpatch test #3 memory compare #3 failed - jump destination is invalid");
 
     hook.disable();
-    hook.elements[0] = std::move(HookElementBuilder().address((uint32_t)compiledAsmpatchCode.data()).type(HOOK_ELEM_TYPE_ASMPATCH).asmText((stringRep("nop\n", 7) + "push ebx").ToStdString()).size(7).build());
+    hook.replaceElement(0, new hk::Asmpatch((uint32_t)compiledAsmpatchCode.data(), (stringRep("nop\n", 7) + "push ebx").ToStdString(), 7));
     hook.enable();
     //dest = relJumpCallTarget((uint32_t)compiledAsmpatchCode.data());
     auto codeString = (stringRep("\x90", 7) + "\x53").ToStdString();

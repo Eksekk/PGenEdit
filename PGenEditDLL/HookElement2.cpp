@@ -3,11 +3,7 @@
 
 void HookElement2::isInitialized() const
 {
-    if (!initialized)
-    {
-        wxLogError("Hook element was used, but wasn't initialized before");
-        wxLog::FlushActive();
-    }
+    return initialized;
 }
 
 bool HookElement2::usesExtraData() const
@@ -47,6 +43,7 @@ HookElement2::~HookElement2()
 void HookElement2::destroy()
 {
     // dummy to allow destructor call
+    disable();
 }
 
 void HookElement2::disable()
@@ -64,11 +61,7 @@ bool HookElement2::isActive() const
     return active;
 }
 
-// HookElement2::HookElement2() : type(HOOK_ELEM_TYPE_DISABLED), active(false), initialized(false)
-// {
-// }
-
-HookElement2::HookElement2(HookElementType type, bool initialized) : type(type), active(false), initialized(initialized) // TODO: add extra "initialized" arg, this ctor is called always
+HookElement2::HookElement2(HookElementType type, bool initialized) : type(type), active(false), initialized(initialized)
 {
 }
 

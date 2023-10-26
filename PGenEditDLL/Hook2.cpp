@@ -93,7 +93,22 @@ Hook2::~Hook2()
     destroy();
 }
 
-void Hook2::addElement(HookElement2* element)
+void Hook2::addElement(HookElement2* element, bool autoEnable)
 {
-    elements.push_back(std::move(std::unique_ptr<HookElement2>(element)));
+    auto p = std::unique_ptr<HookElement2>(element);
+    if (autoEnable)
+    {
+        p->enable(active);
+    }
+    elements.push_back(std::move(p));
+}
+
+void Hook2::replaceElement(int i, HookElement2* element, bool autoEnable)
+{
+    auto p = std::unique_ptr<HookElement2>(element);
+    if (autoEnable)
+    {
+        p->enable(active);
+    }
+    elements.at(i) = std::move(p);
 }

@@ -7,8 +7,8 @@
 class Hook2
 {
     bool active;
-public:
     std::vector<std::unique_ptr<HookElement2>> elements;
+public:
     std::string description;
     std::vector<int> gameVersions;
     void enable(bool enable = true);
@@ -29,7 +29,9 @@ public:
     ~Hook2();
     Hook2& operator=(const Hook2&) = delete;
     Hook2(const Hook2&) = delete;
-
-    void addElement(HookElement2* element);
+    // mainly for testing
+    // autoEnable synchronizes new element enabled state with current hook enabled state
+    void addElement(HookElement2* element, bool autoEnable = true);
+    void replaceElement(int i, HookElement2* element, bool autoEnable = true);
 };
 

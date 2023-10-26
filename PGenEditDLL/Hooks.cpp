@@ -4,6 +4,7 @@
 #include "LowLevel.h"
 #include "Utility.h"
 #include "HookParams.h"
+#include "Hook2.h"
 
 static void recoveryMultiplier_7(HookData* d)
 {
@@ -54,8 +55,10 @@ static __declspec(naked) void noRecovery_7()
 
 // IMPORTANT: adding hooks in main file scope doesn't work
 void setupHooks() {
-    hooks.emplace(HK_NO_RECOVERY, Hook(
-        HookElementBuilder().address(mmv(0, 0x48E962, 0)).target(mmv(0U, (uint32_t)noRecovery_7, 0U)).type(HOOK_ELEM_TYPE_JUMP).description("No recovery for player").build()
+    hooks.emplace(HK_NO_RECOVERY, Hook2(
+        new hk::Jump(mmv(0, 0x48E962, 0), mmv(0U, (uint32_t)noRecovery_7, 0U)),
+        "No recovery for player",
+        {7}
     ));
     hooks.at(HK_NO_RECOVERY).enable();
 
@@ -120,17 +123,18 @@ void setupHooks() {
         }
         return HOOK_RETURN_SUCCESS;
     };
-    hooks.emplace(3, Hook
+    hooks.emplace(3, Hook2
         ({
-            HookElementBuilder().address(mmv(0, 0x462AFC, 0)).type(HOOK_ELEM_TYPE_AUTOHOOK_BEFORE).func(func).build(),
-            HookElementBuilder().address(mmv(0, 0x463309, 0)).type(HOOK_ELEM_TYPE_AUTOHOOK_BEFORE).func(func).build(),
-            HookElementBuilder().address(mmv(0, 0x4975C3, 0)).type(HOOK_ELEM_TYPE_AUTOHOOK_BEFORE).func(func).build(),
-            HookElementBuilder().address(mmv(0, 0x497CC1, 0)).type(HOOK_ELEM_TYPE_AUTOHOOK_BEFORE).func(func).build(),
-            HookElementBuilder().address(mmv(0, 0x4BE762, 0)).type(HOOK_ELEM_TYPE_AUTOHOOK_BEFORE).func(func).build(),
-            HookElementBuilder().address(mmv(0, 0x4BE838, 0)).type(HOOK_ELEM_TYPE_AUTOHOOK_BEFORE).func(func).build(),
-            HookElementBuilder().address(mmv(0, 0x4BFCA5, 0)).type(HOOK_ELEM_TYPE_AUTOHOOK_BEFORE).func(func).build(),
-            HookElementBuilder().address(mmv(0, 0x4BFCFC, 0)).type(HOOK_ELEM_TYPE_AUTOHOOK_BEFORE).func(func).build(),
-        }));
+            new hk::AutohookBefore(mmv(0, 0x462AFC, 0), func),
+            new hk::AutohookBefore(mmv(0, 0x463309, 0), func),
+            new hk::AutohookBefore(mmv(0, 0x4975C3, 0), func),
+            new hk::AutohookBefore(mmv(0, 0x497CC1, 0), func),
+            new hk::AutohookBefore(mmv(0, 0x4BE762, 0), func),
+            new hk::AutohookBefore(mmv(0, 0x4BE838, 0), func),
+            new hk::AutohookBefore(mmv(0, 0x4BFCA5, 0), func),
+            new hk::AutohookBefore(mmv(0, 0x4BFCFC, 0), func),
+        }, "Intercepting window messages", {7})
+    );
     // doesn't solve any problems I intended to solve (tooltips and creation time); keeping it, because it may prove useful later
     //hooks.at(3).enable(); // FIXME! crashes on dll unload
 }

@@ -498,45 +498,6 @@ enum HookElementType
 // also can have same element, but just a bit different
 // and can simply have same elements
 
-// TODO: redo into virtual inheritance to have each hook type store only data it needs
-class HookElement
-{
-	bool _active;
-public:
-	HookElementType type;
-	uint32_t address;
-	uint32_t target;
-	const char* patchDataStr; // TODO: string_view instead of separate data/size fields
-    std::string asmText;
-    CodeReplacementArgs codeReplacementArgs;
-	uint32_t hookSize;
-	uint32_t dataSize;
-	std::vector<uint8_t> restoreData;
-	HookFunc func;
-	std::string description;
-	bool patchUseNops;
-	void* extraData; // like copied code for autohook
-    // int stackParamNum; // for callable function hooks; number is automatically deduced from argument count and calling convention
-    std::vector<int> gameVersions;
-
-    // required for hooks where function receives multiple arguments with various types, can't store templated data member
-    std::function<void()> setCallableFunctionHook = nullptr, unsetCallableFunctionHook = nullptr;
-    // store types in tuple and function addr in void* field, then when placing hook extract them (tuple_element_t??), cast function to correct type and hook?
-    template<typename ReturnType, int cc, typename... Args>
-    void setAdvancedHookFunction(CallableFunctionHookFunc<ReturnType, Args...> func);
-
-	void enable(bool enable = true);
-	void disable();
-	void toggle();
-	inline bool isActive() const;
-	HookElement();
-    HookElement(const HookElement&) = default; // TODO: check (extraData)
-    HookElement(HookElement&&) = default;
-    HookElement& operator=(const HookElement& elem) = default;
-    HookElement& operator=(HookElement&& elem) = default;
-	~HookElement();
-};
-
 /*
     template<typename T>
     auto transform_param(T&& t)
@@ -567,108 +528,8 @@ public:
     using transform_param_type_t = typename transform_param_type<T>::type;
 */
 
-template<typename ReturnType, int cc, typename... Args>
-void HookElement::setAdvancedHookFunction(CallableFunctionHookFunc<ReturnType, Args...> func)
-{
-    wxASSERT_MSG(!setCallableFunctionHook, "Advanced hook function is already stored");
-    constexpr int stackArgs = std::max(0, (int)sizeof...(Args) - std::max(cc, 0));
-    setCallableFunctionHook = [=]() {
-        // to consider: supplying number of stack parameters manually?
-        if (type == HOOK_ELEM_TYPE_REPLACE_CALL)
-        {
-            hookReplaceCall<ReturnType, cc, Args...>(address, stackArgs, func, &restoreData, hookSize);
-        }
-        else if (type == HOOK_ELEM_TYPE_HOOKFUNCTION)
-        {
-            extraData = (void*)hookFunction<ReturnType, cc, Args...>(address, stackArgs, func, &restoreData, hookSize);
-        }
-        else
-        {
-            wxFAIL_MSG(wxString::Format("Setting advanced hook function with invalid hook type (%d)", type));
-        }
-    };
-
-    unsetCallableFunctionHook = [=]() {
-        if (type == HOOK_ELEM_TYPE_REPLACE_CALL)
-        {
-            unhookReplaceCall(address, restoreData);
-        }
-        else if (type == HOOK_ELEM_TYPE_HOOKFUNCTION)
-        {
-            unhookHookFunction(address, restoreData, extraData);
-        }
-        else
-        {
-            wxFAIL_MSG(wxString::Format("Unsetting advanced hook function with invalid hook type (%d)", type));
-        }
-    };
-}
-
-// using this class, because constructors with values only would be somewhat unclear which argument does what
-class HookElementBuilder
-{
-	HookElement elem;
-public:
-	HookElementBuilder& type(HookElementType type);
-	HookElementBuilder& address(uint32_t address);
-	HookElementBuilder& address(void* address);
-	HookElementBuilder& target(uint32_t target);
-	HookElementBuilder& size(uint32_t size);
-	HookElementBuilder& dataSize(uint32_t dataSize);
-    HookElementBuilder& func(HookFunc func);
-    HookElementBuilder& patchDataStr(const char* patchDataStr);
-    HookElementBuilder& asmText(const std::string& asmText);
-	HookElementBuilder& description(const std::string& desc);
-	HookElementBuilder& patchUseNops(bool on);
-	HookElementBuilder& gameVersions(const std::vector<int>& gameVersions);
-	HookElementBuilder& codeReplacementArgs(const CodeReplacementArgs& args);
-    template<typename ReturnType, int cc, typename... Args>
-    HookElementBuilder& callableFunctionHookFunc(CallableFunctionHookFunc<ReturnType, Args...> func);
-    HookElement&& build();
-};
-
-template<typename ReturnType, int cc, typename... Args>
-HookElementBuilder& HookElementBuilder::callableFunctionHookFunc(CallableFunctionHookFunc<ReturnType, Args...> func)
-{
-    wxASSERT_MSG(func, "No function passed");
-    // wxASSERT_MSG(!elem.funcReplaceCall, "Call replace hook function is already set"); // hook element itself will test it
-    elem.setAdvancedHookFunction<ReturnType, cc, Args...>(func);
-    return *this;
-}
-
-class Hook
-{
-	bool _active;
-public:
-	std::vector<HookElement> elements;
-	std::string description;
-	void enable(bool enable = true);
-	void disable();
-	void toggle();
-	inline bool isActive() const;
-	bool isFullyActive() const; // every element is _active
-
-    // cannot use move constructors with initializer_list
-	Hook(std::initializer_list<HookElement> elements, const std::string& description = "");
-    Hook(const std::vector<HookElement>& elements, const std::string description = "");
-	Hook(const HookElement& element, const std::string& description = "");
-
-	Hook() = delete;
-	//Hook(const Hook&) = delete; // breaks with initializer lists
-	Hook(Hook&&) = default;
-	~Hook();
-	Hook& operator=(const Hook&) = delete;
-
-    void addElement(HookElement element);
-};
-
-template<typename Elem>
-Hook singleElementHook(Elem&& elem)
-{
-    return Hook(std::forward<Elem>(elem));
-}
-
-extern std::unordered_map<int, Hook> hooks;
+class Hook2;
+extern std::unordered_map<int, Hook2> hooks;
 extern std::unordered_map<uint32_t, HookFunc> hookFuncMap;
 
 static void __fastcall dispatchHook(uint32_t esp);
