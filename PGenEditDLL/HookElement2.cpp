@@ -1,6 +1,15 @@
 #include "pch.h"
 #include "HookElement2.h"
 
+void HookElement2::isInitialized() const
+{
+    if (!initialized)
+    {
+        wxLogError("Hook element was used, but wasn't initialized before");
+        wxLog::FlushActive();
+    }
+}
+
 bool HookElement2::hasExtraData() const
 {
     return false;
@@ -42,16 +51,16 @@ void HookElement2::toggle()
     enable(!active);
 }
 
-inline bool HookElement2::isActive() const
+bool HookElement2::isActive() const
 {
     return active;
 }
 
-HookElement2::HookElement2() : type(HOOK_ELEM_TYPE_DISABLED), active(false), initialized(false)
-{
-}
+// HookElement2::HookElement2() : type(HOOK_ELEM_TYPE_DISABLED), active(false), initialized(false)
+// {
+// }
 
-HookElement2::HookElement2(HookElementType type) : type(type), active(false), initialized(true) // TODO: add extra "initialized" arg, this ctor is called always
+HookElement2::HookElement2(HookElementType type, bool initialized) : type(type), active(false), initialized(initialized) // TODO: add extra "initialized" arg, this ctor is called always
 {
 }
 
@@ -98,20 +107,22 @@ void HookElementAutohook::destroy()
     }
 }
 
-HookElementAutohook::HookElementAutohook() : address(0), extraData(nullptr), func(nullptr), size(0)// : initialized(false) // not working here
+// elem type arg!
+HookElementAutohook::HookElementAutohook(bool isBefore): HookElement2(isBefore ? HOOK_ELEM_TYPE_AUTOHOOK_BEFORE : HOOK_ELEM_TYPE_AUTOHOOK_AFTER, false),
+    address(0), extraData(nullptr), func(nullptr), size(0)// : initialized(false) // not working here
 {
-    initialized = false;
+    
 }
 
 HookElementAutohook::HookElementAutohook(bool isBefore, uint32_t address, HookFunc func, int size) : isBefore(isBefore), address(address), func(func), size(size),
-    extraData(nullptr), HookElement2(isBefore ? HOOK_ELEM_TYPE_AUTOHOOK_BEFORE : HOOK_ELEM_TYPE_AUTOHOOK_AFTER)
+    extraData(nullptr), HookElement2(isBefore ? HOOK_ELEM_TYPE_AUTOHOOK_BEFORE : HOOK_ELEM_TYPE_AUTOHOOK_AFTER, true)
 {
-    initialized = true;
+    
 }
 
 // AUTOHOOK BEFORE
 
-HookElementAutohookBefore::HookElementAutohookBefore() : HookElementAutohook()
+HookElementAutohookBefore::HookElementAutohookBefore() : HookElementAutohook(true)
 {
 }
 
@@ -121,7 +132,7 @@ HookElementAutohookBefore::HookElementAutohookBefore(uint32_t address, HookFunc 
 
 // AUTOHOOK AFTER
 
-HookElementAutohookAfter::HookElementAutohookAfter()
+HookElementAutohookAfter::HookElementAutohookAfter() : HookElementAutohook(false)
 {
 }
 
@@ -160,17 +171,17 @@ void HookElementAsmhookBase::destroy()
     }
 }
 
-HookElementAsmhookBase::HookElementAsmhookBase()
+HookElementAsmhookBase::HookElementAsmhookBase(HookElementType type) : HookElement2(type, false)
 {
 }
 
 HookElementAsmhookBase::HookElementAsmhookBase(HookElementType type, uint32_t address, const std::string& asmCode, int size)
-    : HookElement2(type), address(address), asmCode(asmCode), size(size)
+    : HookElement2(type, true), address(address), asmCode(asmCode), size(size)
 {
 }
 
 HookElementAsmhookBase::HookElementAsmhookBase(HookElementType type, uint32_t address, const std::string& asmCode, const CodeReplacementArgs& args, int size)
-    : HookElement2(type), address(address), asmCode(SubstitutableAsmCode{asmCode, args}), size(size)
+    : HookElement2(type, true), address(address), asmCode(SubstitutableAsmCode{asmCode, args}), size(size)
 {
 }
 
@@ -305,15 +316,17 @@ void HookElementJump::enable(bool enable)
     }
 }
 
-HookElementJump::HookElementJump() : HookElement2(HOOK_ELEM_TYPE_JUMP), address(0), jumpTarget(nullptr), size(5)
+HookElementJump::HookElementJump() : HookElement2(HOOK_ELEM_TYPE_JUMP, false), address(0), jumpTarget(nullptr), size(5)
 {
 }
 
-HookElementJump::HookElementJump(uint32_t address, void* jumpTarget, int size) : HookElement2(HOOK_ELEM_TYPE_JUMP), address(0), jumpTarget(jumpTarget), size(5)
+HookElementJump::HookElementJump(uint32_t address, void* jumpTarget, int size)
+    : HookElement2(HOOK_ELEM_TYPE_JUMP, true), address(address), jumpTarget(jumpTarget), size(size)
 {
 }
 
-HookElementJump::HookElementJump(uint32_t address, uint32_t jumpTarget, int size) : HookElement2(HOOK_ELEM_TYPE_JUMP), address(0), jumpTarget((void*)jumpTarget), size(5)
+HookElementJump::HookElementJump(uint32_t address, uint32_t jumpTarget, int size)
+    : HookElementJump(address, (void*)jumpTarget, size)
 {
 }
 
@@ -333,17 +346,17 @@ void HookElementCallRaw::enable(bool enable)
     }
 }
 
-HookElementCallRaw::HookElementCallRaw() : HookElement2(HOOK_ELEM_TYPE_CALL_RAW), address(0), callTarget(nullptr), size(5)
+HookElementCallRaw::HookElementCallRaw() : HookElement2(HOOK_ELEM_TYPE_CALL_RAW, false), address(0), callTarget(nullptr), size(5)
 {
 }
 
 HookElementCallRaw::HookElementCallRaw(uint32_t address, void* callTarget, int size)
-    : HookElement2(HOOK_ELEM_TYPE_CALL_RAW), address(address), callTarget(callTarget), size(size)
+    : HookElement2(HOOK_ELEM_TYPE_CALL_RAW, true), address(address), callTarget(callTarget), size(size)
 {
 }
 
 HookElementCallRaw::HookElementCallRaw(uint32_t address, uint32_t callTarget, int size)
-    : HookElement2(HOOK_ELEM_TYPE_CALL_RAW), address(address), callTarget((void*)callTarget), size(size)
+    : HookElementCallRaw(address, (void*)callTarget, size)
 {
 }
 
@@ -363,12 +376,12 @@ void HookElementCall::enable(bool enable)
     }
 }
 
-HookElementCall::HookElementCall() : HookElement2(HOOK_ELEM_TYPE_CALL), address(0), func(nullptr), size(5)
+HookElementCall::HookElementCall() : HookElement2(HOOK_ELEM_TYPE_CALL, false), address(0), func(nullptr), size(5)
 {
 }
 
 HookElementCall::HookElementCall(uint32_t address, HookFunc func, int size)
-    : HookElement2(HOOK_ELEM_TYPE_CALL), address(address), func(func), size(size)
+    : HookElement2(HOOK_ELEM_TYPE_CALL, true), address(address), func(func), size(size)
 {
 }
 
@@ -386,12 +399,12 @@ void HookElementEraseCode::enable(bool enable)
     }
 }
 
-HookElementEraseCode::HookElementEraseCode() : HookElement2(HOOK_ELEM_TYPE_ERASE_CODE), address(0), size(1)
+HookElementEraseCode::HookElementEraseCode() : HookElement2(HOOK_ELEM_TYPE_ERASE_CODE, false), address(0), size(1)
 {
 }
 
 HookElementEraseCode::HookElementEraseCode(uint32_t address, int size)
-    : HookElement2(HOOK_ELEM_TYPE_ERASE_CODE), address(address), size(size)
+    : HookElement2(HOOK_ELEM_TYPE_ERASE_CODE, true), address(address), size(size)
 {
 }
 
@@ -418,25 +431,25 @@ void HookElementPatchData::enable(bool enable)
     }
 }
 
-HookElementPatchData::HookElementPatchData() : HookElement2(HOOK_ELEM_TYPE_PATCH_DATA), address(0), data(ByteVector{}), size(0)
+HookElementPatchData::HookElementPatchData() : HookElement2(HOOK_ELEM_TYPE_PATCH_DATA, false), address(0), data(ByteVector{}), size(0)
 {
 }
 
 HookElementPatchData::HookElementPatchData(uint32_t address, const ByteVector& data, int size)
-    : HookElement2(HOOK_ELEM_TYPE_PATCH_DATA), address(address), data(data), size(size)
+    : HookElement2(HOOK_ELEM_TYPE_PATCH_DATA, true), address(address), data(data), size(size)
 {
 }
 
 HookElementPatchData::HookElementPatchData(uint32_t address, PatchDataGetBytesFunc getBytesFunc, int size)
-    : HookElement2(HOOK_ELEM_TYPE_PATCH_DATA), address(address), data(getBytesFunc), size(size)
+    : HookElement2(HOOK_ELEM_TYPE_PATCH_DATA, true), address(address), data(getBytesFunc), size(size)
 {
 }
 
-HookElementCallableFunction::HookElementCallableFunction(HookElementType type) : HookElement2(type), address(0), size(0)
+HookElementCallableFunction::HookElementCallableFunction(HookElementType type) : HookElement2(type, false), address(0), size(0)
 {
 }
 
-HookElementCallableFunction::HookElementCallableFunction(HookElementType type, uint32_t address, int size) : HookElement2(type), address(address), size(size)
+HookElementCallableFunction::HookElementCallableFunction(HookElementType type, uint32_t address, int size) : HookElement2(type, true), address(address), size(size)
 {
 }
 
@@ -504,15 +517,15 @@ void HookElementAsmproc::enable(bool enable)
     }
 }
 
-HookElementAsmproc::HookElementAsmproc() : HookElement2(HOOK_ELEM_TYPE_ASMPROC)
+HookElementAsmproc::HookElementAsmproc() : HookElement2(HOOK_ELEM_TYPE_ASMPROC, false)
 {
 }
 
-HookElementAsmproc::HookElementAsmproc(const std::string& asmCode) : HookElement2(HOOK_ELEM_TYPE_ASMPROC), asmCode(asmCode)
+HookElementAsmproc::HookElementAsmproc(const std::string& asmCode) : HookElement2(HOOK_ELEM_TYPE_ASMPROC, true), asmCode(asmCode)
 {
 }
 
 HookElementAsmproc::HookElementAsmproc(const std::string& asmCode, const CodeReplacementArgs& args)
-    : HookElement2(HOOK_ELEM_TYPE_ASMPROC), asmCode(SubstitutableAsmCode{asmCode, args})
+    : HookElement2(HOOK_ELEM_TYPE_ASMPROC, true), asmCode(SubstitutableAsmCode{asmCode, args})
 {
 }

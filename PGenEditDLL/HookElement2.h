@@ -12,6 +12,7 @@ protected:
     bool initialized; // for debugging, probably need no arg constructor, but then the element is not initialized fully
     // make sure than when enabling it is initialized
 public:
+    void isInitialized() const;
     virtual bool hasExtraData() const = 0;
     virtual void* getExtraData() const = 0;
     std::vector<uint8_t> getRestorationData() const; // intentionally returns a copy
@@ -20,9 +21,8 @@ public:
     virtual void destroy() = 0; // requested to free all memory etc.
     void disable();
     void toggle();
-    inline bool isActive() const;
-    HookElement2();
-    HookElement2(HookElementType type);
+    bool isActive() const;
+    HookElement2(HookElementType type, bool initialized);
     HookElement2(const HookElement2&) = delete; // TODO: implement proper copy ctor
     HookElement2(HookElement2&&) = default;
     HookElement2& operator=(const HookElement2& elem) = default;
@@ -62,7 +62,7 @@ public:
     void destroy() override;
 protected:
     // constructors protected to disallow creating instances of this class
-    HookElementAutohook();
+    HookElementAutohook(bool isBefore);
     HookElementAutohook(bool isBefore, uint32_t address, HookFunc func, int size = 5);
 };
 
@@ -103,7 +103,7 @@ public:
     void ensureHasNoReplacementArgs();
 protected:
     // constructors protected to disallow creating instances of this class
-    HookElementAsmhookBase();
+    HookElementAsmhookBase(HookElementType type);
     HookElementAsmhookBase(HookElementType type, uint32_t address, const std::string& asmCode, int size = 5);
     HookElementAsmhookBase(HookElementType type, uint32_t address, const std::string& asmCode, const CodeReplacementArgs& args, int size = 5);
 };

@@ -18,12 +18,9 @@ public:
     bool isFullyActive() const; // every element is active
 
     // cannot use move constructors with initializer_list
-    Hook2(const HookElement2& el); // const ref binds to everything, so no need for rvalue reference copy ctor
-    Hook2(std::initializer_list<HookElement2> elems);
-    Hook2(const std::vector<HookElement2>& elems);
     Hook2(HookElement2* el);
     Hook2(std::initializer_list<HookElement2*> elems);
-    Hook2(const std::vector<HookElement2*>& elems);
+    Hook2(std::vector<HookElement2*>& elems);
 
     Hook2() = delete;
     //Hook(const Hook&) = delete; // breaks with initializer lists
@@ -32,7 +29,6 @@ public:
     Hook2& operator=(const Hook2&) = delete;
     Hook2(const Hook2&) = delete;
 
-    void addElement(const HookElement2& element);
     void addElement(HookElement2* element);
 };
 
