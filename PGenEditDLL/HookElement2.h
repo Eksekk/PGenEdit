@@ -23,7 +23,7 @@ public:
     inline bool isActive() const;
     HookElement2();
     HookElement2(HookElementType type);
-    HookElement2(const HookElement2&) = default; // TODO: check (extraData)
+    HookElement2(const HookElement2&) = delete; // TODO: implement proper copy ctor
     HookElement2(HookElement2&&) = default;
     HookElement2& operator=(const HookElement2& elem) = default;
     HookElement2& operator=(HookElement2&& elem) = default;

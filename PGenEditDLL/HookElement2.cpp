@@ -504,14 +504,15 @@ void HookElementAsmproc::enable(bool enable)
     }
 }
 
-HookElementAsmproc::HookElementAsmproc()
+HookElementAsmproc::HookElementAsmproc() : HookElement2(HOOK_ELEM_TYPE_ASMPROC)
 {
 }
 
-HookElementAsmproc::HookElementAsmproc(const std::string& asmCode)
+HookElementAsmproc::HookElementAsmproc(const std::string& asmCode) : HookElement2(HOOK_ELEM_TYPE_ASMPROC), asmCode(asmCode)
 {
 }
 
 HookElementAsmproc::HookElementAsmproc(const std::string& asmCode, const CodeReplacementArgs& args)
+    : HookElement2(HOOK_ELEM_TYPE_ASMPROC), asmCode(SubstitutableAsmCode{asmCode, args})
 {
 }

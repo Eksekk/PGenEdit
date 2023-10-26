@@ -468,6 +468,7 @@ enum HookElementType
     HOOK_ELEM_TYPE_ASMHOOK_BEFORE,
     HOOK_ELEM_TYPE_ASMHOOK_AFTER,
     HOOK_ELEM_TYPE_ASMPATCH,
+    HOOK_ELEM_TYPE_ASMPROC
 };
 // constructor parameters (type will be set automatically):
 // call raw: address, func, size
