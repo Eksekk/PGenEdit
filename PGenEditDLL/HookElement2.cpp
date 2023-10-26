@@ -30,6 +30,14 @@ HookElementType HookElement2::getType() const
     return type;
 }
 
+void HookElement2::enable(bool enable /*= true*/)
+{
+    if (!initialized)
+    {
+        wxLogFatalError("Hook was %s without being initialized first", enable ? "enabled" : "disabled");
+    }
+}
+
 HookElement2::~HookElement2()
 {
     disable();
@@ -66,38 +74,17 @@ HookElement2::HookElement2(HookElementType type, bool initialized) : type(type),
 
 // AUTOHOOK GENERIC
 
-bool HookElementAutohook::hasExtraData() const
+bool HookElementAutohookBase::hasExtraData() const
 {
     return true;
 }
 
-void* HookElementAutohook::getExtraData() const
+void* HookElementAutohookBase::getExtraData() const
 {
     return extraData;
 }
 
-void HookElementAutohook::enable(bool enable)
-{
-    if (enable && !active)
-    {
-        active = true;
-        if (isBefore)
-        {
-            extraData = (void*)autohookBefore(address, func, &restorationData, size);
-        }
-        else
-        {
-            extraData = (void*)autohookAfter(address, func, &restorationData, size);
-        }
-    }
-    else if (!enable && active)
-    {
-        active = false;
-        unhookAutohook(address, restorationData, extraData);
-    }
-}
-
-void HookElementAutohook::destroy()
+void HookElementAutohookBase::destroy()
 {
     disable();
     if (extraData)
@@ -107,36 +94,65 @@ void HookElementAutohook::destroy()
     }
 }
 
-// elem type arg!
-HookElementAutohook::HookElementAutohook(bool isBefore): HookElement2(isBefore ? HOOK_ELEM_TYPE_AUTOHOOK_BEFORE : HOOK_ELEM_TYPE_AUTOHOOK_AFTER, false),
+HookElementAutohookBase::HookElementAutohookBase(HookElementType type): HookElement2(type, false),
     address(0), extraData(nullptr), func(nullptr), size(0)// : initialized(false) // not working here
 {
     
 }
 
-HookElementAutohook::HookElementAutohook(bool isBefore, uint32_t address, HookFunc func, int size) : isBefore(isBefore), address(address), func(func), size(size),
-    extraData(nullptr), HookElement2(isBefore ? HOOK_ELEM_TYPE_AUTOHOOK_BEFORE : HOOK_ELEM_TYPE_AUTOHOOK_AFTER, true)
+HookElementAutohookBase::HookElementAutohookBase(HookElementType type, uint32_t address, HookFunc func, int size) : address(address), func(func), size(size),
+    extraData(nullptr), HookElement2(type, true)
 {
     
 }
 
 // AUTOHOOK BEFORE
 
-HookElementAutohookBefore::HookElementAutohookBefore() : HookElementAutohook(true)
+void HookElementAutohookBefore::enable(bool enable)
+{
+    HookElement2::enable(enable);
+    if (enable && !active)
+    {
+        active = true;
+        extraData = (void*)autohookBefore(address, func, &restorationData, size);
+    }
+    else if (!enable && active)
+    {
+        active = false;
+        unhookAutohook(address, restorationData, extraData);
+    }
+}
+
+HookElementAutohookBefore::HookElementAutohookBefore() : HookElementAutohookBase(HOOK_ELEM_TYPE_AUTOHOOK_BEFORE)
 {
 }
 
-HookElementAutohookBefore::HookElementAutohookBefore(uint32_t address, HookFunc func, int size) : HookElementAutohook(true, address, func, size)
+HookElementAutohookBefore::HookElementAutohookBefore(uint32_t address, HookFunc func, int size) : HookElementAutohookBase(HOOK_ELEM_TYPE_AUTOHOOK_BEFORE, address, func, size)
 {
 }
 
 // AUTOHOOK AFTER
 
-HookElementAutohookAfter::HookElementAutohookAfter() : HookElementAutohook(false)
+void HookElementAutohookAfter::enable(bool enable)
+{
+    HookElement2::enable(enable);
+    if (enable && !active)
+    {
+        active = true;
+        extraData = (void*)autohookAfter(address, func, &restorationData, size);
+    }
+    else if (!enable && active)
+    {
+        active = false;
+        unhookAutohook(address, restorationData, extraData);
+    }
+}
+
+HookElementAutohookAfter::HookElementAutohookAfter() : HookElementAutohookBase(HOOK_ELEM_TYPE_AUTOHOOK_AFTER)
 {
 }
 
-HookElementAutohookAfter::HookElementAutohookAfter(uint32_t address, HookFunc func, int size) : HookElementAutohook(false, address, func, size)
+HookElementAutohookAfter::HookElementAutohookAfter(uint32_t address, HookFunc func, int size) : HookElementAutohookBase(HOOK_ELEM_TYPE_AUTOHOOK_AFTER, address, func, size)
 {
 }
 
@@ -187,6 +203,7 @@ HookElementAsmhookBase::HookElementAsmhookBase(HookElementType type, uint32_t ad
 
 void HookElementAsmhookBefore::enable(bool enable)
 {
+    HookElement2::enable(enable);
     if (enable && !active)
     {
         active = true;
@@ -227,6 +244,7 @@ HookElementAsmhookBefore::HookElementAsmhookBefore(uint32_t address, const std::
 
 void HookElementAsmhookAfter::enable(bool enable)
 {
+    HookElement2::enable(enable);
     if (enable && !active)
     {
         active = true;
@@ -265,6 +283,7 @@ HookElementAsmhookAfter::HookElementAsmhookAfter(uint32_t address, const std::st
 
 void HookElementAsmpatch::enable(bool enable)
 {
+    HookElement2::enable(enable);
     if (enable && !active)
     {
         active = true;
@@ -304,6 +323,7 @@ HookElementAsmpatch::HookElementAsmpatch(uint32_t address, const std::string& as
 
 void HookElementJump::enable(bool enable)
 {
+    HookElement2::enable(enable);
     if (enable && !active)
     {
         active = true;
@@ -334,6 +354,7 @@ HookElementJump::HookElementJump(uint32_t address, uint32_t jumpTarget, int size
 
 void HookElementCallRaw::enable(bool enable)
 {
+    HookElement2::enable(enable);
     if (enable && !active)
     {
         active = true;
@@ -364,6 +385,7 @@ HookElementCallRaw::HookElementCallRaw(uint32_t address, uint32_t callTarget, in
 
 void HookElementCall::enable(bool enable)
 {
+    HookElement2::enable(enable);
     if (enable && !active)
     {
         active = true;
@@ -387,6 +409,7 @@ HookElementCall::HookElementCall(uint32_t address, HookFunc func, int size)
 
 void HookElementEraseCode::enable(bool enable)
 {
+    HookElement2::enable(enable);
     if (enable && !active)
     {
         active = true;
@@ -410,6 +433,7 @@ HookElementEraseCode::HookElementEraseCode(uint32_t address, int size)
 
 void HookElementPatchData::enable(bool enable)
 {
+    HookElement2::enable(enable);
     if (enable && !active)
     {
         active = true;
@@ -455,6 +479,7 @@ HookElementCallableFunction::HookElementCallableFunction(HookElementType type, u
 
 void HookElementCallableFunction::enable(bool enable)
 {
+    HookElement2::enable(enable);
     wxASSERT_MSG((bool)setCallableFunctionHook, "Callable function hook: set hook function not provided");
     if (enable && !active)
     {
@@ -498,6 +523,7 @@ void* HookElementAsmproc::getExtraData() const
 
 void HookElementAsmproc::enable(bool enable)
 {
+    HookElement2::enable(enable);
     if (enable && !active)
     {
         active = true;

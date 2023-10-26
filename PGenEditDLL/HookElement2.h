@@ -3,6 +3,15 @@
 #include "main.h"
 #include "LowLevel.h"
 
+#define makeAliases(name)\
+using name = HookElement ## name;\
+using HKE_ ## name = HookElement ## name;\
+namespace hooks\
+{\
+    using name = HookElement ## name;\
+    using HKE_ ## name = HookElement ## name;\
+}
+
 class HookElement2
 {
 protected:
@@ -46,39 +55,44 @@ public:
 
 // each stores restoration data (defined in base class) and optional extra data field
 
-class HookElementAutohook : public HookElement2
+class HookElementAutohookBase : public HookElement2
 {
 protected:
     uint32_t address;
-    bool isBefore;
     HookFunc func;
     void* extraData;
     int size;
+    using HookElement2::initialized; // allow using protected member of superclass (HookElement2) in subclass (HookElementAutohookBefore)?? TODO: test it
 public:
     // Inherited via HookElement2
     bool hasExtraData() const override;
     void* getExtraData() const override;
-    void enable(bool enable) override;
     void destroy() override;
 protected:
     // constructors protected to disallow creating instances of this class
-    HookElementAutohook(bool isBefore);
-    HookElementAutohook(bool isBefore, uint32_t address, HookFunc func, int size = 5);
+    HookElementAutohookBase(HookElementType type);
+    HookElementAutohookBase(HookElementType type, uint32_t address, HookFunc func, int size = 5);
 };
 
-class HookElementAutohookBefore : public HookElementAutohook
+class HookElementAutohookBefore : public HookElementAutohookBase
 {
 public:
+    void enable(bool enable) override;
     HookElementAutohookBefore();
     HookElementAutohookBefore(uint32_t address, HookFunc func, int size = 5);
 };
 
-class HookElementAutohookAfter : public HookElementAutohook
+makeAliases(AutohookBefore);
+
+class HookElementAutohookAfter : public HookElementAutohookBase
 {
 public:
+    void enable(bool enable) override;
     HookElementAutohookAfter();
     HookElementAutohookAfter(uint32_t address, HookFunc func, int size = 5);
 };
+
+makeAliases(AutohookAfter);
 
 struct SubstitutableAsmCode
 {
@@ -119,6 +133,8 @@ public:
     HookElementAsmhookBefore(uint32_t address, const std::string& asmCode, const CodeReplacementArgs& args, int size = 5);
 };
 
+makeAliases(AsmhookBefore);
+
 class HookElementAsmhookAfter : public HookElementAsmhookBase
 {
 public:
@@ -129,6 +145,8 @@ public:
     HookElementAsmhookAfter(uint32_t address, const std::string& asmCode, int size = 5);
     HookElementAsmhookAfter(uint32_t address, const std::string& asmCode, const CodeReplacementArgs& args, int size = 5);
 };
+
+makeAliases(AsmhookAfter);
 
 class HookElementAsmpatch : public HookElementAsmhookBase
 {
@@ -142,6 +160,8 @@ public:
     HookElementAsmpatch(uint32_t address, const std::string& asmCode, int size = 5, bool writeJumpBack = true);
     HookElementAsmpatch(uint32_t address, const std::string& asmCode, const CodeReplacementArgs& args, int size = 5, bool writeJumpBack = true);
 };
+
+makeAliases(Asmpatch);
 
 class HookElementAsmproc : public HookElement2
 {
@@ -157,6 +177,8 @@ public:
     HookElementAsmproc(const std::string& asmCode, const CodeReplacementArgs& args);
 };
 
+makeAliases(Asmproc);
+
 class HookElementCall : public HookElement2
 {
 protected:
@@ -169,6 +191,8 @@ public:
     HookElementCall();
     HookElementCall(uint32_t address, HookFunc func, int size = 5);
 };
+
+makeAliases(Call);
 
 class HookElementCallRaw : public HookElement2
 {
@@ -184,6 +208,8 @@ public:
     HookElementCallRaw(uint32_t address, uint32_t callTarget, int size = 5);
 };
 
+makeAliases(CallRaw);
+
 class HookElementJump : public HookElement2
 {
 protected:
@@ -198,6 +224,8 @@ public:
     HookElementJump(uint32_t address, uint32_t jumpTarget, int size = 5);
 };
 
+makeAliases(Jump);
+
 class HookElementEraseCode : public HookElement2
 {
 protected:
@@ -209,6 +237,8 @@ public:
     HookElementEraseCode();
     HookElementEraseCode(uint32_t address, int size = 1); // without size argument replaces single instruction, as in MMExt
 };
+
+makeAliases(EraseCode);
 
 using PatchDataGetBytesFunc = std::function<ByteVector(uint32_t address)>;
 
@@ -225,6 +255,8 @@ public:
     HookElementPatchData(uint32_t address, const ByteVector& data, int size);
     HookElementPatchData(uint32_t address, PatchDataGetBytesFunc getBytesFunc, int size);
 };
+
+makeAliases(PatchData);
 
 class HookElementCallableFunction : HookElement2
 {
@@ -262,6 +294,8 @@ public:
     }
 };
 
+makeAliases(ReplaceCall);
+
 class HookElementHookFunction : HookElementCallableFunction
 {
     void* extraData;
@@ -289,3 +323,7 @@ public:
         setCallableFunctionHookFunc<ReturnType, cc>(func);
     }
 };
+
+makeAliases(HookFunction);
+
+#undef makeAliases
