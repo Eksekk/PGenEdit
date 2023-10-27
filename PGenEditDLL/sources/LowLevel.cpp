@@ -223,38 +223,22 @@ void unhookAutohook(uint32_t addr, std::vector<uint8_t>& restoreData, void*& all
 // TODO: generic function to generate all four without repeating code?
 void patchByte(uint32_t addr, uint8_t val, std::vector<uint8_t>* storeAt)
 {
-	storeBytes(storeAt, addr, 1);
-	DWORD tmp;
-	VirtualProtect((void*)addr, 1, PAGE_EXECUTE_READWRITE, &tmp);
-	byte(addr) = val;
-	VirtualProtect((void*)addr, 1, tmp, &tmp);
+	genericPatch(addr, val, storeAt);
 }
 
 void patchWord(uint32_t addr, uint16_t val, std::vector<uint8_t>* storeAt)
 {
-	storeBytes(storeAt, addr, 2);
-	DWORD tmp;
-	VirtualProtect((void*)addr, 2, PAGE_EXECUTE_READWRITE, &tmp);
-	word(addr) = val;
-	VirtualProtect((void*)addr, 2, tmp, &tmp);
+	genericPatch(addr, val, storeAt);
 }
 
 void patchDword(uint32_t addr, uint32_t val, std::vector<uint8_t>* storeAt)
 {
-	storeBytes(storeAt, addr, 4);
-	DWORD tmp;
-	VirtualProtect((void*)addr, 4, PAGE_EXECUTE_READWRITE, &tmp);
-	dword(addr) = val;
-	VirtualProtect((void*)addr, 4, tmp, &tmp);
+	genericPatch(addr, val, storeAt);
 }
 
 void patchQword(uint32_t addr, uint64_t val, std::vector<uint8_t>* storeAt)
 {
-	storeBytes(storeAt, addr, 8);
-	DWORD tmp;
-	VirtualProtect((void*)addr, 8, PAGE_EXECUTE_READWRITE, &tmp);
-	qword(addr) = val;
-	VirtualProtect((void*)addr, 8, tmp, &tmp);
+	genericPatch(addr, val, storeAt);
 }
 
 void patchSByte(uint32_t addr, int8_t val, std::vector<uint8_t>* storeAt)
@@ -269,11 +253,7 @@ void patchSWord(uint32_t addr, int16_t val, std::vector<uint8_t>* storeAt)
 
 void patchSDword(uint32_t addr, int32_t val, std::vector<uint8_t>* storeAt)
 {
-    storeBytes(storeAt, addr, 4);
-    DWORD tmp;
-    VirtualProtect((void*)addr, 4, PAGE_EXECUTE_READWRITE, &tmp);
-    sdword(addr) = val;
-    VirtualProtect((void*)addr, 4, tmp, &tmp);
+	genericPatch(addr, val, storeAt);
 }
 
 void patchSQword(uint32_t addr, int64_t val, std::vector<uint8_t>* storeAt)
@@ -326,6 +306,25 @@ std::map<uint32_t, std::vector<void*>> freeAddressesBySize;
 std::map<void*, uint32_t> sizesByAddress; // all allocated "micro-blocks" (parts of single VirtualAlloc call reserved in multiple codeMemoryAlloc calls)
 std::map<void*, uint32_t> allAllocatedBlocks; // <address, size>
 SYSTEM_INFO systemInfo;
+
+std::string readString(const void* buf, uint32_t maxLength, bool readNull /*= false*/)
+{
+	if (readNull)
+	{
+		return std::string(reinterpret_cast<const char*>(buf), maxLength);
+	}
+	const char* charBuf = reinterpret_cast<const char*>(buf);
+	uint32_t len = 0;
+	if (!maxLength)
+	{
+		maxLength = std::numeric_limits<uint32_t>::max();
+	}
+	for (; *charBuf && len < maxLength; ++charBuf, ++len)
+	{
+
+	}
+	return std::string(reinterpret_cast<const char*>(buf), len);
+}
 
 uint32_t codeMemoryAlloc(uint32_t size)
 {
@@ -881,5 +880,64 @@ std::string_view compileAsm(const std::string& code, uint32_t runtimeAddress)
         wxLogError("Unknown FASM return code: %d", (int)ret);
         wxLog::FlushActive();
         return "";
+    }
+}
+
+namespace lowLevel
+{
+    namespace hooks
+    {
+        using ::bytecodeHookBefore;
+        using ::bytecodeHookAfter;
+        using ::unhookBytecodeHook;
+        using ::asmhookBefore;
+        using ::asmhookAfter;
+        using ::unhookAsmhook;
+        using ::bytecodePatch;
+        using ::asmpatch;
+        using ::bytecodeproc;
+        using ::asmproc;
+        using ::unhookBytecodePatch;
+        using ::unhookAsmpatch;
+        using ::unhookReplaceCall;
+        using ::unhookHookFunction;
+        using ::eraseCode;
+        using ::hookCallRaw;
+        using ::unhookCallRaw;
+        using ::hookJump;
+        using ::unhookJump;
+        using ::hookCall;
+        using ::unhookCall;
+        using ::autohookBefore;
+        using ::autohookAfter;
+        using ::unhookAutohook;
+        using ::patchBytes;
+        using ::patchByte;
+        using ::patchWord;
+        using ::patchDword;
+        using ::patchQword;
+        using ::patchSByte;
+        using ::patchSWord;
+        using ::patchSDword;
+        using ::patchSQword;
+    }
+    using ::compileAsm;
+    using ::getInstructionSize;
+    using ::codeMemoryAlloc;
+    using ::codeMemoryFree;
+    using ::copyCode;
+    using ::readString;
+    using ::relJumpCallTarget;
+    using ::findCode;
+    using ::storeBytes;
+    using ::getRealHookSize;
+    using ::HookData;
+    namespace internal
+    {
+        using ::myHookProc;
+        using ::dispatchHook;
+        using ::removeHooks;
+        using ::codeMemoryFullFree;
+        using ::checkOverlap;
     }
 }

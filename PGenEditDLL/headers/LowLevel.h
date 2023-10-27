@@ -211,20 +211,21 @@ f::test = reinterpret_cast<decltype(f::test)>(0x45458943);
 }*/
 
 // data patching functions which unprotect before/protect after (essential for patching code etc.)
-void patchByte(uint32_t addr, uint8_t val, std::vector<uint8_t>* storeAt);
-void patchWord(uint32_t addr, uint16_t val, std::vector<uint8_t>* storeAt);
-void patchDword(uint32_t addr, uint32_t val, std::vector<uint8_t>* storeAt);
-void patchQword(uint32_t addr, uint64_t val, std::vector<uint8_t>* storeAt);
 
 template<typename valType>
 void genericPatch(uint32_t addr, valType val, std::vector<uint8_t>* storeAt)
 {
-    storeBytes(storeAt, addr, sizeof (valType));
+    storeBytes(storeAt, addr, sizeof(valType));
     DWORD tmp;
-    VirtualProtect((void*)addr, sizeof (valType), PAGE_EXECUTE_READWRITE, &tmp);
+    VirtualProtect((void*)addr, sizeof(valType), PAGE_EXECUTE_READWRITE, &tmp);
     *(valType*)addr = val;
-    VirtualProtect((void*)addr, sizeof (valType), tmp, &tmp);
+    VirtualProtect((void*)addr, sizeof(valType), tmp, &tmp);
 }
+
+void patchByte(uint32_t addr, uint8_t val, std::vector<uint8_t>* storeAt);
+void patchWord(uint32_t addr, uint16_t val, std::vector<uint8_t>* storeAt);
+void patchDword(uint32_t addr, uint32_t val, std::vector<uint8_t>* storeAt);
+void patchQword(uint32_t addr, uint64_t val, std::vector<uint8_t>* storeAt);
 
 void patchSByte(uint32_t addr, int8_t val, std::vector<uint8_t>* storeAt);
 void patchSWord(uint32_t addr, int16_t val, std::vector<uint8_t>* storeAt);
@@ -239,6 +240,9 @@ void patchBytes(uint32_t addr, const void* bytes, uint32_t size, std::vector<uin
 void patchBytes(uint32_t addr, const ByteVector& bytes, std::vector<uint8_t>* storeAt = nullptr, bool useNops = false);
 
 extern SYSTEM_INFO systemInfo;
+
+// works like in MMExt
+std::string readString(const void* buf, uint32_t maxLength = 0, bool readNull = false);
 
 // allocates memory for code
 uint32_t codeMemoryAlloc(uint32_t size);
