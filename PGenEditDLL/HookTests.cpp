@@ -142,7 +142,7 @@ static std::vector<wxString> HookTests::testHookPlacingAndSize()
                     break;
                 case HOOK_ELEM_TYPE_JUMP:
                     hookSize = 5 + hookSizeId * 2;
-                    hookJumpRaw(addr, (void*)0xFEFEFEFE, &autoCodeCopy, hookSize);
+                    hookJump(addr, (void*)0xFEFEFEFE, &autoCodeCopy, hookSize);
                     break;
                 case HOOK_ELEM_TYPE_PATCH_DATA:
                     hookSize = 3 + hookSizeId * 2;

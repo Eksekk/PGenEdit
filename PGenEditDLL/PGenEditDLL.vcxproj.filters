@@ -375,11 +375,11 @@
     <ClInclude Include="ItemDialogBase.h">
       <Filter>Pliki nagłówkowe\Shared GUI\Item dialog</Filter>
     </ClInclude>
-    <ClInclude Include="HookElement.h">
-      <Filter>Pliki nagłówkowe</Filter>
-    </ClInclude>
     <ClInclude Include="Hook.h">
-      <Filter>Pliki nagłówkowe</Filter>
+      <Filter>Pliki nagłówkowe\Misc\Low level</Filter>
+    </ClInclude>
+    <ClInclude Include="HookElement.h">
+      <Filter>Pliki nagłówkowe\Misc\Low level</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -633,10 +633,10 @@
       <Filter>Pliki źródłowe\Shared GUI\Item dialog</Filter>
     </ClCompile>
     <ClCompile Include="HookElement.cpp">
-      <Filter>Pliki źródłowe</Filter>
+      <Filter>Pliki źródłowe\Misc\Low level</Filter>
     </ClCompile>
     <ClCompile Include="Hook.cpp">
-      <Filter>Pliki źródłowe</Filter>
+      <Filter>Pliki źródłowe\Misc\Low level</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

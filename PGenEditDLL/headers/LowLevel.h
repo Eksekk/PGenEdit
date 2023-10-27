@@ -187,8 +187,8 @@ uint32_t relJumpCallTarget(uint32_t addr);
 void hookCallRaw(uint32_t addr, void* func, std::vector<uint8_t>* storeAt, uint32_t size = 5);
 void unhookCallRaw(uint32_t addr, std::vector<uint8_t>& restoreData);
 
-void hookJumpRaw(uint32_t addr, void* func, std::vector<uint8_t>* storeAt, uint32_t size = 5);
-void unhookJumpRaw(uint32_t addr, std::vector<uint8_t>& restoreData);
+void hookJump(uint32_t addr, void* func, std::vector<uint8_t>* storeAt, uint32_t size = 5);
+void unhookJump(uint32_t addr, std::vector<uint8_t>& restoreData);
 
 // mmext-like call hook (dispatch, HookData param etc.)
 void hookCall(uint32_t addr, HookFunc func, std::vector<uint8_t>* storeAt, uint32_t size = 5);

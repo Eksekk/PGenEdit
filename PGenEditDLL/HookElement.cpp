@@ -188,12 +188,12 @@ void HookElementAsmhookBytecodehookBase::destroy()
     }
 }
 
-HookElementAsmhookBytecodehookBase::HookElementAsmhookBytecodehookBase(HookElementType type) : HookElement(type, false)
+HookElementAsmhookBytecodehookBase::HookElementAsmhookBytecodehookBase(HookElementType type) : HookElement(type, false), address(0), extraData(nullptr), size(1)
 {
 }
 
 HookElementAsmhookBytecodehookBase::HookElementAsmhookBytecodehookBase(HookElementType type, uint32_t address, int size)
-    : HookElement(type, true), address(address), size(size)
+    : HookElement(type, true), address(address), size(size), extraData(nullptr)
 {
 }
 
@@ -329,16 +329,16 @@ HookElementAsmpatch::HookElementAsmpatch(uint32_t address, const std::string& as
 {
 }
 
-HookElementBytecodehookBase::HookElementBytecodehookBase(HookElementType type) : HookElementAsmhookBytecodehookBase(type)
+HookElementBytecodeHookBase::HookElementBytecodeHookBase(HookElementType type) : HookElementAsmhookBytecodehookBase(type)
 {
 }
 
-HookElementBytecodehookBase::HookElementBytecodehookBase(HookElementType type, uint32_t address, const std::string& bytecode, int size)
+HookElementBytecodeHookBase::HookElementBytecodeHookBase(HookElementType type, uint32_t address, const std::string& bytecode, int size)
     : HookElementAsmhookBytecodehookBase(type, address, size), bytecode(bytecode)
 {
 }
 
-void HookElementBytecodehookBefore::enable(bool enable)
+void HookElementBytecodeHookBefore::enable(bool enable)
 {
     HookElement::enable(enable);
     if (enable && !active)
@@ -353,16 +353,16 @@ void HookElementBytecodehookBefore::enable(bool enable)
     }
 }
 
-HookElementBytecodehookBefore::HookElementBytecodehookBefore() : HookElementBytecodehookBase(HOOK_ELEM_TYPE_BYTECODEHOOK_BEFORE)
+HookElementBytecodeHookBefore::HookElementBytecodeHookBefore() : HookElementBytecodeHookBase(HOOK_ELEM_TYPE_BYTECODEHOOK_BEFORE)
 {
 }
 
-HookElementBytecodehookBefore::HookElementBytecodehookBefore(uint32_t address, const std::string& bytecode, int size)
-    : HookElementBytecodehookBase(HOOK_ELEM_TYPE_BYTECODEHOOK_BEFORE, address, bytecode, size)
+HookElementBytecodeHookBefore::HookElementBytecodeHookBefore(uint32_t address, const std::string& bytecode, int size)
+    : HookElementBytecodeHookBase(HOOK_ELEM_TYPE_BYTECODEHOOK_BEFORE, address, bytecode, size)
 {
 }
 
-void HookElementBytecodehookAfter::enable(bool enable)
+void HookElementBytecodeHookAfter::enable(bool enable)
 {
     HookElement::enable(enable);
     if (enable && !active)
@@ -377,16 +377,16 @@ void HookElementBytecodehookAfter::enable(bool enable)
     }
 }
 
-HookElementBytecodehookAfter::HookElementBytecodehookAfter() : HookElementBytecodehookBase(HOOK_ELEM_TYPE_BYTECODEHOOK_AFTER)
+HookElementBytecodeHookAfter::HookElementBytecodeHookAfter() : HookElementBytecodeHookBase(HOOK_ELEM_TYPE_BYTECODEHOOK_AFTER)
 {
 }
 
-HookElementBytecodehookAfter::HookElementBytecodehookAfter(uint32_t address, const std::string& bytecode, int size)
-    : HookElementBytecodehookBase(HOOK_ELEM_TYPE_BYTECODEHOOK_AFTER, address, bytecode, size)
+HookElementBytecodeHookAfter::HookElementBytecodeHookAfter(uint32_t address, const std::string& bytecode, int size)
+    : HookElementBytecodeHookBase(HOOK_ELEM_TYPE_BYTECODEHOOK_AFTER, address, bytecode, size)
 {
 }
 
-void HookElementBytecodepatch::enable(bool enable)
+void HookElementBytecodePatch::enable(bool enable)
 {
     HookElement::enable(enable);
     if (enable && !active)
@@ -401,12 +401,12 @@ void HookElementBytecodepatch::enable(bool enable)
     }
 }
 
-HookElementBytecodepatch::HookElementBytecodepatch() : HookElementBytecodehookBase(HOOK_ELEM_TYPE_BYTECODEPATCH)
+HookElementBytecodePatch::HookElementBytecodePatch() : HookElementBytecodeHookBase(HOOK_ELEM_TYPE_BYTECODEPATCH), writeJumpBack(true)
 {
 }
 
-HookElementBytecodepatch::HookElementBytecodepatch(uint32_t address, const std::string& bytecode, int size, bool writeJumpBack)
-    : HookElementBytecodehookBase(HOOK_ELEM_TYPE_BYTECODEPATCH, address, bytecode, size), writeJumpBack(writeJumpBack)
+HookElementBytecodePatch::HookElementBytecodePatch(uint32_t address, const std::string& bytecode, int size, bool writeJumpBack)
+    : HookElementBytecodeHookBase(HOOK_ELEM_TYPE_BYTECODEPATCH, address, bytecode, size), writeJumpBack(writeJumpBack)
 {
 }
 
@@ -442,30 +442,30 @@ void HookElementAsmproc::enable(bool enable)
     }
 }
 
-HookElementAsmproc::HookElementAsmproc() : HookElement(HOOK_ELEM_TYPE_ASMPROC, false)
+HookElementAsmproc::HookElementAsmproc() : HookElement(HOOK_ELEM_TYPE_ASMPROC, false), extraData(nullptr)
 {
 }
 
-HookElementAsmproc::HookElementAsmproc(const std::string& asmCode) : HookElement(HOOK_ELEM_TYPE_ASMPROC, true), asmCode(asmCode)
+HookElementAsmproc::HookElementAsmproc(const std::string& asmCode) : HookElement(HOOK_ELEM_TYPE_ASMPROC, true), asmCode(asmCode), extraData(nullptr)
 {
 }
 
 HookElementAsmproc::HookElementAsmproc(const std::string& asmCode, const CodeReplacementArgs& args)
-    : HookElement(HOOK_ELEM_TYPE_ASMPROC, true), asmCode(SubstitutableAsmCode{ asmCode, args })
+    : HookElement(HOOK_ELEM_TYPE_ASMPROC, true), asmCode(SubstitutableAsmCode{ asmCode, args }), extraData(nullptr)
 {
 }
 
-bool HookElementBytecodeproc::usesExtraData() const
+bool HookElementBytecodeProc::usesExtraData() const
 {
     return true;
 }
 
-void* HookElementBytecodeproc::getExtraData() const
+void* HookElementBytecodeProc::getExtraData() const
 {
     return extraData;
 }
 
-void HookElementBytecodeproc::enable(bool enable)
+void HookElementBytecodeProc::enable(bool enable)
 {
     HookElement::enable(enable);
     if (enable && !active)
@@ -480,11 +480,11 @@ void HookElementBytecodeproc::enable(bool enable)
     }
 }
 
-HookElementBytecodeproc::HookElementBytecodeproc() : HookElement(HOOK_ELEM_TYPE_BYTECODEPROC, false)
+HookElementBytecodeProc::HookElementBytecodeProc() : HookElement(HOOK_ELEM_TYPE_BYTECODEPROC, false), extraData(nullptr)
 {
 }
 
-HookElementBytecodeproc::HookElementBytecodeproc(const std::string& bytecode) : HookElement(HOOK_ELEM_TYPE_BYTECODEPROC, true), bytecode(bytecode)
+HookElementBytecodeProc::HookElementBytecodeProc(const std::string& bytecode) : HookElement(HOOK_ELEM_TYPE_BYTECODEPROC, true), bytecode(bytecode), extraData(nullptr)
 {
 }
 
@@ -496,12 +496,12 @@ void HookElementJump::enable(bool enable)
     if (enable && !active)
     {
         active = true;
-        hookJumpRaw(address, jumpTarget, &restorationData, size);
+        hookJump(address, jumpTarget, &restorationData, size);
     }
     else if (!enable && active)
     {
         active = false;
-        unhookJumpRaw(address, restorationData);
+        unhookJump(address, restorationData);
     }
 }
 
@@ -624,7 +624,7 @@ void HookElementPatchData::enable(bool enable)
     }
 }
 
-HookElementPatchData::HookElementPatchData() : HookElement(HOOK_ELEM_TYPE_PATCH_DATA, false), address(0), data(ByteVector{})
+HookElementPatchData::HookElementPatchData() : HookElement(HOOK_ELEM_TYPE_PATCH_DATA, false), address(0), data(ByteVector{}), useNops(false)
 {
 }
 
@@ -685,6 +685,6 @@ void* HookElementHookFunction::getExtraData() const
     return extraData;
 }
 
-HookElementHookFunction::HookElementHookFunction() : HookElementCallableFunction(HOOK_ELEM_TYPE_HOOKFUNCTION, 0, 0)
+HookElementHookFunction::HookElementHookFunction() : HookElementCallableFunction(HOOK_ELEM_TYPE_HOOKFUNCTION), extraData(nullptr)
 {
 }

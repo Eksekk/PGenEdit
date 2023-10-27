@@ -42,7 +42,7 @@ public:
     HookElement(HookElementType type, bool initialized);
     HookElement(const HookElement&) = delete; // TODO: implement proper copy ctor
     HookElement(HookElement&&) = default;
-    HookElement& operator=(const HookElement& elem) = default;
+    HookElement& operator=(const HookElement& elem) = delete;
     HookElement& operator=(HookElement&& elem) = default;
     virtual ~HookElement();
     // constructor parameters (type will be set automatically):
@@ -134,8 +134,8 @@ protected:
     AsmCodeVariant asmCode;
 public:
     void ensureHasNoReplacementArgs();
-protected:
-    // constructors protected to disallow creating instances of this class
+    // void enable(bool enable) override = 0; // make this class abstract; not needed?
+
     HookElementAsmhookBase(HookElementType type);
     HookElementAsmhookBase(HookElementType type, uint32_t address, const std::string& asmCode, int size = 5);
     HookElementAsmhookBase(HookElementType type, uint32_t address, const std::string& asmCode, const CodeReplacementArgs& args, int size = 5);
@@ -182,52 +182,52 @@ public:
 
 makeAliases(Asmpatch);
 
-class HookElementBytecodehookBase : public HookElementAsmhookBytecodehookBase
+class HookElementBytecodeHookBase : public HookElementAsmhookBytecodehookBase
 {
 protected:
     std::string bytecode;
     // constructors protected to disallow creating instances of this class
-    HookElementBytecodehookBase(HookElementType type);
-    HookElementBytecodehookBase(HookElementType type, uint32_t address, const std::string& bytecode, int size = 5);
+    HookElementBytecodeHookBase(HookElementType type);
+    HookElementBytecodeHookBase(HookElementType type, uint32_t address, const std::string& bytecode, int size = 5);
 };
 
-class HookElementBytecodehookBefore : public HookElementBytecodehookBase
+class HookElementBytecodeHookBefore : public HookElementBytecodeHookBase
 {
 public:
-    // Inherited via HookElementBytecodehookBase
+    // Inherited via HookElementBytecodeHookBase
     void enable(bool enable) override;
 
-    HookElementBytecodehookBefore();
-    HookElementBytecodehookBefore(uint32_t address, const std::string& bytecode, int size = 5);
+    HookElementBytecodeHookBefore();
+    HookElementBytecodeHookBefore(uint32_t address, const std::string& bytecode, int size = 5);
 };
 
-makeAliases(BytecodehookBefore);
+makeAliases(BytecodeHookBefore);
 
-class HookElementBytecodehookAfter : public HookElementBytecodehookBase
+class HookElementBytecodeHookAfter : public HookElementBytecodeHookBase
 {
 public:
-    // Inherited via HookElementBytecodehookBase
+    // Inherited via HookElementBytecodeHookBase
     void enable(bool enable) override;
 
-    HookElementBytecodehookAfter();
-    HookElementBytecodehookAfter(uint32_t address, const std::string& bytecode, int size = 5);
+    HookElementBytecodeHookAfter();
+    HookElementBytecodeHookAfter(uint32_t address, const std::string& bytecode, int size = 5);
 };
 
-makeAliases(BytecodehookAfter);
+makeAliases(BytecodeHookAfter);
 
-class HookElementBytecodepatch : public HookElementBytecodehookBase
+class HookElementBytecodePatch : public HookElementBytecodeHookBase
 {
 protected:
     bool writeJumpBack;
 public:
-    // Inherited via HookElementBytecodehookBase
+    // Inherited via HookElementBytecodeHookBase
     void enable(bool enable) override;
 
-    HookElementBytecodepatch();
-    HookElementBytecodepatch(uint32_t address, const std::string& bytecode, int size = 5, bool writeJumpBack = true);
+    HookElementBytecodePatch();
+    HookElementBytecodePatch(uint32_t address, const std::string& bytecode, int size = 5, bool writeJumpBack = true);
 };
 
-makeAliases(Bytecodepatch);
+makeAliases(BytecodePatch);
 
 class HookElementAsmproc : public HookElement
 {
@@ -245,7 +245,7 @@ public:
 
 makeAliases(Asmproc);
 
-class HookElementBytecodeproc : public HookElement
+class HookElementBytecodeProc : public HookElement
 {
     void* extraData;
     std::string bytecode;
@@ -254,11 +254,11 @@ public:
     void* getExtraData() const override;
     void enable(bool enable) override;
 
-    HookElementBytecodeproc();
-    HookElementBytecodeproc(const std::string& bytecode);
+    HookElementBytecodeProc();
+    HookElementBytecodeProc(const std::string& bytecode);
 };
 
-makeAliases(Bytecodeproc);
+makeAliases(BytecodeProc);
 
 class HookElementCall : public HookElement
 {

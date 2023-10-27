@@ -134,7 +134,7 @@ void unhookCallRaw(uint32_t addr, std::vector<uint8_t>& restoreData)
     restoreData.clear();
 }
 
-void hookJumpRaw(uint32_t addr, void* func, std::vector<uint8_t>* storeAt, uint32_t size)
+void hookJump(uint32_t addr, void* func, std::vector<uint8_t>* storeAt, uint32_t size)
 {
 	size = getRealHookSize(addr, size, 5);
     checkOverlap(addr, size);
@@ -150,7 +150,7 @@ void hookJumpRaw(uint32_t addr, void* func, std::vector<uint8_t>* storeAt, uint3
 	VirtualProtect((void*)addr, size, tmp, &tmp);
 }
 
-void unhookJumpRaw(uint32_t addr, std::vector<uint8_t>& restoreData)
+void unhookJump(uint32_t addr, std::vector<uint8_t>& restoreData)
 {
 	patchBytes(addr, restoreData.data(), restoreData.size(), nullptr);
 }
@@ -208,7 +208,7 @@ uint32_t autohookAfter(uint32_t addr, HookFunc func, std::vector<uint8_t>* store
         return HOOK_RETURN_SUCCESS;
         };
     hookCall((uint32_t)mem + size, wrapperFunc, nullptr, 5);
-	hookJumpRaw(addr, mem, storeAt, size);
+	hookJump(addr, mem, storeAt, size);
     return code;
 }
 
@@ -435,7 +435,7 @@ uint32_t copyCode(uint32_t source, uint32_t size, bool writeJumpBack, uint32_t d
 	// write jump back
 	if (writeJumpBack)
 	{
-        hookJumpRaw(mem + size, reinterpret_cast<void*>(source + size), nullptr);
+        hookJump(mem + size, reinterpret_cast<void*>(source + size), nullptr);
 	}
 	// fix calls/jumps
     for (size_t i = 0; i < rel32Positions.size(); ++i)
@@ -461,9 +461,9 @@ void* bytecodeHookCommon(uint32_t addr, std::string_view bytecode, std::vector<u
         copyCode(addr, size, false, mem, 0);
         copyCode((uint32_t)bytecode.data(), bytecode.size(), false, mem + size, 1);
 		// manual jump hook, because if bytecode one was true, it would generate jump to fasm code block, not original code
-		hookJumpRaw(mem + size + bytecode.size(), (void*)(addr + size), nullptr);
+		hookJump(mem + size + bytecode.size(), (void*)(addr + size), nullptr);
 	}
-	hookJumpRaw(addr, (void*)mem, nullptr);
+	hookJump(addr, (void*)mem, nullptr);
     return (void*)mem;
 }
 
@@ -540,10 +540,10 @@ void* bytecodePatch(uint32_t addr, std::string_view bytecode, std::vector<uint8_
 		copyCode((uint32_t)bytecode.data(), bytecode.size(), false, (uint32_t)mem, writeJumpBack ? 1 : 0);
 		if (writeJumpBack)
         {
-            hookJumpRaw((uint32_t)mem + bytecode.size(), (void*)(addr + size), nullptr);
+            hookJump((uint32_t)mem + bytecode.size(), (void*)(addr + size), nullptr);
 		}
 		eraseCode(addr, size, nullptr);
-		hookJumpRaw(addr, mem, nullptr);
+		hookJump(addr, mem, nullptr);
 		return mem;
 	}
 }
