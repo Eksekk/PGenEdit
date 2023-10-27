@@ -1,7 +1,7 @@
 #include "pch.h"
 #include "HookTests.h"
 #include "LowLevel.h"
-#include "Hook2.h"
+#include "Hook.h"
 
 static const char NOP[] = "\x90";
 
@@ -449,7 +449,7 @@ static std::vector<wxString> HookTests::testBasicHookFunctionalityAndHookManager
     uint32_t firstHookPos = findCode(expectRegisterValues, "\x90"), secondHookPos = findCode(expectRegisterValues, "\x1E"); // nop, push ds
     char patch1[] = "\x03\xC3\x2B\xC3\x90"; // add eax, ebx; sub eax, ebx; nop
     char patch2[] = "\x0F\x18\x20\x90\x90"; // nop dword ptr [eax]; nop; nop
-    std::vector<HookElement2*> elems;
+    std::vector<HookElement*> elems;
     CallableFunctionHookFunc<void> hookfunctionFunc = [=](HookData* d, CallableFunctionHookOrigFunc<void> def) -> uint32_t
     {
         myHookFunc(d);
@@ -508,7 +508,7 @@ static std::vector<wxString> HookTests::testBasicHookFunctionalityAndHookManager
             break;
         }
 
-        Hook2 hook(elems);
+        Hook hook(elems);
         hook.enable();
         if (type == HOOK_ELEM_TYPE_JUMP)
         {
@@ -841,7 +841,7 @@ static std::vector<wxString> HookTests::testAdvancedHookFunctionality()
         return HOOK_RETURN_SUCCESS;
     };
 
-    Hook2 hook
+    Hook hook
     { {
         hk::HookFunction::create<int, 2, int, int, unsigned char>((uint32_t)hookFunctionTest1, hookFunctionFunc, 5),
         hk::ReplaceCall::create<int, 0, unsigned char>(findCall(replaceCallHookTestOuter, replaceCallHookTestInner), replaceCallFunc),
@@ -1052,7 +1052,7 @@ std::vector<wxString> HookTests::testAsmHookFunctions()
     // asmhook
     Asserter myasserter("Asm hook tests");
     std::string code = "add eax, 5";
-    Hook2 hook(new hk::AsmhookBefore(findCode(asmhookTest1, "\x90", 1), code.c_str(), 5));
+    Hook hook(new hk::AsmhookBefore(findCode(asmhookTest1, "\x90", 1), code.c_str(), 5));
     hook.enable();
     myassertf(asmhookTest1(true), "[before asmhook] test failed");
     hook.disable();

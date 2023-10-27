@@ -4,9 +4,9 @@
 #include <cassert>
 #include <cstring>
 #include "wx/debug.h"
-#include "Hook2.h"
+#include "Hook.h"
 
-std::unordered_map<int, Hook2> hooks;
+std::unordered_map<int, Hook> hooks;
 std::unordered_map<uint32_t, HookFunc> hookFuncMap;
 
 void checkOverlap(uint32_t address, uint32_t size)

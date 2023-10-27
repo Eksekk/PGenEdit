@@ -529,8 +529,8 @@ enum HookElementType
     using transform_param_type_t = typename transform_param_type<T>::type;
 */
 
-class Hook2;
-extern std::unordered_map<int, Hook2> hooks;
+class Hook;
+extern std::unordered_map<int, Hook> hooks;
 extern std::unordered_map<uint32_t, HookFunc> hookFuncMap;
 
 static void __fastcall dispatchHook(uint32_t esp);

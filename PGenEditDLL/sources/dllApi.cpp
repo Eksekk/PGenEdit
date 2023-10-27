@@ -22,7 +22,7 @@
 #include <LodStructAccessor.h>
 #include <MapStructAccessor.h>
 #include "LuaWrapper.h"
-#include <Hook2.h>
+#include <Hook.h>
 
 extern bool inMM;
 extern void setMaxSkillLevel();

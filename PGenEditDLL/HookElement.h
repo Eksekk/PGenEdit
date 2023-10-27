@@ -19,7 +19,7 @@ namespace hk\
     using name = name;\
 }
 
-class HookElement2
+class HookElement
 {
 protected:
     HookElementType type;
@@ -39,12 +39,12 @@ public:
     void disable();
     void toggle();
     bool isActive() const;
-    HookElement2(HookElementType type, bool initialized);
-    HookElement2(const HookElement2&) = delete; // TODO: implement proper copy ctor
-    HookElement2(HookElement2&&) = default;
-    HookElement2& operator=(const HookElement2& elem) = default;
-    HookElement2& operator=(HookElement2&& elem) = default;
-    virtual ~HookElement2();
+    HookElement(HookElementType type, bool initialized);
+    HookElement(const HookElement&) = delete; // TODO: implement proper copy ctor
+    HookElement(HookElement&&) = default;
+    HookElement& operator=(const HookElement& elem) = default;
+    HookElement& operator=(HookElement&& elem) = default;
+    virtual ~HookElement();
     // constructor parameters (type will be set automatically):
     // call raw: address, func, size
     // call: address, func, size
@@ -63,16 +63,16 @@ public:
 
 // each stores restoration data (defined in base class) and optional extra data field
 
-class HookElementAutohookBase : public HookElement2
+class HookElementAutohookBase : public HookElement
 {
 protected:
     uint32_t address;
     HookFunc func;
     void* extraData;
     int size;
-    using HookElement2::initialized; // allow using protected member of superclass (HookElement2) in subclass (HookElementAutohookBefore)?? TODO: test it
+    using HookElement::initialized; // allow using protected member of superclass (HookElement) in subclass (HookElementAutohookBefore)?? TODO: test it
 public:
-    // Inherited via HookElement2
+    // Inherited via HookElement
     bool usesExtraData() const override;
     void* getExtraData() const override;
     void destroy() override;
@@ -112,14 +112,14 @@ struct SubstitutableAsmCode
 
 using AsmCodeVariant = std::variant<std::string, SubstitutableAsmCode>;
 
-class HookElementAsmhookBytecodehookBase : public HookElement2
+class HookElementAsmhookBytecodehookBase : public HookElement
 {
 protected:
     uint32_t address;
     void* extraData;
     int size;
 public:
-    // Inherited via HookElement2
+    // Inherited via HookElement
     bool usesExtraData() const override;
     void* getExtraData() const override;
     void destroy() override;
@@ -229,7 +229,7 @@ public:
 
 makeAliases(Bytecodepatch);
 
-class HookElementAsmproc : public HookElement2
+class HookElementAsmproc : public HookElement
 {
     void* extraData;
     AsmCodeVariant asmCode;
@@ -245,7 +245,7 @@ public:
 
 makeAliases(Asmproc);
 
-class HookElementBytecodeproc : public HookElement2
+class HookElementBytecodeproc : public HookElement
 {
     void* extraData;
     std::string bytecode;
@@ -260,7 +260,7 @@ public:
 
 makeAliases(Bytecodeproc);
 
-class HookElementCall : public HookElement2
+class HookElementCall : public HookElement
 {
 protected:
     uint32_t address;
@@ -275,7 +275,7 @@ public:
 
 makeAliases(Call);
 
-class HookElementCallRaw : public HookElement2
+class HookElementCallRaw : public HookElement
 {
 protected:
     uint32_t address;
@@ -291,7 +291,7 @@ public:
 
 makeAliases(CallRaw);
 
-class HookElementJump : public HookElement2
+class HookElementJump : public HookElement
 {
 protected:
     uint32_t address;
@@ -307,7 +307,7 @@ public:
 
 makeAliases(Jump);
 
-class HookElementEraseCode : public HookElement2
+class HookElementEraseCode : public HookElement
 {
 protected:
     uint32_t address;
@@ -323,7 +323,7 @@ makeAliases(EraseCode);
 
 using PatchDataGetBytesFunc = std::function<ByteVector(uint32_t address)>;
 
-class HookElementPatchData : public HookElement2
+class HookElementPatchData : public HookElement
 {
 protected:
     uint32_t address;
@@ -340,7 +340,7 @@ public:
 
 makeAliases(PatchData);
 
-class HookElementCallableFunction : public HookElement2
+class HookElementCallableFunction : public HookElement
 {
 protected:
     uint32_t address;
@@ -380,7 +380,7 @@ public:
         elem->makeInitialized();
         // create default-constructed instance
         // set hook function and other params
-        // set initialized: HookElement2::setInitialized(bool initialized)
+        // set initialized: HookElement::setInitialized(bool initialized)
         // return the instance
         return elem;
     }
@@ -437,7 +437,7 @@ public:
         elem->makeInitialized();
         // create default-constructed instance
         // set hook function and other params
-        // set initialized: HookElement2::setInitialized(bool initialized)
+        // set initialized: HookElement::setInitialized(bool initialized)
         // return the instance
         return elem;
     }

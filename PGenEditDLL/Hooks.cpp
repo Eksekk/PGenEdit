@@ -4,7 +4,7 @@
 #include "LowLevel.h"
 #include "Utility.h"
 #include "HookParams.h"
-#include "Hook2.h"
+#include "Hook.h"
 
 static void recoveryMultiplier_7(HookData* d)
 {
@@ -55,7 +55,7 @@ static __declspec(naked) void noRecovery_7()
 
 // IMPORTANT: adding hooks in main file scope doesn't work
 void setupHooks() {
-    hooks.emplace(HK_NO_RECOVERY, Hook2(
+    hooks.emplace(HK_NO_RECOVERY, Hook(
         new hk::Jump(mmv(0, 0x48E962, 0), mmv(0U, (uint32_t)noRecovery_7, 0U)),
         "No recovery for player",
         {7}
@@ -123,7 +123,7 @@ void setupHooks() {
         }
         return HOOK_RETURN_SUCCESS;
     };
-    hooks.emplace(3, Hook2
+    hooks.emplace(3, Hook
         ({
             new hk::AutohookBefore(mmv(0, 0x462AFC, 0), func),
             new hk::AutohookBefore(mmv(0, 0x463309, 0), func),

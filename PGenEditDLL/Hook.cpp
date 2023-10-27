@@ -1,7 +1,7 @@
 #include "pch.h"
-#include "Hook2.h"
+#include "Hook.h"
 
-void Hook2::enable(bool enable)
+void Hook::enable(bool enable)
 {
     if (elements.empty())
     {
@@ -14,17 +14,17 @@ void Hook2::enable(bool enable)
     }
 }
 
-void Hook2::disable()
+void Hook::disable()
 {
     enable(false);
 }
 
-void Hook2::toggle()
+void Hook::toggle()
 {
     enable(!active);
 }
 
-void Hook2::destroy()
+void Hook::destroy()
 {
     for (auto& elem : elements)
     {
@@ -32,12 +32,12 @@ void Hook2::destroy()
     }
 }
 
-inline bool Hook2::isActive() const
+inline bool Hook::isActive() const
 {
     return active;
 }
 
-bool Hook2::isFullyActive() const
+bool Hook::isFullyActive() const
 {
     bool yes = active;
     for (const auto& elem : elements)
@@ -47,7 +47,7 @@ bool Hook2::isFullyActive() const
     return yes;
 }
 
-Hook2::Hook2(HookElement2* el, const std::string& description, const std::vector<int> gameVersions)
+Hook::Hook(HookElement* el, const std::string& description, const std::vector<int> gameVersions)
     : description(description), gameVersions(gameVersions), active(false)
 {
     if (gameVersions.empty())
@@ -55,10 +55,10 @@ Hook2::Hook2(HookElement2* el, const std::string& description, const std::vector
         this->gameVersions = { 6, 7, 8 };
     }
     // initializer_list in member initializer with unique_ptr breaks - tries to copy it
-    elements.push_back(std::move(std::unique_ptr<HookElement2>(el)));
+    elements.push_back(std::move(std::unique_ptr<HookElement>(el)));
 }
 
-Hook2::Hook2(std::initializer_list<HookElement2*> elems, const std::string& description, const std::vector<int> gameVersions)
+Hook::Hook(std::initializer_list<HookElement*> elems, const std::string& description, const std::vector<int> gameVersions)
     : description(description), gameVersions(gameVersions), active(false)
 {
     if (gameVersions.empty())
@@ -67,11 +67,11 @@ Hook2::Hook2(std::initializer_list<HookElement2*> elems, const std::string& desc
     }
     for (const auto& elem : elems)
     {
-        elements.push_back(std::move(std::unique_ptr<HookElement2>(elem)));
+        elements.push_back(std::move(std::unique_ptr<HookElement>(elem)));
     }
 }
 
-Hook2::Hook2(std::vector<HookElement2*>& elems, const std::string& description, const std::vector<int> gameVersions)
+Hook::Hook(std::vector<HookElement*>& elems, const std::string& description, const std::vector<int> gameVersions)
     : description(description), gameVersions(gameVersions), active(false)
 {
     if (gameVersions.empty())
@@ -80,11 +80,11 @@ Hook2::Hook2(std::vector<HookElement2*>& elems, const std::string& description, 
     }
     for (auto& elem : elems)
     {
-        elements.push_back(std::move(std::unique_ptr<HookElement2>(elem)));
+        elements.push_back(std::move(std::unique_ptr<HookElement>(elem)));
     }
 }
 
-Hook2::~Hook2()
+Hook::~Hook()
 {
     if (active)
     {
@@ -93,9 +93,9 @@ Hook2::~Hook2()
     destroy();
 }
 
-void Hook2::addElement(HookElement2* element, bool autoEnable)
+void Hook::addElement(HookElement* element, bool autoEnable)
 {
-    auto p = std::unique_ptr<HookElement2>(element);
+    auto p = std::unique_ptr<HookElement>(element);
     if (autoEnable)
     {
         p->enable(active);
@@ -103,9 +103,9 @@ void Hook2::addElement(HookElement2* element, bool autoEnable)
     elements.push_back(std::move(p));
 }
 
-void Hook2::replaceElement(int i, HookElement2* element, bool autoEnable)
+void Hook::replaceElement(int i, HookElement* element, bool autoEnable)
 {
-    auto p = std::unique_ptr<HookElement2>(element);
+    auto p = std::unique_ptr<HookElement>(element);
     if (autoEnable)
     {
         p->enable(active);
