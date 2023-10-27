@@ -268,6 +268,7 @@ void* bytecodeHookBefore(uint32_t addr, std::string_view code, std::vector<uint8
 void* bytecodeHookAfter(uint32_t addr, std::string_view code, std::vector<uint8_t>* storeAt, int size);
 void unhookBytecodeHook(uint32_t addr, const std::vector<uint8_t>& restoreData, void*& copiedCode);
 
+// TODO: versions of asm functions taking a function to generate code/copy it (mainly support different game versions)
 // new code is called before overwritten code
 void* asmhookBefore(uint32_t addr, const std::string& code, std::vector<uint8_t>* storeAt, int size = 5);
 // this version formats code

@@ -11,6 +11,14 @@ namespace hk\
     using name = name;\
 }
 
+#define makeAliasesCallableFuncHook(name)\
+using name = HookElement ## name;\
+using HKE_ ## name = HookElement ## name;\
+namespace hk\
+{\
+    using name = name;\
+}
+
 class HookElement2
 {
 protected:
@@ -19,6 +27,7 @@ protected:
     std::vector<uint8_t> restorationData;
     bool initialized; // for debugging, probably need no arg constructor, but then the element is not initialized fully
     // make sure than when enabling it is initialized
+    void makeInitialized();
 public:
     bool isInitialized() const;
     virtual bool usesExtraData() const;
@@ -331,7 +340,7 @@ public:
 
 makeAliases(PatchData);
 
-class HookElementCallableFunction : HookElement2
+class HookElementCallableFunction : public HookElement2
 {
 protected:
     uint32_t address;
@@ -343,7 +352,7 @@ protected:
     void enable(bool enable) override;
 };
 
-class HookElementReplaceCall : HookElementCallableFunction
+class HookElementReplaceCall : public HookElementCallableFunction
 {
 public:
     HookElementReplaceCall();
@@ -360,11 +369,30 @@ public:
                 unhookReplaceCall(address, restorationData);
             };
     }
+
     template<typename ReturnType, int cc, typename... Args>
+    static HookElementReplaceCall* create(uint32_t address, CallableFunctionHookFunc<ReturnType, Args...> func)
+    {
+        HookElementReplaceCall* elem = new HookElementReplaceCall();
+        elem->address = address;
+        elem->size = 5;
+        elem->setCallableFunctionHookFunc<ReturnType, cc, Args...>(func);
+        elem->makeInitialized();
+        // create default-constructed instance
+        // set hook function and other params
+        // set initialized: HookElement2::setInitialized(bool initialized)
+        // return the instance
+        return elem;
+    }
+private: // private to enforce no accidental "new" operator usage
+
+    // COMMENTED OUT, because this constructor is preferred to "no args" constructor
+
+    /*template<typename ReturnType, int cc, typename... Args>
     HookElementReplaceCall(uint32_t address, CallableFunctionHookFunc<ReturnType, Args...> func) : HookElementCallableFunction(HOOK_ELEM_TYPE_REPLACE_CALL, address, 5)
     {
         setCallableFunctionHookFunc<ReturnType, cc, Args...>(func);
-    }
+    }*/
 };
 
 makeAliases(ReplaceCall);
@@ -377,7 +405,7 @@ namespace hk
     using ReplaceCallHookFunc = ::CallableFunctionHookFunc<ReturnType, Args...>;
 }
 
-class HookElementHookFunction : HookElementCallableFunction
+class HookElementHookFunction : public HookElementCallableFunction
 {
     void* extraData;
 public:
@@ -390,19 +418,39 @@ public:
         constexpr int stackNum = sizeof...(Args) - std::clamp(cc, 0, 2);
         setCallableFunctionHook = [=]()
             {
-                extraData = hookFunction<ReturnType, cc>(address, stackNum, func, &restorationData, 5);
+                extraData = (void*)hookFunction<ReturnType, cc>(address, stackNum, func, &restorationData, 5);
             };
         unsetCallableFunctionHook = [=]()
             {
                 unhookHookFunction(address, restorationData, extraData);
             };
     }
+
+    // static function to work around templated constructor problems (can't specify template args)
     template<typename ReturnType, int cc, typename... Args>
+    static HookElementHookFunction* create(uint32_t address, CallableFunctionHookFunc<ReturnType, Args...> func, int size = 5)
+    {
+        HookElementHookFunction* elem = new HookElementHookFunction();
+        elem->address = address;
+        elem->size = size;
+        elem->setCallableFunctionHookFunc<ReturnType, cc, Args...>(func);
+        elem->makeInitialized();
+        // create default-constructed instance
+        // set hook function and other params
+        // set initialized: HookElement2::setInitialized(bool initialized)
+        // return the instance
+        return elem;
+    }
+private: // private to enforce no accidental "new" operator usage
+
+    // COMMENTED OUT, because this constructor is preferred to "no args" constructor
+
+    /*template<typename ReturnType, int cc, typename... Args>
     HookElementHookFunction(uint32_t address, CallableFunctionHookFunc<ReturnType, Args...> func, int size = 5)
         : HookElementCallableFunction(HOOK_ELEM_TYPE_HOOKFUNCTION, address, size)
     {
         setCallableFunctionHookFunc<ReturnType, cc>(func);
-    }
+    }*/
 };
 
 namespace hk

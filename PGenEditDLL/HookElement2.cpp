@@ -1,6 +1,11 @@
 #include "pch.h"
 #include "HookElement2.h"
 
+void HookElement2::makeInitialized()
+{
+    initialized = true;
+}
+
 bool HookElement2::isInitialized() const
 {
     return initialized;

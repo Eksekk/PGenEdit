@@ -477,11 +477,11 @@ static std::vector<wxString> HookTests::testBasicHookFunctionalityAndHookManager
             elems.push_back(new hk::Call(secondHookPos, myHookFunc));
             break;
         case HOOK_ELEM_TYPE_AUTOHOOK_BEFORE:
-            elems.push_back(new hk::AutohookBefore(firstHookPos, doNothing).build());
+            elems.push_back(new hk::AutohookBefore(firstHookPos, doNothing));
             elems.push_back(new hk::AutohookBefore(secondHookPos, myHookFuncAutohook));
             break;
         case HOOK_ELEM_TYPE_AUTOHOOK_AFTER:
-            elems.push_back(new hk::AutohookAfter(firstHookPos, doNothing).build());
+            elems.push_back(new hk::AutohookAfter(firstHookPos, doNothing));
             elems.push_back(new hk::AutohookAfter(secondHookPos, myHookFuncAutohook));
             break;
         case HOOK_ELEM_TYPE_JUMP:
@@ -843,8 +843,8 @@ static std::vector<wxString> HookTests::testAdvancedHookFunctionality()
 
     Hook2 hook
     { {
-        new hk::HookFunction<int, 2, int, int, unsigned char>((uint32_t)hookFunctionTest1, hookFunctionFunc, 5),
-        new hk::ReplaceCall<int, 0, unsigned char>(findCall(replaceCallHookTestOuter, replaceCallHookTestInner), replaceCallFunc, 5),
+        hk::HookFunction::create<int, 2, int, int, unsigned char>((uint32_t)hookFunctionTest1, hookFunctionFunc, 5),
+        hk::ReplaceCall::create<int, 0, unsigned char>(findCall(replaceCallHookTestOuter, replaceCallHookTestInner), replaceCallFunc),
         new hk::AutohookBefore((uint32_t)findCode(autohookTest, NOP), autohookFunc1, 6),
         new hk::AutohookBefore((uint32_t)findCode(autohookTest, "\x66\x0F\x1F\x00", 4), autohookFunc2, 5),
     } };
