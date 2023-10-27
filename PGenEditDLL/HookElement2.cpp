@@ -53,7 +53,8 @@ void HookElement2::destroy()
 
 void HookElement2::disable()
 {
-    enable(false);
+    // IMPORTANT: fully qualify name here, because otherwise virtual function call happens and crashes
+    HookElement2::enable(false);
 }
 
 void HookElement2::toggle()
