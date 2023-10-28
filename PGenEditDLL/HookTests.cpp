@@ -1647,6 +1647,90 @@ std::vector<CompileAsmTest> compileAsmTests =
     },
 };
 
+/*
+    uint32_t eflags;
+    uint32_t edi;
+    uint32_t esi;
+    uint32_t ebp;
+    uint32_t esp; // change this to change return address from hook proc
+    uint32_t edx;
+    uint32_t ecx;
+    uint32_t ebx;
+    uint32_t eax;
+*/
+static dword_t regs[9]; // set by testing function
+static int checkRegistersFailReasonId;
+static dword_t eaxBackup; // needed for checking eflags
+static dword_t returnJump; // to allow having custom esp value, while also correctly "returning" to caller
+static __declspec(naked) int __stdcall checkRegisters()
+{
+    _asm
+    {
+        mov checkRegistersFailReasonId, 1
+        mov eaxBackup, eax
+        pushfd
+        pop eax
+        cmp eax, regs[0]
+        // do it here to not pollute eflags and have one free register to not have "memory-to-memory move" problem
+        mov eax, dword ptr[esp]
+        mov returnJump, eax
+        jne $exitFail
+        mov eax, eaxBackup
+
+        inc checkRegistersFailReasonId
+        cmp edi, regs[1]
+        jne $exitFail
+
+        inc checkRegistersFailReasonId
+        cmp esi, regs[2]
+        jne $exitFail
+
+        inc checkRegistersFailReasonId
+        cmp ebp, regs[3]
+        jne $exitFail
+
+        inc checkRegistersFailReasonId
+        cmp esp, regs[4]
+        jne $exitFail
+
+        inc checkRegistersFailReasonId
+        cmp edx, regs[5]
+        jne $exitFail
+
+        inc checkRegistersFailReasonId
+        cmp ecx, regs[6]
+        jne $exitFail
+
+        inc checkRegistersFailReasonId
+        cmp ebx, regs[7]
+        jne $exitFail
+
+        inc checkRegistersFailReasonId
+        cmp eax, regs[8]
+        jne $exitFail
+
+        mov checkRegistersFailReasonId, 0
+        jmp $setValues
+
+        $exitFail:
+        ret
+
+        $setValues:
+        push 0x21212121
+            popfd
+            mov edi, 0
+            mov esi, 0x32221
+            mov ebp, 0x40040404
+            mov esp, 0x55555555
+            mov edx, 0x1234
+            mov ecx, 0x47287324
+            mov ebx, 0x10000001
+        mov eax, 0x33333
+        jmp returnJump
+    }
+
+}
+
 template<typename Player, typename Game>
 static std::vector<wxString>
 HookTests::testMiscFunctions()
@@ -1805,6 +1889,9 @@ HookTests::testMiscFunctions()
         }
         ++i;
     }
+
+    // callMemoryAddressRegisters
+    HookData testData;
     
     return myasserter.errors;
 }

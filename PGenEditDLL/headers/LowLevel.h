@@ -360,6 +360,73 @@ ReturnType callMemoryAddress(Address address, int registerParamsNum, Args... arg
     }
 }
 
+static dword_t callData[12]; // registers, address, old esp, esp after call
+// using this for registers, because compiler probably would use ebp-based addressing for accessing retData, which wouldn't work
+template<typename Address, typename... Args>
+HookData callMemoryAddressRegisters(Address address, int registerParamsNum, const HookData& useData, Args... args)
+{
+    HookData retData;
+    constexpr int arg = sizeof...(Args);
+    _asm
+    {
+        pushad
+        pushfd
+        push ebp // to allow using ebp-based params later
+
+        // copy registers to use
+        mov esi, useData
+        mov edi, callData
+        mov ecx, 9
+        rep movsd
+        mov dword ptr[callData + 9 * 4], address
+        // for now ignore register params num
+
+        // backup stack and registers
+        // move register values
+        // call static address
+        // push registers in order
+        // memcpy
+        // cleanup
+        mov dword ptr [callData + 10*4], esp
+        push dword ptr[callData]
+        popfd
+        mov edi, dword ptr[callData + 4]
+        mov esi, dword ptr[callData + 8]
+        mov ebp, dword ptr[callData + 12]
+        mov esp, dword ptr[callData + 16]
+        mov edx, dword ptr[callData + 20]
+        mov ecx, dword ptr[callData + 24]
+        mov ebx, dword ptr[callData + 28]
+        mov eax, dword ptr[callData + 32]
+        call dword ptr[callData + 36]
+        mov callData[11], esp
+        mov esp, dword ptr [callData + 10*4]
+        pushfd
+        push eax
+        mov eax, callData[11]
+        push ebx
+        push ecx
+        push edx
+        push eax // esp
+        push ebp
+        push esi
+        push edi
+
+        mov ebp, dword ptr [esp + 9*4]
+
+        lea esi, dword ptr [esp + 8*4]
+        lea edi, retData
+        mov ecx, 9
+        rep movsd
+
+        add esp, 11*4
+
+        popfd
+        popad
+    }
+    return retData;
+}
+
 // type of object representing replaced function call
 template<typename ReturnType, typename... Args>
 using CallableFunctionHookOrigFunc = typename std::function<ReturnType(Args...)>;

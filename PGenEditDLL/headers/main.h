@@ -56,6 +56,16 @@ INSTANTIATE_ACCESSOR_TEMPLATES_SINGLE_GAME(6, identifier, name); \
 INSTANTIATE_ACCESSOR_TEMPLATES_SINGLE_GAME(7, identifier, name); \
 INSTANTIATE_ACCESSOR_TEMPLATES_SINGLE_GAME(8, identifier, name)
 
+using byte_t = uint8_t;
+using word_t = uint16_t;
+using dword_t = uint32_t;
+using qword_t = uint64_t;
+
+using sbyte_t = int8_t;
+using sword_t = int16_t;
+using sdword_t = int32_t;
+using sqword_t = int64_t;
+
 /*#pragma comment( lib, "comctl32.lib")
 
 #pragma comment( linker, "/manifestdependency:\"type='win32' \
