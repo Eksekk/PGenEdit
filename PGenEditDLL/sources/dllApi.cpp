@@ -298,7 +298,7 @@ extern "C"
                 errors.push_back("Items info wasn't received from lua yet!");
             }
 			// TODO: check all data to be received from lua
-			wxMessageBox(concatWxStrings(errors, "\n"), "Error", wxOK | wxICON_ERROR);
+			wxMessageBox(concatStrings(errors, "\n"), "Error", wxOK | wxICON_ERROR);
 			return false;
 		}
         return true;
@@ -423,7 +423,7 @@ extern "C"
             }
             if (errors.size() > 0)
             {
-				wxString str = concatWxStrings(errors, "\n\n");
+				wxString str = concatStrings(errors, "\n\n");
 				std::fstream file("pgen_errors.txt", std::ios::out | std::ios::trunc);
 				file << str;
 				file.close();

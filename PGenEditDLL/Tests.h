@@ -116,7 +116,7 @@ void testSettableStructField(
 		std::vector<wxString> parts;
 		parts.reserve(tests.size());
 		std::transform(tests.begin(), tests.end(), std::back_inserter(parts), [](uint64_t test) -> wxString { return wxString::Format("%lld", test); });
-		wxLogWarning("Test data: %s", concatWxStrings(parts, ", "));
+		wxLogWarning("Test data: %s", concatStrings(parts, ", "));
 	}
 
 	// for [getStat/setStat]-settable stats, either make new function similar to this one, but less templates and member pointers

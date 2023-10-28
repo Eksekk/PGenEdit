@@ -360,13 +360,16 @@ ReturnType callMemoryAddress(Address address, int registerParamsNum, Args... arg
     }
 }
 
-static dword_t callData[12]; // registers, address, old esp, esp after call
+static dword_t callRegisters[9], callAddress, callOldEsp, callEspAfterCall; // registers, address, old esp, esp after call
+//static dword_t* callRegisters = callRegisters2; // for some reason this is needed, "mov edi, callRegisters2" would result in edi == 0
 // using this for registers, because compiler probably would use ebp-based addressing for accessing retData, which wouldn't work
 template<typename Address, typename... Args>
 HookData callMemoryAddressRegisters(Address address, int registerParamsNum, const HookData& useData, Args... args)
 {
     HookData retData;
     constexpr int arg = sizeof...(Args);
+    std::vector<dword_t> argsVec{args...};
+    dword_t* vecDwords = argsVec.data();
     _asm
     {
         pushad
@@ -375,10 +378,11 @@ HookData callMemoryAddressRegisters(Address address, int registerParamsNum, cons
 
         // copy registers to use
         mov esi, useData
-        mov edi, callData
+        lea edi, callRegisters
         mov ecx, 9
         rep movsd
-        mov dword ptr[callData + 9 * 4], address
+        mov eax, address
+        mov callAddress, eax
         // for now ignore register params num
 
         // backup stack and registers
@@ -387,23 +391,41 @@ HookData callMemoryAddressRegisters(Address address, int registerParamsNum, cons
         // push registers in order
         // memcpy
         // cleanup
-        mov dword ptr [callData + 10*4], esp
-        push dword ptr[callData]
+
+        mov callOldEsp, esp
+        // push args
+        xor esi, esi
+        mov eax, vecDwords
+        mov ecx, arg
+        test ecx, ecx
+        je $pushed
+        $push:
+        push dword ptr [eax + esi * 4]
+        inc esi
+            cmp esi, ecx
+        jb $push
+        $pushed:
+
+        push dword ptr[callRegisters]
         popfd
-        mov edi, dword ptr[callData + 4]
-        mov esi, dword ptr[callData + 8]
-        mov ebp, dword ptr[callData + 12]
-        mov esp, dword ptr[callData + 16]
-        mov edx, dword ptr[callData + 20]
-        mov ecx, dword ptr[callData + 24]
-        mov ebx, dword ptr[callData + 28]
-        mov eax, dword ptr[callData + 32]
-        call dword ptr[callData + 36]
-        mov callData[11], esp
-        mov esp, dword ptr [callData + 10*4]
-        pushfd
+        mov edi, dword ptr[callRegisters + 4]
+        mov esi, dword ptr[callRegisters + 8]
+        mov ebp, dword ptr[callRegisters + 12]
+        //mov esp, dword ptr[callRegisters + 16]
+        mov edx, dword ptr[callRegisters + 20]
+        mov ecx, dword ptr[callRegisters + 24]
+        mov ebx, dword ptr[callRegisters + 28]
+        mov eax, dword ptr[callRegisters + 32]
+        call callAddress
+        mov callEspAfterCall, esp
+        mov esp, callOldEsp
+        // push in inverse order and start from stack top going towards increasing addresses
+        // starting from first pushed arg wouldn't work, would be going inverse of where params are in memory,
+        // and we can't toggle direction flag, because otherwise edi would decrease too;
+        // normal order and starting from stack top would not require flag, but would move memory in inverse order,
+        // while normal order and starting from first arg would require toggling the flag too
         push eax
-        mov eax, callData[11]
+            mov eax, callEspAfterCall
         push ebx
         push ecx
         push edx
@@ -411,15 +433,16 @@ HookData callMemoryAddressRegisters(Address address, int registerParamsNum, cons
         push ebp
         push esi
         push edi
+        pushfd
 
-        mov ebp, dword ptr [esp + 9*4]
+        mov ebp, dword ptr [esp + 9*4] // restore to allow to take address of retData
 
-        lea esi, dword ptr [esp + 8*4]
+        mov esi, esp
         lea edi, retData
         mov ecx, 9
         rep movsd
-
-        add esp, 11*4
+        
+        add esp, 10*4
 
         popfd
         popad

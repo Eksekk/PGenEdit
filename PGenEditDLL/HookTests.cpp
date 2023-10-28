@@ -1670,7 +1670,7 @@ static __declspec(naked) int __stdcall checkRegisters()
         mov eaxBackup, eax
         pushfd
         pop eax
-        cmp eax, regs[0]
+        cmp eax, dword ptr [regs]
         // do it here to not pollute eflags and have one free register to not have "memory-to-memory move" problem
         mov eax, dword ptr[esp]
         mov returnJump, eax
@@ -1678,35 +1678,35 @@ static __declspec(naked) int __stdcall checkRegisters()
         mov eax, eaxBackup
 
         inc checkRegistersFailReasonId
-        cmp edi, regs[1]
+        cmp edi, dword ptr[regs + 4 * 1] // "cmp edi, regs[1]" would get translated into "cmp edi, dword ptr [regs + 1]" (1 byte, not 4)
         jne $exitFail
 
         inc checkRegistersFailReasonId
-        cmp esi, regs[2]
+        cmp esi, dword ptr[regs + 4 * 2]
         jne $exitFail
 
         inc checkRegistersFailReasonId
-        cmp ebp, regs[3]
+        cmp ebp, dword ptr[regs + 4 * 3]
         jne $exitFail
 
         inc checkRegistersFailReasonId
-        cmp esp, regs[4]
+        //cmp esp, dword ptr [regs + 4 * 4]
+        //jne $exitFail
+
+        inc checkRegistersFailReasonId
+        cmp edx, dword ptr[regs + 4 * 5]
         jne $exitFail
 
         inc checkRegistersFailReasonId
-        cmp edx, regs[5]
+        cmp ecx, dword ptr[regs + 4 * 6]
         jne $exitFail
 
         inc checkRegistersFailReasonId
-        cmp ecx, regs[6]
+        cmp ebx, dword ptr[regs + 4 * 7]
         jne $exitFail
 
         inc checkRegistersFailReasonId
-        cmp ebx, regs[7]
-        jne $exitFail
-
-        inc checkRegistersFailReasonId
-        cmp eax, regs[8]
+        cmp eax, dword ptr[regs + 4 * 8]
         jne $exitFail
 
         mov checkRegistersFailReasonId, 0
@@ -1715,19 +1715,21 @@ static __declspec(naked) int __stdcall checkRegisters()
         $exitFail:
         ret
 
-        $setValues:
-        push 0x21212121
+        $setValues :
+        add esp, 4 // pop return address
+        push 0x200203 // carefully chosen, see c++ part
             popfd
             mov edi, 0
             mov esi, 0x32221
             mov ebp, 0x40040404
+            // here we can test esp, due to ret changed to jump and restoring correct esp asap inside caller
             mov esp, 0x55555555
             mov edx, 0x1234
             mov ecx, 0x47287324
             mov ebx, 0x10000001
         mov eax, 0x33333
         jmp returnJump
-    }
+    }//0x200203U, 0U, 0x32221U, 0x40040404U, 0x55555555U, 0x1234U, 0x47287324U, 0x10000001U, 0x33333U
 
 }
 
@@ -1892,6 +1894,44 @@ HookTests::testMiscFunctions()
 
     // callMemoryAddressRegisters
     HookData testData;
+    // EFLAGS value carefully chosen to:
+    // 1) not enable trap flag, which is annoying
+    // 2) not cause processor to drop some bits (reserved?), thus breaking the comparison
+    static const dword_t testValues[9] = { 0x200A12, 0x54433221U, 0U, 0x48200000U, 0x33333333U, 0x19283746U, 0x44445555U,
+        0x11122233U, 0x10011001U };
+    static const dword_t expectValues[9] = { 0x200203U, 0U, 0x32221U, 0x40040404U, 0x55555555U, 0x1234U, 0x47287324U, 0x10000001U, 0x33333U };
+    /*
+    push 0x21212121
+            popfd
+            mov edi, 0
+            mov esi, 0x32221
+            mov ebp, 0x40040404
+            mov esp, 0x55555555
+            mov edx, 0x1234
+            mov ecx, 0x47287324
+            mov ebx, 0x10000001
+        mov eax, 0x33333*/
+    memcpy(&testData, testValues, 9 * 4);
+    memcpy(regs, testValues, 9 * 4);
+    HookData retData = callMemoryAddressRegisters(checkRegisters, 0, testData);
+    if (checkRegistersFailReasonId)
+    {
+        myassertf(false, "[callMemoryAddressRegisters] received fail reason id #", checkRegistersFailReasonId);
+    }
+    std::vector<int> failPositions;
+    for (int i = 0; i < 9; ++i)
+    {
+        if (dword(reinterpret_cast<char*>(&retData) + i * 4) != expectValues[i])
+        {
+            failPositions.push_back(i);
+        }
+    }
+    if (!failPositions.empty())
+    {
+        std::vector<std::string> v;
+        std::ranges::transform(failPositions, std::back_inserter(v), [](int i) { return std::to_string(i); });
+        myassertf(false, "[callMemoryAddressRegisters] expected register values differ (indexes of fails: %s)", concatStrings(v, ", "));
+    }
     
     return myasserter.errors;
 }

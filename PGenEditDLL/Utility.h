@@ -23,18 +23,18 @@ wxString my_to_string(const T& t)
     // like str << "x" << "y" << 5)
 }
 
-template<template<typename, typename...> typename Container, typename... Extra>
-wxString concatWxStrings(const Container<wxString, Extra...>& container, const wxString& separator = "\n")
+template<template<typename, typename, typename...> typename Container, typename String, typename... Extra>
+String concatStrings(const Container<String, Extra...>& container, const std::string& separator = "\n")
 {
-    wxString s;
+	String s = "";
     const int size = container.size();
     int i = 0;
     for (const auto& val : container)
     {
-        s << val;
+        s += val;
         if (i++ < size - 1)
         {
-            s << separator;
+            s += separator;
         }
     }
     return s;
