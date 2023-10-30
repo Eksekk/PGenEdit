@@ -7,6 +7,7 @@
 class EditorSkillsPanel;
 class EditorMainWindow;
 class EditorStatisticsPanel;
+class NotebookReplaceableTabs;
 
 enum PlayerWindowPanelType
 {
@@ -29,7 +30,7 @@ private:
 
 protected:
 	wxPanel* mainPanel;
-	wxNotebook* tabs;
+	NotebookReplaceableTabs* tabs;
 
 	EditorMainWindow* mainWindow;
 	wxWindowDisabler* windowDisabler;

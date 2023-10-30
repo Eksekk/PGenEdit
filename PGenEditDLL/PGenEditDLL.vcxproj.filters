@@ -381,6 +381,9 @@
     <ClInclude Include="HookElement.h">
       <Filter>Pliki nagłówkowe\Misc\Low level</Filter>
     </ClInclude>
+    <ClInclude Include="NotebookReplaceableTabs.h">
+      <Filter>Pliki nagłówkowe\Shared GUI</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="sources\MainWindow.cpp">
@@ -637,6 +640,9 @@
     </ClCompile>
     <ClCompile Include="Hook.cpp">
       <Filter>Pliki źródłowe\Misc\Low level</Filter>
+    </ClCompile>
+    <ClCompile Include="NotebookReplaceableTabs.cpp">
+      <Filter>Pliki źródłowe\Shared GUI</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

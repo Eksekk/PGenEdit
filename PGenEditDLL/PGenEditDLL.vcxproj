@@ -73,6 +73,7 @@
     <ClInclude Include="LuaFunctions.h" />
     <ClInclude Include="LuaWrapper.h" />
     <ClInclude Include="MapStructAccessor.h" />
+    <ClInclude Include="NotebookReplaceableTabs.h" />
     <ClInclude Include="PartyStructAccessor.h" />
     <ClInclude Include="PlayerClass.h" />
     <ClInclude Include="headers\GuiApplication.h" />
@@ -149,6 +150,7 @@
     <ClCompile Include="LuaFunctions.cpp" />
     <ClCompile Include="LuaWrapper.cpp" />
     <ClCompile Include="MapStructAccessor.cpp" />
+    <ClCompile Include="NotebookReplaceableTabs.cpp" />
     <ClCompile Include="PartyStructAccessor.cpp" />
     <ClCompile Include="PlayerClass.cpp" />
     <ClCompile Include="PlayerResistance.cpp" />

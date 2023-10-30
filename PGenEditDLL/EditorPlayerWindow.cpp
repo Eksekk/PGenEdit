@@ -10,6 +10,7 @@
 #include "Asserter.h"
 #include "SaveGameData.h"
 #include "EditorItemsPanel.h"
+#include "NotebookReplaceableTabs.h"
 
 const std::vector<std::pair<std::string, PlayerWindowPanelType>> EditorPlayerWindow::panelNamesWithIndexes =
 { {"Appearance", APPEARANCE_PANEL_INDEX}, { "Statistics", STATISTICS_PANEL_INDEX }, { "Skills", SKILLS_PANEL_INDEX },
@@ -80,7 +81,7 @@ EditorPlayerWindow::EditorPlayerWindow(wxWindow* parent, int playerIndex, int ro
 	mainSizer = new wxBoxSizer(wxVERTICAL);
 	mainPanel->SetSizer(mainSizer);
 
-	tabs = new wxNotebook(mainPanel, wxID_ANY);
+	tabs = new NotebookReplaceableTabs(mainPanel, wxID_ANY);
 	static const wxSize tabsImageSize = wxSize(50, 30);
     wxImageList* tabsImages = new wxImageList(tabsImageSize.GetWidth(), tabsImageSize.GetHeight());
     tabs->AssignImageList(tabsImages);
@@ -182,17 +183,17 @@ bool EditorPlayerWindow::Destroy()
 void EditorPlayerWindow::onTabChange(wxBookCtrlEvent& event)
 {
 	// TODO!!!: RemovePage might allow to keep tab contents in memory, avoiding "a ton of controls" problem, since it's removed from the window?
-	if (changingPage)
-	{
-		//event.Veto();
+    if (changingPage)
+    {
+        //event.Veto();
         event.Skip();
-		return;
+        return;
     }
-    Freeze();
-	changingPage = true;
-	wxON_BLOCK_EXIT0([&] {changingPage = false; Thaw(); });
+    changingPage = true;
+	Freeze();
+	wxON_BLOCK_EXIT0([&] { changingPage = false; Thaw(); });
 	// TODO: don't cast enum to int, use mapping table, more safety
-	int oldSelInt = event.GetOldSelection(), newSelInt = tabs->GetSelection();//event.GetSelection();
+	int oldSelInt = event.GetOldSelection(), newSelInt = tabs->GetSelection();
 	PlayerWindowPanelType oldSel = static_cast<PlayerWindowPanelType>(oldSelInt), newSel = static_cast<PlayerWindowPanelType>(newSelInt);
 
 	if (newSel == oldSel)
@@ -206,50 +207,47 @@ void EditorPlayerWindow::onTabChange(wxBookCtrlEvent& event)
     {
         saveGameData.saveEditorPlayerPanelData(*panel);
 	}
-    // replace old content page with dummy
-    tabs->InsertPage(oldSelInt, new wxPanel(tabs), getPanelNameByType(oldSel));
-	tabs->DeletePage(oldSelInt + 1);
-
-	// replace dummy page with newly created one
-	// 
+	
+	wxPanel* newPanel = nullptr;
+	std::string newPanelName;
 	switch (newSel)
 	{
 	case SKILLS_PANEL_INDEX:
-		tabs->InsertPage(newSelInt + 1, new EditorSkillsPanel(tabs, playerIndex, rosterIndex), getPanelNameByType(SKILLS_PANEL_INDEX));
+		newPanel = new EditorSkillsPanel(tabs, playerIndex, rosterIndex);
+		newPanelName = getPanelNameByType(SKILLS_PANEL_INDEX);
 		break;
 	case APPEARANCE_PANEL_INDEX:
-		tabs->InsertPage(newSelInt + 1, new wxPanel(tabs, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL), getPanelNameByType(APPEARANCE_PANEL_INDEX));
+		newPanel = new wxPanel(tabs, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
+		newPanelName = getPanelNameByType(APPEARANCE_PANEL_INDEX);
 		break;
 	case STATISTICS_PANEL_INDEX:
-        tabs->InsertPage(newSelInt + 1, new EditorStatisticsPanel(tabs, playerIndex, rosterIndex), getPanelNameByType(STATISTICS_PANEL_INDEX));
+		newPanel = new EditorStatisticsPanel(tabs, playerIndex, rosterIndex);
+		newPanelName = getPanelNameByType(STATISTICS_PANEL_INDEX);
         break;
 	case SPELLS_PANEL_INDEX:
-        tabs->InsertPage(newSelInt + 1, new wxPanel(tabs, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL), getPanelNameByType(SPELLS_PANEL_INDEX));
+		newPanel = new wxPanel(tabs, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
+		newPanelName = getPanelNameByType(SPELLS_PANEL_INDEX);
         break;
 	case ITEMS_PANEL_INDEX:
-        tabs->InsertPage(newSelInt + 1, new EditorItemsPanel(tabs, 14, 9, ItemRefPlayerInventory{.rosterIndex = rosterIndex}, playerIndex, rosterIndex), getPanelNameByType(ITEMS_PANEL_INDEX));
+		newPanel = new EditorItemsPanel(tabs, 14, 9, ItemRefPlayerInventory{ .rosterIndex = rosterIndex }, playerIndex, rosterIndex);
+		newPanelName = getPanelNameByType(ITEMS_PANEL_INDEX);
         break;
 	case CONDITIONS_BUFFS_PANEL_INDEX:
-        tabs->InsertPage(newSelInt + 1, new wxPanel(tabs, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL), getPanelNameByType(CONDITIONS_BUFFS_PANEL_INDEX));
+		newPanel = new wxPanel(tabs, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
+		newPanelName = getPanelNameByType(CONDITIONS_BUFFS_PANEL_INDEX);
         break;
 	case AWARDS_PANEL_INDEX:
-        tabs->InsertPage(newSelInt + 1, new wxPanel(tabs, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL), getPanelNameByType(AWARDS_PANEL_INDEX));
+		newPanel = new wxPanel(tabs, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
+		newPanelName = getPanelNameByType(AWARDS_PANEL_INDEX);
         break;
 	default:
 		wxFAIL_MSG(wxString::Format("Unknown player panel type (%d)", (int)newSel));
 		break;
     }
-	try
-	{
 
-        tabs->DeletePage(newSelInt);
-        tabs->ChangeSelection(newSelInt);
-	}
-	catch (const std::exception& ex)
-	{
-		wxLogError(ex.what());
-		wxLog::FlushActive();
-	}
+	std::string oldPanelName = getPanelNameByType(oldSel);
+	tabs->replacePageAt(newSelInt, newPanel, oldPanelName, newPanelName);
+	tabs->ChangeSelection(newSelInt);
     panel = dynamic_cast<EditorPlayerPanel*>(tabs->GetPage(newSelInt));
     if (panel) // TODO: remove condition when all panels are implemented (now they can be wxPanel as placeholder)
     {

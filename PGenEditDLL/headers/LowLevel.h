@@ -320,7 +320,6 @@ auto getAddress(T&& t)
     }
 }
 
-// TODO: a version that uses registers from stack (for use in hookfunction or hookcall, to call a function with particular set of register values)
 template<typename ReturnType, typename Address, typename... Args>
 ReturnType callMemoryAddress(Address address, int registerParamsNum, Args... args) // NO rvalue reference, because it passes arguments by address
 {
@@ -360,6 +359,12 @@ ReturnType callMemoryAddress(Address address, int registerParamsNum, Args... arg
     }
 }
 
+#pragma warning(push)
+#pragma warning(disable: 4731) // frame pointer register 'ebp' modified by inline assembly code
+
+// another version of "call arbitrary address" function
+// this one uses registers from provided HookData for call (except esp [TODO: push before changing registers and do jump instead of call, as in hook tests?]),
+// and returns HookData which contains the registers just after called function returns
 static dword_t callRegisters[9], callAddress, callOldEsp, callEspAfterCall; // registers, address, old esp, esp after call
 //static dword_t* callRegisters = callRegisters2; // for some reason this is needed, "mov edi, callRegisters2" would result in edi == 0
 // using this for registers, because compiler probably would use ebp-based addressing for accessing retData, which wouldn't work
@@ -377,7 +382,7 @@ HookData callMemoryAddressRegisters(Address address, int registerParamsNum, cons
         push ebp // to allow using ebp-based params later
 
         // copy registers to use
-        mov esi, useData
+        mov esi, useData // we want to use value as pointer -> can't use "lea", or we would get pointer to a pointer to value
         lea edi, callRegisters
         mov ecx, 9
         rep movsd
@@ -448,6 +453,46 @@ HookData callMemoryAddressRegisters(Address address, int registerParamsNum, cons
         popad
     }
     return retData;
+}
+
+#pragma warning(pop)
+
+// fills out hookData struct with current register values (at the moment of this function call)
+static void __declspec(naked) __stdcall fillOutHookData(HookData* d)
+{
+    _asm
+    {
+        push eax
+        push ebx
+        push ecx
+        push edx
+        lea eax, dword ptr [esp + 6 * 4]
+        push eax
+        push ebp
+        push esi
+        push edi
+        pushfd
+
+        mov esi, esp
+        mov edi, dword ptr [esp + 10 * 4]
+        mov ecx, 9
+        rep movsd
+        mov edi, dword ptr [esp + 4]
+        mov esi, dword ptr [esp + 8]
+        add esp, 9 * 4
+        ret 4
+    }
+}
+
+// trick to allow asm jump from different function into this name-mangled one
+static void(__stdcall* myFuncPtr)(HookData*) = fillOutHookData;
+
+static void __declspec(naked) __stdcall fillOutHookData(HookData& d)
+{
+    _asm
+    {
+        jmp myFuncPtr
+    }
 }
 
 // type of object representing replaced function call

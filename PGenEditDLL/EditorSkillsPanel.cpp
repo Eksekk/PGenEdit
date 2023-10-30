@@ -13,7 +13,9 @@ extern wxTimer* mainUpdateTimer;
 
 EditorSkillsPanel::EditorSkillsPanel(wxWindow* parent, int playerIndex, int rosterIndex) : wxScrolledWindow(parent), EditorPlayerPanel(playerIndex, rosterIndex)
 {
-	Freeze();
+	ChildrenRepositioningGuard g(this);
+    Freeze();
+    Hide();
     Bind(wxEVT_ACTIVATE, &EditorSkillsPanel::onActivateWindow, this);
 	Profiler profiler;
 	//profiler.start("Creating skills panel");
@@ -46,7 +48,8 @@ EditorSkillsPanel::EditorSkillsPanel(wxWindow* parent, int playerIndex, int rost
 // 	Bind(wxEVT_ACTIVATE, &EditorSkillsPanel::onActivate, this);
 
 	//profiler.start("skills panel layout");
-	this->SetSizer(mainSizer);
+    this->SetSizer(mainSizer);
+    Show();
 	this->Layout();
 	Thaw();
 	//profiler.logResults();

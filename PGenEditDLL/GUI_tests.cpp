@@ -20,6 +20,7 @@
 #include "EditorStatisticsPanel.h"
 #include "MainWindow.h"
 #include "GuiTestHelper.h"
+#include "NotebookReplaceableTabs.h"
 
 std::vector<wxString> GUI_tests::testAlignmentRadioBox()
 {

@@ -18,6 +18,7 @@ EditorSkillValueChooser::EditorSkillValueChooser(wxWindow* parent, const wxStrin
     : wxPanel(parent), playerIndex(playerIndex), skill(skill), options(options)
 {
     Freeze();
+    Hide();
     wxBoxSizer* mainSizer = new wxBoxSizer(wxHORIZONTAL);
 	SetSizer(mainSizer);
 	wxBoxSizer* innerSizer = new wxBoxSizer(wxHORIZONTAL); // to allow sizer "border" to have color
@@ -70,6 +71,7 @@ EditorSkillValueChooser::EditorSkillValueChooser(wxWindow* parent, const wxStrin
 
 	skillMastery->Bind(wxEVT_CHOICE, &EditorSkillValueChooser::onValueChange, this);
 	innerSizer->Add(skillMastery);
+    Show();
     Thaw();
 }
 
