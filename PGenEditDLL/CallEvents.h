@@ -3,6 +3,7 @@
 #include "main.h"
 #include "LuaFunctions.h"
 #include "Utility.h"
+#include "LuaWrapper.h"
 
 namespace
 {
@@ -43,6 +44,9 @@ using EventArg = std::variant<EventArgKeyValue, EventArgsMap>;
 // for simplicity, handler function will be same type as returned activator function, in future handler might receive any extra args
 //
 // Args... type needs to support "pseudo-tables" with reference wrappers to represent lua tables and access/modify them (recursive variant type?)
+//
+// since C++ has static typing, it's probably impossible to do variable arg number templates (or very annoying to use vector of std::any), I'm doing static number of basic args
+// additional args (like, not present by default) will be inside table parameter
 
 template<typename ArgType>
 auto convertLuaTypeToCpp(ArgType& arg)
@@ -112,36 +116,28 @@ auto convertSingleLuaStackArg(int stackIndex)
 // we know types of destination args, still have to return it as variants (containing passed type), or tuple of specific args, or throw exception
 // pass stack index and take next args from incrementing it
 
-template<int stackIndexFirst, int count, int current = 0, template<typename...> typename Tuple, typename... Args>
-static void processSingleLuaArgRecursive(Tuple<Args...>& tuple)
+template<int current = 0, template<typename...> typename Tuple, typename... Args>
+static void processSingleLuaArgRecursive(int stackIndexFirst, Tuple<Args...>& tuple)
 {
-    if constexpr (current < count)
+    if constexpr (current < sizeof...(Args))
     {
         using ElemType = std::tuple_element_t<current, Tuple<Args...>>;
         std::get<current>(tuple) = convertSingleLuaStackArg<ElemType>(stackIndexFirst + current);
-        processSingleLuaArgRecursive<stackIndexFirst, count, current + 1, Tuple, Args...>(tuple);
+        processSingleLuaArgRecursive<current + 1, Tuple, Args...>(stackIndexFirst, tuple);
     }
 }
 
 // NEEDS TO RETURN EventArg type!
-template<int stackIndexFirst, typename... Args>
-std::tuple<Args...> convertLuaToCpp()
+template<typename... Args>
+std::tuple<Args...> convertLuaToCpp(int stackIndexFirst)
 {
-    try 
-    {
-        std::tuple<Args...> tup;
-        processSingleLuaArgRecursive<stackIndexFirst, sizeof...(Args)>(tup);
-        return tup;
-    }
-    catch (const std::exception& ex)
-    {
-    	
-    }
+    // this can throw
+    std::tuple<Args...> tup;
+    processSingleLuaArgRecursive<sizeof...(Args)>(stackIndexFirst, tup);
+    return tup;
 }
 
-auto x = convertLuaToCpp<1, int, char, bool>();
-
-template<int current, typename... Args>
+template<int current = 0, typename... Args>
 static void pushSingleCppArgRecursive(const std::tuple<Args...>& tup)
 {
     if constexpr (current < sizeof...(Args))
@@ -177,7 +173,8 @@ static void pushSingleCppArgRecursive(const std::tuple<Args...>& tup)
 template<typename... Args>
 static void pushCppArgs(const std::tuple<Args...>& args)
 {
-    pushSingleCppArgRecursive<0, Args...>(args);
+    pushSingleCppArgRecursive(args);
+    auto x = convertLuaToCpp<int, char, bool>(1);
 }
 
 static void ff()
@@ -186,14 +183,40 @@ static void ff()
     pushCppArgs(tup);
 }
 
+// returns tuple with first argument equal to number of returned args, and second containing parameters
+template<template<typename...> typename Tuple, typename... Args>
+using ReturnFuncType = std::function<std::tuple<int, Tuple>(Args...)>;
+
 template<typename... Args>
 using HandlerFuncType = std::function<void(Args&... args)>;
 
-template<typename... Args>
-HandlerFuncType<Args...> getEventActivator(const std::string& eventName, HandlerFuncType<Args...> handler, Args&&... args)
+template<template<typename...> typename Tuple, typename... Args>
+ReturnFuncType<Tuple, Args...> getEventActivator(const std::string& eventName, HandlerFuncType<Args...> handler)
 {
-    return [=](Args&... args)
+    constexpr const int count = sizeof...(Args);
+    return [=](Args... args)
+    {
+        int stackPos = lua_gettop(Lua);
+        // TODO: a version which receives keys as separate arguments, converts them and gets path
+        luaWrapper.getPath("pgenedit.events");
+        lua_pushlstring(Lua, eventName.data(), eventName.size());
+        lua_gettable(Lua, -2);
+        lua_replace(Lua, -2); // replaces table
+        lua_getfield(Lua, -1, "call");
+        lua_replace(Lua, -2); // replaces events subtable
+        pushCppArgs(std::make_tuple(args...));
+        if (!lua_pcall(Lua, count, 0, 0))
         {
-
-        };
+            wxLogError("Event handler for '%s' pgenedit event caused error: %s", eventName, lua_tostring(Lua, -1));
+            lua_settop(Lua, stackPos);
+            return;
+        }
+        // FIXME: clean Lua error (somehow deal with longjmp) instead of hard crash
+        wxASSERT_MSG(lua_gettop(Lua) - stackPos >= sizeof...(Args), wxString::Format("Expected at least %d stack args, current number of stack args is %d", sizeof...(Args), lua_gettop(Lua)));
+        // can have not all args returned
+        // args can have different types!
+        Tuple returnTuple = convertLuaToCpp<Args...>(lua_gettop(Lua) - sizeof...(Args) + 1);
+        lua_settop(Lua, stackPos);
+        return make_tuple(1, returnTuple);
+    };
 }

@@ -4,6 +4,7 @@
 #include "SaveGameData.h"
 #include "LuaWrapper.h"
 #include "Utility.h"
+#include "CallEvents.h"
 
 extern "C"
 {
@@ -58,12 +59,30 @@ extern "C"
 		if (lua_type(Lua, -1) == LUA_TNIL)
 		{
 			luaL_openlib(Lua, "pgenedit", lib, 0);
-			lua_pop(Lua, 2);
+			lua_replace(Lua, -2);
 		}
 		else
 		{
 			lua_pop(Lua, 1);
 		}
+		lua_getfield(Lua, -1, "events");
+		if (lua_type(Lua, -1) != LUA_TTABLE)
+		{
+			lua_pop(Lua, 1);
+			luaWrapper.getPath("events.new");
+			lua_call(Lua, 0, 0);
+			lua_setfield(Lua, -2, "events");
+			lua_getfield(Lua, -1, "events");
+		}
+		lua_replace(Lua, -2);
+		std::function<void(int&, bool&)> func = [](int& i, bool& b)
+			{
+				wxLogInfo("Event activated, variable values: %d %s", i, b);
+				wxLog::FlushActive();
+				i += 3;
+				b = !b;
+			};
+		auto f = getEventActivator<std::tuple<bool>, int, bool>("testEvent", func);
 		/*lua_getglobal(Lua, "pgen");
 		if (lua_type(Lua, -1) == LUA_TNIL)
 		{
