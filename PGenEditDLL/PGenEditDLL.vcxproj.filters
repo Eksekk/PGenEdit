@@ -384,6 +384,9 @@
     <ClInclude Include="NotebookReplaceableTabs.h">
       <Filter>Pliki nagłówkowe\Shared GUI</Filter>
     </ClInclude>
+    <ClInclude Include="CallEvents.h">
+      <Filter>Pliki nagłówkowe\Misc\Lua</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="sources\MainWindow.cpp">
@@ -643,6 +646,9 @@
     </ClCompile>
     <ClCompile Include="NotebookReplaceableTabs.cpp">
       <Filter>Pliki źródłowe\Shared GUI</Filter>
+    </ClCompile>
+    <ClCompile Include="CallEvents.cpp">
+      <Filter>Pliki źródłowe\Misc\Lua</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

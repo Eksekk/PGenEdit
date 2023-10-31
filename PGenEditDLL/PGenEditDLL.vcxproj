@@ -22,6 +22,7 @@
     <ClInclude Include="AlignmentRadioBox.h" />
     <ClInclude Include="Asserter.h" />
     <ClInclude Include="AutoBackup.h" />
+    <ClInclude Include="CallEvents.h" />
     <ClInclude Include="ClassInfoPanel.h" />
     <ClInclude Include="ClassSettingsTab.h" />
     <ClInclude Include="ClassWindow.h" />
@@ -115,6 +116,7 @@
     <ClCompile Include="AlignmentRadioBox.cpp" />
     <ClCompile Include="Asserter.cpp" />
     <ClCompile Include="AutoBackup.cpp" />
+    <ClCompile Include="CallEvents.cpp" />
     <ClCompile Include="ClassGenerationData.cpp" />
     <ClCompile Include="ClassInfoPanel.cpp" />
     <ClCompile Include="ClassSettingsTab.cpp" />
