@@ -183,18 +183,25 @@ static void ff()
     pushCppArgs(tup);
 }
 
+// getEventActivator returns function, which, when called, will call the event with provided args
+// receives event name
+
+template<typename... ReturnTypes>
+struct CustomReturnCaller
+{
+    //template<typename... Args>
+    //static std::tuple<ReturnTypes> getEventActivator() {}
+};
+
 // returns tuple with first argument equal to number of returned args, and second containing parameters
-template<template<typename...> typename Tuple, typename... Args>
-using ReturnFuncType = std::function<std::tuple<int, Tuple>(Args...)>;
+template<typename Ret, typename... Args>
+using ReturnFuncType = std::function<std::tuple<int, Ret>(Args...)>;
 
-template<typename... Args>
-using HandlerFuncType = std::function<void(Args&... args)>;
-
-template<template<typename...> typename Tuple, typename... Args>
-ReturnFuncType<Tuple, Args...> getEventActivator(const std::string& eventName, HandlerFuncType<Args...> handler)
+template<typename... Args, typename... ReturnArgs>
+ReturnFuncType<std::tuple<ReturnArgs...>, Args...> getEventActivator(const std::string& eventName, const std::tuple<ReturnArgs...>&) // dummy tuple to allow second parameter pack
 {
     constexpr const int count = sizeof...(Args);
-    return [=](Args... args)
+    return [=](Args... args) -> std::tuple<int, std::tuple<ReturnArgs...>>
     {
         int stackPos = lua_gettop(Lua);
         // TODO: a version which receives keys as separate arguments, converts them and gets path
@@ -205,17 +212,17 @@ ReturnFuncType<Tuple, Args...> getEventActivator(const std::string& eventName, H
         lua_getfield(Lua, -1, "call");
         lua_replace(Lua, -2); // replaces events subtable
         pushCppArgs(std::make_tuple(args...));
-        if (!lua_pcall(Lua, count, 0, 0))
+        if (!lua_pcall(Lua, count, 0/*!!!!!!!*/, 0))
         {
             wxLogError("Event handler for '%s' pgenedit event caused error: %s", eventName, lua_tostring(Lua, -1));
             lua_settop(Lua, stackPos);
-            return;
+            return make_tuple(0, std::tuple<ReturnArgs...>());
         }
         // FIXME: clean Lua error (somehow deal with longjmp) instead of hard crash
-        wxASSERT_MSG(lua_gettop(Lua) - stackPos >= sizeof...(Args), wxString::Format("Expected at least %d stack args, current number of stack args is %d", sizeof...(Args), lua_gettop(Lua)));
+        wxASSERT_MSG(lua_gettop(Lua) - stackPos >= sizeof...(ReturnArgs), wxString::Format("Expected at least %d stack args, current number of stack args is %d", sizeof...(Args), lua_gettop(Lua)));
         // can have not all args returned
         // args can have different types!
-        Tuple returnTuple = convertLuaToCpp<Args...>(lua_gettop(Lua) - sizeof...(Args) + 1);
+        std::tuple<ReturnArgs...> returnTuple = convertLuaToCpp<ReturnArgs...>(lua_gettop(Lua) - sizeof...(ReturnArgs) + 1);
         lua_settop(Lua, stackPos);
         return make_tuple(1, returnTuple);
     };

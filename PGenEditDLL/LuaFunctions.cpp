@@ -75,14 +75,7 @@ extern "C"
 			lua_getfield(Lua, -1, "events");
 		}
 		lua_replace(Lua, -2);
-		std::function<void(int&, bool&)> func = [](int& i, bool& b)
-			{
-				wxLogInfo("Event activated, variable values: %d %s", i, b);
-				wxLog::FlushActive();
-				i += 3;
-				b = !b;
-			};
-		auto f = getEventActivator<std::tuple<bool>, int, bool>("testEvent", func);
+		auto f = getEventActivator<int, bool>("testEvent", std::tuple<int, int>());
 		/*lua_getglobal(Lua, "pgen");
 		if (lua_type(Lua, -1) == LUA_TNIL)
 		{
