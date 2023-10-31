@@ -98,6 +98,15 @@ extern "C"
 	}
 }
 
+std::string buildWantedLuaTypeString(std::initializer_list<int> list)
+{
+    static const std::string singleFormat = "%s", multipleFormat = "any of [%s]";
+    std::string s;
+	std::vector<std::string> parts;
+	std::ranges::transform(list, std::back_inserter(parts), [](int arg) { return luaTypeToString(Lua, arg); });
+	return wxString::Format(wxString(list.size() <= 1 ? singleFormat : multipleFormat), (wxString)stringConcat(parts)).ToStdString();
+}
+
 bool detectIfIsMerge()
 {
 	if (MMVER != 8)
@@ -357,6 +366,42 @@ void fillGameStaticPointersAndSizes()
 		));
 	}
 	lua_settop(Lua, origStack);
+}
+
+
+
+std::string luaTypeToString(lua_State* L, int idx)
+{
+    switch (lua_type(L, idx))
+    {
+    case LUA_TNIL:
+        return "nil";
+    case LUA_TBOOLEAN:
+        return "boolean";
+    case LUA_TSTRING:
+        return "string";
+    case LUA_TNUMBER:
+        return "number";
+    case LUA_TTABLE:
+        return "table";
+    case LUA_TTHREAD:
+        return "thread";
+    case LUA_TUSERDATA:
+        return "userdata";
+	case LUA_TFUNCTION:
+		return "function";
+    }
+    return "";
+}
+
+std::string getLuaTypeMismatchString(std::initializer_list<int> wanted, int provided, int stackIndex)
+{
+    return wxString::Format("Expected %s, got %s (stack index of parameter is %d)", buildWantedLuaTypeString(wanted), luaTypeToString(Lua, provided), stackIndex).ToStdString();
+}
+
+std::string getLuaTypeMismatchString(int wanted, int provided, int stackIndex)
+{
+    return getLuaTypeMismatchString({ wanted }, provided, stackIndex);
 }
 
 extern "C" static int saveGameHandler(lua_State* L)

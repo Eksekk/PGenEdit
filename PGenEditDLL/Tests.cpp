@@ -37,7 +37,7 @@ std::vector<wxString> Tests::testJson()
 	errorFile.open(ERROR_FILE_NAME, std::ios::out | std::ios::trunc);
 	if (!jsonErrors.empty())
 	{
-		wxString str = wxString::Format("Time: %s\nEntering %s(), %d old errors still present:\n\n%s\n\n\n", getTimeStr(), __FUNCTION__, jsonErrors.size(), concatStrings(jsonErrors, "\n"));
+		wxString str = wxString::Format("Time: %s\nEntering %s(), %d old errors still present:\n\n%s\n\n\n", getTimeStr(), __FUNCTION__, jsonErrors.size(), stringConcat(jsonErrors, "\n"));
 		errorFile << str;
 		if (jsonErrors.size() <= 5)
 		{
@@ -131,7 +131,7 @@ std::vector<wxString> Tests::testJson()
 	}
 	if (!jsonErrors.empty())
 	{
-		wxString str = wxString::Format("Time: %s\nLeaving %s(), %d errors occurred:\n\n%s\n\n\n", getTimeStr(), __FUNCTION__, jsonErrors.size(), concatStrings(jsonErrors, "\n"));
+		wxString str = wxString::Format("Time: %s\nLeaving %s(), %d errors occurred:\n\n%s\n\n\n", getTimeStr(), __FUNCTION__, jsonErrors.size(), stringConcat(jsonErrors, "\n"));
 		errorFile << str;
 		if (jsonErrors.size() <= 5)
 		{
@@ -614,7 +614,7 @@ std::vector<wxString> Tests::testPlayerStructAccessor()
 					skillPtr->name,
 					oldVal.toString(),
 					value.toString()),
-				concatStrings(failReasons) + "\n\n"
+				stringConcat(failReasons) + "\n\n"
 			);
 		}
 	};

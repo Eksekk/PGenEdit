@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "LuaWrapper.h"
 #include "Utility.h"
+#include "LuaFunctions.h"
 
 LuaWrapper luaWrapper;
 
@@ -30,28 +31,6 @@ LuaWrapper& LuaWrapper::getfield(int idx, const char* key)
     return *this;
 }
 
-std::string luaTypeToStr(lua_State* L, int idx)
-{
-    switch (lua_type(L, idx))
-    {
-    case LUA_TNIL:
-        return "nil";
-    case LUA_TBOOLEAN:
-        return "boolean";
-    case LUA_TSTRING:
-        return "string";
-    case LUA_TNUMBER:
-        return "number";
-    case LUA_TTABLE:
-        return "table";
-    case LUA_TTHREAD:
-        return "thread";
-    case LUA_TUSERDATA:
-        return "userdata";
-    }
-    return "";
-}
-
 bool LuaWrapper::getPath(const std::string& path, bool lastMustBeTable, bool create)
 {
     auto parts = stringSplit(path, ".");
@@ -78,7 +57,7 @@ bool LuaWrapper::getPath(const std::string& path, bool lastMustBeTable, bool cre
     static const wxString format = "[index %d, key %s] couldn't get proper value (got '%s', expected '%s')";
     if (lua_type(L, -1) != LUA_TTABLE)
     {
-        wxLogError(format, 0, parts.at(0), luaTypeToStr(L, -1), "table");
+        wxLogError(format, 0, parts.at(0), luaTypeToString(L, -1), "table");
         lua_pop(L, n);
         return false;
     }
@@ -89,7 +68,7 @@ bool LuaWrapper::getPath(const std::string& path, bool lastMustBeTable, bool cre
         ++n;
         if ((lastMustBeTable || i != parts.size() - 1) && lua_type(L, -1) != LUA_TTABLE) // last part can be any value
         {
-            wxLogError(format, n - 1, part, luaTypeToStr(L, -1), "table");
+            wxLogError(format, n - 1, part, luaTypeToString(L, -1), "table");
             lua_pop(L, n);
             return false;
         }

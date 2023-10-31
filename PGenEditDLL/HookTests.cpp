@@ -1930,7 +1930,7 @@ HookTests::testMiscFunctions()
     {
         std::vector<std::string> v;
         std::ranges::transform(failPositions, std::back_inserter(v), [](int i) { return std::to_string(i); });
-        myassertf(false, "[callMemoryAddressRegisters] expected register values differ (indexes of fails: %s)", concatStrings(v, ", "));
+        myassertf(false, "[callMemoryAddressRegisters] expected register values differ (indexes of fails: %s)", stringConcat(v, ", "));
     }
     
     return myasserter.errors;

@@ -24,7 +24,7 @@ wxString my_to_string(const T& t)
 }
 
 template<template<typename, typename, typename...> typename Container, typename String, typename... Extra>
-String concatStrings(const Container<String, Extra...>& container, const std::string& separator = "\n")
+String stringConcat(const Container<String, Extra...>& container, const std::string& separator = "\n")
 {
 	String s = "";
     const int size = container.size();
