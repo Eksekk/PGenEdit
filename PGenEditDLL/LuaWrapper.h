@@ -23,6 +23,11 @@ public:
     // returns true if successful and only adds to the stack requested object, otherwise returns false and stack is fully restored
     // if "create" is true, acts like "tget" function
     bool getPath(const std::string& path, bool lastMustBeTable = false, bool create = false);
+
+    bool getPath(const std::vector<std::string>& parts, bool lastMustBeTable = false, bool create = false);
+
+    // gets the path (without last element) with getPath and then sets last element to value at provided stack index
+    bool setPath(const std::string& path, int index);
     
 
 

@@ -53,6 +53,15 @@ extern "C"
 		{0, 0}
 	};
 
+	static int eventTestHandler(lua_State* L)
+	{
+		int i = lua_tonumber(L, -2);
+		bool b = lua_toboolean(L, -1);
+		wxLogInfo("Event handler: received int %d and bool %d, returning %d", i, b, i * 3);
+		lua_pushnumber(L, i * 3);
+		return 1;
+	}
+
 	void luaInit()
 	{
 		lua_getglobal(Lua, "pgenedit");
@@ -60,22 +69,32 @@ extern "C"
 		{
 			luaL_openlib(Lua, "pgenedit", lib, 0);
 			lua_replace(Lua, -2);
-		}
-		else
-		{
-			lua_pop(Lua, 1);
-		}
+        }
 		lua_getfield(Lua, -1, "events");
 		if (lua_type(Lua, -1) != LUA_TTABLE)
 		{
 			lua_pop(Lua, 1);
 			luaWrapper.getPath("events.new");
-			lua_call(Lua, 0, 0);
+			lua_call(Lua, 0, 1);
 			lua_setfield(Lua, -2, "events");
-			lua_getfield(Lua, -1, "events");
 		}
-		lua_replace(Lua, -2);
-		auto f = getEventActivator<int, bool>("testEvent", std::tuple<int, int>());
+		else
+		{
+			lua_pop(Lua, 1);
+		}
+		lua_pushcfunction(Lua, eventTestHandler);
+		luaWrapper.setPath("pgenedit.events.testEvent", -1);
+
+		auto f = getEventActivator<int, bool>("testEvent", std::tuple<int>());
+		auto [i1] = std::get<1>(f(5, true));
+        wxLogInfo("Event caller: received %d", i1);
+		wxLog::FlushActive();
+        std::tie(i1) = std::get<1>(f(2, false));
+        wxLogInfo("Event caller: received %d", i1);
+        wxLog::FlushActive();
+        std::tie(i1) = std::get<1>(f(88, false));
+        wxLogInfo("Event caller: received %d", i1);
+        wxLog::FlushActive();
 		/*lua_getglobal(Lua, "pgen");
 		if (lua_type(Lua, -1) == LUA_TNIL)
 		{

@@ -74,56 +74,65 @@ template<typename ArgType>
 auto convertSingleLuaStackArg(int stackIndex)
 {
     int type = lua_type(Lua, stackIndex);
-    if constexpr (SAME(ArgType, bool))
+    if (type == LUA_TNIL)
     {
-        return lua_toboolean(Lua, stackIndex);
+        return ArgType(); // default-constructed
+        // TO CONSIDER: using unique_ptr's everywhere might allow for unspecified args to be nullptr
     }
-    else if constexpr (std::is_arithmetic_v<ArgType>)
+    else
     {
-        if (type == LUA_TNUMBER)
+
+        if constexpr (SAME(ArgType, bool))
         {
-            return static_cast<ArgType>(lua_tonumber(Lua, stackIndex));
+            return lua_toboolean(Lua, stackIndex);
         }
-        else if (type == LUA_TBOOLEAN)
+        else if constexpr (std::is_arithmetic_v<ArgType>)
         {
-            return static_cast<ArgType>(lua_toboolean(Lua, stackIndex));
+            if (type == LUA_TNUMBER)
+            {
+                return static_cast<ArgType>(lua_tonumber(Lua, stackIndex));
+            }
+            else if (type == LUA_TBOOLEAN)
+            {
+                return static_cast<ArgType>(lua_toboolean(Lua, stackIndex));
+            }
+            else
+            {
+                // not sure how I want to handle this, using exceptions for now
+                throw std::logic_error(getLuaTypeMismatchString({ LUA_TNUMBER, LUA_TBOOLEAN }, type, stackIndex));
+            }
         }
-        else
+        else if constexpr (SAME(ArgType, std::string))
         {
-            // not sure how I want to handle this, using exceptions for now
-            throw std::logic_error(getLuaTypeMismatchString({LUA_TNUMBER, LUA_TBOOLEAN}, type, stackIndex));
+            if (type == LUA_TSTRING)
+            {
+                size_t len;
+                const char* str = lua_tolstring(Lua, stackIndex, &len);
+                return std::string(str, len);
+            }
+            else
+            {
+                throw std::logic_error(getLuaTypeMismatchString({ LUA_TSTRING }, type, stackIndex));
+            }
         }
-    }
-    else if constexpr (SAME(ArgType, std::string))
-    {
-        if (type == LUA_TSTRING)
+        else if constexpr (std::is_pointer_v<ArgType>)
         {
-            size_t len;
-            const char* str = lua_tolstring(Lua, stackIndex, &len);
-            return std::string(str, len);
+            return reinterpret_cast<ArgType>(convertSingleLuaStackArg<dword_t>(stackIndex));
         }
-        else
-        {
-            throw std::logic_error(getLuaTypeMismatchString({ LUA_TSTRING }, type, stackIndex));
-        }
-    }
-    else if constexpr (std::is_pointer_v<ArgType>)
-    {
-        return reinterpret_cast<ArgType>(convertSingleLuaStackArg<dword_t>(stackIndex));
     }
 }
 
 // we know types of destination args, still have to return it as variants (containing passed type), or tuple of specific args, or throw exception
 // pass stack index and take next args from incrementing it
 
-template<int current = 0, template<typename...> typename Tuple, typename... Args>
-static void processSingleLuaArgRecursive(int stackIndexFirst, Tuple<Args...>& tuple)
+template<int current = 0, typename... Args>
+static void processSingleLuaArgRecursive(int stackIndexFirst, std::tuple<Args...>& tuple)
 {
     if constexpr (current < sizeof...(Args))
     {
-        using ElemType = std::tuple_element_t<current, Tuple<Args...>>;
+        using ElemType = std::tuple_element_t<current, std::tuple<Args...>>;
         std::get<current>(tuple) = convertSingleLuaStackArg<ElemType>(stackIndexFirst + current);
-        processSingleLuaArgRecursive<current + 1, Tuple, Args...>(stackIndexFirst, tuple);
+        processSingleLuaArgRecursive<current + 1>(stackIndexFirst, tuple);
     }
 }
 
@@ -133,7 +142,7 @@ std::tuple<Args...> convertLuaToCpp(int stackIndexFirst)
 {
     // this can throw
     std::tuple<Args...> tup;
-    processSingleLuaArgRecursive<sizeof...(Args)>(stackIndexFirst, tup);
+    processSingleLuaArgRecursive<0, Args...>(stackIndexFirst, tup);
     return tup;
 }
 
@@ -163,6 +172,8 @@ static void pushSingleCppArgRecursive(const std::tuple<Args...>& tup)
         }
         else
         {
+            wxLogError("Unknown type");
+            wxLog::FlushActive();
             showDeducedType(val);
         }
         pushSingleCppArgRecursive<current + 1>(tup);
@@ -174,7 +185,6 @@ template<typename... Args>
 static void pushCppArgs(const std::tuple<Args...>& args)
 {
     pushSingleCppArgRecursive(args);
-    auto x = convertLuaToCpp<int, char, bool>(1);
 }
 
 static void ff()
@@ -197,29 +207,28 @@ struct CustomReturnCaller
 template<typename Ret, typename... Args>
 using ReturnFuncType = std::function<std::tuple<int, Ret>(Args...)>;
 
-template<typename... Args, typename... ReturnArgs>
+// GRAYFACE'S EVENTS support returning only one value!
+template<typename... Args, typename... ReturnArgs> // "real" parameter pack (specified) must be first
 ReturnFuncType<std::tuple<ReturnArgs...>, Args...> getEventActivator(const std::string& eventName, const std::tuple<ReturnArgs...>&) // dummy tuple to allow second parameter pack
 {
+    static_assert(sizeof...(ReturnArgs) <= 1, "Grayface's events support returning only one value");
     constexpr const int count = sizeof...(Args);
     return [=](Args... args) -> std::tuple<int, std::tuple<ReturnArgs...>>
     {
         int stackPos = lua_gettop(Lua);
-        // TODO: a version which receives keys as separate arguments, converts them and gets path
-        luaWrapper.getPath("pgenedit.events");
+        luaWrapper.getPath("pgenedit.events.call");
         lua_pushlstring(Lua, eventName.data(), eventName.size());
-        lua_gettable(Lua, -2);
-        lua_replace(Lua, -2); // replaces table
-        lua_getfield(Lua, -1, "call");
-        lua_replace(Lua, -2); // replaces events subtable
         pushCppArgs(std::make_tuple(args...));
-        if (!lua_pcall(Lua, count, 0/*!!!!!!!*/, 0))
+        if (lua_pcall(Lua, count + 1, sizeof...(ReturnArgs), 0)) // unspecified return values will be nils
         {
             wxLogError("Event handler for '%s' pgenedit event caused error: %s", eventName, lua_tostring(Lua, -1));
+            wxLog::FlushActive();
             lua_settop(Lua, stackPos);
             return make_tuple(0, std::tuple<ReturnArgs...>());
         }
         // FIXME: clean Lua error (somehow deal with longjmp) instead of hard crash
-        wxASSERT_MSG(lua_gettop(Lua) - stackPos >= sizeof...(ReturnArgs), wxString::Format("Expected at least %d stack args, current number of stack args is %d", sizeof...(Args), lua_gettop(Lua)));
+        int providedCount = lua_gettop(Lua) - stackPos;
+        //wxASSERT_MSG(lua_gettop(Lua) - stackPos >= sizeof...(ReturnArgs), wxString::Format("Expected at least %d stack args, current number of stack args is %d", sizeof...(ReturnArgs), lua_gettop(Lua)));
         // can have not all args returned
         // args can have different types!
         std::tuple<ReturnArgs...> returnTuple = convertLuaToCpp<ReturnArgs...>(lua_gettop(Lua) - sizeof...(ReturnArgs) + 1);

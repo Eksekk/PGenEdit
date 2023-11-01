@@ -34,6 +34,11 @@ LuaWrapper& LuaWrapper::getfield(int idx, const char* key)
 bool LuaWrapper::getPath(const std::string& path, bool lastMustBeTable, bool create)
 {
     auto parts = stringSplit(path, ".");
+    return getPath(parts, lastMustBeTable, create);
+}
+
+bool LuaWrapper::getPath(const std::vector<std::string>& parts, bool lastMustBeTable /*= false*/, bool create /*= false*/)
+{
     if (create)
     {
         lua_getglobal(L, "tget");
@@ -45,7 +50,7 @@ bool LuaWrapper::getPath(const std::string& path, bool lastMustBeTable, bool cre
         int error = pcall(parts.size() + 1, 1, 0);
         if (error)
         {
-            wxLogError("Couldn't tget() path '%s': '%s'", path, lua_tostring(L, -1));
+            wxLogError("Couldn't tget() path '%s': '%s'", stringConcat(parts, "."), lua_tostring(L, -1));
             pop(1);
             wxLog::FlushActive();
             return false;
@@ -94,4 +99,29 @@ LuaWrapper& LuaWrapper::call(int nargs, int nresults)
 {
     lua_call(L, nargs, nresults);
     return *this;
+}
+
+bool LuaWrapper::setPath(const std::string& path, int index)
+{
+    auto parts = stringSplit(path, ".");
+    index = index > 0 ? index : lua_gettop(L) + index + 1; // get absolute index
+    if (parts.size() == 1)
+    {
+        pushString(path.data());
+        pushvalue(index);
+        lua_settable(L, LUA_GLOBALSINDEX);
+    }
+    else
+    {
+        auto firstParts = std::vector<std::string>(parts.begin(), parts.end() - 1);
+        if (!getPath(firstParts))
+        {
+            return false;
+        }
+        lua_pushstring(L, parts.back().data());
+        pushvalue(index);
+        lua_settable(L, -3);
+        lua_pop(L, 1);
+    }
+    return true;
 }
