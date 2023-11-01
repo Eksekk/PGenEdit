@@ -85,16 +85,16 @@ extern "C"
 		lua_pushcfunction(Lua, eventTestHandler);
 		luaWrapper.setPath("pgenedit.events.testEvent", -1);
 
-		auto f = getEventActivator<int, bool>("testEvent", std::tuple<int>());
-		auto [i1] = std::get<1>(f(5, true));
-        wxLogInfo("Event caller: received %d", i1);
-		wxLog::FlushActive();
-        std::tie(i1) = std::get<1>(f(2, false));
-        wxLogInfo("Event caller: received %d", i1);
-        wxLog::FlushActive();
-        std::tie(i1) = std::get<1>(f(88, false));
-        wxLogInfo("Event caller: received %d", i1);
-        wxLog::FlushActive();
+// 		auto f = getEventActivator<int, bool>("testEvent", std::tuple<int>());
+// 		auto [i1] = std::get<1>(f(5, true));
+//         wxLogInfo("Event caller: received %d", i1);
+// 		wxLog::FlushActive();
+//         std::tie(i1) = std::get<1>(f(2, false));
+//         wxLogInfo("Event caller: received %d", i1);
+//         wxLog::FlushActive();
+//         std::tie(i1) = std::get<1>(f(88, false));
+//         wxLogInfo("Event caller: received %d", i1);
+//         wxLog::FlushActive();
 		/*lua_getglobal(Lua, "pgen");
 		if (lua_type(Lua, -1) == LUA_TNIL)
 		{

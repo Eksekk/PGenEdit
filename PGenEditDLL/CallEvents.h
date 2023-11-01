@@ -9,29 +9,54 @@ namespace
 {
     template <typename T>
     using Ref = std::reference_wrapper<T>;
-    using _EventArgKeyValue = std::variant<
-        Ref<qword_t>, Ref<sqword_t>,
-        Ref<dword_t>, Ref<sdword_t>,
-        Ref<word_t>, Ref<sword_t>,
-        Ref<byte_t>, Ref<sbyte_t>,
-        Ref<float>, Ref<double>, Ref<long double>,
-        Ref<std::string>, Ref<void*>, Ref<bool>
-    >;
-
 }
-using EventArgKeyValue = std::variant<
-    Ref<qword_t>, Ref<sqword_t>,
-    Ref<dword_t>, Ref<sdword_t>,
-    Ref<word_t>, Ref<sword_t>,
-    Ref<byte_t>, Ref<sbyte_t>,
-    Ref<float>, Ref<double>, Ref<long double>,
-    Ref<std::string>, Ref<void*>, Ref<bool>/*,
-    Ref<_EventArgKeyValue>*/ // no subtables for now
+struct LuaTable;
+
+static struct _Nil {};
+
+extern _Nil Nil;
+
+using LuaTypesInCpp = std::variant<
+    _Nil,
+    sqword_t,
+    lua_Number,
+    std::string,
+    bool,
+    LuaTable
 >;
 
-using EventArgsMap = std::unordered_map<EventArgKeyValue, EventArgKeyValue>;
+static_assert(sizeof(lua_Number) == 8, "Unexpected lua_Number size");
+using CppTypesInLua = std::variant<
+    _Nil,
+    double,
+    sqword_t,
+    sdword_t,
+    std::string,
+    bool,
+    LuaTable
+>;
 
-using EventArg = std::variant<EventArgKeyValue, EventArgsMap>;
+struct LuaTable
+{
+    using Values = std::unordered_map<LuaTypesInCpp, LuaTypesInCpp>;
+    Values values;
+    static LuaTable fromLuaTable(int index = -1); // converts table at specified stack index into this value
+    static void toLuaTable(); // converts this structure into lua table on top of the stack
+    // extracts keys from table at the top of the stack and creates instance of this class, but for table calls itself recursively with created output LuaTable
+    static LuaTable processSingleTableContents(int index = -1);
+    Values::iterator begin();
+    Values::iterator end();
+    Values::const_iterator begin() const;
+    Values::const_iterator end() const;
+
+
+    LuaTypesInCpp& operator[](const LuaTypesInCpp& type);
+    const LuaTypesInCpp& at(const LuaTypesInCpp& type) const;
+    LuaTypesInCpp& at(const LuaTypesInCpp& type);
+    bool contains(const LuaTypesInCpp& type) const;
+private:
+    static void luaConvertTypeCommon(LuaTypesInCpp& val, int stack);
+};
 
 // call this function, must receive eventName, handler function taking args by reference, and args, which should be taken by reference or pointer
 // 

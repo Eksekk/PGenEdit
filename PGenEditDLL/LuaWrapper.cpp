@@ -31,6 +31,36 @@ LuaWrapper& LuaWrapper::getfield(int idx, const char* key)
     return *this;
 }
 
+LuaWrapper& LuaWrapper::setfield(int idx, const char* key)
+{
+    lua_setfield(L, idx, key);
+    return *this;
+}
+
+LuaWrapper& LuaWrapper::gettable(int idx)
+{
+    lua_gettable(L, idx);
+    return *this;
+}
+
+LuaWrapper& LuaWrapper::settable(int idx)
+{
+    lua_settable(L, idx);
+    return *this;
+}
+
+LuaWrapper& LuaWrapper::rawget(int idx)
+{
+    lua_rawget(L, idx);
+    return *this;
+}
+
+LuaWrapper& LuaWrapper::rawset(int idx)
+{
+    lua_rawset(L, idx);
+    return *this;
+}
+
 bool LuaWrapper::getPath(const std::string& path, bool lastMustBeTable, bool create)
 {
     auto parts = stringSplit(path, ".");
@@ -90,6 +120,36 @@ LuaWrapper& LuaWrapper::pushString(const std::string& str)
     return *this;
 }
 
+LuaWrapper& LuaWrapper::pushnumber(lua_Number num)
+{
+    lua_pushnumber(L, num);
+    return *this;
+}
+
+int LuaWrapper::checkstack(int extra)
+{
+    lua_checkstack(L, extra);
+    return 0;
+}
+
+LuaWrapper& LuaWrapper::concat(int n)
+{
+    lua_concat(L, n);
+    return *this;
+}
+
+LuaWrapper& LuaWrapper::createtable(int narr, int nrec)
+{
+    lua_createtable(L, narr, nrec);
+    return *this;
+}
+
+LuaWrapper& LuaWrapper::newtable()
+{
+    lua_newtable(L);
+    return *this;
+}
+
 int LuaWrapper::pcall(int nargs, int nresults, int errfunc)
 {
     return lua_pcall(L, nargs, nresults, errfunc);
@@ -101,10 +161,60 @@ LuaWrapper& LuaWrapper::call(int nargs, int nresults)
     return *this;
 }
 
+int LuaWrapper::type(int index)
+{
+    return lua_type(L, index);
+}
+
+bool LuaWrapper::isNil(int index)
+{
+    return lua_isnil(L, index);
+}
+
+bool LuaWrapper::isNumber(int index)
+{
+    return lua_isnumber(L, index);
+}
+
+bool LuaWrapper::isString(int index)
+{
+    return lua_isstring(L, index);
+}
+
+bool LuaWrapper::isBoolean(int index)
+{
+    return lua_isboolean(L, index);
+}
+
+bool LuaWrapper::isTable(int index)
+{
+    return lua_istable(L, index);
+}
+
+bool LuaWrapper::isFunction(int index)
+{
+    return lua_isfunction(L, index);
+}
+
+bool LuaWrapper::isThread(int index)
+{
+    return lua_isthread(L, index);
+}
+
+bool LuaWrapper::isUserdata(int index)
+{
+    return lua_isuserdata(L, index);
+}
+
+bool LuaWrapper::isLightuserdata(int index)
+{
+    return lua_islightuserdata(L, index);
+}
+
 bool LuaWrapper::setPath(const std::string& path, int index)
 {
     auto parts = stringSplit(path, ".");
-    index = index > 0 ? index : lua_gettop(L) + index + 1; // get absolute index
+    index = makeAbsoluteStackIndex(index);
     if (parts.size() == 1)
     {
         pushString(path.data());
@@ -124,4 +234,9 @@ bool LuaWrapper::setPath(const std::string& path, int index)
         lua_pop(L, 1);
     }
     return true;
+}
+
+int LuaWrapper::makeAbsoluteStackIndex(int index)
+{
+    return index >= 0 ? index : lua_gettop(L) + index + 1;
 }
