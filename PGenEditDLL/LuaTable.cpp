@@ -127,45 +127,45 @@ LuaTable LuaTable::processSingleTableContents(int index)
 
 LuaTableValues::iterator LuaTable::begin()
 {
-    return values->begin();
+    return values.begin();
 }
 
 LuaTableValues::iterator LuaTable::end()
 {
-    return values->end();
+    return values.end();
 }
 
 LuaTableValues::const_iterator LuaTable::begin() const
 {
-    return values->begin();
+    return values.begin();
 }
 
 LuaTableValues::const_iterator LuaTable::end() const
 {
-    return values->end();
+    return values.end();
 }
 
 void LuaTable::emplace(LuaTypesInCpp&& key, LuaTypesInCpp&& value)
 {
-    values->emplace(std::forward<LuaTypesInCpp>(key), std::forward<LuaTypesInCpp>(value));
+    values.emplace(std::forward<LuaTypesInCpp>(key), std::forward<LuaTypesInCpp>(value));
 }
 
 const LuaTypesInCpp& LuaTable::at(const LuaTypesInCpp& type) const
 {
-    return values->at(type);
+    return values.at(type);
 }
 
 LuaTypesInCpp& LuaTable::at(const LuaTypesInCpp& type)
 {
-    return values->at(type);
+    return values.at(type);
 }
 
 bool LuaTable::contains(const LuaTypesInCpp& type) const
 {
-    return values->contains(type);
+    return values.contains(type);
 }
 
 LuaTable::LuaTable()
 {
-    values = std::make_unique<LuaTableValues>();
+    
 }

@@ -35,7 +35,7 @@ struct LuaTable
     // only values as unique_ptr doesn't work
     // values and table as unique_ptrs don't work with std::unordered_map
     // values and table as unique_ptrs work with std::map
-    LuaTableValuesUPtr values;
+    LuaTableValues values;
     static LuaTable fromLuaTable(int index = -1); // converts table at specified stack index into this value
     static void toLuaTable(); // converts this structure into lua table on top of the stack
     // extracts keys from table at specified stack index and creates instance of this class, but for table calls itself recursively with created output LuaTable
