@@ -149,6 +149,7 @@ LuaTable LuaTable::fromLuaTable(int index)
             break;
         }
         t.emplace(std::move(key), std::move(value));
+        lua_pop(Lua, 1); // pop value, leave key
     }
     lua_settop(Lua, prevStack);
     return t;

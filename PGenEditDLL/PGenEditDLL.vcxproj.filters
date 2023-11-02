@@ -391,7 +391,7 @@
       <Filter>Pliki nagłówkowe\Misc\Lua</Filter>
     </ClInclude>
     <ClInclude Include="LuaTests.h">
-      <Filter>Pliki nagłówkowe</Filter>
+      <Filter>Pliki nagłówkowe\Misc\Lua</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -660,7 +660,7 @@
       <Filter>Pliki źródłowe\Misc\Lua</Filter>
     </ClCompile>
     <ClCompile Include="LuaTests.cpp">
-      <Filter>Pliki źródłowe</Filter>
+      <Filter>Pliki źródłowe\Misc\Lua</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

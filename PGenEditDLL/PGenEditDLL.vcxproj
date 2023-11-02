@@ -273,7 +273,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <TargetName>PGenEdit</TargetName>
     <IncludePath>headers;headers\structs;.;C:\wxWidgets-3.2.1\include;.\openresty-luajit\src;.\Zydis\include;.\Zydis\dependencies\zycore\include</IncludePath>
-    <SourcePath>.;sources;C:\wxWidgets-3.2.1\src\common;C:\wxWidgets-3.2.1\src\msw;C:\wxWidgets-3.2.1\src\generic</SourcePath>
+    <SourcePath>.;sources;C:\wxWidgets-3.2.1\src\common;C:\wxWidgets-3.2.1\src\msw;C:\wxWidgets-3.2.1\src\generic;openresty-luajit\src</SourcePath>
     <EnableMicrosoftCodeAnalysis>true</EnableMicrosoftCodeAnalysis>
     <ExternalIncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);json</ExternalIncludePath>
     <GenerateManifest>true</GenerateManifest>
@@ -295,7 +295,7 @@
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalIncludeDirectories>C:\wxWidgets-3.2.1\lib\vc_dll\mswud;C:\wxWidgets-3.2.1\include;json;openresty-luajit\src</AdditionalIncludeDirectories>
-      <TreatWarningAsError>false</TreatWarningAsError>
+      <TreatWarningAsError>true</TreatWarningAsError>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <FloatingPointExceptions>true</FloatingPointExceptions>
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
@@ -312,6 +312,7 @@
       <MinimalRebuild>false</MinimalRebuild>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <SupportJustMyCode>true</SupportJustMyCode>
+      <CallingConvention>Cdecl</CallingConvention>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
