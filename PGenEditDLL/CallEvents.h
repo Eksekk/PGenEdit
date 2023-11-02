@@ -117,7 +117,6 @@ static void processSingleLuaArgRecursive(int stackIndexFirst, std::tuple<Args...
     }
 }
 
-// NEEDS TO RETURN EventArg type!
 template<typename... Args>
 std::tuple<Args...> convertLuaToCpp(int stackIndexFirst)
 {

@@ -12,7 +12,6 @@ using LuaTableUPtr = std::unique_ptr<LuaTable>;
 
 struct _Nil {};
 
-
 static_assert(sizeof(lua_Number) == 8, "Unexpected lua_Number size");
 
 using LuaTypesInCpp = std::variant<
@@ -21,7 +20,7 @@ using LuaTypesInCpp = std::variant<
     lua_Number,
     std::string,
     bool,
-    LuaTableUPtr
+    LuaTable
 >;
 
 inline bool operator<(const _Nil& lhs, const _Nil& rhs)
@@ -37,17 +36,19 @@ struct LuaTable
     // values and table as unique_ptrs don't work with std::unordered_map
     // values and table as unique_ptrs work with std::map
     LuaTableValuesUPtr values;
-    static LuaTableUPtr fromLuaTable(int index = -1); // converts table at specified stack index into this value
+    static LuaTable fromLuaTable(int index = -1); // converts table at specified stack index into this value
     static void toLuaTable(); // converts this structure into lua table on top of the stack
     // extracts keys from table at specified stack index and creates instance of this class, but for table calls itself recursively with created output LuaTable
-    static LuaTableUPtr processSingleTableContents(int index = -1);
+    static LuaTable processSingleTableContents(int index = -1);
     LuaTableValues::iterator begin();
     LuaTableValues::iterator end();
     LuaTableValues::const_iterator begin() const;
     LuaTableValues::const_iterator end() const;
     LuaTable();
-    LuaTable(const LuaTableValuesUPtr& vals);
-    LuaTable(const LuaTable& other);
+    LuaTable(const LuaTable& other) = default;
+    LuaTable& operator=(const LuaTable& other) = default;
+    LuaTable& operator=(LuaTable&& other) = default;
+    LuaTable(LuaTable&& other) = default;
 
     //LuaTypesInCpp& operator[](const LuaTypesInCpp& type);
     void emplace(LuaTypesInCpp&& key, LuaTypesInCpp&& value);
@@ -73,6 +74,11 @@ inline bool operator==(const _Nil& lhs, const _Nil& rhs)
 inline bool operator==(const LuaTable& lhs, const LuaTable& rhs)
 {
     return lhs.values == rhs.values;
+}
+
+inline bool operator<(const LuaTable& lhs, const LuaTable& rhs)
+{
+    return lhs.values < rhs.values;
 }
 
 namespace std

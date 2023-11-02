@@ -5,10 +5,10 @@
 
 _Nil Nil;
 
-LuaTableUPtr LuaTable::fromLuaTable(int index)
+LuaTable LuaTable::fromLuaTable(int index)
 {
     wxASSERT_MSG(luaWrapper.isTable(index), wxString::Format("Value at index #%d is not a table", index));
-    LuaTableUPtr t = processSingleTableContents(index);
+    LuaTable t = processSingleTableContents(index);
     return t;
 }
 
@@ -61,12 +61,12 @@ void LuaTable::luaConvertTypeCommon(LuaTypesInCpp& val, int stack)
     }
 }
 
-LuaTableUPtr LuaTable::processSingleTableContents(int index)
+LuaTable LuaTable::processSingleTableContents(int index)
 {
     static sqword_t dword_max = std::numeric_limits<dword_t>::max(), sdword_min = std::numeric_limits<sdword_t>::min(), sdword_max = std::numeric_limits<sdword_t>::max();
     index = luaWrapper.makeAbsoluteStackIndex(index);
     int prevStack = lua_gettop(Lua);
-    LuaTableUPtr t = std::make_unique<LuaTable>();
+    LuaTable t;
     lua_pushnil(Lua);
     while (lua_next(Lua, index) != 0)
     {
@@ -119,7 +119,7 @@ LuaTableUPtr LuaTable::processSingleTableContents(int index)
             argError("light userdata", luaTypeToString(Lua, -1));
             break;
         }
-        t->emplace(std::move(key), std::move(value));
+        t.emplace(std::move(key), std::move(value));
     }
     lua_settop(Lua, prevStack);
     return t;
@@ -168,12 +168,4 @@ bool LuaTable::contains(const LuaTypesInCpp& type) const
 LuaTable::LuaTable()
 {
     values = std::make_unique<LuaTableValues>();
-}
-
-LuaTable::LuaTable(const LuaTableValuesUPtr& vals)
-{
-}
-
-LuaTable::LuaTable(const LuaTable& other)
-{
 }
