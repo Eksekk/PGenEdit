@@ -11,10 +11,12 @@ namespace
     using Ref = std::reference_wrapper<T>;
 }
 struct LuaTable;
+using LuaTableUPtr = std::unique_ptr<LuaTable>;
 
-static struct _Nil {};
+struct _Nil {};
 
-extern _Nil Nil;
+
+static_assert(sizeof(lua_Number) == 8, "Unexpected lua_Number size");
 
 using LuaTypesInCpp = std::variant<
     _Nil,
@@ -22,35 +24,36 @@ using LuaTypesInCpp = std::variant<
     lua_Number,
     std::string,
     bool,
-    LuaTable
+    LuaTableUPtr
 >;
 
-static_assert(sizeof(lua_Number) == 8, "Unexpected lua_Number size");
-using CppTypesInLua = std::variant<
-    _Nil,
-    double,
-    sqword_t,
-    sdword_t,
-    std::string,
-    bool,
-    LuaTable
->;
+inline bool operator<(const _Nil& lhs, const _Nil& rhs)
+{
+    return false;
+}
 
+using LuaTableValues = std::map<LuaTypesInCpp, LuaTypesInCpp>;
+using LuaTableValuesUPtr = std::unique_ptr<LuaTableValues>;
 struct LuaTable
 {
-    using Values = std::unordered_map<LuaTypesInCpp, LuaTypesInCpp>;
-    Values values;
-    static LuaTable fromLuaTable(int index = -1); // converts table at specified stack index into this value
+    // only values as unique_ptr doesn't work
+    // values and table as unique_ptrs don't work with std::unordered_map
+    // values and table as unique_ptrs work with std::map
+    LuaTableValuesUPtr values;
+    static LuaTableUPtr fromLuaTable(int index = -1); // converts table at specified stack index into this value
     static void toLuaTable(); // converts this structure into lua table on top of the stack
-    // extracts keys from table at the top of the stack and creates instance of this class, but for table calls itself recursively with created output LuaTable
-    static LuaTable processSingleTableContents(int index = -1);
-    Values::iterator begin();
-    Values::iterator end();
-    Values::const_iterator begin() const;
-    Values::const_iterator end() const;
+    // extracts keys from table at specified stack index and creates instance of this class, but for table calls itself recursively with created output LuaTable
+    static LuaTableUPtr processSingleTableContents(int index = -1);
+    LuaTableValues::iterator begin();
+    LuaTableValues::iterator end();
+    LuaTableValues::const_iterator begin() const;
+    LuaTableValues::const_iterator end() const;
+    LuaTable();
+    LuaTable(const LuaTableValuesUPtr& vals);
+    LuaTable(const LuaTable& other);
 
-
-    LuaTypesInCpp& operator[](const LuaTypesInCpp& type);
+    //LuaTypesInCpp& operator[](const LuaTypesInCpp& type);
+    void emplace(LuaTypesInCpp&& key, LuaTypesInCpp&& value);
     const LuaTypesInCpp& at(const LuaTypesInCpp& type) const;
     LuaTypesInCpp& at(const LuaTypesInCpp& type);
     bool contains(const LuaTypesInCpp& type) const;
@@ -58,6 +61,57 @@ private:
     static void luaConvertTypeCommon(LuaTypesInCpp& val, int stack);
 };
 
+using LuaValuePair = std::pair<LuaTypesInCpp, LuaTypesInCpp>;
+
+inline bool operator==(const LuaValuePair& lhs, const LuaValuePair& rhs)
+{
+    return lhs.first == rhs.first && lhs.second == rhs.second;
+}
+
+inline bool operator==(const _Nil& lhs, const _Nil& rhs)
+{
+    return true;
+}
+
+inline bool operator==(const LuaTable& lhs, const LuaTable& rhs)
+{
+    return lhs.values == rhs.values;
+}
+
+namespace std
+{
+//     template<>
+//     struct hash<_Nil>
+//     {
+//         size_t operator()(const _Nil& Nil) const noexcept
+//         {
+//             return (size_t)1;
+//         }
+//     };
+//     template<>
+//     struct hash<LuaValuePair>
+//     {
+//         size_t operator()(const LuaValuePair& pair) const noexcept
+//         {
+//             return std::hash<LuaTypesInCpp>()(pair.first) ^ std::hash<LuaTypesInCpp>()(pair.second);
+//         }
+//     };
+//     template<>
+//     struct hash<LuaTable>
+//     {
+//         size_t operator()(const LuaTable& tbl) const noexcept
+//         {
+//             size_t res = 0;
+//             for (const auto& pair : tbl.values)
+//             {
+//                 res ^= std::hash<LuaValuePair>()(pair);
+//             }
+//             return res;
+//         }
+//     };
+}
+
+extern _Nil Nil;
 // call this function, must receive eventName, handler function taking args by reference, and args, which should be taken by reference or pointer
 // 
 // function sets pgenedit.events[eventName] to generated lua-interacting function and returns a lambda, which will call the event,
@@ -91,6 +145,10 @@ auto convertLuaTypeToCpp(ArgType& arg)
     else if constexpr (std::is_pointer_v<ArgType>)
     {
         return (lua_Number)(dword_t)arg;
+    }
+    else if constexpr (SAME(ArgType, LuaTable))
+    {
+        return arg;
     }
 }
 
@@ -143,6 +201,10 @@ auto convertSingleLuaStackArg(int stackIndex)
         else if constexpr (std::is_pointer_v<ArgType>)
         {
             return reinterpret_cast<ArgType>(convertSingleLuaStackArg<dword_t>(stackIndex));
+        }
+        else if constexpr (SAME(ArgType, LuaTable))
+        {
+            return LuaTable::fromLuaTable(stackIndex);
         }
     }
 }

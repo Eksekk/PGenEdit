@@ -25,8 +25,12 @@ public:
     LuaWrapper& rawget(int idx);
     LuaWrapper& rawset(int idx);
 
-    LuaWrapper& pushString(const std::string& str);
+    LuaWrapper& pushstring(const std::string& str);
     LuaWrapper& pushnumber(lua_Number num);
+    LuaWrapper& pushboolean(int b);
+    LuaWrapper& pushnil();
+
+    std::string tostring(int index);
     int checkstack(int extra);
     LuaWrapper& concat(int n);
     LuaWrapper& createtable(int narr, int nrec);

@@ -75,7 +75,7 @@ bool LuaWrapper::getPath(const std::vector<std::string>& parts, bool lastMustBeT
         lua_pushvalue(L, LUA_GLOBALSINDEX);
         for (const auto& part : parts)
         {
-            pushString(part);
+            pushstring(part);
         }
         int error = pcall(parts.size() + 1, 1, 0);
         if (error)
@@ -114,7 +114,7 @@ bool LuaWrapper::getPath(const std::vector<std::string>& parts, bool lastMustBeT
     return true;
 }
 
-LuaWrapper& LuaWrapper::pushString(const std::string& str)
+LuaWrapper& LuaWrapper::pushstring(const std::string& str)
 {
     lua_pushstring(L, str.c_str());
     return *this;
@@ -124,6 +124,25 @@ LuaWrapper& LuaWrapper::pushnumber(lua_Number num)
 {
     lua_pushnumber(L, num);
     return *this;
+}
+
+LuaWrapper& LuaWrapper::pushboolean(int b)
+{
+    lua_pushboolean(L, b);
+    return *this;
+}
+
+LuaWrapper& LuaWrapper::pushnil()
+{
+    lua_pushnil(L);
+    return *this;
+}
+
+std::string LuaWrapper::tostring(int index)
+{
+    size_t s;
+    const char* p = lua_tolstring(L, index, &s);
+    return std::string(p, s);
 }
 
 int LuaWrapper::checkstack(int extra)
@@ -217,7 +236,7 @@ bool LuaWrapper::setPath(const std::string& path, int index)
     index = makeAbsoluteStackIndex(index);
     if (parts.size() == 1)
     {
-        pushString(path.data());
+        pushstring(path.data());
         pushvalue(index);
         lua_settable(L, LUA_GLOBALSINDEX);
     }

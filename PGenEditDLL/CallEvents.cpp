@@ -1,13 +1,18 @@
 #include "pch.h"
 #include "CallEvents.h"
 
-LuaTable LuaTable::fromLuaTable(int index)
+_Nil Nil;
+
+LuaTableUPtr LuaTable::fromLuaTable(int index)
 {
-    wxASSERT_MSG()
+    wxASSERT_MSG(luaWrapper.isTable(index), wxString::Format("Value at index #%d is not a table", index));
+    LuaTableUPtr t = processSingleTableContents(index);
+    return t;
 }
 
 void LuaTable::toLuaTable()
 {
+    wxFAIL;
 }
 
 void argError(const std::string& expected, const std::string& actual)
@@ -54,12 +59,12 @@ void LuaTable::luaConvertTypeCommon(LuaTypesInCpp& val, int stack)
     }
 }
 
-LuaTable LuaTable::processSingleTableContents(int index)
+LuaTableUPtr LuaTable::processSingleTableContents(int index)
 {
     static sqword_t dword_max = std::numeric_limits<dword_t>::max(), sdword_min = std::numeric_limits<sdword_t>::min(), sdword_max = std::numeric_limits<sdword_t>::max();
     index = luaWrapper.makeAbsoluteStackIndex(index);
     int prevStack = lua_gettop(Lua);
-    LuaTable t;
+    LuaTableUPtr t = std::make_unique<LuaTable>();
     lua_pushnil(Lua);
     while (lua_next(Lua, index) != 0)
     {
@@ -112,48 +117,61 @@ LuaTable LuaTable::processSingleTableContents(int index)
             argError("light userdata", luaTypeToString(Lua, -1));
             break;
         }
-        t[key] = value;
+        t->emplace(std::move(key), std::move(value));
     }
     lua_settop(Lua, prevStack);
     return t;
 }
 
-LuaTable::Values::iterator LuaTable::begin()
+LuaTableValues::iterator LuaTable::begin()
 {
-    return values.begin();
+    return values->begin();
 }
 
-LuaTable::Values::iterator LuaTable::end()
+LuaTableValues::iterator LuaTable::end()
 {
-    return values.end();
+    return values->end();
 }
 
-LuaTable::Values::const_iterator LuaTable::begin() const
+LuaTableValues::const_iterator LuaTable::begin() const
 {
-    return values.begin();
+    return values->begin();
 }
 
-LuaTable::Values::const_iterator LuaTable::end() const
+LuaTableValues::const_iterator LuaTable::end() const
 {
-    return values.end();
+    return values->end();
 }
 
-LuaTypesInCpp& LuaTable::operator[](const LuaTypesInCpp& type)
+void LuaTable::emplace(LuaTypesInCpp&& key, LuaTypesInCpp&& value)
 {
-    return values[type];
+    values->emplace(std::forward<LuaTypesInCpp>(key), std::forward<LuaTypesInCpp>(value));
 }
 
 const LuaTypesInCpp& LuaTable::at(const LuaTypesInCpp& type) const
 {
-    return values.at(type);
+    return values->at(type);
 }
 
 LuaTypesInCpp& LuaTable::at(const LuaTypesInCpp& type)
 {
-    return values.at(type);
+    return values->at(type);
 }
 
 bool LuaTable::contains(const LuaTypesInCpp& type) const
 {
-    return values.contains(type);
+    return values->contains(type);
+}
+
+LuaTable::LuaTable()
+{
+    values = std::make_unique<LuaTableValues>();
+}
+
+LuaTable::LuaTable(const LuaTableValuesUPtr& vals)
+{
+}
+
+LuaTable::LuaTable(const LuaTable& other)
+{
 }
