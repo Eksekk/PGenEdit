@@ -7,6 +7,7 @@
 #include "Asserter.h"
 #include "GUI_tests.h"
 #include "HookTests.h"
+#include "LuaTests.h"
 
 extern Generator* generator;
 
@@ -41,7 +42,7 @@ std::vector<wxString> Tests::run()
 {
 	testingNow = true;
 	auto ret = mergeVectors({ testMisc<Player, Game>(), testUtilityFunctions(), testSkillFunctions()/*, testJson()*///, GUI_tests::testGui<Player, Game>()
-		, testPlayerStructAccessor<Player, Game>(), HookTests::run<Player, Game>()
+		, testPlayerStructAccessor<Player, Game>(), HookTests::run<Player, Game>(), LuaTests::run()
 	});
 	testingNow = false;
 	return ret;

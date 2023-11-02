@@ -5,7 +5,7 @@ void Hook::enable(bool enable)
 {
     if (elements.empty())
     {
-        wxLogWarning("Enabled hook '%s' with no elements", description);
+        //wxLogWarning("Enabled hook '%s' with no elements", description);
     }
 
     for (auto& elem : elements)

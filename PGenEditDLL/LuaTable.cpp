@@ -5,16 +5,44 @@
 
 _Nil Nil;
 
-LuaTable LuaTable::fromLuaTable(int index)
+// converts value to lua value and pushes it on the stack
+void luaTypeInCppToStack(const LuaTypeInCpp& val)
 {
-    wxASSERT_MSG(luaWrapper.isTable(index), wxString::Format("Value at index #%d is not a table", index));
-    LuaTable t = processSingleTableContents(index);
-    return t;
+    if (const _Nil* nil = std::get_if<_Nil>(&val))
+    {
+        luaWrapper.pushnil();
+    }
+    else if (const sqword_t* num = std::get_if<sqword_t>(&val))
+    {
+        luaWrapper.pushnumber(*num);
+    }
+    else if (const lua_Number* num = std::get_if<lua_Number>(&val))
+    {
+        luaWrapper.pushnumber(*num);
+    }
+    else if (const std::string* str = std::get_if<std::string>(&val))
+    {
+        luaWrapper.pushstring(*str);
+    }
+    else if (const bool* b = std::get_if<bool>(&val))
+    {
+        luaWrapper.pushboolean(*b);
+    }
+    else if (const LuaTable* tbl = std::get_if<LuaTable>(&val))
+    {
+        tbl->toLuaTable();
+    }
 }
 
-void LuaTable::toLuaTable()
+void LuaTable::toLuaTable() const
 {
-    wxFAIL;
+    luaWrapper.newtable();
+    for (const auto& [key, value] : values)
+    {
+        luaTypeInCppToStack(key);
+        luaTypeInCppToStack(value);
+        luaWrapper.settable(-3);
+    }
 }
 
 void argError(const std::string& expected, const std::string& actual)
@@ -22,7 +50,7 @@ void argError(const std::string& expected, const std::string& actual)
     wxLogError("Expected type '%s', got '%s'", expected, actual);
 }
 
-void LuaTable::luaConvertTypeCommon(LuaTypesInCpp& val, int stack)
+void LuaTable::luaConvertTypeCommon(LuaTypeInCpp& val, int stack)
 {
     stack = luaWrapper.makeAbsoluteStackIndex(stack);
     switch (lua_type(Lua, stack))
@@ -31,7 +59,7 @@ void LuaTable::luaConvertTypeCommon(LuaTypesInCpp& val, int stack)
         val = Nil;
         break;
     case LUA_TTABLE:
-        val = LuaTable::processSingleTableContents(stack);
+        val = LuaTable::fromLuaTable(stack);
         break;
     case LUA_TNUMBER:
     {
@@ -61,8 +89,9 @@ void LuaTable::luaConvertTypeCommon(LuaTypesInCpp& val, int stack)
     }
 }
 
-LuaTable LuaTable::processSingleTableContents(int index)
+LuaTable LuaTable::fromLuaTable(int index)
 {
+    wxASSERT_MSG(luaWrapper.isTable(index), wxString::Format("Value at index #%d is not a table", index));
     static sqword_t dword_max = std::numeric_limits<dword_t>::max(), sdword_min = std::numeric_limits<sdword_t>::min(), sdword_max = std::numeric_limits<sdword_t>::max();
     index = luaWrapper.makeAbsoluteStackIndex(index);
     int prevStack = lua_gettop(Lua);
@@ -70,8 +99,8 @@ LuaTable LuaTable::processSingleTableContents(int index)
     lua_pushnil(Lua);
     while (lua_next(Lua, index) != 0)
     {
-        LuaTypesInCpp key;
-        LuaTypesInCpp value;
+        LuaTypeInCpp key;
+        LuaTypeInCpp value;
         switch (lua_type(Lua, -2)) // key
         {
         case LUA_TNIL:
@@ -145,27 +174,30 @@ LuaTableValues::const_iterator LuaTable::end() const
     return values.end();
 }
 
-void LuaTable::emplace(LuaTypesInCpp&& key, LuaTypesInCpp&& value)
+LuaTable::LuaTable(const LuaTableValues& values) : values(values)
 {
-    values.emplace(std::forward<LuaTypesInCpp>(key), std::forward<LuaTypesInCpp>(value));
 }
 
-const LuaTypesInCpp& LuaTable::at(const LuaTypesInCpp& type) const
+LuaTable::LuaTable(LuaTableValues&& values) : values(std::move(values))
+{
+}
+
+void LuaTable::emplace(LuaTypeInCpp&& key, LuaTypeInCpp&& value)
+{
+    values.emplace(std::forward<LuaTypeInCpp>(key), std::forward<LuaTypeInCpp>(value));
+}
+
+const LuaTypeInCpp& LuaTable::at(const LuaTypeInCpp& type) const
 {
     return values.at(type);
 }
 
-LuaTypesInCpp& LuaTable::at(const LuaTypesInCpp& type)
+LuaTypeInCpp& LuaTable::at(const LuaTypeInCpp& type)
 {
     return values.at(type);
 }
 
-bool LuaTable::contains(const LuaTypesInCpp& type) const
+bool LuaTable::contains(const LuaTypeInCpp& type) const
 {
     return values.contains(type);
-}
-
-LuaTable::LuaTable()
-{
-    
 }

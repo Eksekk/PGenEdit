@@ -41,8 +41,10 @@ void HookElement::enable(bool enable /*= true*/)
 
 HookElement::~HookElement()
 {
-    disable();
-    destroy();
+    // COMMENTED OUT, because they cause crash - when this destructor runs, derived classes have already been destroyed, so vmt call fails
+    // SOLUTION: make sure no virtual method calls to derived classes happen in base classes; each derived class should release its own resources
+    //disable();
+    //destroy();
 }
 
 void HookElement::destroy()
@@ -54,7 +56,8 @@ void HookElement::destroy()
 void HookElement::disable()
 {
     // IMPORTANT: fully qualify name here, because otherwise virtual function call happens and crashes
-    HookElement::enable(false);
+    // NO, this causes disable() call on derived instance through base pointer to not run 'its' enable() method
+    enable(false);
 }
 
 void HookElement::toggle()
@@ -131,6 +134,13 @@ HookElementAutohookBefore::HookElementAutohookBefore(uint32_t address, HookFunc&
 {
 }
 
+HookElementAutohookBefore::~HookElementAutohookBefore()
+{
+    // here could probably make vmt call, because a method of current class, which isn't destroyed yet, would be called
+    // better safe than sorry though
+    HookElementAutohookBefore::enable(false);
+    HookElementAutohookBefore::destroy();
+}
 // AUTOHOOK AFTER
 
 void HookElementAutohookAfter::enable(bool enable)
@@ -158,6 +168,11 @@ HookElementAutohookAfter::HookElementAutohookAfter(uint32_t address, HookFunc&& 
 }
 
 
+HookElementAutohookAfter::~HookElementAutohookAfter()
+{
+    HookElementAutohookAfter::enable(false);
+    HookElementAutohookAfter::destroy();
+}
 // ASMHOOK BASE
 
 bool HookElementAsmhookBytecodehookBase::usesExtraData() const
@@ -250,6 +265,12 @@ HookElementAsmhookBefore::HookElementAsmhookBefore(uint32_t address, const std::
 {
 }
 
+HookElementAsmhookBefore::~HookElementAsmhookBefore()
+{
+    HookElementAsmhookBefore::enable(false);
+    HookElementAsmhookBefore::destroy();
+}
+
 // ASMHOOK AFTER
 
 void HookElementAsmhookAfter::enable(bool enable)
@@ -289,6 +310,11 @@ HookElementAsmhookAfter::HookElementAsmhookAfter(uint32_t address, const std::st
 {
 }
 
+HookElementAsmhookAfter::~HookElementAsmhookAfter()
+{
+    HookElementAsmhookAfter::enable(false);
+    HookElementAsmhookAfter::destroy();
+}
 // ASMPATCH
 
 void HookElementAsmpatch::enable(bool enable)
@@ -329,6 +355,11 @@ HookElementAsmpatch::HookElementAsmpatch(uint32_t address, const std::string& as
 {
 }
 
+HookElementAsmpatch::~HookElementAsmpatch()
+{
+    HookElementAsmpatch::enable(false);
+    HookElementAsmpatch::destroy();
+}
 HookElementBytecodeHookBase::HookElementBytecodeHookBase(HookElementType type) : HookElementAsmhookBytecodehookBase(type)
 {
 }
@@ -362,6 +393,12 @@ HookElementBytecodeHookBefore::HookElementBytecodeHookBefore(uint32_t address, c
 {
 }
 
+HookElementBytecodeHookBefore::~HookElementBytecodeHookBefore()
+{
+    HookElementBytecodeHookBefore::enable(false);
+    HookElementBytecodeHookBefore::destroy();
+}
+
 void HookElementBytecodeHookAfter::enable(bool enable)
 {
     HookElement::enable(enable);
@@ -386,6 +423,12 @@ HookElementBytecodeHookAfter::HookElementBytecodeHookAfter(uint32_t address, con
 {
 }
 
+HookElementBytecodeHookAfter::~HookElementBytecodeHookAfter()
+{
+    HookElementBytecodeHookAfter::enable(false);
+    HookElementBytecodeHookAfter::destroy();
+}
+
 void HookElementBytecodePatch::enable(bool enable)
 {
     HookElement::enable(enable);
@@ -408,6 +451,12 @@ HookElementBytecodePatch::HookElementBytecodePatch() : HookElementBytecodeHookBa
 HookElementBytecodePatch::HookElementBytecodePatch(uint32_t address, const std::string& bytecode, int size, bool writeJumpBack)
     : HookElementBytecodeHookBase(HOOK_ELEM_TYPE_BYTECODEPATCH, address, bytecode, size), writeJumpBack(writeJumpBack)
 {
+}
+
+HookElementBytecodePatch::~HookElementBytecodePatch()
+{
+    HookElementBytecodePatch::enable(false);
+    HookElementBytecodePatch::destroy();
 }
 
 bool HookElementAsmproc::usesExtraData() const
@@ -455,6 +504,12 @@ HookElementAsmproc::HookElementAsmproc(const std::string& asmCode, const CodeRep
 {
 }
 
+HookElementAsmproc::~HookElementAsmproc()
+{
+    HookElementAsmproc::enable(false);
+    HookElementAsmproc::destroy();
+}
+
 bool HookElementBytecodeProc::usesExtraData() const
 {
     return true;
@@ -488,6 +543,11 @@ HookElementBytecodeProc::HookElementBytecodeProc(const std::string& bytecode) : 
 {
 }
 
+HookElementBytecodeProc::~HookElementBytecodeProc()
+{
+    HookElementBytecodeProc::enable(false);
+    HookElementBytecodeProc::destroy();
+}
 // JUMP
 
 void HookElementJump::enable(bool enable)
@@ -519,6 +579,11 @@ HookElementJump::HookElementJump(uint32_t address, uint32_t jumpTarget, int size
 {
 }
 
+HookElementJump::~HookElementJump()
+{
+    HookElementJump::enable(false);
+    HookElementJump::destroy();
+}
 // CALL RAW
 
 void HookElementCallRaw::enable(bool enable)
@@ -550,6 +615,11 @@ HookElementCallRaw::HookElementCallRaw(uint32_t address, uint32_t callTarget, in
 {
 }
 
+HookElementCallRaw::~HookElementCallRaw()
+{
+    HookElementCallRaw::enable(false);
+    HookElementCallRaw::destroy();
+}
 // CALL
 
 void HookElementCall::enable(bool enable)
@@ -576,6 +646,12 @@ HookElementCall::HookElementCall(uint32_t address, HookFunc func, int size)
 {
 }
 
+HookElementCall::~HookElementCall()
+{
+    HookElementCall::enable(false);
+    HookElementCall::destroy();
+}
+
 void HookElementEraseCode::enable(bool enable)
 {
     HookElement::enable(enable);
@@ -598,6 +674,12 @@ HookElementEraseCode::HookElementEraseCode() : HookElement(HOOK_ELEM_TYPE_ERASE_
 HookElementEraseCode::HookElementEraseCode(uint32_t address, int size)
     : HookElement(HOOK_ELEM_TYPE_ERASE_CODE, true), address(address), size(size)
 {
+}
+
+HookElementEraseCode::~HookElementEraseCode()
+{
+    HookElementEraseCode::enable(false);
+    HookElementEraseCode::destroy();
 }
 
 void HookElementPatchData::enable(bool enable)
@@ -647,6 +729,12 @@ HookElementPatchData::HookElementPatchData(uint32_t address, const std::string& 
     this->data = std::move(v);
 }
 
+HookElementPatchData::~HookElementPatchData()
+{
+    HookElementPatchData::enable(false);
+    HookElementPatchData::destroy();
+}
+
 HookElementCallableFunction::HookElementCallableFunction(HookElementType type) : HookElement(type, false), address(0), size(0)
 {
 }
@@ -675,6 +763,11 @@ HookElementReplaceCall::HookElementReplaceCall() : HookElementCallableFunction(H
 {
 }
 
+HookElementReplaceCall::~HookElementReplaceCall()
+{
+    HookElementReplaceCall::enable(false);
+    HookElementReplaceCall::destroy();
+}
 bool HookElementHookFunction::usesExtraData() const
 {
     return true;
@@ -687,4 +780,9 @@ void* HookElementHookFunction::getExtraData() const
 
 HookElementHookFunction::HookElementHookFunction() : HookElementCallableFunction(HOOK_ELEM_TYPE_HOOKFUNCTION), extraData(nullptr)
 {
+}
+HookElementHookFunction::~HookElementHookFunction()
+{
+    HookElementHookFunction::enable(false);
+    HookElementHookFunction::destroy();
 }

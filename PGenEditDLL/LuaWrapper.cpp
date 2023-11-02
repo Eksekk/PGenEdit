@@ -116,7 +116,7 @@ bool LuaWrapper::getPath(const std::vector<std::string>& parts, bool lastMustBeT
 
 LuaWrapper& LuaWrapper::pushstring(const std::string& str)
 {
-    lua_pushstring(L, str.c_str());
+    lua_pushlstring(L, str.c_str(), str.size());
     return *this;
 }
 

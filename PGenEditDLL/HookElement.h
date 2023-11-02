@@ -44,7 +44,8 @@ public:
     HookElement(HookElement&&) = default;
     HookElement& operator=(const HookElement& elem) = delete;
     HookElement& operator=(HookElement&& elem) = default;
-    virtual ~HookElement();
+    // each subclass needs to override the destructor, calling virtual method from base class, when derived overrides it and has already been destroyed, causes a crash
+    virtual ~HookElement() = 0;
     // constructor parameters (type will be set automatically):
     // call raw: address, func, size
     // call: address, func, size
@@ -76,6 +77,7 @@ public:
     bool usesExtraData() const override;
     void* getExtraData() const override;
     void destroy() override;
+    ~HookElementAutohookBase() = 0 {};
 protected:
     // constructors protected to disallow creating instances of this class
     HookElementAutohookBase(HookElementType type);
@@ -89,6 +91,7 @@ public:
     HookElementAutohookBefore();
     // using rvalue reference here, because copy will be made in superclass constructor
     HookElementAutohookBefore(uint32_t address, HookFunc&& func, int size = 5);
+    ~HookElementAutohookBefore();
 };
 
 makeAliases(AutohookBefore);
@@ -100,6 +103,7 @@ public:
     HookElementAutohookAfter();
     // using rvalue reference here, because copy will be made in superclass constructor
     HookElementAutohookAfter(uint32_t address, HookFunc&& func, int size = 5);
+    ~HookElementAutohookAfter();
 };
 
 makeAliases(AutohookAfter);
@@ -123,6 +127,7 @@ public:
     bool usesExtraData() const override;
     void* getExtraData() const override;
     void destroy() override;
+    ~HookElementAsmhookBytecodehookBase() = 0 {};
 
     HookElementAsmhookBytecodehookBase(HookElementType type);
     HookElementAsmhookBytecodehookBase(HookElementType type, uint32_t address, int size = 5);
@@ -139,6 +144,7 @@ public:
     HookElementAsmhookBase(HookElementType type);
     HookElementAsmhookBase(HookElementType type, uint32_t address, const std::string& asmCode, int size = 5);
     HookElementAsmhookBase(HookElementType type, uint32_t address, const std::string& asmCode, const CodeReplacementArgs& args, int size = 5);
+    ~HookElementAsmhookBase() = 0 {};
 };
 
 class HookElementAsmhookBefore : public HookElementAsmhookBase
@@ -150,6 +156,7 @@ public:
     HookElementAsmhookBefore();
     HookElementAsmhookBefore(uint32_t address, const std::string& asmCode, int size = 5);
     HookElementAsmhookBefore(uint32_t address, const std::string& asmCode, const CodeReplacementArgs& args, int size = 5);
+    ~HookElementAsmhookBefore();
 };
 
 makeAliases(AsmhookBefore);
@@ -163,6 +170,7 @@ public:
     HookElementAsmhookAfter();
     HookElementAsmhookAfter(uint32_t address, const std::string& asmCode, int size = 5);
     HookElementAsmhookAfter(uint32_t address, const std::string& asmCode, const CodeReplacementArgs& args, int size = 5);
+    ~HookElementAsmhookAfter();
 };
 
 makeAliases(AsmhookAfter);
@@ -178,6 +186,7 @@ public:
     HookElementAsmpatch();
     HookElementAsmpatch(uint32_t address, const std::string& asmCode, int size = 1, bool writeJumpBack = true);
     HookElementAsmpatch(uint32_t address, const std::string& asmCode, const CodeReplacementArgs& args, int size = 1, bool writeJumpBack = true);
+    ~HookElementAsmpatch();
 };
 
 makeAliases(Asmpatch);
@@ -189,6 +198,7 @@ protected:
     // constructors protected to disallow creating instances of this class
     HookElementBytecodeHookBase(HookElementType type);
     HookElementBytecodeHookBase(HookElementType type, uint32_t address, const std::string& bytecode, int size = 5);
+    ~HookElementBytecodeHookBase() = 0 {};
 };
 
 class HookElementBytecodeHookBefore : public HookElementBytecodeHookBase
@@ -199,6 +209,7 @@ public:
 
     HookElementBytecodeHookBefore();
     HookElementBytecodeHookBefore(uint32_t address, const std::string& bytecode, int size = 5);
+    ~HookElementBytecodeHookBefore();
 };
 
 makeAliases(BytecodeHookBefore);
@@ -211,6 +222,7 @@ public:
 
     HookElementBytecodeHookAfter();
     HookElementBytecodeHookAfter(uint32_t address, const std::string& bytecode, int size = 5);
+    ~HookElementBytecodeHookAfter();
 };
 
 makeAliases(BytecodeHookAfter);
@@ -225,6 +237,7 @@ public:
 
     HookElementBytecodePatch();
     HookElementBytecodePatch(uint32_t address, const std::string& bytecode, int size = 5, bool writeJumpBack = true);
+    ~HookElementBytecodePatch();
 };
 
 makeAliases(BytecodePatch);
@@ -241,6 +254,7 @@ public:
     HookElementAsmproc();
     HookElementAsmproc(const std::string& asmCode);
     HookElementAsmproc(const std::string& asmCode, const CodeReplacementArgs& args);
+    ~HookElementAsmproc();
 };
 
 makeAliases(Asmproc);
@@ -256,6 +270,7 @@ public:
 
     HookElementBytecodeProc();
     HookElementBytecodeProc(const std::string& bytecode);
+    ~HookElementBytecodeProc();
 };
 
 makeAliases(BytecodeProc);
@@ -271,6 +286,7 @@ public:
 
     HookElementCall();
     HookElementCall(uint32_t address, HookFunc func, int size = 5);
+    ~HookElementCall();
 };
 
 makeAliases(Call);
@@ -287,6 +303,7 @@ public:
     HookElementCallRaw();
     HookElementCallRaw(uint32_t address, void* callTarget, int size = 5);
     HookElementCallRaw(uint32_t address, uint32_t callTarget, int size = 5);
+    ~HookElementCallRaw();
 };
 
 makeAliases(CallRaw);
@@ -303,6 +320,7 @@ public:
     HookElementJump();
     HookElementJump(uint32_t address, void* jumpTarget, int size = 5);
     HookElementJump(uint32_t address, uint32_t jumpTarget, int size = 5);
+    ~HookElementJump();
 };
 
 makeAliases(Jump);
@@ -317,6 +335,7 @@ public:
 
     HookElementEraseCode();
     HookElementEraseCode(uint32_t address, int size = 1); // without size argument replaces single instruction, as in MMExt
+    ~HookElementEraseCode();
 };
 
 makeAliases(EraseCode);
@@ -336,6 +355,7 @@ public:
     HookElementPatchData(uint32_t address, const ByteVector& data, bool useNops = false);
     HookElementPatchData(uint32_t address, const std::string& data, bool useNops = false);
     HookElementPatchData(uint32_t address, PatchDataGetBytesFunc getBytesFunc, bool useNops = false);
+    ~HookElementPatchData();
 };
 
 makeAliases(PatchData);
@@ -349,7 +369,9 @@ protected:
     // constructors protected to disallow creating instances of this class
     HookElementCallableFunction(HookElementType type);
     HookElementCallableFunction(HookElementType type, uint32_t address, int size = 5);
+public:
     void enable(bool enable) override;
+    ~HookElementCallableFunction() = 0 {};
 };
 
 class HookElementReplaceCall : public HookElementCallableFunction
@@ -384,6 +406,7 @@ public:
         // return the instance
         return elem;
     }
+    ~HookElementReplaceCall();
 private: // private to enforce no accidental "new" operator usage
 
     // COMMENTED OUT, because this constructor is preferred to "no args" constructor
@@ -441,6 +464,7 @@ public:
         // return the instance
         return elem;
     }
+    ~HookElementHookFunction();
 private: // private to enforce no accidental "new" operator usage
 
     // COMMENTED OUT, because this constructor is preferred to "no args" constructor
