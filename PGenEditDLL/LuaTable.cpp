@@ -202,3 +202,37 @@ bool LuaTable::contains(const LuaTypeInCpp& type) const
 {
     return values.contains(type);
 }
+
+bool operator==(const LuaTypeInCpp& a, const LuaTypeInCpp& b)
+{
+    // only way is to reimplement default behavior as on cppreference and sometimes use custom compare?
+
+    // cannot have two variable initializers of different types inside if, and auto must deduce to same type
+    // that's why variables are declared
+    const lua_Number* num, * num2;
+    const sqword_t* integer;
+    if (num = std::get_if<lua_Number>(&a), integer = std::get_if<sqword_t>(&b); num && integer)
+    {
+        if (*num == *integer)
+        {
+            return true;
+        }
+    }
+    else if (integer = std::get_if<sqword_t>(&a), num = std::get_if<lua_Number>(&b); integer && num)
+    {
+        if (*num == *integer)
+        {
+            return true;
+        }
+    }
+    else if (num = std::get_if<lua_Number>(&a), num2 = std::get_if<lua_Number>(&b); num && num2)
+    {
+        return essentiallyEqualFloats(*num, *num2);
+    }
+    return operator==(a, b);
+}
+
+bool operator!=(const LuaTypeInCpp& a, const LuaTypeInCpp& b)
+{
+    return false;
+}

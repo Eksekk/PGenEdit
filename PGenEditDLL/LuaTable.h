@@ -21,12 +21,30 @@ struct LuaTable;
 using LuaTableUPtr = std::unique_ptr<LuaTable>;
 using LuaTypeInCpp = std::variant<
     _Nil,
+    // TODO: I wanted to allow to duplicate lua_Number as sqword_t (and maybe qword_t) to have full 64-bit range of numbers,
+    // but this will cause equality checking errors (different types, same real value) and will require some code to mitigate
+    // !!! also usual floating-point equality checking problems!
     sqword_t,
     lua_Number,
     std::string,
     bool,
     LuaTable
 >;
+
+// from stack overflow
+template<typename Float>
+bool essentiallyEqualFloats(Float a, Float b)
+{
+    // checking for pointer, because I use variants with std::get_if
+    static_assert(!std::is_pointer_v<Float>, "This function doesn't accept pointers to floating-point values");
+    using std::abs;
+    Float epsilon = std::numeric_limits<Float>::epsilon();
+    return abs(a - b) <= ((abs(a) > abs(b) ? abs(b) : abs(a)) * epsilon);
+}
+
+// to correctly handle floating-point keys with integer value transformed into integers
+bool operator==(const LuaTypeInCpp& a, const LuaTypeInCpp& b);
+bool operator!=(const LuaTypeInCpp& a, const LuaTypeInCpp& b);
 
 using LuaTableValues = std::map<LuaTypeInCpp, LuaTypeInCpp>;
 using LuaTableValuesUPtr = std::unique_ptr<LuaTableValues>;
