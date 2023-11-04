@@ -7,3 +7,6 @@
 [submodule "Google Test"]
 	path = googletest
 	url = https://github.com/google/googletest.git
+[submodule "PGenEditDLL/pfr"]
+	path = PGenEditDLL/pfr
+	url = https://github.com/boostorg/pfr.git

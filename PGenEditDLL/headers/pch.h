@@ -43,6 +43,9 @@
 #include <variant>
 #include <regex>
 
+#include <boost/pfr.hpp>
+namespace pfr = boost::pfr;
+
 extern "C"
 {
 #include <lua.h>

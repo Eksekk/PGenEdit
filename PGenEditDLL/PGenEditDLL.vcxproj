@@ -273,15 +273,15 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <TargetName>PGenEdit</TargetName>
-    <IncludePath>headers;headers\structs;.;C:\wxWidgets-3.2.1\include;.\openresty-luajit\src;.\Zydis\include;.\Zydis\dependencies\zycore\include</IncludePath>
+    <IncludePath>headers;headers\structs;.;C:\wxWidgets-3.2.1\include;.\openresty-luajit\src;.\Zydis\include;.\Zydis\dependencies\zycore\include;.\pfr\include</IncludePath>
     <SourcePath>.;sources;C:\wxWidgets-3.2.1\src\common;C:\wxWidgets-3.2.1\src\msw;C:\wxWidgets-3.2.1\src\generic;openresty-luajit\src</SourcePath>
     <EnableMicrosoftCodeAnalysis>true</EnableMicrosoftCodeAnalysis>
     <ExternalIncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);json</ExternalIncludePath>
     <GenerateManifest>true</GenerateManifest>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <IncludePath>headers</IncludePath>
-    <SourcePath>sources</SourcePath>
+    <IncludePath>headers;headers\structs;.;C:\wxWidgets-3.2.1\include;.\openresty-luajit\src;.\Zydis\include;.\Zydis\dependencies\zycore\include;.\pfr\include</IncludePath>
+    <SourcePath>.;sources;C:\wxWidgets-3.2.1\src\common;C:\wxWidgets-3.2.1\src\msw;C:\wxWidgets-3.2.1\src\generic;openresty-luajit\src</SourcePath>
     <EnableClangTidyCodeAnalysis>true</EnableClangTidyCodeAnalysis>
     <TargetName>PGenEdit</TargetName>
     <GenerateManifest>true</GenerateManifest>
