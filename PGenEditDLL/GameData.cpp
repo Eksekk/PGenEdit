@@ -13,6 +13,7 @@
 #include "Tests.h"
 #include "LodStructAccessor.h"
 #include "LowLevel.h"
+#include "dllApi.h"
 
 std::unordered_map<int, PlayerClass> GameData::classes;
 std::unordered_map<int, PlayerSkill> GameData::skills;
@@ -23,6 +24,7 @@ Json GameData::classDataJson;
 Json GameData::skillDataJson;
 Json GameData::miscDataJson;
 Json GameData::itemDataJson;
+std::vector<std::function<void()>> GameData::callbacks;
 
 Json getJsonFromStr(const char* str)
 {
@@ -40,6 +42,11 @@ Json getJsonFromStr(const char* str)
     return json;
 }
 
+void GameData::addPostProcessCallback(std::function<void()> callback)
+{
+    callbacks.push_back(callback);
+}
+
 bool GameData::allDataReceived = false;
 void GameData::postProcess()
 {
@@ -47,6 +54,10 @@ void GameData::postProcess()
     if (!classes.empty() && !skills.empty() && !primaryStats.empty() && !items.empty())
     {
         allDataReceived = true;
+        for (auto& callback : callbacks)
+        {
+            callback();
+        }
     }
 }
 
@@ -361,7 +372,10 @@ void GameData::fillInItemImages()
         {
             std::string name = stringToLower(bitmapPtr->name.data());
             int width = bitmapPtr->width, height = bitmapPtr->height;
-            wxASSERT(imageIdToNameMap.contains(name));
+            if (!imageIdToNameMap.contains(name))
+            {
+                return;
+            }
             uint8_t* palettePtr;
             int paletteBitWidth; // 16, 24, (32?)
             if (bitmapPtr->palette)
@@ -438,11 +452,50 @@ bool GameData::processItemDataJson(const char* str)
 {
     try
     {
+        addPostInitCallback([] {
+            int itemIndex = 0;
+            itemAccessor->forEachItemTxtDo([&](const AnyItemsTxtItemStruct auto* entry) -> void
+                {
+                    ++itemIndex; // TODO: pass extra index argument to callback functions
+                    if (!GameData::items.contains(itemIndex))
+                    {
+                        GameData::items[itemIndex] = std::move(std::make_unique<PlayerItem>());
+                    }
+                    auto& item = GameData::items.at(itemIndex);
+                    int skIdx;
+                    if constexpr (SAME_BASE_TYPE(entry, mm6::ItemsTxtItem))
+                    {
+                        //showDeducedType(entry);
+                        skIdx = entry->skill[0] - 1; // is an array in this case (custom type)
+                    }
+                    else
+                    {
+                        skIdx = entry->skill;
+                    }
+                    // club has fake skill one higher than normal highest
+                    item->skill = skIdx < (int)GameData::skills.size() ? &GameData::skills.at(skIdx) : nullptr;
+                    item->pictureName = entry->picture;
+                    item->id = itemIndex;
+                    item->name = entry->name;
+                    item->value = entry->value;
+                    // 0 = normal,  1 = artifact,  2 = relic,  3 = special
+                    item->isArtifact = entry->material == 1 || entry->material == 2;
+
+                    items.emplace(itemIndex, std::move(item));
+                });
+
+            fillInItemImages();
+        });
         Json json = getJsonFromStr(str);
 
         for (const auto& [indexStr, data] : json.get<std::map<std::string, Json>>())
         {
-            items.emplace(stoi(indexStr), std::make_unique<PlayerItem>());
+            int itemIndex = stoi(indexStr);
+            if (!GameData::items.contains(itemIndex))
+            {
+                GameData::items[itemIndex] = std::move(std::make_unique<PlayerItem>());
+            }
+            auto& itemPtr = GameData::items.at(itemIndex);
             // TODO: fill other info
         }
 

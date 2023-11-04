@@ -63,8 +63,10 @@ inline void gameVersionDispatchItem(void* stru, auto func)
 #undef GENERATE_DISPATCH_CODE
 
 // std::decay doesn't remove pointer after array is converted to it
+// first duplicated std::decay is for cases, where qualifier removal order (for reference to pointer to const value for example) causes some of them to remain
+// TODO: some recursive template version?
 template<typename Struct>
-using decay_fully = std::remove_pointer_t<std::decay_t<Struct>>;
+using decay_fully = std::decay_t<std::remove_pointer_t<std::decay_t<Struct>>>;
 
 /*
  Structures

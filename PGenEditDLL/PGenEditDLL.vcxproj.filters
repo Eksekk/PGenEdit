@@ -393,6 +393,9 @@
     <ClInclude Include="LuaTests.h">
       <Filter>Pliki nagłówkowe\Misc\Lua</Filter>
     </ClInclude>
+    <ClInclude Include="dllApi.h">
+      <Filter>Pliki nagłówkowe\Misc</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="sources\MainWindow.cpp">

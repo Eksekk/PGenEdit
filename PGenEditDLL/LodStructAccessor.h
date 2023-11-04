@@ -117,7 +117,7 @@ inline int test()
 {
     LodStructAccessor::forEachLodDo((void*)0xFEFEFEFE, 2, [](auto lodPtr)
         {
-            if constexpr (SAMEDECL(lodPtr, mm6::Lod*))
+            if constexpr (SAME_DECL(lodPtr, mm6::Lod*))
             {
                 wxMessageBox("MM6");
                 int x = lodPtr->chapterHandle;

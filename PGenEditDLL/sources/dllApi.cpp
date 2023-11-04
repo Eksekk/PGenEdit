@@ -23,10 +23,19 @@
 #include <MapStructAccessor.h>
 #include "LuaWrapper.h"
 #include <Hook.h>
+#include "dllApi.h"
 
 extern bool inMM;
+bool initialized = false;
 extern void setMaxSkillLevel();
 extern void setupHooks();
+
+std::vector<SimpleCallback> postInitCallbacks;
+void addPostInitCallback(SimpleCallback callback)
+{
+    wxASSERT_MSG(!initialized, "Post init callback added after full initialization");
+    postInitCallbacks.push_back(callback);
+}
 
 std::vector<void*> getPlayerPointersMm8()
 {
@@ -248,6 +257,12 @@ extern "C"
         mainUpdateTimer->Bind(wxEVT_TIMER, runUpdateTimerCallbacks);
 		addUpdateTimerCallback(GameData::updateIsInGameAndPartySize);
 		mainUpdateTimer->Start(350, wxTIMER_CONTINUOUS);
+
+        for (auto&& callback : postInitCallbacks)
+        {
+            callback();
+        }
+        initialized = true;
         
         //MSGBOX((std::string("app: ") + std::to_string((int)app)).c_str());
         //MSGBOX((std::string("window: ") + std::to_string((int)app->mainWindow)).c_str());

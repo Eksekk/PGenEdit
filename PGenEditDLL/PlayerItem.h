@@ -9,23 +9,28 @@
 class PlayerItem // holds generic item data, one entry per each item id
 {
 public:
-	union
-	{
-		int id;
+    // these are plucked from game data directly
+    union
+    {
+        int id;
         int number;
-	};
-	std::string name;
-	std::string pictureName;
-	PlayerSkill* skill;
-	ItemType type;
+    };
+    std::unique_ptr<wxBitmap> image;
+    // width in cells is ceil(width / 45), same for height
+    int inventoryWidth, inventoryHeight;
+    std::string name;
+    std::string pictureName;
+    dword_t value;
+    int itemTypeActual;
+    PlayerSkill* skill;
+    bool isArtifact;
+
+	// from JSON
+	ItemType itemTypeGenerator;
 	double power; // relative
 	int cost; // how much should this reduce amount/quality of remaining items to generate
-	bool isArtifact;
 	std::vector<double> affinityByClass;
 	std::vector<double> affinityByPlayerType;
-	std::unique_ptr<wxBitmap> image;
-	// width in cells is ceil(width / 45), same for height
-	int inventoryWidth, inventoryHeight;
 
 	PlayerItem();
 

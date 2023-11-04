@@ -23,8 +23,9 @@
 //#define NEXTBYTE() int : 0 // allocates at next byte, can use skipbits instead
 
 #define SAME(unknownType, knownType) std::is_same_v<unknownType, knownType>
-#define SAMEDECL(unknownType, knownType) SAME(decltype(unknownType), knownType)
-#define TYPE(x) std::decay_t<decltype(x)>
+#define SAME_DECL(unknownType, knownType) SAME(decltype(unknownType), knownType)
+#define BASE_TYPE(variable) decay_fully<decltype(variable)>
+#define SAME_BASE_TYPE(variable, type) SAME(BASE_TYPE(variable), type)
 
 #define JSON_DIAGNOSTICS 1
 #include <json.hpp>
@@ -65,6 +66,8 @@ using sbyte_t = int8_t;
 using sword_t = int16_t;
 using sdword_t = int32_t;
 using sqword_t = int64_t;
+
+using SimpleCallback = std::function<void()>;
 
 /*#pragma comment( lib, "comctl32.lib")
 

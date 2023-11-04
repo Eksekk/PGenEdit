@@ -29,6 +29,7 @@
     <ClInclude Include="ControlPanel.h" />
     <ClInclude Include="CreateItemDialog.h" />
     <ClInclude Include="DefaultPlayerPanel.h" />
+    <ClInclude Include="dllApi.h" />
     <ClInclude Include="EditorItemsPanel.h" />
     <ClInclude Include="EditorMainWindow.h" />
     <ClInclude Include="EditorPlayerPanel.h" />

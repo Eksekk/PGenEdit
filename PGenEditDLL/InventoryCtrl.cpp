@@ -449,6 +449,7 @@ InventoryCtrl::InventoryCtrl(wxWindow* parent, int CELLS_ROW, int CELLS_COL, Inv
     Bind(wxEVT_PAINT, &InventoryCtrl::OnPaint, this);
     SetSizeHints(DoGetBestClientSize());
     saveGameData.loadInventoryControl(*this);
+    reloadReferencedItems();
 }
 
 InventoryCtrl::~InventoryCtrl()

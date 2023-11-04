@@ -107,19 +107,19 @@ class StructAccessorGenericFor
 {
 public:
     template<typename Function, typename Type6, typename Type7, typename Type8>
-    static auto genericForEachDo(void* ptr, int n, Function&& func)
+    static auto genericForEachDo(void* ptr, int limit, Function&& func, int first = 0)
     {
         if (MMVER == 6)
         {
-            return genericForEachDoSpecialized(reinterpret_cast<Type6*>(ptr), n, std::forward<Function>(func));
+            return genericForEachDoSpecialized(reinterpret_cast<Type6*>(ptr), limit, std::forward<Function>(func), first);
         }
         else if (MMVER == 7)
         {
-            return genericForEachDoSpecialized(reinterpret_cast<Type7*>(ptr), n, std::forward<Function>(func));
+            return genericForEachDoSpecialized(reinterpret_cast<Type7*>(ptr), limit, std::forward<Function>(func), first);
         }
         else if (MMVER == 8)
         {
-            return genericForEachDoSpecialized(reinterpret_cast<Type8*>(ptr), n, std::forward<Function>(func));
+            return genericForEachDoSpecialized(reinterpret_cast<Type8*>(ptr), limit, std::forward<Function>(func), first);
         }
         else
         {
@@ -128,9 +128,9 @@ public:
     }
 
     template<typename Function, typename T>
-    static auto genericForEachDoSpecialized(T* ptr, int n, Function&& func)
+    static auto genericForEachDoSpecialized(T* ptr, int limit, Function&& func, int first = 0)
     {
-        for (int i = 0; i < n; ++i)
+        for (int i = first; i < limit; ++i)
         {
             func(ptr + i);
         }

@@ -28,6 +28,9 @@ public:
 	static const int DATA_TYPE_COUNT = 3;
 
 	static Json classDataJson, skillDataJson, miscDataJson, itemDataJson;
+	static std::vector<std::function<void()>> callbacks;
+	// using this, because for example item data depends on filled in skill data (skill pointer), and I want to not have to adjust order and hope nothing else breaks
+	static void addPostProcessCallback(std::function<void()> callback);
 
 	static bool allDataReceived; // from lua, like class info
 	static void postProcess();

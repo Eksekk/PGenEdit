@@ -237,6 +237,12 @@ void showDeducedType(T&&) {
 	deduced_type<T>::show;
 }
 
+template<typename T>
+void showDeducedType(const T&&) {
+
+    deduced_type<T>::show;
+}
+
 /*
 template<typename T>
 struct is_temporary
