@@ -39,9 +39,12 @@ void LuaTable::toLuaTable() const
     luaWrapper.newtable();
     for (const auto& [key, value] : values)
     {
-        luaTypeInCppToStack(key);
-        luaTypeInCppToStack(value);
-        luaWrapper.settable(-3);
+        if (!std::holds_alternative<_Nil>(key) && !std::holds_alternative<_Nil>(value))
+        {
+            luaTypeInCppToStack(key);
+            luaTypeInCppToStack(value);
+            luaWrapper.settable(-3);
+        }
     }
 }
 
@@ -175,16 +178,19 @@ LuaTableValues::const_iterator LuaTable::end() const
     return values.end();
 }
 
-LuaTable::LuaTable(const LuaTableValues& values) : values(values)
+LuaTable::LuaTable(const LuaTableValues& values) : values(tryToIntegerFull(values))
 {
+
 }
 
-LuaTable::LuaTable(LuaTableValues&& values) : values(std::move(values))
+LuaTable::LuaTable(LuaTableValues&& values) : values(tryToIntegerFull(std::forward<LuaTableValues>(values)))
 {
 }
 
 void LuaTable::emplace(LuaTypeInCpp&& key, LuaTypeInCpp&& value)
 {
+    tryToIntegerRef(key);
+    tryToIntegerRef(value);
     values.emplace(std::forward<LuaTypeInCpp>(key), std::forward<LuaTypeInCpp>(value));
 }
 
@@ -203,36 +209,84 @@ bool LuaTable::contains(const LuaTypeInCpp& type) const
     return values.contains(type);
 }
 
-bool operator==(const LuaTypeInCpp& a, const LuaTypeInCpp& b)
+void LuaTable::tryToIntegerRef(LuaTypeInCpp& type)
 {
-    // only way is to reimplement default behavior as on cppreference and sometimes use custom compare?
-
-    // cannot have two variable initializers of different types inside if, and auto must deduce to same type
-    // that's why variables are declared
-    const lua_Number* num, * num2;
-    const sqword_t* integer;
-    if (num = std::get_if<lua_Number>(&a), integer = std::get_if<sqword_t>(&b); num && integer)
+    if (canBeInteger(type))
     {
-        if (*num == *integer)
-        {
-            return true;
-        }
+        type = (sqword_t)std::get<lua_Number>(type);
     }
-    else if (integer = std::get_if<sqword_t>(&a), num = std::get_if<lua_Number>(&b); integer && num)
-    {
-        if (*num == *integer)
-        {
-            return true;
-        }
-    }
-    else if (num = std::get_if<lua_Number>(&a), num2 = std::get_if<lua_Number>(&b); num && num2)
-    {
-        return essentiallyEqualFloats(*num, *num2);
-    }
-    return operator==(a, b);
 }
 
-bool operator!=(const LuaTypeInCpp& a, const LuaTypeInCpp& b)
+bool LuaTable::canBeInteger(const LuaTypeInCpp& type)
 {
+    if (const lua_Number* num = std::get_if<lua_Number>(&type))
+    {
+        return *num == (sqword_t)*num;
+    }
     return false;
+}
+LuaTypeInCpp LuaTable::tryToIntegerRet(const LuaTypeInCpp& type)
+{
+    if (canBeInteger(type))
+    {
+        return (sqword_t)std::get<lua_Number>(type);
+    }
+    return type;
+}
+
+LuaTableValues LuaTable::tryToIntegerFull(const LuaTableValues& values)
+{
+    LuaTableValues vals = values;
+    return tryToIntegerFull(std::move(vals));
+}
+
+LuaTableValues LuaTable::tryToIntegerFull(LuaTableValues&& values)
+{
+    std::vector<LuaTableValues::value_type> deferInsert;
+    for (auto itr = values.begin(); itr != values.end(); )
+    {
+        auto& [key, value] = *itr;
+        if (canBeInteger(key)) // key is const, need to remove map entry and insert new one later (to not break iteration)
+        {
+            LuaTableValues::value_type pair(tryToIntegerRet(key), tryToIntegerRet(value));
+            itr = values.erase(itr);
+            deferInsert.push_back(std::move(pair));
+        }
+        else // value is not const, can be modified in place
+        {
+            tryToIntegerRef(value);
+            ++itr;
+        }
+    }
+    for (auto& pair : deferInsert)
+    {
+        values.insert(std::move(pair));
+    }
+    return values;
+}
+
+bool operator==(const LuaTypeInCpp& a, const LuaTypeInCpp& b)
+{
+    // cleanest way to have default operator for most types and custom behavior for some, without endless recursion, is this lambda way, I think
+    return std::visit([](const auto& a, const auto& b) -> bool
+    {
+        using TypeA = std::decay_t<decltype(a)>;
+        using TypeB = std::decay_t<decltype(b)>;
+        if constexpr (SAME(TypeA, lua_Number) && SAME(TypeB, lua_Number))
+        {
+            return essentiallyEqualFloats(a, b);
+        }
+        else if constexpr ((SAME(TypeA, sqword_t) && SAME(TypeB, lua_Number)) || (SAME(TypeA, lua_Number) && SAME(TypeB, sqword_t)))
+        {
+            return a == b;
+        }
+        else if constexpr (SAME(TypeA, TypeB))
+        {
+            return a == b;
+        }
+        else
+        {
+            return false;
+        }
+    }, a, b); // generates lambda handler for each combination of types from variants, that is, usually size(a) * size(b) handlers
 }

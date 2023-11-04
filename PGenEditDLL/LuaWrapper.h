@@ -25,11 +25,13 @@ public:
     LuaWrapper& rawget(int idx);
     LuaWrapper& rawset(int idx);
 
+    // internally uses pushlstring
     LuaWrapper& pushstring(const std::string& str);
     LuaWrapper& pushnumber(lua_Number num);
     LuaWrapper& pushboolean(int b);
     LuaWrapper& pushnil();
 
+    // internally uses tolstring
     std::string tostring(int index);
     int checkstack(int extra);
     LuaWrapper& concat(int n);

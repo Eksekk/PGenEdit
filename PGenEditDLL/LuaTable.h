@@ -46,6 +46,7 @@ bool essentiallyEqualFloats(Float a, Float b)
 bool operator==(const LuaTypeInCpp& a, const LuaTypeInCpp& b);
 bool operator!=(const LuaTypeInCpp& a, const LuaTypeInCpp& b);
 
+
 using LuaTableValues = std::map<LuaTypeInCpp, LuaTypeInCpp>;
 using LuaTableValuesUPtr = std::unique_ptr<LuaTableValues>;
 struct LuaTable // TODO: storing array part and hashed part separately - will improve table to lua conversion time, but will require tricky code
@@ -55,6 +56,7 @@ struct LuaTable // TODO: storing array part and hashed part separately - will im
     // values and table as unique_ptrs work with std::map
     LuaTableValues values;
     void toLuaTable() const; // converts this structure into lua table on top of the stack
+    // TODO: a version updating lua table at specified index
     // converts table at specified stack index into this value
     static LuaTable fromLuaTable(int index = -1);
 
@@ -65,9 +67,9 @@ struct LuaTable // TODO: storing array part and hashed part separately - will im
     LuaTable(const LuaTableValues& values);
     LuaTable(LuaTableValues&& values);
     LuaTable(const LuaTable& other) = default;
-    LuaTable& operator=(const LuaTable& other) = default;
-    LuaTable& operator=(LuaTable&& other) = default;
-    LuaTable(LuaTable&& other) = default;
+    LuaTable& operator=(const LuaTable& other) = default;//FIX
+    LuaTable& operator=(LuaTable&& other) = default;//FIX
+    LuaTable(LuaTable&& other) = default;//FIX
 
     //LuaTypeInCpp& operator[](const LuaTypeInCpp& type);
     void emplace(LuaTypeInCpp&& key, LuaTypeInCpp&& value);
@@ -77,6 +79,11 @@ struct LuaTable // TODO: storing array part and hashed part separately - will im
 private:
     LuaTable() = default; // this is private, so lua tables without provided values won't be created
     static void luaConvertTypeCommon(LuaTypeInCpp& val, int stack);
+    static void tryToIntegerRef(LuaTypeInCpp& type);
+    static LuaTypeInCpp tryToIntegerRet(const LuaTypeInCpp& type);
+    static bool canBeInteger(const LuaTypeInCpp& type);
+    static LuaTableValues tryToIntegerFull(const LuaTableValues& values);
+    static LuaTableValues tryToIntegerFull(LuaTableValues&& values);
 };
 
 using LuaValuePair = std::pair<LuaTypeInCpp, LuaTypeInCpp>;
