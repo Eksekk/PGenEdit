@@ -106,16 +106,17 @@ InventoryManagerCtrl::InventoryManagerCtrl(wxWindow* parent, int CELLS_ROW, int 
 
     itemsMainSizer->Add(inventoryAndActionsSizer, 0, wxEXPAND, 5);
 
+    auto renderer = [] { return new wxDataViewTextRenderer("string", wxDATAVIEW_CELL_INERT, wxALIGN_LEFT); };
+
     dataViewItemTable = new wxDataViewCtrl(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, 0);
-    auto* renderer = new wxDataViewTextRenderer("string", wxDATAVIEW_CELL_INERT, wxALIGN_LEFT);
-    dataViewItemTable->AppendColumn(new wxDataViewColumn("#", renderer, InventoryItemTableViewModel::COLUMN_INDEX_ID));
-    dataViewItemTable->AppendColumn(new wxDataViewColumn("Name", renderer, InventoryItemTableViewModel::COLUMN_INDEX_NAME));
-    dataViewItemTable->AppendColumn(new wxDataViewColumn("Type", renderer, InventoryItemTableViewModel::COLUMN_INDEX_TYPE));
-    dataViewItemTable->AppendColumn(new wxDataViewColumn("Skill", renderer, InventoryItemTableViewModel::COLUMN_INDEX_SKILL));
-    dataViewItemTable->AppendColumn(new wxDataViewColumn("Stats", renderer, InventoryItemTableViewModel::COLUMN_INDEX_STATS));
-    dataViewItemTable->AppendColumn(new wxDataViewColumn("Bonus", renderer, InventoryItemTableViewModel::COLUMN_INDEX_BONUS));
-    dataViewItemTable->AppendColumn(new wxDataViewColumn("Condition", renderer, InventoryItemTableViewModel::COLUMN_INDEX_CONDITION));
-    dataViewItemTable->AppendColumn(new wxDataViewColumn("Value", renderer, InventoryItemTableViewModel::COLUMN_INDEX_VALUE));
+    dataViewItemTable->AppendColumn(new wxDataViewColumn("#", renderer(), InventoryItemTableViewModel::COLUMN_INDEX_ID));
+    dataViewItemTable->AppendColumn(new wxDataViewColumn("Name", renderer(), InventoryItemTableViewModel::COLUMN_INDEX_NAME));
+    dataViewItemTable->AppendColumn(new wxDataViewColumn("Type", renderer(), InventoryItemTableViewModel::COLUMN_INDEX_TYPE));
+    dataViewItemTable->AppendColumn(new wxDataViewColumn("Skill", renderer(), InventoryItemTableViewModel::COLUMN_INDEX_SKILL));
+    dataViewItemTable->AppendColumn(new wxDataViewColumn("Stats", renderer(), InventoryItemTableViewModel::COLUMN_INDEX_STATS));
+    dataViewItemTable->AppendColumn(new wxDataViewColumn("Bonus", renderer(), InventoryItemTableViewModel::COLUMN_INDEX_BONUS));
+    dataViewItemTable->AppendColumn(new wxDataViewColumn("Condition", renderer(), InventoryItemTableViewModel::COLUMN_INDEX_CONDITION));
+    dataViewItemTable->AppendColumn(new wxDataViewColumn("Value", renderer(), InventoryItemTableViewModel::COLUMN_INDEX_VALUE));
 
     dataViewItemTable->AssociateModel(new InventoryItemTableViewModel(*this));
     

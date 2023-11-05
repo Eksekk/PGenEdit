@@ -361,6 +361,28 @@ bool GameData::processMiscDataJson(const char* str)
     return true;
 }
 
+struct CacheKey
+{
+    uint8_t* ptr;
+    int bitWidth;
+    inline bool operator==(const CacheKey& b) const
+    {
+        return ptr == b.ptr && bitWidth == b.bitWidth;
+    }
+};
+
+namespace std
+{
+    template<>
+    struct hash<CacheKey>
+    {
+        size_t operator()(const CacheKey& val) const
+        {
+            return hash<uint8_t*>()(val.ptr) ^ hash<int>()(val.bitWidth);
+        }
+    };
+}
+
 void GameData::fillInItemImages()
 {
     std::map<std::string, std::vector<int>> imageIdToNameMap;
@@ -370,6 +392,11 @@ void GameData::fillInItemImages()
         (void)lodAccessor->loadBitmap(str.data(), BITMAPS_LOD_ICONS);
         imageIdToNameMap[str].push_back(id);
     }
+    struct CacheValue
+    {
+        std::vector<uint8_t> red, green, blue;
+    }; static_assert(std::is_aggregate_v<CacheKey>);
+    std::unordered_map<CacheKey, CacheValue/*, pfr::hash<CacheKey>, pfr::equal_to<CacheKey>*/> cache;
     LodStructAccessor::forEachLodBitmapDo([&](auto bitmapPtr)
         {
             std::string name = stringToLower(bitmapPtr->name.data());
@@ -402,44 +429,63 @@ void GameData::fillInItemImages()
                 assert(false);
             }
 
-            // extract palette colors
-            // three vectors at index "i" contain constituent RGB colors of palette entry (max 256 entries)
-            // each palette color value has "paletteBitWidth" bits to represent the value
             std::vector<uint8_t> red, blue, green;
-            red.resize(256);
-            blue.resize(256);
-            green.resize(256);
-
-            // couuuld simply read dword from memory, but to be 100% sure no invalid memory access happens, let's use a small buffer
-            uint8_t entry[4];
-            int entrySize = std::ceil(paletteBitWidth / 8.0 * 3);
-            uint16_t mask = (1 << paletteBitWidth) - 1;
-
-            for (int i = 0; i < 256; ++i)
+            auto itr = cache.find(CacheKey{ palettePtr, paletteBitWidth });
+            if (itr == cache.end())
             {
-                memcpy(entry, palettePtr + i * paletteBitWidth * 3, entrySize);
-                uint32_t data = dword(entry);
-                // extract bit groups
-                red[i] = data & mask;
-                blue[i] = (data >> (32 - paletteBitWidth)) & mask;
-                green[i] = (data >> (32 - paletteBitWidth * 2)) & mask;
+                // extract palette colors
+                // three vectors at index "i" contain constituent RGB colors of palette entry (max 256 entries)
+                // each palette color value has "paletteBitWidth" bits to represent the value
+                red.resize(256);
+                blue.resize(256);
+                green.resize(256);
+
+                // couuuld simply read dword from memory, but to be 100% sure no invalid memory access happens, let's use a small buffer
+                //uint8_t entry[4];
+                int entrySize = std::ceil(paletteBitWidth / 8.0 * 3);
+                uint16_t mask = (1 << paletteBitWidth) - 1;
+
+                for (int i = 0; i < 256; ++i)
+                {
+                    //memcpy(entry, palettePtr + i * paletteBitWidth * 3, entrySize);
+                    //uint32_t data = dword(entry);
+                    dword_t data = dword(palettePtr + i * paletteBitWidth * 3);
+                    // extract bit groups
+                    red[i] = data & mask;
+                    blue[i] = (data >> paletteBitWidth) & mask;
+                    green[i] = (data >> (paletteBitWidth * 2)) & mask;
+                }
+                cache[CacheKey{palettePtr, paletteBitWidth}] = CacheValue{ red, green, blue };
+            }
+            else
+            {
+                std::tie(red, green, blue) = pfr::structure_to_tuple(itr->second);
             }
 
             // TODO: better, this will be slow
-            wxImage img(width, height);
-            img.InitAlpha();
+            // MALLOC REQUIRED, wxWidgets will take care of deletion
+            uint8_t* data = (uint8_t*)malloc(width * height * 3); // RGBRGBRGBRGB... data
+            uint8_t* alpha = (uint8_t*)malloc(width * height);
+            memset(alpha, 0x255, width * height);
             for (int y = 0; y < height; ++y)
             {
                 for (int x = 0; x < width; ++x)
                 {
-                    int pal = byte(bitmapPtr->image + x + y * width);
-                    img.SetRGB(x, y, red[pal], blue[pal], green[pal]);
+                    dword_t off = (dword_t)data + (y * width + x) * 3;
+                    dword_t pal = byte(bitmapPtr->image + x + y * width);
+                    byte(off) = red[pal];
+                    byte(off + 1) = blue[pal];
+                    byte(off + 2) = red[pal];
+                    //img.SetRGB(x, y, red[pal], blue[pal], green[pal]);
+
                     if (pal == 0) // first color in palette is transparency color
                     {
-                        img.SetAlpha(x, y, 255);
+                        //img.SetAlpha(x, y, 255);
+                        byte((dword_t)data + y * width + x) = 0;
                     }
                 }
             }
+            wxImage img(width, height, data, alpha);
 
             for (int itemId : imageIdToNameMap[name])
             {
