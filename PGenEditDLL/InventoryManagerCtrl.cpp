@@ -22,6 +22,7 @@ void InventoryManagerCtrl::onModifyPress(wxCommandEvent& event)
 
 void InventoryManagerCtrl::onStorePress(wxCommandEvent& event)
 {
+    
 }
 
 void InventoryManagerCtrl::onRestorePress(wxCommandEvent& event)
@@ -88,16 +89,20 @@ InventoryManagerCtrl::InventoryManagerCtrl(wxWindow* parent, int CELLS_ROW, int 
 
     itemsMainSizer->Add(inventoryAndActionsSizer, 0, wxEXPAND, 5);
 
-    m_dataViewListCtrl3 = new wxDataViewListCtrl(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, 0);
-    numberCol = m_dataViewListCtrl3->AppendTextColumn(_("#"), wxDATAVIEW_CELL_INERT, -1, static_cast<wxAlignment>(wxALIGN_LEFT), wxDATAVIEW_COL_RESIZABLE);
-    m_dataViewListColumn13 = m_dataViewListCtrl3->AppendTextColumn(_("Name"), wxDATAVIEW_CELL_INERT, -1, static_cast<wxAlignment>(wxALIGN_LEFT), wxDATAVIEW_COL_RESIZABLE);
-    m_dataViewListColumn14 = m_dataViewListCtrl3->AppendTextColumn(_("Type"), wxDATAVIEW_CELL_INERT, -1, static_cast<wxAlignment>(wxALIGN_LEFT), wxDATAVIEW_COL_RESIZABLE);
-    m_dataViewListColumn15 = m_dataViewListCtrl3->AppendTextColumn(_("Skill"), wxDATAVIEW_CELL_INERT, -1, static_cast<wxAlignment>(wxALIGN_LEFT), wxDATAVIEW_COL_RESIZABLE);
-    m_dataViewListColumn16 = m_dataViewListCtrl3->AppendTextColumn(_("Stats"), wxDATAVIEW_CELL_INERT, -1, static_cast<wxAlignment>(wxALIGN_LEFT), wxDATAVIEW_COL_RESIZABLE);
-    m_dataViewListColumn17 = m_dataViewListCtrl3->AppendTextColumn(_("Value"), wxDATAVIEW_CELL_INERT, -1, static_cast<wxAlignment>(wxALIGN_LEFT), wxDATAVIEW_COL_RESIZABLE);
-    m_dataViewListColumn18 = m_dataViewListCtrl3->AppendTextColumn(_("Condition"), wxDATAVIEW_CELL_INERT, -1, static_cast<wxAlignment>(wxALIGN_LEFT), wxDATAVIEW_COL_RESIZABLE);
-    m_dataViewListColumn19 = m_dataViewListCtrl3->AppendTextColumn(_("Bonus" /* aggregate str */), wxDATAVIEW_CELL_INERT, -1, static_cast<wxAlignment>(wxALIGN_LEFT), wxDATAVIEW_COL_RESIZABLE);
-    itemsMainSizer->Add(m_dataViewListCtrl3, 0, wxALL | wxEXPAND, 5);
+    dataViewItemTable = new wxDataViewCtrl(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, 0);
+    auto* renderer = new wxDataViewTextRenderer("string", wxDATAVIEW_CELL_INERT, wxALIGN_LEFT);
+    dataViewItemTable->AppendColumn(new wxDataViewColumn("#", renderer, InventoryItemTableViewModel::COLUMN_INDEX_ID));
+    dataViewItemTable->AppendColumn(new wxDataViewColumn("Name", renderer, InventoryItemTableViewModel::COLUMN_INDEX_NAME));
+    dataViewItemTable->AppendColumn(new wxDataViewColumn("Type", renderer, InventoryItemTableViewModel::COLUMN_INDEX_TYPE));
+    dataViewItemTable->AppendColumn(new wxDataViewColumn("Skill", renderer, InventoryItemTableViewModel::COLUMN_INDEX_SKILL));
+    dataViewItemTable->AppendColumn(new wxDataViewColumn("Stats", renderer, InventoryItemTableViewModel::COLUMN_INDEX_STATS));
+    dataViewItemTable->AppendColumn(new wxDataViewColumn("Bonus", renderer, InventoryItemTableViewModel::COLUMN_INDEX_BONUS));
+    dataViewItemTable->AppendColumn(new wxDataViewColumn("Condition", renderer, InventoryItemTableViewModel::COLUMN_INDEX_CONDITION));
+    dataViewItemTable->AppendColumn(new wxDataViewColumn("Value", renderer, InventoryItemTableViewModel::COLUMN_INDEX_VALUE));
+
+    dataViewItemTable->AssociateModel(new InventoryItemTableViewModel(*this));
+    
+    itemsMainSizer->Add(dataViewItemTable, 0, wxALL | wxEXPAND, 5);
 
     Fit();
     this->Layout();
@@ -119,59 +124,57 @@ bool InventoryManagerCtrl::unpersist(const Json& json)
 
 void InventoryItemTableViewModel::GetValue(wxVariant& variant, const wxDataViewItem& dataItem, unsigned int col) const
 {
-#if 0
-    numberCol = m_dataViewListCtrl3->AppendTextColumn(_("#"), wxDATAVIEW_CELL_INERT, -1, static_cast<wxAlignment>(wxALIGN_LEFT), wxDATAVIEW_COL_RESIZABLE);
-    m_dataViewListColumn14 = m_dataViewListCtrl3->AppendTextColumn(_("Type" /* aggregate str */), wxDATAVIEW_CELL_INERT, -1, static_cast<wxAlignment>(wxALIGN_LEFT), wxDATAVIEW_COL_RESIZABLE);
-    m_dataViewListColumn15 = m_dataViewListCtrl3->AppendTextColumn(_("Skill"), wxDATAVIEW_CELL_INERT, -1, static_cast<wxAlignment>(wxALIGN_LEFT), wxDATAVIEW_COL_RESIZABLE);
-    m_dataViewListColumn16 = m_dataViewListCtrl3->AppendTextColumn(_("Stats"), wxDATAVIEW_CELL_INERT, -1, static_cast<wxAlignment>(wxALIGN_LEFT), wxDATAVIEW_COL_RESIZABLE);
-    m_dataViewListColumn17 = m_dataViewListCtrl3->AppendTextColumn(_("Value"), wxDATAVIEW_CELL_INERT, -1, static_cast<wxAlignment>(wxALIGN_LEFT), wxDATAVIEW_COL_RESIZABLE);
-    m_dataViewListColumn18 = m_dataViewListCtrl3->AppendTextColumn(_("Condition"), wxDATAVIEW_CELL_INERT, -1, static_cast<wxAlignment>(wxALIGN_LEFT), wxDATAVIEW_COL_RESIZABLE);
-    m_dataViewListColumn19 = m_dataViewListCtrl3->AppendTextColumn(_("Bonus"), wxDATAVIEW_CELL_INERT, -1, static_cast<wxAlignment>(wxALIGN_LEFT), wxDATAVIEW_COL_RESIZABLE);
-#endif
-    const ItemStoreElement* const elem = reinterpret_cast<const ItemStoreElement*>(&dataItem);
-    const mm7::Item* const item = &elem->item;
-    const PlayerItem* const itemData = GameData::items.at(item->number).get();
+    const ItemStoreElement* const elem = reinterpret_cast<ItemStoreElement*>(dataItem.GetID());
+    const mm7::Item& item = elem->getItem();
+    const PlayerItem* const itemData = GameData::items.at(item.number).get();
     switch (col)
     {
-    case 0: // id
+    case COLUMN_INDEX_ID:
         variant = (long)itemData->id;
         break;
-    case 1: // name
+    case COLUMN_INDEX_NAME:
         variant = itemData->name;
         break;
-    case 2: // type
-        variant = ENUM_TO_STRING_ITEM_TYPE.at(itemData->id);
+    case COLUMN_INDEX_TYPE:
+        variant = ENUM_TO_STRING_ITEM_TYPE.at(itemData->itemTypeActual);
         break;
-    case 3: // skill name
+    case COLUMN_INDEX_SKILL: // skill name
     {
-        PlayerSkill* sk = itemData->skill;
-        if (sk)
-        {
-            variant = sk->name;
-        }
-        else
-        {
-            variant = "None";
-        }
+        variant = itemData->getSkillString();
         break;
     }
-    case 4: // stats (+5 AC etc.)
-        variant = playerItem->getItemTypeName();
+    case COLUMN_INDEX_STATS: // stats (+5 AC etc.)
+        variant = itemData->getStatsString();
         break;
-    case 5: // value
-        variant = ""; // TODO
+    case COLUMN_INDEX_BONUS: // Bonus (complex string like +5 might)
+    {
+        auto opt = PlayerItem::getEnchantmentsString(item);
+        variant = opt.value_or(""); // TODO
         break;
-    case 6: // condition (broken etc.)
-        variant = (long)playerItem->forItemTxtDo([](auto itemTxt) { return itemTxt->material; });
+    }
+    case COLUMN_INDEX_CONDITION: // condition (broken etc.)
+    {
+        std::vector<std::string> v{item.identified ? "Identified" : "Not identified", item.broken ? "Broken" : "Not broken"};
+        if (MMVER > 6)
+        {
+            v.push_back(item.hardened ? "Hardened" : "Not hardened");
+            v.push_back(item.stolen ? "Stolen" : "Not stolen");
+        }
+        variant = stringConcat(v, "; ");
         break;
-    case 7: // Bonus (complex string like +5 might)
-        variant = ""; // TODO
+
+    }
+    case COLUMN_INDEX_VALUE: // value
+        variant = (long)itemData->value;
         break;
+    default:
+        wxLogFatalError("Unknown column id %d", col);
     }
 }
 
 bool InventoryItemTableViewModel::SetValue(const wxVariant& variant, const wxDataViewItem& dataItem, unsigned int col)
 {
+    wxFAIL;
     return false;
 }
 
@@ -182,12 +185,24 @@ wxDataViewItem InventoryItemTableViewModel::GetParent(const wxDataViewItem& data
 
 bool InventoryItemTableViewModel::IsContainer(const wxDataViewItem& dataItem) const
 {
-    return false;
+    return !dataItem.IsOk();
 }
 
 unsigned int InventoryItemTableViewModel::GetChildren(const wxDataViewItem& dataItem, wxDataViewItemArray& children) const
 {
-    //itemAccessor->for
+    if (!dataItem.IsOk()) // get top level items
+    {
+        int n = 0;
+        for (const auto& elem : inventoryManagerCtrl.inventoryCtrl->getElements())
+        {
+            if (std::holds_alternative<ItemRefPlayerInventory>(elem->location) || std::holds_alternative<ItemRefMapChest>(elem->location))
+            {
+                children.Add(wxDataViewItem(elem.get()));
+                ++n;
+            }
+        }
+        return n;
+    }
     return 0;
 }
 

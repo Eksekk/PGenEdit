@@ -11,6 +11,13 @@ struct PlayerItemModifierData
     int mod1DiceCount, mod1DiceSides, mod2;
 };
 
+struct ItemImageRelatedData
+{
+    std::string bitmapName;
+    int inventoryWidth, inventoryHeight;
+    std::unique_ptr<wxBitmap> image; // wxBitmap is refcounted, using unique_ptr, because raw pointer wouldn't call destructor (decrement refcount)
+};
+
 class PlayerItem // holds generic item data, one entry per each item id
 {
 public:
@@ -41,7 +48,7 @@ public:
 
     std::string getSkillString() const;
     std::string getStatsString() const; // weapons have "damage: 2d5+4", armor has "AC: +15" etc.
-    std::string getEnchantmentsString() const;
+    static std::optional<std::string> getEnchantmentsString(const mm7::Item& item);
     PlayerItemModifierData getModifierData() const;
 	void loadAndConvertBitmap(const wxString& name);
 	std::string getItemTypeName() const;
@@ -49,6 +56,24 @@ public:
 	auto forItemTxtDo(Function&& func) const
 	{
 		return itemAccessor->forItemTxtIndexDo(id, std::forward<Function>(func));
-	}
+    }
+
+    // executes only if item has std bonus
+    template<AnyItemStruct Item, typename Function>
+    static auto forStdItemTxtDoOptional(const Item& item, const Function&& func)
+    {
+        return item.bonus
+            ? itemAccessor->forStdItemTxtIndexDo(item.bonus - 1, std::forward<Function>(func))
+            : decltype(itemAccessor->forStdItemTxtIndexDo(item.bonus - 1, std::forward<Function>(func)))(); // default-constructed instance of return type
+    }
+
+    // executes only if item has spc bonus
+    template<AnyItemStruct Item, typename Function>
+    static auto forSpcItemTxtDoOptional(const Item& item, const Function&& func)
+    {
+        return item.bonus2
+            ? itemAccessor->forSpcItemTxtIndexDo(item.bonus2 - 1, std::forward<Function>(func))
+            : decltype(itemAccessor->forSpcItemTxtIndexDo(item.bonus2 - 1, std::forward<Function>(func)))(); // default-constructed instance of return type
+    }
 };
 

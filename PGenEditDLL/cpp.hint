@@ -11,3 +11,11 @@
 // such as names of functions and macros.
 // For more information see https://go.microsoft.com/fwlink/?linkid=865984
 #define _NODISCARD [[nodiscard]]
+#define GEN_DEF_1(name) GEN_DEF_2(name, name)
+#define GEN_DEF_2(name, codeName) using Any##name##Variant = std::variant<mm6::codeName*, mm7::codeName*, mm8::codeName*>;\
+template<typename T>\
+concept Any##name##Struct = SAME(T, mm6::codeName) || SAME(T, mm7::codeName) || SAME(T, mm8::codeName)
+
+// "macro overloading" on number of arguments
+#define GET_MACRO(_1, _2, name, ...) name
+#define GEN_DEF(...) GET_MACRO(__VA_ARGS__, GEN_DEF_2, GEN_DEF_1)(__VA_ARGS__)

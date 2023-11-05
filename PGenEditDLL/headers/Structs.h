@@ -208,7 +208,7 @@ concept Any##name##Struct = SAME(T, mm6::codeName) || SAME(T, mm7::codeName) || 
 #define GET_MACRO(_1, _2, name, ...) name
 #define GEN_DEF(...) GET_MACRO(__VA_ARGS__, GEN_DEF_2, GEN_DEF_1)(__VA_ARGS__)
 
-// commented out are those that 
+// commented out are those that aren't in all games
 
 GEN_DEF(ActionItem);
 // GEN_DEF(Arcomage);

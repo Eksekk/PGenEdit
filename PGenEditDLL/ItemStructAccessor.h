@@ -97,7 +97,7 @@ public:
     }
 
     template<typename Function>
-    auto forStdItemTxtIndexDo(void* ptr, int index, Function&& func)
+    auto forStdItemTxtIndexDo(int index, Function&& func)
     {
         ArrayData data = gameAccessor->getStdItemsTxtArrayData();
         data.checkIndex(index);

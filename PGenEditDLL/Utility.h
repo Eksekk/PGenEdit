@@ -61,19 +61,6 @@ void jsonEnsureIsArray(Json& json);
 // misc functions
 
 template<typename T>
-bool existsInVector(const std::vector<T>& vec, const T& val)
-{
-	for (size_t i = 0; i < vec.size(); ++i)
-	{
-		if (vec[i] == val)
-		{
-			return true;
-		}
-	}
-	return false;
-}
-
-template<typename T>
 int indexInVector(const std::vector<T>& vec, const T& val)
 {
 	for (size_t i = 0; i < vec.size(); ++i)
@@ -84,6 +71,34 @@ int indexInVector(const std::vector<T>& vec, const T& val)
 		}
 	}
 	return -1;
+}
+
+template<typename T>
+bool existsInVector(const std::vector<T>& vec, const T& val)
+{
+	return indexInVector(vec, val) != -1;
+}
+
+template<typename Container, typename Val>
+	requires std::random_access_iterator<typename Container::iterator> // index usually makes sense only in random access containers
+int indexInContainer(const Container& container, const Val& val)
+{
+	int i = 0;
+	for (const auto& v : container)
+	{
+		if (v == val)
+		{
+			return i;
+		}
+	}
+	return -1;
+}
+
+template<typename Container, typename Val>
+	requires std::random_access_iterator<typename Container::iterator> // index usually makes sense only in random access containers
+bool existsInContainer(const Container& container, const Val& val)
+{
+	return indexInContainer(container, val) != -1;
 }
 
 template<typename Vector>

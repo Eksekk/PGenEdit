@@ -6,6 +6,7 @@
 #include "GameData.h"
 #include "MapStructAccessor.h"
 #include "SaveGameData.h"
+#include "PlayerItem.h"
 
 const std::string ITEM_LOC_STORED = "stored", ITEM_LOC_CHEST = "chest", ITEM_LOC_PLAYER = "player";
 
@@ -539,6 +540,28 @@ PlayerItem* ItemStoreElement::getItemData() const
         return GameData::items.at(item.number).get();
     }
     return nullptr;
+}
+
+const mm7::Item& ItemStoreElement::getItem() const
+{
+    return item;
+}
+
+bool ItemStoreElement::changeItem(const mm7::Item& item)
+{
+    wxFAIL;
+    return false;
+}
+
+InventoryPosition ItemStoreElement::getPos() const
+{
+    return pos;
+}
+
+bool ItemStoreElement::changePos(InventoryPosition pos)
+{
+    wxFAIL;
+    return false;
 }
 
 ItemStoreElement::ItemStoreElement(const mm7::Item& item, const ItemLocationType& origin, const ItemLocationType& location, InventoryPosition pos)

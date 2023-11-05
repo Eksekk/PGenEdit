@@ -2,6 +2,7 @@
 #include "pch.h"
 #include "main.h"
 #include "InventoryCtrl.h"
+#include "wx/dataview.h"
 
 class wxDataViewListCtrl;
 class wxDataViewColumn;
@@ -15,13 +16,7 @@ class InventoryManagerCtrl : public wxPanel
     wxButton* modifyButton;
     wxButton* storeButton;
     wxButton* restoreButton;
-    wxDataViewListCtrl* m_dataViewListCtrl3;
-    wxDataViewColumn* numberCol;
-    wxDataViewColumn* m_dataViewListColumn14;
-    wxDataViewColumn* m_dataViewListColumn15;
-    wxDataViewColumn* m_dataViewListColumn16;
-    wxDataViewColumn* m_dataViewListColumn17;
-    wxDataViewColumn* m_dataViewListColumn18;
+    wxDataViewCtrl* dataViewItemTable;
 
     void onAddPress(wxCommandEvent& event);
     void onDeletePress(wxCommandEvent& event);
@@ -41,8 +36,6 @@ public:
 
     bool persist(Json& json) const;
     bool unpersist(const Json& json);
-private:
-    wxDataViewColumn* m_dataViewListColumn19;
 };
 
 
@@ -51,6 +44,9 @@ class InventoryItemTableViewModel : public wxDataViewModel
 private:
     wxVector<wxVector<wxVariant>> data;
 public:
+    static const int COLUMN_INDEX_ID = 0, COLUMN_INDEX_NAME = 1, COLUMN_INDEX_TYPE = 2, COLUMN_INDEX_SKILL = 3, COLUMN_INDEX_STATS = 4,
+        COLUMN_INDEX_BONUS = 5, COLUMN_INDEX_CONDITION = 6, COLUMN_INDEX_VALUE = 7;
+
     void GetValue(wxVariant& variant, const wxDataViewItem& dataItem, unsigned int col) const override;
 
     bool SetValue(const wxVariant& variant, const wxDataViewItem& dataItem, unsigned int col) override;

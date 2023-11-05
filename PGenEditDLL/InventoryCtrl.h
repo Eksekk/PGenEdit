@@ -4,6 +4,7 @@
 #include "Utility.h"
 
 extern const std::string ITEM_LOC_STORED, ITEM_LOC_CHEST, ITEM_LOC_PLAYER;
+class PlayerItem;
 
 struct ItemRefMapChest
 {
@@ -54,8 +55,6 @@ using InventoryType = std::variant<ItemRefMapChest, ItemRefPlayerInventory>;
 
 struct ItemStoreElement
 {
-    mm7::Item item; // mm7 item, because it has all required fields
-    InventoryPosition pos;
     // TODO: automatically calculate cell width
 
     ItemLocationType location; // first is when item is only stored (doesn't exist in any inventory)
@@ -69,10 +68,19 @@ struct ItemStoreElement
 
     PlayerItem* getItemData() const;
 
+    const mm7::Item& getItem() const;
+    bool changeItem(const mm7::Item& item);
+    InventoryPosition getPos() const;
+    bool changePos(InventoryPosition pos);
+
     bool isSameExceptPos(const ItemStoreElement& other) const;
     ItemStoreElement();
     ItemStoreElement(const mm7::Item& item, const ItemLocationType& origin = ItemRefStored{}, const ItemLocationType& location = ItemRefStored{}, InventoryPosition pos = { -1, -1 });
 private:
+    mm7::Item item; // mm7 item, because it has all required fields
+    InventoryPosition pos;
+
+    //InventoryCtrl& invCtrl;
     friend class InventoryCtrl;
 };
 
