@@ -10,3 +10,6 @@
 [submodule "PGenEditDLL/pfr"]
 	path = PGenEditDLL/pfr
 	url = https://github.com/boostorg/pfr.git
+[submodule "PGenEditDLL/rttr"]
+	path = PGenEditDLL/rttr
+	url = https://github.com/rttrorg/rttr.git

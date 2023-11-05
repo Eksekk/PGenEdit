@@ -42,9 +42,12 @@
 #include <functional>
 #include <variant>
 #include <regex>
+#include <set>
+#include <unordered_set>
 
 #include <boost/pfr.hpp>
 namespace pfr = boost::pfr;
+#include <rttr/registration>
 
 extern "C"
 {

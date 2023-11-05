@@ -22,11 +22,28 @@ void InventoryManagerCtrl::onModifyPress(wxCommandEvent& event)
 
 void InventoryManagerCtrl::onStorePress(wxCommandEvent& event)
 {
-    
+    auto sel = dataViewItemTable->GetSelection();
+    if (sel.IsOk())
+    {
+        ItemStoreElement* item = reinterpret_cast<ItemStoreElement*>(sel.GetID());
+        if (!inventoryCtrl->moveInventoryItemToStore(*item))
+        {
+            wxMessageBox("Failed to move item in inventory to store", "Error", wxOK_DEFAULT | wxICON_ERROR, this); // should this really be "this", and not like parent wxFrame?
+        }
+    }
 }
 
 void InventoryManagerCtrl::onRestorePress(wxCommandEvent& event)
 {
+    auto sel = dataViewItemTable->GetSelection();
+    if (sel.IsOk())
+    {
+        ItemStoreElement* item = reinterpret_cast<ItemStoreElement*>(sel.GetID());
+        if (!inventoryCtrl->moveStoredItemToInventory(*item))
+        {
+            wxMessageBox("Failed to move stored item to inventory", "Error", wxOK_DEFAULT | wxICON_ERROR, this); // should this really be "this", and not like parent wxFrame?
+        }
+    }
 }
 
 void InventoryManagerCtrl::addItem()

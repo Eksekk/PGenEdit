@@ -386,6 +386,25 @@ bool InventoryCtrl::moveStoredItemToInventory(ItemStoreElement& item, InventoryP
         std::visit(visitor, inventoryType);
         return true;
     }
+
+    if (pos.isValid())
+    {
+        wxASSERT(canItemBePlacedAtPosition(item, pos));
+        item.pos = pos;
+        std::visit(visitor, inventoryType);
+        return true;
+    }
+    else
+    {
+        auto pos2 = findFreePositionForItem(item);
+        if (pos2.isValid())
+        {
+            wxASSERT(canItemBePlacedAtPosition(item, pos2));
+            item.pos = pos2;
+            std::visit(visitor, inventoryType);
+            return true;
+        }
+    }
     return false;
 }
 
@@ -431,6 +450,29 @@ bool InventoryCtrl::removeItem(ItemStoreElement&& item)
 bool InventoryCtrl::modifyItem(const ItemStoreElement& itemToModify, ItemStoreElement&& newItem)
 {
     return false;
+}
+
+bool InventoryCtrl::setHighlightForItem(const ItemStoreElement& item, bool highlight /*= true*/)
+{
+    if (highlight)
+    {
+    }
+    else
+    {
+        // premature delete from erase???
+        highlighted.erase(std::ref(item));
+    }
+    return false;
+}
+
+int test(char c)
+{
+    return c + 23;
+}
+
+RTTR_REGISTRATION
+{
+    rttr::registration::method("test", &test);
 }
 
 InventoryPosition InventoryCtrl::findFreePositionForItem(const ItemStoreElement& elem)
@@ -581,6 +623,11 @@ bool ItemStoreElement::isSameExceptPos(const ItemStoreElement& other) const
     {
         return false;
     }
+}
+
+bool operator==(const ItemStoreElement& a, const ItemStoreElement& b)
+{
+    return a.isSameExceptPos(b) && pfr::eq_fields<InventoryPosition, InventoryPosition>(a.getPos(), b.getPos());
 }
 
 bool ItemRefMapChest::persist(Json& json) const

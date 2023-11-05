@@ -74,6 +74,8 @@ struct ItemStoreElement
     bool changePos(InventoryPosition pos);
 
     bool isSameExceptPos(const ItemStoreElement& other) const;
+    // exact equality
+    friend bool operator==(const ItemStoreElement& a, const ItemStoreElement& b);
     ItemStoreElement();
     ItemStoreElement(const mm7::Item& item, const ItemLocationType& origin = ItemRefStored{}, const ItemLocationType& location = ItemRefStored{}, InventoryPosition pos = { -1, -1 });
 private:
@@ -83,6 +85,55 @@ private:
     //InventoryCtrl& invCtrl;
     friend class InventoryCtrl;
 };
+
+// hash specializations for unordered_set of highlighted elements
+namespace std
+{
+    template<>
+    struct hash<ItemRefStored>
+    {
+        size_t operator()(const ItemRefStored& elem) const noexcept
+        {
+            return 1;
+        }
+    };
+    template<>
+    struct hash<ItemRefMapChest>
+    {
+        size_t operator()(const ItemRefMapChest& elem) const noexcept
+        {
+            return hash<std::string>()(elem.mapName) ^ hash<int>()(elem.chestId);
+        }
+    };
+    template<>
+    struct hash<ItemRefPlayerInventory>
+    {
+        size_t operator()(const ItemRefPlayerInventory& elem) const noexcept
+        {
+            return hash<int>()(elem.rosterIndex);
+        }
+    };
+    template<>
+    struct hash<ItemStoreElement>
+    {
+        size_t operator()(const ItemStoreElement& elem) const noexcept
+        {
+            //return hash<ItemLocationType>()(elem.location) ^ hash<ItemLocationType>()(elem.origin)
+            //    ^ pfr::hash_fields<mm7::Item>(elem.getItem()) ^ pfr::hash_fields<InventoryPosition>(elem.getPos());
+            return 1;
+        }
+    };
+    template<typename T>
+    struct hash<std::reference_wrapper<T>>
+    {
+        size_t operator()(const std::reference_wrapper<T>& elem) const noexcept
+        {
+            //return hash<ItemLocationType>()(elem.location) ^ hash<ItemLocationType>()(elem.origin)
+            //    ^ pfr::hash_fields<mm7::Item>(elem.getItem()) ^ pfr::hash_fields<InventoryPosition>(elem.getPos());
+            return hash<std::remove_cvref_t<T>>()(elem.get());
+        }
+    };
+}
 
 using ElementsContainer = std::vector<std::unique_ptr<ItemStoreElement>>;
 using ItemsVariant = std::variant<mm6::Item*, mm7::Item*, mm8::Item*>;
@@ -97,6 +148,8 @@ class InventoryCtrl : public wxWindow
     // wx stuff
     virtual wxSize DoGetBestClientSize() const override;
     void OnPaint(wxPaintEvent& event);
+
+    std::unordered_set<std::reference_wrapper<const ItemStoreElement>> highlighted;
 
     template<typename Variant> bool unpersistItemLocationVariant(Variant& loc, const Json& json);
     // event handlers
@@ -125,6 +178,7 @@ public:
     ItemStoreElement* addItem(const mm7::Item& item, const ItemLocationType& origin = ItemRefStored{}, const ItemLocationType& location = ItemRefStored{}, InventoryPosition pos = { -1, -1 });
     bool removeItem(ItemStoreElement&& item);
     bool modifyItem(const ItemStoreElement& itemToModify, ItemStoreElement&& newItem);
+    bool setHighlightForItem(const ItemStoreElement& item, bool highlight = true);
 
     InventoryPosition findFreePositionForItem(const ItemStoreElement& elem);
     bool canItemBePlacedAtPosition(const ItemStoreElement& elem, InventoryPosition pos);

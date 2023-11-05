@@ -273,15 +273,15 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <TargetName>PGenEdit</TargetName>
-    <IncludePath>headers;headers\structs;.;C:\wxWidgets-3.2.1\include;.\openresty-luajit\src;.\Zydis\include;.\Zydis\dependencies\zycore\include;.\pfr\include</IncludePath>
-    <SourcePath>.;sources;C:\wxWidgets-3.2.1\src\common;C:\wxWidgets-3.2.1\src\msw;C:\wxWidgets-3.2.1\src\generic;openresty-luajit\src</SourcePath>
+    <IncludePath>headers;headers\structs;.;C:\wxWidgets-3.2.1\include;.\openresty-luajit\src;.\Zydis\include;.\Zydis\dependencies\zycore\include;.\pfr\include;.\rttr\src\</IncludePath>
+    <SourcePath>.;sources;C:\wxWidgets-3.2.1\src\common;C:\wxWidgets-3.2.1\src\msw;C:\wxWidgets-3.2.1\src\generic;openresty-luajit\src;.\rttr\src\rttr</SourcePath>
     <EnableMicrosoftCodeAnalysis>true</EnableMicrosoftCodeAnalysis>
     <ExternalIncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);json</ExternalIncludePath>
     <GenerateManifest>true</GenerateManifest>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <IncludePath>headers;headers\structs;.;C:\wxWidgets-3.2.1\include;.\openresty-luajit\src;.\Zydis\include;.\Zydis\dependencies\zycore\include;.\pfr\include</IncludePath>
-    <SourcePath>.;sources;C:\wxWidgets-3.2.1\src\common;C:\wxWidgets-3.2.1\src\msw;C:\wxWidgets-3.2.1\src\generic;openresty-luajit\src</SourcePath>
+    <IncludePath>headers;headers\structs;.;C:\wxWidgets-3.2.1\include;.\openresty-luajit\src;.\Zydis\include;.\Zydis\dependencies\zycore\include;.\pfr\include;.\rttr\src\rttr</IncludePath>
+    <SourcePath>.;sources;C:\wxWidgets-3.2.1\src\common;C:\wxWidgets-3.2.1\src\msw;C:\wxWidgets-3.2.1\src\generic;openresty-luajit\src;.\rttr\src\rttr</SourcePath>
     <EnableClangTidyCodeAnalysis>true</EnableClangTidyCodeAnalysis>
     <TargetName>PGenEdit</TargetName>
     <GenerateManifest>true</GenerateManifest>
@@ -319,8 +319,8 @@
       <SubSystem>Windows</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableUAC>false</EnableUAC>
-      <AdditionalLibraryDirectories>.\openresty-luajit\src;C:\wxWidgets-3.2.1\lib\vc_dll;$(wxLibOrDllDir);.\Zydis\msvc\bin\DebugX86;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>wxmsw32ud_core.lib;wxbase32ud.lib;wxtiffd.lib;wxjpegd.lib;wxpngd.lib;wxzlibd.lib;wxregexud.lib;wxexpatd.lib;kernel32.lib;user32.lib;gdi32.lib;comdlg32.lib;winspool.lib;winmm.lib;shell32.lib;shlwapi.lib;comctl32.lib;ole32.lib;oleaut32.lib;uuid.lib;rpcrt4.lib;advapi32.lib;version.lib;ws2_32.lib;wininet.lib;lua51.lib;Zydis.lib;Zycore.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>.\openresty-luajit\src;C:\wxWidgets-3.2.1\lib\vc_dll;$(wxLibOrDllDir);.\Zydis\msvc\bin\DebugX86;.\rttr\build\lib\Debug;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>wxmsw32ud_core.lib;wxbase32ud.lib;wxtiffd.lib;wxjpegd.lib;wxpngd.lib;wxzlibd.lib;wxregexud.lib;wxexpatd.lib;kernel32.lib;user32.lib;gdi32.lib;comdlg32.lib;winspool.lib;winmm.lib;shell32.lib;shlwapi.lib;comctl32.lib;ole32.lib;oleaut32.lib;uuid.lib;rpcrt4.lib;advapi32.lib;version.lib;ws2_32.lib;wininet.lib;lua51.lib;Zydis.lib;Zycore.lib;rttr_core_d.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <RandomizedBaseAddress>false</RandomizedBaseAddress>
       <ForceFileOutput>
       </ForceFileOutput>

@@ -18,4 +18,11 @@ concept Any##name##Struct = SAME(T, mm6::codeName) || SAME(T, mm7::codeName) || 
 
 // "macro overloading" on number of arguments
 #define GET_MACRO(_1, _2, name, ...) name
-#define GEN_DEF(...) GET_MACRO(__VA_ARGS__, GEN_DEF_2, GEN_DEF_1)(__VA_ARGS__)
+#define GEN_DEF(...) GET_MACRO(__VA_ARGS__, GEN_DEF_2, GEN_DEF_1)(__VA_ARGS__)#define RTTR_REG
+#define RTTR_REGISTRATION static void rttr_auto_register_reflection_function_(); namespace {\
+    struct rttr__auto__register__ {\
+        rttr__auto__register__() {\
+            rttr_auto_register_reflection_function_();\
+        }\
+    };\
+} static const rttr__auto__register__ auto_register__473; static void rttr_auto_register_reflection_function_()
