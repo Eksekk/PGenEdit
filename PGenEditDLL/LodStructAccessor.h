@@ -1,6 +1,8 @@
 #pragma once
 #include "pch.h"
 #include "main.h"
+#include "Utility.h"
+#include <LowLevel.h>
 
 template<typename Lod>
 class TemplatedLodStructAccessor;
@@ -51,6 +53,8 @@ public:
             TemplatedLodStructAccessor<mm8::Lod>::forEachLodBitmapDo(func, type);
         }
     }
+    
+    virtual int loadBitmap(const char* name, BitmapsLodType type) = 0;
 
     virtual ~LodStructAccessor();
 };
@@ -108,6 +112,34 @@ public:
         {
             func(bmp + i);
         }
+    }
+
+    virtual int loadBitmap(const char* name, BitmapsLodType type) override
+    {
+        // TODO: argument count may be wrong in mm6
+        void* p = type == BITMAPS_LOD_BITMAPS ? &game->bitmapsLod : &game->iconsLod;
+        int typ = type == BITMAPS_LOD_BITMAPS ? 0 : 2;
+        if (MMVER == 6)
+        {
+            wxFAIL;
+        }
+        else if (MMVER == 7)
+        {
+            return callMemoryAddress<int>(mmv(0x40B430, 0x40FB2C, 0x410D70), 1,
+                p,
+                name,
+                typ);
+        }
+        else if (MMVER == 8)
+        {
+            return callMemoryAddress<int>(mmv(0x40B430, 0x40FB2C, 0x410D70), 1,
+                p,
+                name,
+                typ,
+                0, 0);
+        }
+        return 0;
+        //return call(mmv(0x40B430, 0x40FB2C, 0x410D70), 1, self["?ptr"], bmpbuf, (self == Game.IconsLod and 2 or 0), 0, EnglishD or 0)
     }
 };
 

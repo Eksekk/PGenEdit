@@ -35,6 +35,18 @@ static bool operator==(const ItemRefStored& lhs, const ItemRefStored& rhs);
 struct InventoryPosition
 {
     int x, y;
+    inline bool isInvalid()
+    {
+        return x == -1 || y == -1;
+    }
+    inline bool isValid()
+    {
+        return !isInvalid();
+    }
+    static inline InventoryPosition invalid()
+    {
+        return { -1, -1 };
+    }
 };
 
 using ItemLocationType = std::variant<ItemRefStored, ItemRefMapChest, ItemRefPlayerInventory>;
@@ -54,6 +66,8 @@ struct ItemStoreElement
 
     bool persist(Json& json) const;
     bool unpersist(const Json& json);
+
+    PlayerItem* getItemData() const;
 
     bool isSameExceptPos(const ItemStoreElement& other) const;
     ItemStoreElement();

@@ -6,6 +6,11 @@
 #include "ItemGenerationData.h"
 #include "ItemStructAccessor.h"
 
+struct PlayerItemModifierData
+{
+    int mod1DiceCount, mod1DiceSides, mod2;
+};
+
 class PlayerItem // holds generic item data, one entry per each item id
 {
 public:
@@ -34,9 +39,12 @@ public:
 
 	PlayerItem();
 
+    std::string getSkillString() const;
+    std::string getStatsString() const; // weapons have "damage: 2d5+4", armor has "AC: +15" etc.
+    std::string getEnchantmentsString() const;
+    PlayerItemModifierData getModifierData() const;
 	void loadAndConvertBitmap(const wxString& name);
 	std::string getItemTypeName() const;
-	std::string getItemModString() const; // weapons have "damage: 2d5+4", armor has "AC: +15" etc.
 	template<typename Function>
 	auto forItemTxtDo(Function&& func) const
 	{

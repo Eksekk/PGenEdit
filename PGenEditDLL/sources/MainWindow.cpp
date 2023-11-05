@@ -185,7 +185,7 @@ MainWindow::MainWindow(wxWindow* parent, wxWindowID id, const wxString& title, c
 		}
 
 		updateTabsTimer = new wxTimer(this);
-		Bind(wxEVT_TIMER, &MainWindow::onTimer, this); // TODO mm6-7 party size when reloading dll at runtime (currently hook launches only on map load)
+		Bind(wxEVT_TIMER, &MainWindow::onTimer, this);
 		updateTabsTimer->Start(200, wxTIMER_CONTINUOUS);
 	}
 

@@ -23,7 +23,6 @@ public:
     wxString GetColumnType(unsigned int col) const override;
     ItemDialogBase& dialog;
 
-    std::unordered_map<int, int> classIdsToTableIndexes;
     ItemTableViewModel(ItemDialogBase& dialog);
 };
 

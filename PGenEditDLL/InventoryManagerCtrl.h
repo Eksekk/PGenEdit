@@ -6,6 +6,8 @@
 class wxDataViewListCtrl;
 class wxDataViewColumn;
 
+class InventoryItemTableViewModel;
+
 class InventoryManagerCtrl : public wxPanel
 {
     wxButton* addButton;
@@ -39,5 +41,29 @@ public:
 
     bool persist(Json& json) const;
     bool unpersist(const Json& json);
+private:
+    wxDataViewColumn* m_dataViewListColumn19;
 };
 
+
+class InventoryItemTableViewModel : public wxDataViewModel
+{
+private:
+    wxVector<wxVector<wxVariant>> data;
+public:
+    void GetValue(wxVariant& variant, const wxDataViewItem& dataItem, unsigned int col) const override;
+
+    bool SetValue(const wxVariant& variant, const wxDataViewItem& dataItem, unsigned int col) override;
+
+    wxDataViewItem GetParent(const wxDataViewItem& dataItem) const override;
+
+    bool IsContainer(const wxDataViewItem& dataItem) const override;
+
+    unsigned int GetChildren(const wxDataViewItem& dataItem, wxDataViewItemArray& children) const override;
+
+    unsigned int GetColumnCount() const override;
+    wxString GetColumnType(unsigned int col) const override;
+    InventoryManagerCtrl& inventoryManagerCtrl;
+
+    InventoryItemTableViewModel(InventoryManagerCtrl& dialog);
+};

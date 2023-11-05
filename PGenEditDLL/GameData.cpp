@@ -366,7 +366,9 @@ void GameData::fillInItemImages()
     std::map<std::string, std::vector<int>> imageIdToNameMap;
     for (auto& [id, item] : items)
     {
-        imageIdToNameMap[stringToLower(item->pictureName)].push_back(id);
+        std::string str = stringToLower(item->pictureName);
+        (void)lodAccessor->loadBitmap(str.data(), BITMAPS_LOD_ICONS);
+        imageIdToNameMap[str].push_back(id);
     }
     LodStructAccessor::forEachLodBitmapDo([&](auto bitmapPtr)
         {
@@ -410,7 +412,7 @@ void GameData::fillInItemImages()
 
             // couuuld simply read dword from memory, but to be 100% sure no invalid memory access happens, let's use a small buffer
             uint8_t entry[4];
-            int entrySize = std::round(paletteBitWidth / 8.0 * 3);
+            int entrySize = std::ceil(paletteBitWidth / 8.0 * 3);
             uint16_t mask = (1 << paletteBitWidth) - 1;
 
             for (int i = 0; i < 256; ++i)
@@ -418,13 +420,14 @@ void GameData::fillInItemImages()
                 memcpy(entry, palettePtr + i * paletteBitWidth * 3, entrySize);
                 uint32_t data = dword(entry);
                 // extract bit groups
-                red[i] = (data >> (32 - paletteBitWidth)) & mask; // 32 = bit size of "data"
-                blue[i] = (((data << paletteBitWidth) >> (32 - paletteBitWidth)) & mask);
-                green[i] = (((data << (paletteBitWidth * 2)) & mask) >> (32 - paletteBitWidth));
+                red[i] = data & mask;
+                blue[i] = (data >> (32 - paletteBitWidth)) & mask;
+                green[i] = (data >> (32 - paletteBitWidth * 2)) & mask;
             }
 
             // TODO: better, this will be slow
             wxImage img(width, height);
+            img.InitAlpha();
             for (int y = 0; y < height; ++y)
             {
                 for (int x = 0; x < width; ++x)
@@ -480,6 +483,7 @@ bool GameData::processItemDataJson(const char* str)
                     item->value = entry->value;
                     // 0 = normal,  1 = artifact,  2 = relic,  3 = special
                     item->isArtifact = entry->material == 1 || entry->material == 2;
+                    item->itemTypeActual = entry->equipStat + 1;
 
                     items.emplace(itemIndex, std::move(item));
                 });

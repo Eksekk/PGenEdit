@@ -21,6 +21,24 @@
 // since C++ has static typing, it's probably impossible to do variable arg number templates (or very annoying to use vector of std::any), I'm doing static number of basic args
 // additional args (like, not present by default) will be inside table parameter
 
+// template<typename T, typename Type, typename Type2, typename... Types>
+// struct is_any_of
+// {
+//     static constexpr bool value = std::disjunction_v<std::is_same<T, Type>, is_any_of<T, Type2, Types...>>;
+// };
+// 
+// template<typename T, typename Type>
+// struct is_any_of
+// {
+//     static constexpr bool value = std::is_same_v<T, Type>;
+// };
+// 
+// // template<typename T, typename... Types>
+// // using is_any_of_v = is_any_of<T, Types...>::value;
+// 
+// template<typename T>
+// concept LuaEventArg = is_any_of<T, bool, byte_t, sbyte_t, word_t, sword_t, dword_t, sdword_t, qword_t, sqword_t, std::string, LuaTable>::value;
+
 template<typename ArgType>
 auto convertLuaTypeToCpp(ArgType& arg)
 {

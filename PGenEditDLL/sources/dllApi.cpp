@@ -141,7 +141,6 @@ extern "C"
                 }
                 setMaxSkillLevel();
 
-                // TODO: test for Merge (run lua script?)
                 break;
             }
 

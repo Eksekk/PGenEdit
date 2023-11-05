@@ -220,7 +220,6 @@ void unhookAutohook(uint32_t addr, std::vector<uint8_t>& restoreData, void*& all
 	allocatedCode = nullptr;
 }
 
-// TODO: generic function to generate all four without repeating code?
 void patchByte(uint32_t addr, uint8_t val, std::vector<uint8_t>* storeAt)
 {
 	genericPatch(addr, val, storeAt);
@@ -532,7 +531,6 @@ void* bytecodePatch(uint32_t addr, std::string_view bytecode, std::vector<uint8_
 	else // jump out
 	{
 		// size = getRealHookSize(addr, 5); // least 5+ byte size
-		// TODO: test if commenting out line above and adding line below works
 		size = getRealHookSize(addr, size, 5); // size of code to replace with jump and nops, at least 5
 		storeBytes(storeAt, addr, size);
 		void* mem = (void*)codeMemoryAlloc(bytecode.size() + (writeJumpBack ? 5 : 0));

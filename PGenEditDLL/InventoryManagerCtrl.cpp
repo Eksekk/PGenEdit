@@ -4,6 +4,8 @@
 #include <wx/dataview.h>
 #include "ItemDialogBase.h"
 #include "CreateItemDialog.h"
+#include "PlayerItem.h"
+#include "GameData.h"
 
 void InventoryManagerCtrl::onAddPress(wxCommandEvent& event)
 {
@@ -88,11 +90,13 @@ InventoryManagerCtrl::InventoryManagerCtrl(wxWindow* parent, int CELLS_ROW, int 
 
     m_dataViewListCtrl3 = new wxDataViewListCtrl(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, 0);
     numberCol = m_dataViewListCtrl3->AppendTextColumn(_("#"), wxDATAVIEW_CELL_INERT, -1, static_cast<wxAlignment>(wxALIGN_LEFT), wxDATAVIEW_COL_RESIZABLE);
-    m_dataViewListColumn14 = m_dataViewListCtrl3->AppendTextColumn(_("Name"), wxDATAVIEW_CELL_INERT, -1, static_cast<wxAlignment>(wxALIGN_LEFT), wxDATAVIEW_COL_RESIZABLE);
-    m_dataViewListColumn15 = m_dataViewListCtrl3->AppendTextColumn(_("Name"), wxDATAVIEW_CELL_INERT, -1, static_cast<wxAlignment>(wxALIGN_LEFT), wxDATAVIEW_COL_RESIZABLE);
-    m_dataViewListColumn16 = m_dataViewListCtrl3->AppendTextColumn(_("Name"), wxDATAVIEW_CELL_INERT, -1, static_cast<wxAlignment>(wxALIGN_LEFT), wxDATAVIEW_COL_RESIZABLE);
-    m_dataViewListColumn17 = m_dataViewListCtrl3->AppendTextColumn(_("Name"), wxDATAVIEW_CELL_INERT, -1, static_cast<wxAlignment>(wxALIGN_LEFT), wxDATAVIEW_COL_RESIZABLE);
-    m_dataViewListColumn18 = m_dataViewListCtrl3->AppendTextColumn(_("Name"), wxDATAVIEW_CELL_INERT, -1, static_cast<wxAlignment>(wxALIGN_LEFT), wxDATAVIEW_COL_RESIZABLE);
+    m_dataViewListColumn13 = m_dataViewListCtrl3->AppendTextColumn(_("Name"), wxDATAVIEW_CELL_INERT, -1, static_cast<wxAlignment>(wxALIGN_LEFT), wxDATAVIEW_COL_RESIZABLE);
+    m_dataViewListColumn14 = m_dataViewListCtrl3->AppendTextColumn(_("Type"), wxDATAVIEW_CELL_INERT, -1, static_cast<wxAlignment>(wxALIGN_LEFT), wxDATAVIEW_COL_RESIZABLE);
+    m_dataViewListColumn15 = m_dataViewListCtrl3->AppendTextColumn(_("Skill"), wxDATAVIEW_CELL_INERT, -1, static_cast<wxAlignment>(wxALIGN_LEFT), wxDATAVIEW_COL_RESIZABLE);
+    m_dataViewListColumn16 = m_dataViewListCtrl3->AppendTextColumn(_("Stats"), wxDATAVIEW_CELL_INERT, -1, static_cast<wxAlignment>(wxALIGN_LEFT), wxDATAVIEW_COL_RESIZABLE);
+    m_dataViewListColumn17 = m_dataViewListCtrl3->AppendTextColumn(_("Value"), wxDATAVIEW_CELL_INERT, -1, static_cast<wxAlignment>(wxALIGN_LEFT), wxDATAVIEW_COL_RESIZABLE);
+    m_dataViewListColumn18 = m_dataViewListCtrl3->AppendTextColumn(_("Condition"), wxDATAVIEW_CELL_INERT, -1, static_cast<wxAlignment>(wxALIGN_LEFT), wxDATAVIEW_COL_RESIZABLE);
+    m_dataViewListColumn19 = m_dataViewListCtrl3->AppendTextColumn(_("Bonus" /* aggregate str */), wxDATAVIEW_CELL_INERT, -1, static_cast<wxAlignment>(wxALIGN_LEFT), wxDATAVIEW_COL_RESIZABLE);
     itemsMainSizer->Add(m_dataViewListCtrl3, 0, wxALL | wxEXPAND, 5);
 
     Fit();
@@ -111,4 +115,94 @@ bool InventoryManagerCtrl::persist(Json& json) const
 bool InventoryManagerCtrl::unpersist(const Json& json)
 {
     return inventoryCtrl->unpersist(json);
+}
+
+void InventoryItemTableViewModel::GetValue(wxVariant& variant, const wxDataViewItem& dataItem, unsigned int col) const
+{
+#if 0
+    numberCol = m_dataViewListCtrl3->AppendTextColumn(_("#"), wxDATAVIEW_CELL_INERT, -1, static_cast<wxAlignment>(wxALIGN_LEFT), wxDATAVIEW_COL_RESIZABLE);
+    m_dataViewListColumn14 = m_dataViewListCtrl3->AppendTextColumn(_("Type" /* aggregate str */), wxDATAVIEW_CELL_INERT, -1, static_cast<wxAlignment>(wxALIGN_LEFT), wxDATAVIEW_COL_RESIZABLE);
+    m_dataViewListColumn15 = m_dataViewListCtrl3->AppendTextColumn(_("Skill"), wxDATAVIEW_CELL_INERT, -1, static_cast<wxAlignment>(wxALIGN_LEFT), wxDATAVIEW_COL_RESIZABLE);
+    m_dataViewListColumn16 = m_dataViewListCtrl3->AppendTextColumn(_("Stats"), wxDATAVIEW_CELL_INERT, -1, static_cast<wxAlignment>(wxALIGN_LEFT), wxDATAVIEW_COL_RESIZABLE);
+    m_dataViewListColumn17 = m_dataViewListCtrl3->AppendTextColumn(_("Value"), wxDATAVIEW_CELL_INERT, -1, static_cast<wxAlignment>(wxALIGN_LEFT), wxDATAVIEW_COL_RESIZABLE);
+    m_dataViewListColumn18 = m_dataViewListCtrl3->AppendTextColumn(_("Condition"), wxDATAVIEW_CELL_INERT, -1, static_cast<wxAlignment>(wxALIGN_LEFT), wxDATAVIEW_COL_RESIZABLE);
+    m_dataViewListColumn19 = m_dataViewListCtrl3->AppendTextColumn(_("Bonus"), wxDATAVIEW_CELL_INERT, -1, static_cast<wxAlignment>(wxALIGN_LEFT), wxDATAVIEW_COL_RESIZABLE);
+#endif
+    const ItemStoreElement* const elem = reinterpret_cast<const ItemStoreElement*>(&dataItem);
+    const mm7::Item* const item = &elem->item;
+    const PlayerItem* const itemData = GameData::items.at(item->number).get();
+    switch (col)
+    {
+    case 0: // id
+        variant = (long)itemData->id;
+        break;
+    case 1: // name
+        variant = itemData->name;
+        break;
+    case 2: // type
+        variant = ENUM_TO_STRING_ITEM_TYPE.at(itemData->id);
+        break;
+    case 3: // skill name
+    {
+        PlayerSkill* sk = itemData->skill;
+        if (sk)
+        {
+            variant = sk->name;
+        }
+        else
+        {
+            variant = "None";
+        }
+        break;
+    }
+    case 4: // stats (+5 AC etc.)
+        variant = playerItem->getItemTypeName();
+        break;
+    case 5: // value
+        variant = ""; // TODO
+        break;
+    case 6: // condition (broken etc.)
+        variant = (long)playerItem->forItemTxtDo([](auto itemTxt) { return itemTxt->material; });
+        break;
+    case 7: // Bonus (complex string like +5 might)
+        variant = ""; // TODO
+        break;
+    }
+}
+
+bool InventoryItemTableViewModel::SetValue(const wxVariant& variant, const wxDataViewItem& dataItem, unsigned int col)
+{
+    return false;
+}
+
+wxDataViewItem InventoryItemTableViewModel::GetParent(const wxDataViewItem& dataItem) const
+{
+    return wxDataViewItem();
+}
+
+bool InventoryItemTableViewModel::IsContainer(const wxDataViewItem& dataItem) const
+{
+    return false;
+}
+
+unsigned int InventoryItemTableViewModel::GetChildren(const wxDataViewItem& dataItem, wxDataViewItemArray& children) const
+{
+    //itemAccessor->for
+    return 0;
+}
+
+unsigned int InventoryItemTableViewModel::GetColumnCount() const
+{
+    // NOT NEEDED, is not called because of deprecation
+    return 8;
+}
+
+wxString InventoryItemTableViewModel::GetColumnType(unsigned int col) const
+{
+    // NOT NEEDED, is not called because of deprecation
+    return wxString();
+}
+
+InventoryItemTableViewModel::InventoryItemTableViewModel(InventoryManagerCtrl& inventoryManagerCtrl) : inventoryManagerCtrl(inventoryManagerCtrl)
+{
 }

@@ -70,12 +70,11 @@ void InventoryCtrl::OnPaint(wxPaintEvent& event)
 
     for (const auto& elem : elements)
     {
-        drawItemAt(dc, *elem, elem->pos.x * CELL_WIDTH, elem->pos.y * CELL_HEIGHT);
+        if (elem->pos.isValid()) // draw only items actually placed in the inventory
+        {
+            drawItemAt(dc, *elem, elem->pos.x * CELL_WIDTH, elem->pos.y * CELL_HEIGHT);
+        }
     }
-    /*
-     
-     
-     */
 }
 
 template<typename Variant>
@@ -435,7 +434,57 @@ bool InventoryCtrl::modifyItem(const ItemStoreElement& itemToModify, ItemStoreEl
 
 InventoryPosition InventoryCtrl::findFreePositionForItem(const ItemStoreElement& elem)
 {
-    return {-1, -1};
+    // mm7+/mm6 with Grayface patch placing order (prefer left side, not top)
+    auto taken = std::vector<std::vector<byte_t>>(CELLS_COL, std::vector<byte_t>(CELLS_ROW, 0));
+    for (const auto& existing : elements)
+    {
+        if (std::holds_alternative<ItemRefStored>(existing->location))
+        {
+            const PlayerItem* const data = existing->getItemData();
+            if (data)
+            {
+                int startx = existing->pos.x, starty = existing->pos.y, w = data->inventoryWidth, h = data->inventoryHeight;
+                wxASSERT_MSG(startx + w <= CELLS_ROW && starty + h <= CELLS_COL,
+                    wxString::Format("Detected invalid item at row %d col %d (width %d, height %d)", starty, startx, w, h));
+                for (int x = startx; x < startx + w; ++x)
+                {
+                    for (int y = starty; y < starty + h; ++y)
+                    {
+                        taken[y][x] = true;
+                    }
+                }
+            }
+        }
+    }
+    const PlayerItem* const data = elem.getItemData();
+    if (data)
+    {
+        int w = data->inventoryWidth, h = data->inventoryHeight;
+        for (int x = 0; x + w < CELLS_ROW; ++x)
+        {
+            for (int y = 0; y + h < CELLS_COL; ++y)
+            {
+                bool free = true;
+                for (int itemX = x; itemX < x + w; ++itemX)
+                {
+                    for (int itemY = y; itemY < y + h; ++itemY)
+                    {
+                        if (taken[itemY][itemX])
+                        {
+                            free = false;
+                            goto exit;
+                        }
+                    }
+                }
+                exit:
+                if (free)
+                {
+                    return InventoryPosition{ x, y };
+                }
+            }
+        }
+    }
+    return InventoryPosition::invalid();
 }
 
 bool InventoryCtrl::canItemBePlacedAtPosition(const ItemStoreElement& elem, InventoryPosition pos)
@@ -481,6 +530,15 @@ bool ItemStoreElement::unpersist(const Json& json)
     unpersistItemLocationVariant(origin, json.at("origin"));
     unpersistItem(json);
     return true;
+}
+
+PlayerItem* ItemStoreElement::getItemData() const
+{
+    if (item.number != 0)
+    {
+        return GameData::items.at(item.number).get();
+    }
+    return nullptr;
 }
 
 ItemStoreElement::ItemStoreElement(const mm7::Item& item, const ItemLocationType& origin, const ItemLocationType& location, InventoryPosition pos)
