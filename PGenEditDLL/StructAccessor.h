@@ -2,7 +2,9 @@
 #include "pch.h"
 #include "main.h"
 
-struct ArrayData // TODO: wrap all suitable dynamic arrays inside this class
+// holds dynamic array data
+// TODO: wrap all suitable dynamic arrays inside this class
+struct ArrayData
 {
 private:
     std::variant<int, int*, uint32_t, uint32_t*> countVariant;
@@ -83,6 +85,7 @@ public:
     }
 };
 
+// base type for all struct accessors, contains some predefined game-specific struct pointers
 template<typename MainTypeActual, typename MainType6, typename MainType7, typename MainType8>
 class StructAccessor
 {
@@ -91,11 +94,11 @@ protected:
     using MakeType = std::conditional_t<SAME(MainTypeActual, MainType6), Type6, std::conditional_t<SAME(MainTypeActual, MainType7), Type7, Type8>>;
 public:
     // typedef?
-    using GameType = std::conditional_t<SAME(MainTypeActual, MainType6), mm6::GameStructure, std::conditional_t<SAME(MainTypeActual, MainType7), mm7::GameStructure, mm8::GameStructure>>;
+    using GameType = MakeType<mm6::Game, mm7::Game, mm8::Game>;
     static inline GameType* const game = reinterpret_cast<GameType*>(0);
-    using MapType = std::conditional_t<SAME(MainTypeActual, MainType6), mm6::GameMap, std::conditional_t<SAME(MainTypeActual, MainType7), mm7::GameMap, mm8::GameMap>>;
+    using MapType = MakeType<mm6::GameMap, mm7::GameMap, mm8::GameMap>;
     static inline MapType* const map = reinterpret_cast<MapType*>(0);
-    using ScreenType = std::conditional_t<SAME(MainTypeActual, MainType6), mm6::GameScreen, std::conditional_t<SAME(MainTypeActual, MainType7), mm7::GameScreen, mm8::GameScreen>>;
+    using ScreenType = MakeType<mm6::GameScreen, mm7::GameScreen, mm8::GameScreen>;
     static inline ScreenType* const screen = reinterpret_cast<ScreenType*>(0);
     using PartyType = MakeType<mm6::GameParty, mm7::GameParty, mm8::GameParty>;
     static inline PartyType* const party = reinterpret_cast<PartyType*>(0);
@@ -103,9 +106,12 @@ public:
     static inline MouseType* const mouse = reinterpret_cast<MouseType*>(0);
 };
 
+// utility class, contains generic functions for executing a function for any game version's struct over each array item,
+// for single item, single index of array, execute once function receiving std::vector<T*>, or execute a function over one instance of static struct (like Game or Party)
 class StructAccessorGenericFor
 {
 public:
+    // executes a function for any game version's struct over each array item
     template<typename Function, typename Type6, typename Type7, typename Type8>
     static auto genericForEachDo(void* ptr, int limit, Function&& func, int first = 0)
     {
@@ -124,6 +130,30 @@ public:
         else
         {
             wxFAIL;
+            return decltype(func(reinterpret_cast<Type6*>(ptr)))(); // default-constructed return value
+        }
+    }
+
+    // executes once a function receiving std::vector of pointers to structure entries
+    template<typename Function, typename Type6, typename Type7, typename Type8>
+    static auto genericForRangeDo(void* ptr, int limit, Function&& func, int first = 0)
+    {
+        if (MMVER == 6)
+        {
+            return genericForRangeDoSpecialized(reinterpret_cast<Type6*>(ptr), limit, std::forward<Function>(func), first);
+        }
+        else if (MMVER == 7)
+        {
+            return genericForRangeDoSpecialized(reinterpret_cast<Type7*>(ptr), limit, std::forward<Function>(func), first);
+        }
+        else if (MMVER == 8)
+        {
+            return genericForRangeDoSpecialized(reinterpret_cast<Type8*>(ptr), limit, std::forward<Function>(func), first);
+        }
+        else
+        {
+            wxFAIL;
+            return decltype(genericForRangeDoSpecialized(reinterpret_cast<Type6*>(ptr), limit, std::forward<Function>(func), first))(); // default-constructed return value
         }
     }
 
@@ -135,60 +165,66 @@ public:
             func(ptr + i);
         }
     }
-#pragma warning(push)
-#pragma warning(disable : 4715) // "not all control paths return a value"
+
+    template<typename Function, typename T>
+    static auto genericForRangeDoSpecialized(T* ptr, int limit, Function&& func, int first = 0)
+    {
+        std::vector<T*> ptrs(limit - first);
+        for (int i = first, j = 0; i < limit; ++i, ++j)
+        {
+            ptrs[j] = ptr + i;
+        }
+        return func(ptrs);
+    }
+
+    // executes a function for single struct entry
     template<typename Function, typename Type6, typename Type7, typename Type8>
     static auto genericForItemExecute(void* ptr, Function&& func)
     {
         if (MMVER == 6)
         {
-            return genericForItemExecuteSpecialized(reinterpret_cast<Type6*>(ptr), std::forward<Function>(func));
+            return func(reinterpret_cast<Type6*>(ptr));
         }
         else if (MMVER == 7)
         {
-            return genericForItemExecuteSpecialized(reinterpret_cast<Type7*>(ptr), std::forward<Function>(func));
+            return func(reinterpret_cast<Type7*>(ptr));
         }
         else if (MMVER == 8)
         {
-            return genericForItemExecuteSpecialized(reinterpret_cast<Type8*>(ptr), std::forward<Function>(func));
+            return func(reinterpret_cast<Type8*>(ptr));
         }
         else
         {
             wxFAIL;
+            return decltype(func(reinterpret_cast<Type6*>(ptr)))(); // default-constructed return value
         }
-        return false;
     }
-#pragma warning(pop)
 
-    template<typename Function, typename T>
-    static auto genericForItemExecuteSpecialized(T* ptr, Function&& func)
-    {
-        return func(ptr);
-    }
-#pragma warning(push)
-#pragma warning(disable : 4715) // "not all control paths return a value"
+    // executes a function for single index of array
     // to be used for example with items.txt - where there is one array only, so if you need item id 5 data, you don't need to calculate pointer
     template<typename Function, typename Type6, typename Type7, typename Type8>
     static auto genericForSingleArrayIndexExecute(void* ptr, int index, Function&& func)
     {
         if (MMVER == 6)
         {
-            return genericForItemExecuteSpecialized(reinterpret_cast<Type6*>(ptr) + index, std::forward<Function>(func));
+            return func(reinterpret_cast<Type6*>(ptr) + index);
         }
         else if (MMVER == 7)
         {
-            return genericForItemExecuteSpecialized(reinterpret_cast<Type7*>(ptr) + index, std::forward<Function>(func));
+            return func(reinterpret_cast<Type7*>(ptr) + index);
         }
         else if (MMVER == 8)
         {
-            return genericForItemExecuteSpecialized(reinterpret_cast<Type8*>(ptr) + index, std::forward<Function>(func));
+            return func(reinterpret_cast<Type8*>(ptr) + index);
         }
         else
         {
             wxFAIL;
+            return decltype(func(reinterpret_cast<Type6*>(ptr)))(); // default-constructed return value
         }
     }
 
+    // executes for single-instance struct at static address, like Game or Party
     template<typename Function, typename Type6, typename Type7, typename Type8>
     static auto genericForSingleStructExecute(void* ptr, Function&& func)
     {
@@ -207,9 +243,7 @@ public:
         else
         {
             wxFAIL;
+            return decltype(func(reinterpret_cast<Type6*>(ptr)))(); // default-constructed return value
         }
     }
-
-
-#pragma warning(pop)
 };

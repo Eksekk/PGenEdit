@@ -3,6 +3,7 @@
 #include "main.h"
 #include "Utility.h"
 #include <LowLevel.h>
+#include "StructAccessor.h"
 
 template<typename Lod>
 class TemplatedLodStructAccessor;
@@ -60,20 +61,12 @@ public:
 };
 
 template<typename Lod>
-class TemplatedLodStructAccessor : public LodStructAccessor
+using StructAccessorAlias = StructAccessor<Lod, mm6::Lod, mm7::Lod, mm8::Lod>;
+
+template<typename Lod>
+class TemplatedLodStructAccessor : public LodStructAccessor, public StructAccessorAlias<Lod>
 {
 public:
-    // Inherited via LodStructAccessor
-    /*virtual void forEachIconsLodBitmapDo(void* ptr, int n, std::function<void(AnyLodBitmapVariant var)> func) override
-    {
-        mm6::LodBitmap* lodBmps = reinterpret_cast<mm6::LodBitmap*>(ptr);
-
-        for (int i = 0; i < n; ++i)
-        {
-            func(lodBmps + i);
-        }
-    }*/
-
     template<typename Function>
     static void forEachLodDo(void* ptr, int n, Function func)
     {
@@ -85,14 +78,12 @@ public:
         }
     }
 
-    using LodBitmap = std::conditional_t<SAME(Lod, mm6::Lod), mm6::LodBitmap, std::conditional_t<SAME(Lod, mm7::Lod), mm7::LodBitmap, mm8::LodBitmap>>;
-    using BitmapsLod = std::conditional_t<SAME(Lod, mm6::Lod), mm6::BitmapsLod, std::conditional_t<SAME(Lod, mm7::Lod), mm7::BitmapsLod, mm8::BitmapsLod>>;
-    using GameType = std::conditional_t<SAME(Lod, mm6::Lod), mm6::GameStructure, std::conditional_t<SAME(Lod, mm7::Lod), mm7::GameStructure, mm8::GameStructure>>;
-    static inline GameType* const game = reinterpret_cast<GameType*>(0);
+    using LodBitmap = typename StructAccessorAlias<Lod>::template MakeType<mm6::LodBitmap, mm7::LodBitmap, mm8::LodBitmap>;
+    using BitmapsLod = typename StructAccessorAlias<Lod>::template MakeType<mm6::BitmapsLod, mm7::BitmapsLod, mm8::BitmapsLod>;
+    using StructAccessorAlias<Lod>::game;
     using IconsLod = BitmapsLod;
-
-    template<typename Function>
-    static void forEachLodBitmapDo(Function func, BitmapsLodType type)
+private:
+    static BitmapsLod* getBitmaps(BitmapsLodType type)
     {
         BitmapsLod* lod = nullptr;
         if (type == BITMAPS_LOD_BITMAPS)
@@ -107,11 +98,26 @@ public:
         {
             assert(false);
         }
+        return lod;
+    }
+public:
+    template<typename Function>
+    static void forEachLodBitmapDo(Function func, BitmapsLodType type)
+    {
+        BitmapsLod* lod = getBitmaps(type);
         LodBitmap* bmp = reinterpret_cast<LodBitmap*>(lod->bitmaps.data());
         for (size_t i = 0; i < lod->bitmaps_size; ++i)
         {
             func(bmp + i);
         }
+    }
+
+    template<typename Function>
+    static auto forLodBitmapRangeDo(Function func, BitmapsLodType type)
+    {
+        BitmapsLod* lod = getBitmaps(type);
+        LodBitmap* bmp = reinterpret_cast<LodBitmap*>(lod->bitmaps.data());
+        StructAccessorGenericFor::genericForRangeDoSpecialized(bmp, lod->bitmaps_size, func);
     }
 
     virtual int loadBitmap(const char* name, BitmapsLodType type) override

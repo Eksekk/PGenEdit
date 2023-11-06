@@ -462,7 +462,6 @@ void GameData::fillInItemImages()
                 std::tie(red, green, blue) = pfr::structure_to_tuple(itr->second);
             }
 
-            // TODO: better, this will be slow
             // MALLOC REQUIRED, wxWidgets will take care of deletion
             uint8_t* data = (uint8_t*)malloc(width * height * 3); // RGBRGBRGBRGB... data
             uint8_t* alpha = (uint8_t*)malloc(width * height);
@@ -481,7 +480,7 @@ void GameData::fillInItemImages()
                     if (pal == 0) // first color in palette is transparency color
                     {
                         //img.SetAlpha(x, y, 255);
-                        byte((dword_t)data + y * width + x) = 0;
+                        byte((dword_t)alpha + y * width + x) = 0;
                     }
                 }
             }
