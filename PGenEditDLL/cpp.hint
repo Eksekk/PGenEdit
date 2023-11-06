@@ -25,4 +25,5 @@ concept Any##name##Struct = SAME(T, mm6::codeName) || SAME(T, mm7::codeName) || 
             rttr_auto_register_reflection_function_();\
         }\
     };\
-} static const rttr__auto__register__ auto_register__473; static void rttr_auto_register_reflection_function_()
+} static const rttr__auto__register__ auto_register__473; static void rttr_auto_register_reflection_function_()#define RTTR_REGISTRATION_FRIEND
+#define RTTR_REGISTRATION_FRIEND friend void ::rttr_auto_register_reflection_function_(); template<typename Ctor_Type, typename Policy, typename Accessor, typename Arg_Indexer> friend struct rttr::detail::constructor_invoker;

@@ -265,6 +265,11 @@ LuaTableValues LuaTable::tryToIntegerFull(LuaTableValues&& values)
     return values;
 }
 
+LuaTypeInCpp& LuaTable::operator[](const LuaTypeInCpp& type)
+{
+    return values[type];
+}
+
 bool operator==(const LuaTypeInCpp& a, const LuaTypeInCpp& b)
 {
     // cleanest way to have default operator for most types and custom behavior for some, without endless recursion, is this lambda way, I think
@@ -289,4 +294,94 @@ bool operator==(const LuaTypeInCpp& a, const LuaTypeInCpp& b)
             return false;
         }
     }, a, b); // generates lambda handler for each combination of types from variants, that is, usually size(a) * size(b) handlers
+}
+
+/*
+struct LuaTable // TODO: storing array part and hashed part separately - will improve table to lua conversion time, but will require tricky code
+{
+    // only values as unique_ptr doesn't work
+    // values and table as unique_ptrs don't work with std::unordered_map
+    // values and table as unique_ptrs work with std::map
+    LuaTableValues values;
+    void toLuaTable() const; // converts this structure into lua table on top of the stack
+    // TODO: a version updating lua table at specified index
+    // converts table at specified stack index into this value
+    static LuaTable fromLuaTable(int index = -1);
+
+    LuaTableValues::iterator begin();
+    LuaTableValues::iterator end();
+    LuaTableValues::const_iterator begin() const;
+    LuaTableValues::const_iterator end() const;
+    LuaTable(const LuaTableValues& values);
+    LuaTable(LuaTableValues&& values);
+    LuaTable(const LuaTable& other) = default;
+    LuaTable& operator=(const LuaTable& other) = default;//FIX
+    LuaTable& operator=(LuaTable&& other) = default;//FIX
+    LuaTable(LuaTable&& other) = default;//FIX
+
+    //LuaTypeInCpp& operator[](const LuaTypeInCpp& type);
+    void emplace(LuaTypeInCpp&& key, LuaTypeInCpp&& value);
+    const LuaTypeInCpp& at(const LuaTypeInCpp& type) const;
+    LuaTypeInCpp& at(const LuaTypeInCpp& type);
+    bool contains(const LuaTypeInCpp& type) const;
+private:
+    LuaTable() = default; // this is private, so lua tables without provided values won't be created
+    static void luaConvertTypeCommon(LuaTypeInCpp& val, int stack);
+    static void tryToIntegerRef(LuaTypeInCpp& type);
+    static LuaTypeInCpp tryToIntegerRet(const LuaTypeInCpp& type);
+    static bool canBeInteger(const LuaTypeInCpp& type);
+    static LuaTableValues tryToIntegerFull(const LuaTableValues& values);
+    static LuaTableValues tryToIntegerFull(LuaTableValues&& values);
+};
+*/
+
+
+RTTR_REGISTRATION
+{
+    using namespace rttr;
+    registration::class_<LuaTable>("LuaTable")
+.property("LuaTableValues", &LuaTable::values)
+.constructor<const LuaTableValues&>(registration::public_access)
+.constructor<LuaTableValues&&>(registration::public_access)
+.constructor<const LuaTable&>(registration::public_access)
+.constructor<LuaTable&&>(registration::public_access)
+.constructor<>(registration::private_access)
+.method("operator=", select_overload<LuaTable&(const LuaTable&)>(&LuaTable::operator=))
+.method("operator=", select_overload<LuaTable&(LuaTable&&)>(&LuaTable::operator=))
+.method("operator[]", &LuaTable::operator[])
+.method("toLuaTable", &LuaTable::toLuaTable, registration::public_access)
+.method("begin", select_overload<typename LuaTableValues::iterator()>(&LuaTable::begin), registration::public_access)//reinterpret_cast<typename LuaTableValues::iterator(__thiscall *)()>(&LuaTable::begin)
+.method("end", select_overload<typename LuaTableValues::iterator()>(&LuaTable::end), registration::public_access)
+.method("begin", select_overload<typename LuaTableValues::const_iterator() const>(&LuaTable::begin), registration::public_access)
+.method("end", select_overload<typename LuaTableValues::const_iterator() const>(&LuaTable::end), registration::public_access)
+.method("emplace", &LuaTable::emplace, registration::public_access)
+.method("at", select_overload<const LuaTypeInCpp&(const LuaTypeInCpp&) const>(&LuaTable::at), registration::public_access)
+.method("at", select_overload<LuaTypeInCpp&(const LuaTypeInCpp&)>(&LuaTable::at), registration::public_access)
+.method("contains", &LuaTable::contains, registration::public_access)
+.method("fromLuaTable", &LuaTable::fromLuaTable)
+.method("luaConvertTypeCommon", &LuaTable::luaConvertTypeCommon, registration::private_access)
+.method("tryToIntegerRef", &LuaTable::tryToIntegerRef, registration::private_access)
+.method("tryToIntegerRet", &LuaTable::tryToIntegerRet, registration::private_access)
+.method("canBeInteger", &LuaTable::canBeInteger, registration::private_access)
+.method("tryToIntegerFull", select_overload<LuaTableValues(const LuaTableValues&)>(&LuaTable::tryToIntegerFull), registration::private_access)
+.method("tryToIntegerFull", select_overload<LuaTableValues(LuaTableValues&&)>(&LuaTable::tryToIntegerFull), registration::private_access)
+        ;
+    /*
+    static void luaConvertTypeCommon(LuaTypeInCpp& val, int stack);
+    static void tryToIntegerRef(LuaTypeInCpp& type);
+    static LuaTypeInCpp tryToIntegerRet(const LuaTypeInCpp& type);
+    static bool canBeInteger(const LuaTypeInCpp& type);
+    static LuaTableValues tryToIntegerFull(const LuaTableValues& values);
+    static LuaTableValues tryToIntegerFull(LuaTableValues&& values);
+    LuaTable& operator=(const LuaTable& other) = default;//FIX
+    LuaTable& operator=(LuaTable&& other) = default;//FIX
+    LuaTable(LuaTable&& other) = default;//FIX
+    LuaTableValues::iterator begin();
+    LuaTableValues::iterator end();
+    LuaTableValues::const_iterator begin() const;
+    LuaTableValues::const_iterator end() const;
+    void emplace(LuaTypeInCpp&& key, LuaTypeInCpp&& value);
+    const LuaTypeInCpp& at(const LuaTypeInCpp& type) const;
+    LuaTypeInCpp& at(const LuaTypeInCpp& type);
+    bool contains(const LuaTypeInCpp& type) const;*/
 }

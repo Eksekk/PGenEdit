@@ -71,7 +71,7 @@ struct LuaTable // TODO: storing array part and hashed part separately - will im
     LuaTable& operator=(LuaTable&& other) = default;//FIX
     LuaTable(LuaTable&& other) = default;//FIX
 
-    //LuaTypeInCpp& operator[](const LuaTypeInCpp& type);
+    LuaTypeInCpp& operator[](const LuaTypeInCpp& type);
     void emplace(LuaTypeInCpp&& key, LuaTypeInCpp&& value);
     const LuaTypeInCpp& at(const LuaTypeInCpp& type) const;
     LuaTypeInCpp& at(const LuaTypeInCpp& type);
@@ -84,6 +84,8 @@ private:
     static bool canBeInteger(const LuaTypeInCpp& type);
     static LuaTableValues tryToIntegerFull(const LuaTableValues& values);
     static LuaTableValues tryToIntegerFull(LuaTableValues&& values);
+
+    RTTR_REGISTRATION_FRIEND
 };
 
 using LuaValuePair = std::pair<LuaTypeInCpp, LuaTypeInCpp>;
