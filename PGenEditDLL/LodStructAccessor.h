@@ -16,26 +16,15 @@ enum BitmapsLodType
     BITMAPS_LOD_ICONS
 };
 
-class LodStructAccessor
+class LodStructAccessor : public StructAccessorGenericFor
 {
 public:
     //virtual void forEachIconsLodBitmapDo(void* ptr, int n, std::function<void(AnyLodBitmapVariant var)> func) = 0;
 
     template<typename Function>
-    static void forEachLodDo(void* ptr, int n, Function func)
+    static void forEachLodDo(void* ptr, int n, Function&& func)
     {
-        if (MMVER == 6)
-        {
-            TemplatedLodStructAccessor<mm6::Lod>::forEachLodDo(ptr, n, func);
-        }
-        else if (MMVER == 7)
-        {
-            TemplatedLodStructAccessor<mm7::Lod>::forEachLodDo(ptr, n, func);
-        }
-        else if (MMVER == 8)
-        {
-            TemplatedLodStructAccessor<mm8::Lod>::forEachLodDo(ptr, n, func);
-        }
+        StructAccessorGenericFor::genericForEachDo<Function, mm6::Lod, mm7::Lod, mm8::Lod>(ptr, n, std::forward<Function>(func));
     }
 
     template<typename Function>
@@ -60,24 +49,16 @@ public:
     virtual ~LodStructAccessor();
 };
 
-template<typename Lod>
-using StructAccessorAlias = StructAccessor<Lod, mm6::Lod, mm7::Lod, mm8::Lod>;
+namespace
+{
+    template<typename Lod>
+    using StructAccessorAlias = StructAccessor<Lod, mm6::Lod, mm7::Lod, mm8::Lod>;
+}
 
 template<typename Lod>
 class TemplatedLodStructAccessor : public LodStructAccessor, public StructAccessorAlias<Lod>
 {
 public:
-    template<typename Function>
-    static void forEachLodDo(void* ptr, int n, Function func)
-    {
-        Lod* lod = reinterpret_cast<Lod*>(ptr);
-
-        for (int i = 0; i < n; ++i)
-        {
-            func(lod + i);
-        }
-    }
-
     using LodBitmap = typename StructAccessorAlias<Lod>::template MakeType<mm6::LodBitmap, mm7::LodBitmap, mm8::LodBitmap>;
     using BitmapsLod = typename StructAccessorAlias<Lod>::template MakeType<mm6::BitmapsLod, mm7::BitmapsLod, mm8::BitmapsLod>;
     using StructAccessorAlias<Lod>::game;
