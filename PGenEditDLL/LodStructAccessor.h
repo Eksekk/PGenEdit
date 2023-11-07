@@ -30,19 +30,27 @@ public:
     template<typename Function>
     static void forEachLodBitmapDo(Function func, BitmapsLodType type)
     {
-        if (MMVER == 6)
-        {
-            TemplatedLodStructAccessor<mm6::Lod>::forEachLodBitmapDo(func, type);
-        }
-        else if (MMVER == 7)
-        {
-            TemplatedLodStructAccessor<mm7::Lod>::forEachLodBitmapDo(func, type);
-        }
-        else if (MMVER == 8)
-        {
-            TemplatedLodStructAccessor<mm8::Lod>::forEachLodBitmapDo(func, type);
-        }
+        StructAccessorGenericFor::versionBasedAccessorDispatch(
+            // just "TemplatedLodStructAccessor<mm6::Lod>::forEachLodBitmapDo" doesn't work
+            // I now know why - it's template function, so just function name doesn't exist
+            TemplatedLodStructAccessor<mm6::Lod>::template forEachLodBitmapDo<Function>,
+            TemplatedLodStructAccessor<mm7::Lod>::template forEachLodBitmapDo<Function>,
+            TemplatedLodStructAccessor<mm8::Lod>::template forEachLodBitmapDo<Function>,
+            func, type);
+//         if (MMVER == 6)
+//         {
+//             TemplatedLodStructAccessor<mm6::Lod>::forEachLodBitmapDo(func, type);
+//         }
+//         else if (MMVER == 7)
+//         {
+//             TemplatedLodStructAccessor<mm7::Lod>::forEachLodBitmapDo(func, type);
+//         }
+//         else if (MMVER == 8)
+//         {
+//             TemplatedLodStructAccessor<mm8::Lod>::forEachLodBitmapDo(func, type);
+//         }
     }
+    
     
     virtual int loadBitmap(const char* name, BitmapsLodType type) = 0;
 

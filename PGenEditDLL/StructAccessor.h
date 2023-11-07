@@ -89,10 +89,10 @@ public:
 template<typename MainTypeActual, typename MainType6, typename MainType7, typename MainType8>
 class StructAccessor
 {
-protected:
+public:
     template<typename Type6, typename Type7, typename Type8>
     using MakeType = std::conditional_t<SAME(MainTypeActual, MainType6), Type6, std::conditional_t<SAME(MainTypeActual, MainType7), Type7, Type8>>;
-public:
+
     // typedef?
     using GameType = MakeType<mm6::Game, mm7::Game, mm8::Game>;
     static inline GameType* const game = reinterpret_cast<GameType*>(0);
@@ -245,5 +245,27 @@ public:
             wxFAIL;
             return decltype(func(reinterpret_cast<Type6*>(ptr)))(); // default-constructed return value
         }
+    }
+
+    template<typename Function6, typename Function7, typename Function8, typename... Args>
+    static auto versionBasedAccessorDispatch(Function6&& func6, Function7&& func7, Function8&& func8, Args&&... args)
+    {
+        if (MMVER == 6)
+        {
+            return func6(std::forward<Args>(args)...);
+        }
+        else if (MMVER == 7)
+        {
+            return func7(std::forward<Args>(args)...);
+        }
+        else if (MMVER == 8)
+        {
+            return func8(std::forward<Args>(args)...);
+        }
+        else
+        {
+            wxFAIL_MSG(wxString::Format("Invalid MM version (%d)", MMVER));
+        }
+        return decltype(func6(std::forward<Args>(args)...))(); // default-constructed return value, compiler will make sure all three returned types match
     }
 };

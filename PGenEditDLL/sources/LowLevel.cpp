@@ -306,7 +306,7 @@ std::map<void*, uint32_t> sizesByAddress; // all allocated "micro-blocks" (parts
 std::map<void*, uint32_t> allAllocatedBlocks; // <address, size>
 SYSTEM_INFO systemInfo;
 
-std::string readString(const void* buf, uint32_t maxLength, bool readNull /*= false*/)
+std::string readStringFromMemory(const void* buf, uint32_t maxLength, bool readNull /*= false*/)
 {
 	if (readNull)
 	{
@@ -325,6 +325,11 @@ std::string readString(const void* buf, uint32_t maxLength, bool readNull /*= fa
 	return std::string(reinterpret_cast<const char*>(buf), len);
 }
 
+// the main idea is, we do the allocation in form of blocks with VirtualAlloc, which allows a contiguous range of memory,
+// return first address in map of free addresses of given size or, if not found, main block address, also either increase block pointer or remove address from the map
+// keep all allocated addresses in container, so they can be really freed later
+// when [there is no allocated block or there is no space in current block] and can't find address in map, allocate new block,
+// adding last previous block address of remaining size to map, if size is > 0
 uint32_t codeMemoryAlloc(uint32_t size)
 {
 	auto itr = freeAddressesBySize.find(size);
@@ -924,7 +929,7 @@ namespace lowLevel
     using ::codeMemoryAlloc;
     using ::codeMemoryFree;
     using ::copyCode;
-    using ::readString;
+    using ::readStringFromMemory;
     using ::relJumpCallTarget;
     using ::findCode;
     using ::storeBytes;

@@ -87,6 +87,10 @@ namespace
     constexpr size_t GetVersionMM = SAME(T, Type6) ? 6 : (SAME(T, Type7) ? 7 : 8);
 }
 
+// TODO: a way to index a struct by one struct type and get the corresponding type for any other game (so, you do:
+// GameSpecificStructs<mm6::Lod>::currentStructVersion7
+// and get back mm7::Lod type
+
 #define SAME_BASE(a, b) std::is_same<std::decay_t<a>, b>
 #define GEN_DEF_1(name) GEN_DEF_2(name, name)
 #define GEN_DEF_2(name, codeName) using Any##name##Variant = std::variant<mm6::codeName*, mm7::codeName*, mm8::codeName*>;\

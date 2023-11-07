@@ -242,7 +242,7 @@ void patchBytes(uint32_t addr, const ByteVector& bytes, std::vector<uint8_t>* st
 extern SYSTEM_INFO systemInfo;
 
 // works like in MMExt
-std::string readString(const void* buf, uint32_t maxLength = 0, bool readNull = false);
+std::string readStringFromMemory(const void* buf, uint32_t maxLength = 0, bool readNull = false);
 
 // allocates memory for code
 uint32_t codeMemoryAlloc(uint32_t size);
@@ -528,6 +528,21 @@ struct PackParams
     }
 };
 
+// template<int cc, typename Arg, int... Indexes, int i>
+// auto getParam(HookData* d)
+// {
+//     constexpr int regNum = std::clamp(i, 0, 2);
+//     constexpr int stackIndex = i - regNum;
+//     if constexpr (stackIndex < 0)
+//     {
+//         return static_cast<Arg>(i == 0 ? d->ecx : d->edx);
+//     }
+//     else
+//     {
+//         return static_cast<Arg>(dword(d->esp + 4 + stackIndex * 4));
+//     }
+// }
+
 template<typename ReturnType, int cc, typename... Args>
 uint32_t callableHookCommon(uint32_t addr, uint32_t stackNum, CallableFunctionHookFunc<ReturnType, Args...> func, std::vector<uint8_t>* storeAt, uint32_t size, uint32_t code, bool hookfunction)
 {
@@ -559,6 +574,10 @@ uint32_t callableHookCommon(uint32_t addr, uint32_t stackNum, CallableFunctionHo
         }
         // int result = bitwiseUnsignedToInt(std::apply(func, basicParams));
         uint32_t result = std::apply(func, fullArgs);
+        //constexpr int i = 0;
+        //std::integer_sequence<int, sizeof...(Args)> seq = std::make_integer_sequence<int, sizeof...(Args)>;
+        //uint32_t result1 = func(d, def, getParam<cc, Args, seq>(d)...);
+        //std::inde
         // return from function (pop basicParams and move return address)
         d->ret(stackNum);
         d->eax = result;
