@@ -93,10 +93,11 @@ namespace
 template<typename T>\
 concept Any##name##Struct = SAME(T, mm6::codeName) || SAME(T, mm7::codeName) || SAME(T, mm8::codeName);\
 template<Any##name##Struct T>\
-struct GameSpecificStructs<T> : GameVersionStructs<GetVersionMM<T, mm6::codeName, mm7::codeName, mm8::codeName>> {}
+struct GameSpecificStructs<T> : GameVersionStructs<GetVersionMM<T, mm6::codeName, mm7::codeName, mm8::codeName>>\
+{\
+	static constexpr const size_t gameVersion = GetVersionMM<T, mm6::codeName, mm7::codeName, mm8::codeName>;\
+};
 
-// "macro overloading" on number of arguments
-#define GET_MACRO(_1, _2, name, ...) name
 // X macro
 #define GEN_DEF(...) GEN_DEF_CURRENT(__VA_ARGS__)
 
@@ -203,12 +204,48 @@ GEN_DEF(TownPortalTownInfo);\
 GEN_DEF(TravelInfo);\
 GEN_DEF(Weather);
 
+// "macro overloading" on number of arguments
+#define GET_MACRO(_1, _2, name, ...) name
+
+#pragma warning(push)
+#pragma warning(disable: 4005) // "macro redefinition"
+// base definitions, incl. structure template taking any game type
 #define GEN_DEF_CURRENT(...) GET_MACRO(__VA_ARGS__, GEN_DEF_2, GEN_DEF_1)(__VA_ARGS__)
 GEN_STRUCT_DEFS;
-#define GEN_DEF_CURRENT(...) GET_MACRO(__VA_ARGS__, GEN_DEF_2, GEN_DEF_1)(__VA_ARGS__)
+#define GEN_DEF_2(name, codeName) using name = mm6::codeName;
 
+template<>
+struct GameVersionStructs<6>
+{
+	// mm6 definitions
+	GEN_STRUCT_DEFS;
+};
+
+#define GEN_DEF_2(name, codeName) using name = mm7::codeName;
+
+template<>
+struct GameVersionStructs<7>
+{
+	// mm7 definitions
+    GEN_STRUCT_DEFS;
+};
+
+#define GEN_DEF_2(name, codeName) using name = mm8::codeName;
+
+template<>
+struct GameVersionStructs<8>
+{
+	// mm8 definitions
+    GEN_STRUCT_DEFS;
+};
+
+#define GEN_DEF_CURRENT(...) GET_MACRO(__VA_ARGS__, MM6_VER_2, MM6_VER)(__VA_ARGS__)
+
+#pragma warning(pop)
 #undef GEN_DEF
 #undef GEN_DEF_1
 #undef GEN_DEF_2
 #undef GET_MACRO
+#undef GEN_DEF_CURRENT
+#undef GEN_STRUCT_DEFS
 #undef SAME_BASE
