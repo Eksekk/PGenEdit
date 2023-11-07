@@ -72,13 +72,28 @@ template<size_t s>
 	requires (s == 6) || (s == 7) || (s == 8)
 struct GameVersionStructs;
 
+template<class>
+struct GameSpecificStructs;
+
+namespace
+{
+    template<class T, class Type6, class Type7, class Type8>
+    using GetTypeMM = std::conditional_t<SAME(T, Type6), Type6, std::conditional_t<SAME(T, Type7), Type7, Type8>>;
+
+    template<class T, class Type6, class Type7, class Type8>
+    constexpr bool hasTypeMM = SAME(T, Type6) || SAME(T, Type7) || SAME(T, Type8);
+
+    template<class T, class Type6, class Type7, class Type8>
+    constexpr size_t GetVersionMM = SAME(T, Type6) ? 6 : (SAME(T, Type7) ? 7 : 8);
+}
+
 #define SAME_BASE(a, b) std::is_same<std::decay_t<a>, b>
 #define GEN_DEF_1(name) GEN_DEF_2(name, name)
 #define GEN_DEF_2(name, codeName) using Any##name##Variant = std::variant<mm6::codeName*, mm7::codeName*, mm8::codeName*>;\
 template<typename T>\
-concept Any##name##Struct = SAME(T, mm6::codeName) || SAME(T, mm7::codeName) || SAME(T, mm8::codeName)
-#define GEN_STRUCT_6_1
-
+concept Any##name##Struct = SAME(T, mm6::codeName) || SAME(T, mm7::codeName) || SAME(T, mm8::codeName);\
+template<Any##name##Struct T>\
+struct GameSpecificStructs<T> : GameVersionStructs<GetVersionMM<T, mm6::codeName, mm7::codeName, mm8::codeName>> {}
 
 // "macro overloading" on number of arguments
 #define GET_MACRO(_1, _2, name, ...) name
@@ -86,7 +101,6 @@ concept Any##name##Struct = SAME(T, mm6::codeName) || SAME(T, mm7::codeName) || 
 #define GEN_DEF(...) GEN_DEF_CURRENT(__VA_ARGS__)
 
 /* commented out are those that aren't in all games */
-
 #define GEN_STRUCT_DEFS \
 GEN_DEF(ActionItem);\
 /* GEN_DEF(Arcomage); */\
