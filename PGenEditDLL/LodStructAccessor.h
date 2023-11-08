@@ -49,7 +49,19 @@ public:
             func, type);
     }
     
+    template<typename Function>
+    static auto forLodBitmapIndexesDo(Function func, BitmapsLodType type, const std::vector<int>& indexes, bool sort = false)
+    {
+        StructAccessorGenericFor::versionBasedAccessorDispatch(
+            TemplatedLodStructAccessor<mm6::Lod>::template forLodBitmapIndexesDo<Function>,
+            TemplatedLodStructAccessor<mm7::Lod>::template forLodBitmapIndexesDo<Function>,
+            TemplatedLodStructAccessor<mm8::Lod>::template forLodBitmapIndexesDo<Function>,
+            func, type, indexes, sort);
+    }
+    
     virtual int loadBitmap(const char* name, BitmapsLodType type) = 0;
+    virtual void destroyBitmap(void* ptr) = 0;
+    virtual void cleanupBitmaps(BitmapsLodType type) = 0;
 
     virtual ~LodStructAccessor();
 };
@@ -106,32 +118,52 @@ public:
         StructAccessorGenericFor::genericForRangeDoSpecialized(bmp, lod->bitmaps_size, func);
     }
 
+    template<typename Function>
+    static auto forLodBitmapIndexesDo(Function func, BitmapsLodType type, const std::vector<int>& indexes, bool sort = false)
+    {
+        BitmapsLod* lod = getBitmaps(type);
+        LodBitmap* bmp = reinterpret_cast<LodBitmap*>(lod->bitmaps.data());
+        StructAccessorGenericFor::genericForSpecificArrayIndexesExecuteSpecialized(bmp, func, indexes, sort, 0);
+    }
+
     virtual int loadBitmap(const char* name, BitmapsLodType type) override
     {
         // TODO: argument count may be wrong in mm6
         void* p = type == BITMAPS_LOD_BITMAPS ? &game->bitmapsLod : &game->iconsLod;
         int typ = type == BITMAPS_LOD_BITMAPS ? 0 : 2;
+
+        int ret = -1;
         if (MMVER == 6)
         {
             wxFAIL;
         }
         else if (MMVER == 7)
         {
-            return callMemoryAddress<int>(mmv(0x40B430, 0x40FB2C, 0x410D70), 1,
+            ret = callMemoryAddress<int>(mmv(0x40B430, 0x40FB2C, 0x410D70), 1,
                 p,
                 name,
                 typ);
         }
         else if (MMVER == 8)
         {
-            return callMemoryAddress<int>(mmv(0x40B430, 0x40FB2C, 0x410D70), 1,
+            ret = callMemoryAddress<int>(mmv(0x40B430, 0x40FB2C, 0x410D70), 1,
                 p,
                 name,
                 typ,
                 0, 0);
         }
-        return 0;
-        //return call(mmv(0x40B430, 0x40FB2C, 0x410D70), 1, self["?ptr"], bmpbuf, (self == Game.IconsLod and 2 or 0), 0, EnglishD or 0)
+        return ret;
+    }
+
+    virtual void destroyBitmap(void* ptr) override
+    {
+        callMemoryAddress(mmv(0x40A0C0, 0x40F788, 0x410A10), 1, ptr);
+    }
+
+    virtual void cleanupBitmaps(BitmapsLodType type)
+    {
+        void* p = type == BITMAPS_LOD_BITMAPS ? &game->bitmapsLod : &game->iconsLod;
+        callMemoryAddress(mmv(0x40B2F0, 0x40F9D1, 0x410C09), 1, p);
     }
 };
 

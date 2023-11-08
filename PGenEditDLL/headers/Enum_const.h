@@ -7,6 +7,8 @@ extern int CURRENT_PARTY_SIZE; // in mm8
 extern bool IS_ELEMENTAL_MOD; // changes some game structures, different parsing needed
 extern bool IS_MERGE; // ditto, todo: merge versions !!!!! structs.Player.Attrs support
 
+const int INVENTORY_WIDTH_PLAYER = 14, INVENTORY_HEIGHT_PLAYER = 9;
+
 extern int NUM_CLASSES;
 
 enum SkillCombineMode

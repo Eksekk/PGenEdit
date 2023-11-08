@@ -112,7 +112,7 @@ public:
 // for single item, single index of array, execute once function receiving std::vector<T*>, or execute a function over one instance of static struct (like Game or Party)
 class StructAccessorGenericFor
 {
-public:
+protected:
     // executes a function for any game version's struct over each array item
     template<typename Function, typename Type6, typename Type7, typename Type8>
     static auto genericForEachDo(void* ptr, int limit, Function&& func, int first = 0)
@@ -270,6 +270,48 @@ public:
             return decltype(func(reinterpret_cast<Type6*>(ptr)))(); // default-constructed return value
         }
     }
+
+    // executes a function for specific indexes of array
+    template<typename Function, typename Type6, typename Type7, typename Type8>
+    static auto genericForSpecificArrayIndexesExecute(void* ptr, Function&& func, const std::vector<int>& baseIndexes, bool sort = false, int first = 0)
+    {
+        if (MMVER == 6)
+        {
+            genericForSpecificArrayIndexesExecuteSpecialized(reinterpret_cast<Type6*>(ptr), std::forward<Function>(func), baseIndexes, sort, first);
+        }
+        else if (MMVER == 7)
+        {
+            genericForSpecificArrayIndexesExecuteSpecialized(reinterpret_cast<Type7*>(ptr), std::forward<Function>(func), baseIndexes, sort, first);
+        }
+        else if (MMVER == 8)
+        {
+            genericForSpecificArrayIndexesExecuteSpecialized(reinterpret_cast<Type8*>(ptr), std::forward<Function>(func), baseIndexes, sort, first);
+        }
+        else
+        {
+            wxFAIL;
+            return decltype(genericForSpecificArrayIndexesExecuteSpecialized(reinterpret_cast<Type6*>(ptr),
+                std::forward<Function>(func), baseIndexes, sort, first))(); // default-constructed return value
+        }
+    }
+
+    // executes a function for specific indexes of array
+    template<typename Function, typename T>
+    static auto genericForSpecificArrayIndexesExecuteSpecialized(T* ptr, Function&& func, const std::vector<int>& baseIndexes, bool sort = false, int first = 0)
+    {
+        auto actualIndexes = baseIndexes;
+        if (sort)
+        {
+            std::ranges::sort(actualIndexes);
+        }
+        for (int index : actualIndexes)
+        {
+            assert(index >= 0);
+            func(ptr + index + first);
+        }
+    }
+
+    //mmv(0x40A0C0, 0x40F788, 0x410A10)
 
     template<typename Function6, typename Function7, typename Function8, typename... Args>
     static auto versionBasedAccessorDispatch(Function6&& func6, Function7&& func7, Function8&& func8, Args&&... args)

@@ -396,6 +396,9 @@
     <ClInclude Include="dllApi.h">
       <Filter>Pliki nagłówkowe\Misc</Filter>
     </ClInclude>
+    <ClInclude Include="accessorCommonCode.h">
+      <Filter>Pliki nagłówkowe\GameStructs\Accessors</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="sources\MainWindow.cpp">
@@ -664,6 +667,9 @@
     </ClCompile>
     <ClCompile Include="LuaTests.cpp">
       <Filter>Pliki źródłowe\Misc\Lua</Filter>
+    </ClCompile>
+    <ClCompile Include="accessorCommonCode.cpp">
+      <Filter>Pliki źródłowe\GameStructs\Accessors</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

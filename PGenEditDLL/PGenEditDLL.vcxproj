@@ -19,6 +19,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="accessorCommonCode.h" />
     <ClInclude Include="AlignmentRadioBox.h" />
     <ClInclude Include="Asserter.h" />
     <ClInclude Include="AutoBackup.h" />
@@ -116,6 +117,7 @@
     <ClInclude Include="Utility.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="accessorCommonCode.cpp" />
     <ClCompile Include="AlignmentRadioBox.cpp" />
     <ClCompile Include="Asserter.cpp" />
     <ClCompile Include="AutoBackup.cpp" />
@@ -314,6 +316,7 @@
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <SupportJustMyCode>true</SupportJustMyCode>
       <CallingConvention>Cdecl</CallingConvention>
+      <ForcedIncludeFiles>%(ForcedIncludeFiles)</ForcedIncludeFiles>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>

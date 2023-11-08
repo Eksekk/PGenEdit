@@ -7,6 +7,7 @@
 #include "Enum_const.h"
 #include "GameStructAccessor.h"
 #include "AutoBackup.h"
+#include "accessorCommonCode.h"
 
 const bool MALE = true, FEMALE = false; // TODO: check
 const int PLAYER_ACTIVE = 6, PLAYER_RANDOM = 7;
@@ -640,6 +641,24 @@ void setFieldSizes_8()
 	PlayerStructAccessor::FieldSizes::name = 31;
 }
 
+
+template<typename Player>
+bool TemplatedPlayerStructAccessor<Player>::moveItemToInventoryPosition(void* ptr, int x, int y)
+{
+	return ::setItemInventoryPosition(getPlayerToAffect(), reinterpret_cast<PlayerItemType*>(ptr), INVENTORY_WIDTH_PLAYER, INVENTORY_HEIGHT_PLAYER, x, y);
+}
+
+template<typename Player>
+bool TemplatedPlayerStructAccessor<Player>::moveItemToInventoryPosition(void* ptr, InventoryPosition pos)
+{
+	return moveItemToInventoryPosition(ptr, pos.x, pos.y);
+}
+
+template<typename Player>
+InventoryPosition TemplatedPlayerStructAccessor<Player>::getItemInventoryPosition(void* ptr)
+{
+	return ::getItemInventoryPosition(getPlayerToAffect(), reinterpret_cast<PlayerItemType*>(ptr), INVENTORY_WIDTH_PLAYER, INVENTORY_HEIGHT_PLAYER);
+}
 
 template<typename Player>
 bool TemplatedPlayerStructAccessor<Player>::isBlackPotionUsed(int statId)

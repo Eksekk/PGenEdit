@@ -339,6 +339,9 @@ bool InventoryCtrl::reloadReferencedItems()
     }
     else if (const ItemRefPlayerInventory* ref = std::get_if<ItemRefPlayerInventory>(&inventoryType))
     {
+        // need to take item ptr and player/chest ptr
+        // also know which game's structs to use
+        
         // add items from player
         auto callback = [&](AnyItemStruct auto* item)
         {

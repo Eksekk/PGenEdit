@@ -554,6 +554,7 @@ void* bytecodePatch(uint32_t addr, std::string_view bytecode, std::vector<uint8_
 void* asmpatch(uint32_t addr, const std::string& code, std::vector<uint8_t>* storeAt, int size /*= 5*/, bool writeJumpBack)
 {
     std::string_view codeBytes = compileAsm(code);
+
     return bytecodePatch(addr, codeBytes, storeAt, size, writeJumpBack);
 }
 
@@ -856,7 +857,8 @@ static void fail(int extraLinesCount)
 // IMPORTANT: don't use "mov eax, dword ptr [ebx + 50]", use "mov eax, dword [ebx + 50]" or maybe (not tested) "mov eax, dword ptr [ds:ebx + 50]"
 std::string_view compileAsm(const std::string& code, uint32_t runtimeAddress)
 {
-	std::string useCode = asmPrologue + (runtimeAddress ? stringReplace(absolutePrologue, "%p", std::to_string(runtimeAddress), true) + "\n" : "") + code;
+	wxASSERT(!runtimeAddress);
+	std::string useCode = asmPrologue + stringReplace(absolutePrologue, "%p", runtimeAddress ? std::to_string(runtimeAddress) : "0x10000", true) + "\n" + code;
 	// TODO: replace ptr
     FasmAssembleReturn ret = fasm_Assemble(useCode.c_str(), fasmMemoryBlock, FASM_MEMORY_BLOCK_SIZE, 100, 0);
     switch (ret)

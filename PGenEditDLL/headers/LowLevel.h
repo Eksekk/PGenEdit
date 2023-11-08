@@ -185,7 +185,7 @@ template<std::integral T>
 T byteswap(const T& val)
 {
     T ret;
-    char* retP = (char*)&ret, * valP = (char*)&val;
+    char* retP = (char*)&ret, * valP = (const char*)&val;
     for (int i = 0; i < sizeof(T); ++i)
     {
         byte(retP + sizeof(T) - i - 1) = byte(valP + i);
@@ -331,8 +331,8 @@ auto getAddress(T&& t)
     }
 }
 
-template<typename ReturnType, typename Address, typename... Args>
-ReturnType callMemoryAddress(Address address, int registerParamsNum, Args... args) // NO rvalue reference, because it passes arguments by address
+template<typename ReturnType = void, typename Address, typename... Args>
+ReturnType callMemoryAddress(Address address, int registerParamsNum = 0, Args... args) // NO rvalue reference, because it passes arguments by address
 {
     wxASSERT_MSG(registerParamsNum >= -1 && registerParamsNum <= 2, "Invalid number of register parameters");
     // fold expression??? kinda weird syntax

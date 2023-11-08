@@ -186,6 +186,7 @@ GEN_DEF(OverlayItem);\
 GEN_DEF(PFTItem);\
 GEN_DEF(PatchOptions);\
 /* GEN_DEF(PlayerResistanceBaseBonus); */\
+GEN_DEF(Player);\
 GEN_DEF(ProgressBar);\
 GEN_DEF(SFT);\
 /* GEN_DEF(SFTGroupType); */\

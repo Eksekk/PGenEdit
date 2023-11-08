@@ -3,6 +3,7 @@
 #include "main.h"
 #include "Enum_const.h"
 #include "Utility.h" // BaseBonus
+#include "InventoryCtrl.h"
 
 extern const bool MALE, FEMALE;
 
@@ -237,6 +238,10 @@ public:
 			return ret;
 		}
 	}
+
+	[[nodiscard]] virtual InventoryPosition getItemInventoryPosition(void* ptr) = 0;
+	virtual bool moveItemToInventoryPosition(void* ptr, InventoryPosition pos) = 0;
+	virtual bool moveItemToInventoryPosition(void* ptr, int x, int y) = 0;
 };
 
 // ENTER CONFIRMS TEMPLATE FOR INTELLISENSE
@@ -265,6 +270,8 @@ class TemplatedPlayerStructAccessor : public PlayerStructAccessor
 public:
 	TemplatedPlayerStructAccessor();
 	virtual ~TemplatedPlayerStructAccessor() noexcept;
+
+	using PlayerItemType = std::decay_t<decltype(Player::items[0])>;
 
 	// C++ limitation, no static initializers for template classes (almost sure)
 	static void _initMaps();;
@@ -370,6 +377,10 @@ public:
 	virtual int getRosterIndexFromPtr(void* ptr) override;
 
 	virtual int getRosterIndexFromPartyIndex(int idx) override;
+
+    [[nodiscard]] virtual InventoryPosition getItemInventoryPosition(void* ptr) override;
+    virtual bool moveItemToInventoryPosition(void* ptr, InventoryPosition pos) override;
+    virtual bool moveItemToInventoryPosition(void* ptr, int x, int y) override;
 };
 
 template<typename Player>

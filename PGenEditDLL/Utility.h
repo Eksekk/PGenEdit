@@ -48,6 +48,12 @@ std::string stringReplace(const std::string& str, const std::string& replaceWhat
 // replaces all occurences of regex pattern, using value obtained from callback function as replacement
 std::string stringReplace(const std::string& str, const std::string& replaceWhat, const StringReplaceFuncType& func);
 
+template<size_t size>
+std::string stringFromArray(const std::array<char, size>& arr)
+{
+	return std::string(arr.data(), size);
+}
+
 // wxWidgets functions
 
 void redBlackGreenTextThreshold(wxWindow* win, int value, int threshold);

@@ -229,7 +229,7 @@ void EditorPlayerWindow::onTabChange(wxBookCtrlEvent& event)
 		newPanelName = getPanelNameByType(SPELLS_PANEL_INDEX);
         break;
 	case ITEMS_PANEL_INDEX:
-		newPanel = new EditorItemsPanel(tabs, 14, 9, ItemRefPlayerInventory{ .rosterIndex = rosterIndex }, playerIndex, rosterIndex);
+		newPanel = new EditorItemsPanel(tabs, INVENTORY_WIDTH_PLAYER, INVENTORY_HEIGHT_PLAYER, ItemRefPlayerInventory{ .rosterIndex = rosterIndex }, playerIndex, rosterIndex);
 		newPanelName = getPanelNameByType(ITEMS_PANEL_INDEX);
         break;
 	case CONDITIONS_BUFFS_PANEL_INDEX:
