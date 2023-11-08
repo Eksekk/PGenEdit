@@ -1,5 +1,4 @@
 #pragma once
-#include "pch.h"
 #include "main.h"
 #include "InventoryCtrl.h"
 #include "wx/dataview.h"

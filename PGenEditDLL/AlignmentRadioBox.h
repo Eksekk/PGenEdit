@@ -1,5 +1,4 @@
 #pragma once
-#include "pch.h"
 #include "main.h"
 #include "Enum_const.h"
 class AlignmentRadioBox : public wxRadioBox

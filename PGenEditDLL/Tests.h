@@ -1,5 +1,4 @@
 #pragma once
-#include "pch.h"
 #include "main.h"
 #include "PlayerStructAccessor.h"
 #include "Generator.h"

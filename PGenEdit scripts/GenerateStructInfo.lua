@@ -1558,7 +1558,7 @@ function printStruct(name, includeMembers, excludeMembers, indentLevel, intended
 			end
 			local prefix = {
 				"#pragma once",
-				"#include \"pch.h\"",
+				-- "#include \"pch.h\"", // commented out, because this shouldn't be in header files, compiler and IDE works properly when it's in source files only
 				"#include \"main.h\"",
 			}
 			if not intendedForPgenedit then -- all header includes are in pch.h

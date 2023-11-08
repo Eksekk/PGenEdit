@@ -1,5 +1,4 @@
 #pragma once
-#include "pch.h"
 #include "main.h"
 
 // will be used for using accessors after json data has been initialized, when it is being initialized, they don't exist yet

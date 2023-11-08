@@ -1,6 +1,5 @@
 #ifndef __MAIN_H__
 #define __MAIN_H__
-#include "pch.h"
 
 #define BUILD_DLL
 #ifdef BUILD_DLL
