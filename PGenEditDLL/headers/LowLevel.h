@@ -166,8 +166,6 @@ uint32_t findCall(Address beginAddr, Address2 findAddr = 0)
     return 0;
 }
 
-int bitwiseUnsignedToInt(uint32_t val);
-
 // get or set either byte/word/dword/qword (unsigned 1/2/4/8 byte integer)
 #define byte(addr) (*(uint8_t*)(addr))
 #define word(addr) (*(uint16_t*)(addr))
@@ -181,6 +179,19 @@ int bitwiseUnsignedToInt(uint32_t val);
 #define sqword(addr) (*(int64_t*)(addr))
 
 uint32_t relJumpCallTarget(uint32_t addr);
+
+int bitwiseUnsignedToInt(uint32_t val);
+template<std::integral T>
+T byteswap(const T& val)
+{
+    T ret;
+    char* retP = (char*)&ret, * valP = (char*)&val;
+    for (int i = 0; i < sizeof(T); ++i)
+    {
+        byte(retP + sizeof(T) - i - 1) = byte(valP + i);
+    }
+    return ret;
+}
 
 // sets a call/jump hook (5-byte instruction) at given address transferring
 // control into given func, hook size can be given or omitted (5 assumed)

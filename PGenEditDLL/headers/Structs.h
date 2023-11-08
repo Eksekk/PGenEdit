@@ -243,8 +243,6 @@ struct GameVersionStructs<8>
     GEN_STRUCT_DEFS;
 };
 
-#define GEN_DEF_CURRENT(...) GET_MACRO(__VA_ARGS__, MM6_VER_2, MM6_VER)(__VA_ARGS__)
-
 #pragma warning(pop)
 #undef GEN_DEF
 #undef GEN_DEF_1

@@ -397,7 +397,7 @@ void GameData::fillInItemImages()
         std::vector<uint8_t> red, green, blue;
     }; static_assert(std::is_aggregate_v<CacheKey>);
     std::unordered_map<CacheKey, CacheValue/*, pfr::hash<CacheKey>, pfr::equal_to<CacheKey>*/> cache;
-    LodStructAccessor::forEachLodBitmapDo([&](auto bitmapPtr)
+    LodStructAccessor::forEachLodBitmapDo([&](AnyLodBitmapStruct auto* bitmapPtr)
         {
             std::string name = stringToLower(bitmapPtr->name.data());
             int width = bitmapPtr->width, height = bitmapPtr->height;
@@ -421,7 +421,7 @@ void GameData::fillInItemImages()
             else if (bitmapPtr->palette16)
             {
                 palettePtr = (uint8_t*)bitmapPtr->palette16;
-                paletteBitWidth = 6;
+                paletteBitWidth = 5;
             }
             else
             {
@@ -442,18 +442,25 @@ void GameData::fillInItemImages()
 
                 // couuuld simply read dword from memory, but to be 100% sure no invalid memory access happens, let's use a small buffer
                 //uint8_t entry[4];
-                int entrySize = std::ceil(paletteBitWidth / 8.0 * 3);
+                int entrySize = std::ceil(paletteBitWidth * 3 / 8.0);
                 uint16_t mask = (1 << paletteBitWidth) - 1;
 
+                // 10110100 01101100
+                // r 10110, b 10001, g 10110
+                // 01101100 10110100
+                // r 01101, b 10010, g 11010
+                const int scale = std::max(8 - paletteBitWidth, 0); // scale lower ranges to one byte
                 for (int i = 0; i < 256; ++i)
                 {
                     //memcpy(entry, palettePtr + i * paletteBitWidth * 3, entrySize);
                     //uint32_t data = dword(entry);
-                    dword_t data = dword(palettePtr + i * paletteBitWidth * 3);
+                    dword_t data = dword(palettePtr + i * (int)std::ceil(paletteBitWidth * 3 / 8.0));
+                    data = byteswap(data);
                     // extract bit groups
-                    red[i] = data & mask;
-                    blue[i] = (data >> paletteBitWidth) & mask;
-                    green[i] = (data >> (paletteBitWidth * 2)) & mask;
+                    const int bitShiftFull = sizeof(data) * 8;
+                    red[i] = ((data >> (bitShiftFull - paletteBitWidth)) & mask) << scale;
+                    green[i] = ((data >> (bitShiftFull - paletteBitWidth * 2)) & mask) << scale;
+                    blue[i] = ((data >> (bitShiftFull - paletteBitWidth * 3)) & mask) << scale;
                 }
                 cache[CacheKey{palettePtr, paletteBitWidth}] = CacheValue{ red, green, blue };
             }
@@ -464,8 +471,9 @@ void GameData::fillInItemImages()
 
             // MALLOC REQUIRED, wxWidgets will take care of deletion
             uint8_t* data = (uint8_t*)malloc(width * height * 3); // RGBRGBRGBRGB... data
+            // TODO: wxWidgets supports transparency mask
             uint8_t* alpha = (uint8_t*)malloc(width * height);
-            memset(alpha, 0x255, width * height);
+            memset(alpha, 255, width * height);
             for (int y = 0; y < height; ++y)
             {
                 for (int x = 0; x < width; ++x)
@@ -473,8 +481,8 @@ void GameData::fillInItemImages()
                     dword_t off = (dword_t)data + (y * width + x) * 3;
                     dword_t pal = byte(bitmapPtr->image + x + y * width);
                     byte(off) = red[pal];
-                    byte(off + 1) = blue[pal];
-                    byte(off + 2) = red[pal];
+                    byte(off + 1) = green[pal];
+                    byte(off + 2) = blue[pal];
                     //img.SetRGB(x, y, red[pal], blue[pal], green[pal]);
 
                     if (pal == 0) // first color in palette is transparency color

@@ -104,6 +104,8 @@ public:
     static inline PartyType* const party = reinterpret_cast<PartyType*>(0);
     using MouseType = MakeType<mm6::GameMouse, mm7::GameMouse, mm8::GameMouse>;
     static inline MouseType* const mouse = reinterpret_cast<MouseType*>(0);
+    using DialogLogicType = MakeType<mm6::DialogLogic, mm7::DialogLogic, mm8::DialogLogic>;
+    static inline DialogLogicType* const dialogLogic = game->dialogLogic;
 };
 
 // utility class, contains generic functions for executing a function for any game version's struct over each array item,
@@ -175,6 +177,28 @@ public:
             ptrs[j] = ptr + i;
         }
         return func(ptrs);
+    }
+
+    template<typename Function, typename... Args>
+    static auto gameVersionFunctionDispatch(Function&& func, Args&&... args)
+    {
+        if (MMVER == 6)
+        {
+            return func(std::forward<Args>(args)...);
+        }
+        else if (MMVER == 7)
+        {
+            return func(std::forward<Args>(args)...);
+        }
+        else if (MMVER == 8)
+        {
+            return func(std::forward<Args>(args)...);
+        }
+        else
+        {
+            wxFAIL;
+            return decltype(func(std::forward<Args>(args)...))(); // default-constructed return value
+        }
     }
 
     // executes a function for single struct entry

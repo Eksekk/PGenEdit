@@ -37,20 +37,17 @@ public:
             TemplatedLodStructAccessor<mm7::Lod>::template forEachLodBitmapDo<Function>,
             TemplatedLodStructAccessor<mm8::Lod>::template forEachLodBitmapDo<Function>,
             func, type);
-//         if (MMVER == 6)
-//         {
-//             TemplatedLodStructAccessor<mm6::Lod>::forEachLodBitmapDo(func, type);
-//         }
-//         else if (MMVER == 7)
-//         {
-//             TemplatedLodStructAccessor<mm7::Lod>::forEachLodBitmapDo(func, type);
-//         }
-//         else if (MMVER == 8)
-//         {
-//             TemplatedLodStructAccessor<mm8::Lod>::forEachLodBitmapDo(func, type);
-//         }
     }
     
+    template<typename Function>
+    static auto forLodBitmapRangeDo(Function func, BitmapsLodType type)
+    {
+        StructAccessorGenericFor::versionBasedAccessorDispatch(
+            TemplatedLodStructAccessor<mm6::Lod>::template forLodBitmapRangeDo<Function>,
+            TemplatedLodStructAccessor<mm7::Lod>::template forLodBitmapRangeDo<Function>,
+            TemplatedLodStructAccessor<mm8::Lod>::template forLodBitmapRangeDo<Function>,
+            func, type);
+    }
     
     virtual int loadBitmap(const char* name, BitmapsLodType type) = 0;
 
