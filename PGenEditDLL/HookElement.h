@@ -21,13 +21,13 @@ namespace hk\
 class HookElement
 {
 protected:
-    HookElementType type;
     bool active;
     std::vector<uint8_t> restorationData;
     bool initialized; // for debugging, probably need no arg constructor, but then the element is not initialized fully
     // make sure than when enabling it is initialized
     void makeInitialized();
 public:
+    const HookElementType type;
     bool isInitialized() const;
     virtual bool usesExtraData() const;
     virtual void* getExtraData() const;
@@ -40,9 +40,9 @@ public:
     bool isActive() const;
     HookElement(HookElementType type, bool initialized);
     HookElement(const HookElement&) = delete; // TODO: implement proper copy ctor
-    HookElement(HookElement&&) = default;
+    HookElement(HookElement&& other);
     HookElement& operator=(const HookElement& elem) = delete;
-    HookElement& operator=(HookElement&& elem) = default;
+    HookElement& operator=(HookElement&& elem) = delete; // explicitly delete - const non-class-type member does it implicitly
     // each subclass needs to override the destructor, calling virtual method from base class, when derived overrides it and has already been destroyed, causes a crash
     virtual ~HookElement() = 0;
     // constructor parameters (type will be set automatically):
@@ -57,6 +57,9 @@ public:
     // bytecodehooks/bytecodepatch: (address, bytecodePtr, bytecodeSize, hookSize) OR (address, std::string/std::string_view bytecode, hookSize)
     // hookfunction/hookReplaceCall: address, func, size
     // asmproc: code OR (code, codeReplacementArgs), provide method to get generated code address (also in all other asmhooks/asmpatches)
+
+    RTTR_ENABLE()
+    RTTR_REGISTRATION_FRIEND
 };
 
 // all: description
@@ -81,6 +84,9 @@ protected:
     // constructors protected to disallow creating instances of this class
     HookElementAutohookBase(HookElementType type);
     HookElementAutohookBase(HookElementType type, uint32_t address, HookFunc func, int size = 5);
+
+    RTTR_ENABLE(HookElement)
+    RTTR_REGISTRATION_FRIEND
 };
 
 class HookElementAutohookBefore : public HookElementAutohookBase
@@ -91,6 +97,9 @@ public:
     // using rvalue reference here, because copy will be made in superclass constructor
     HookElementAutohookBefore(uint32_t address, HookFunc&& func, int size = 5);
     ~HookElementAutohookBefore();
+
+    RTTR_ENABLE(HookElementAutohookBase)
+    RTTR_REGISTRATION_FRIEND
 };
 
 makeAliases(AutohookBefore);
@@ -103,6 +112,9 @@ public:
     // using rvalue reference here, because copy will be made in superclass constructor
     HookElementAutohookAfter(uint32_t address, HookFunc&& func, int size = 5);
     ~HookElementAutohookAfter();
+
+    RTTR_ENABLE(HookElementAutohookBase)
+    RTTR_REGISTRATION_FRIEND
 };
 
 makeAliases(AutohookAfter);
@@ -130,6 +142,9 @@ public:
 
     HookElementAsmhookBytecodehookBase(HookElementType type);
     HookElementAsmhookBytecodehookBase(HookElementType type, uint32_t address, int size = 5);
+
+    RTTR_ENABLE(HookElement)
+    RTTR_REGISTRATION_FRIEND
 };
 
 class HookElementAsmhookBase : public HookElementAsmhookBytecodehookBase
@@ -144,6 +159,9 @@ public:
     HookElementAsmhookBase(HookElementType type, uint32_t address, const std::string& asmCode, int size = 5);
     HookElementAsmhookBase(HookElementType type, uint32_t address, const std::string& asmCode, const CodeReplacementArgs& args, int size = 5);
     ~HookElementAsmhookBase() = 0 {};
+
+    RTTR_ENABLE(HookElementAsmhookBytecodehookBase)
+    RTTR_REGISTRATION_FRIEND
 };
 
 class HookElementAsmhookBefore : public HookElementAsmhookBase
@@ -156,6 +174,9 @@ public:
     HookElementAsmhookBefore(uint32_t address, const std::string& asmCode, int size = 5);
     HookElementAsmhookBefore(uint32_t address, const std::string& asmCode, const CodeReplacementArgs& args, int size = 5);
     ~HookElementAsmhookBefore();
+
+    RTTR_ENABLE(HookElementAsmhookBase)
+    RTTR_REGISTRATION_FRIEND
 };
 
 makeAliases(AsmhookBefore);
@@ -170,6 +191,9 @@ public:
     HookElementAsmhookAfter(uint32_t address, const std::string& asmCode, int size = 5);
     HookElementAsmhookAfter(uint32_t address, const std::string& asmCode, const CodeReplacementArgs& args, int size = 5);
     ~HookElementAsmhookAfter();
+
+    RTTR_ENABLE(HookElementAsmhookBase)
+    RTTR_REGISTRATION_FRIEND
 };
 
 makeAliases(AsmhookAfter);
@@ -186,6 +210,9 @@ public:
     HookElementAsmpatch(uint32_t address, const std::string& asmCode, int size = 1, bool writeJumpBack = true);
     HookElementAsmpatch(uint32_t address, const std::string& asmCode, const CodeReplacementArgs& args, int size = 1, bool writeJumpBack = true);
     ~HookElementAsmpatch();
+
+    RTTR_ENABLE(HookElementAsmhookBase)
+    RTTR_REGISTRATION_FRIEND
 };
 
 makeAliases(Asmpatch);
@@ -198,6 +225,9 @@ protected:
     HookElementBytecodeHookBase(HookElementType type);
     HookElementBytecodeHookBase(HookElementType type, uint32_t address, const std::string& bytecode, int size = 5);
     ~HookElementBytecodeHookBase() = 0 {};
+
+    RTTR_ENABLE(HookElementAsmhookBytecodehookBase)
+    RTTR_REGISTRATION_FRIEND
 };
 
 class HookElementBytecodeHookBefore : public HookElementBytecodeHookBase
@@ -209,6 +239,9 @@ public:
     HookElementBytecodeHookBefore();
     HookElementBytecodeHookBefore(uint32_t address, const std::string& bytecode, int size = 5);
     ~HookElementBytecodeHookBefore();
+
+    RTTR_ENABLE(HookElementBytecodeHookBase)
+    RTTR_REGISTRATION_FRIEND
 };
 
 makeAliases(BytecodeHookBefore);
@@ -222,6 +255,9 @@ public:
     HookElementBytecodeHookAfter();
     HookElementBytecodeHookAfter(uint32_t address, const std::string& bytecode, int size = 5);
     ~HookElementBytecodeHookAfter();
+
+    RTTR_ENABLE(HookElementBytecodeHookBase)
+    RTTR_REGISTRATION_FRIEND
 };
 
 makeAliases(BytecodeHookAfter);
@@ -237,6 +273,9 @@ public:
     HookElementBytecodePatch();
     HookElementBytecodePatch(uint32_t address, const std::string& bytecode, int size = 5, bool writeJumpBack = true);
     ~HookElementBytecodePatch();
+
+    RTTR_ENABLE(HookElementBytecodeHookBase)
+    RTTR_REGISTRATION_FRIEND
 };
 
 makeAliases(BytecodePatch);
@@ -254,6 +293,9 @@ public:
     HookElementAsmproc(const std::string& asmCode);
     HookElementAsmproc(const std::string& asmCode, const CodeReplacementArgs& args);
     ~HookElementAsmproc();
+
+    RTTR_ENABLE(HookElement)
+    RTTR_REGISTRATION_FRIEND
 };
 
 makeAliases(Asmproc);
@@ -270,6 +312,9 @@ public:
     HookElementBytecodeProc();
     HookElementBytecodeProc(const std::string& bytecode);
     ~HookElementBytecodeProc();
+
+    RTTR_ENABLE(HookElement)
+    RTTR_REGISTRATION_FRIEND
 };
 
 makeAliases(BytecodeProc);
@@ -286,6 +331,9 @@ public:
     HookElementCall();
     HookElementCall(uint32_t address, HookFunc func, int size = 5);
     ~HookElementCall();
+
+    RTTR_ENABLE(HookElement)
+    RTTR_REGISTRATION_FRIEND
 };
 
 makeAliases(Call);
@@ -303,6 +351,9 @@ public:
     HookElementCallRaw(uint32_t address, void* callTarget, int size = 5);
     HookElementCallRaw(uint32_t address, uint32_t callTarget, int size = 5);
     ~HookElementCallRaw();
+
+    RTTR_ENABLE(HookElement)
+    RTTR_REGISTRATION_FRIEND
 };
 
 makeAliases(CallRaw);
@@ -320,6 +371,9 @@ public:
     HookElementJump(uint32_t address, void* jumpTarget, int size = 5);
     HookElementJump(uint32_t address, uint32_t jumpTarget, int size = 5);
     ~HookElementJump();
+
+    RTTR_ENABLE(HookElement)
+    RTTR_REGISTRATION_FRIEND
 };
 
 makeAliases(Jump);
@@ -335,6 +389,9 @@ public:
     HookElementEraseCode();
     HookElementEraseCode(uint32_t address, int size = 1); // without size argument replaces single instruction, as in MMExt
     ~HookElementEraseCode();
+
+    RTTR_ENABLE(HookElement)
+    RTTR_REGISTRATION_FRIEND
 };
 
 makeAliases(EraseCode);
@@ -355,6 +412,9 @@ public:
     HookElementPatchData(uint32_t address, const std::string& data, bool useNops = false);
     HookElementPatchData(uint32_t address, PatchDataGetBytesFunc getBytesFunc, bool useNops = false);
     ~HookElementPatchData();
+
+    RTTR_ENABLE(HookElement)
+    RTTR_REGISTRATION_FRIEND
 };
 
 makeAliases(PatchData);
@@ -371,6 +431,9 @@ protected:
 public:
     void enable(bool enable) override;
     ~HookElementCallableFunction() = 0 {};
+
+    RTTR_ENABLE(HookElement)
+    RTTR_REGISTRATION_FRIEND
 };
 
 class HookElementReplaceCall : public HookElementCallableFunction
@@ -415,6 +478,9 @@ private: // private to enforce no accidental "new" operator usage
     {
         setCallableFunctionHookFunc<ReturnType, cc, Args...>(func);
     }*/
+
+    RTTR_ENABLE(HookElementCallableFunction)
+    RTTR_REGISTRATION_FRIEND
 };
 
 makeAliases(ReplaceCall);
@@ -474,6 +540,9 @@ private: // private to enforce no accidental "new" operator usage
     {
         setCallableFunctionHookFunc<ReturnType, cc>(func);
     }*/
+
+    RTTR_ENABLE(HookElementCallableFunction)
+    RTTR_REGISTRATION_FRIEND
 };
 
 namespace hk

@@ -74,6 +74,11 @@ HookElement::HookElement(HookElementType type, bool initialized) : type(type), a
 {
 }
 
+HookElement::HookElement(HookElement&& other) : type(other.type), initialized(other.initialized),
+    active(other.active), restorationData(std::move(other.restorationData))
+{
+
+}
 // AUTOHOOK GENERIC
 
 bool HookElementAutohookBase::usesExtraData() const
@@ -785,4 +790,27 @@ HookElementHookFunction::~HookElementHookFunction()
 {
     HookElementHookFunction::enable(false);
     HookElementHookFunction::destroy();
+}
+
+RTTR_REGISTRATION
+{
+    using namespace rttr;
+registration::class_<HookElement>("HookElement")
+//.constructor<HookElementType, bool>() // abstract class
+//.constructor<HookElement&&>()
+.property_readonly("active", &HookElement::active, registration::protected_access)
+.property_readonly("initialized", &HookElement::initialized, registration::protected_access)
+.property_readonly("type", &HookElement::type)
+.property_readonly("restorationData", &HookElement::restorationData, registration::protected_access)
+.method("enable", &HookElement::enable)(default_arguments(true))
+.method("disable", &HookElement::disable)
+.method("toggle", &HookElement::toggle)
+.method("destroy", &HookElement::destroy)
+.method("getExtraData", &HookElement::getExtraData)
+.method("getRestorationData", &HookElement::getRestorationData)
+.method("getType", &HookElement::getType)
+.method("isActive", &HookElement::isActive)
+.method("isInitialized", &HookElement::isInitialized)
+.method("makeInitialized", &HookElement::makeInitialized, registration::protected_access);
+
 }
