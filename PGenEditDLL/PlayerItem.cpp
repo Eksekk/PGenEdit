@@ -100,3 +100,10 @@ PlayerItemModifierData PlayerItem::getModifierData() const
     );
     return d;
 }
+
+PlayerItem::~PlayerItem()
+{
+    delete image; // this decrements reference count
+    // using unique_ptr would require each bitmap to be distinct object (or **the same object** would be deleted multiple times
+    // [if wrappers would be deleted, then it'd be ok, since it would decrement refcount of actual data])
+}

@@ -26,7 +26,8 @@ public:
         int id;
         int number;
     };
-    std::unique_ptr<wxBitmap> image;
+    // !!! always use bitmap copy constructor to reuse the same image, only first should be created from wxImage
+    wxBitmap* image;
     // width in cells is ceil(width / 45), same for height
     int inventoryWidth, inventoryHeight;
     std::string name;
@@ -44,6 +45,7 @@ public:
 	std::vector<double> affinityByPlayerType;
 
 	PlayerItem();
+    ~PlayerItem();
 
     std::string getSkillString() const;
     std::string getStatsString() const; // weapons have "damage: 2d5+4", armor has "AC: +15" etc.

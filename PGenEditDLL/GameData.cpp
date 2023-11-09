@@ -385,6 +385,9 @@ namespace std
 
 void GameData::fillInItemImages()
 {
+    // I considered multiple times to move actual loading code into PlayerItem, but decided against it, because, to be fully decoupled,
+    // I would need to iterate over lod once to find out if bitmap was already loaded, load it if not, destroy bitmap and call Cleanup() function **for every item**
+    // this is a ton of overhead, and I think putting code here is better
     std::map<std::string, std::vector<int>> imageIdToNameMap;
     // NEED TO UNLOAD BITMAPS, otherwise crash might happen when loading any other from same lod, due to too high loaded bitmap count
     std::unordered_set<std::string> loaded; // store already-loaded bitmaps, to unload only those loaded by me
@@ -477,6 +480,7 @@ void GameData::fillInItemImages()
         else
         {
             // NEVER called - console script confirmed each palette has distinct address, I thought they might be shared
+            
             //std::tie(red, green, blue) = pfr::structure_to_tuple(itr->second);
         }
 
@@ -505,12 +509,21 @@ void GameData::fillInItemImages()
         }
         wxImage img(width, height, data, alpha);
 
+        wxBitmap* bmp = nullptr;
         for (int itemId : imageIdToNameMap[name])
         {
             PlayerItem* item = items.at(itemId).get();
             item->inventoryHeight = std::ceil(height / 45.0);
             item->inventoryWidth = std::ceil(width / 45.0);
-            item->image = std::make_unique<wxBitmap>(img);
+            if (!bmp)
+            {
+                bmp = new wxBitmap(img); // actual image-to-bitmap conversion is only performed once
+                item->image = bmp;
+            }
+            else
+            {
+                item->image = new wxBitmap(*bmp); // all subsequent images use copy constructor
+            }
         }
     }, BITMAPS_LOD_ICONS);
 
