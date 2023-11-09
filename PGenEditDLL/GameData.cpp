@@ -441,21 +441,21 @@ void GameData::fillInItemImages()
         }
         const uint8_t* palettePtr = _palettePtr;
 
-        std::vector<uint8_t> red, blue, green;
-        auto itr = cache.find(CacheKey{ _palettePtr, paletteBitWidth });
-        if (itr == cache.end())
+        uint8_t red[256], blue[256], green[256];
+        //auto itr = cache.find(CacheKey{ _palettePtr, paletteBitWidth });
+        if (true)//(itr == cache.end())
         {
             // extract palette colors
             // three vectors at index "i" contain constituent RGB colors of palette entry (max 256 entries)
             // each palette color value has "paletteBitWidth" bits to represent the value
-            red.resize(256);
-            blue.resize(256);
-            green.resize(256);
+            //red.resize(256);
+            //blue.resize(256);
+            //green.resize(256);
 
             // couuuld simply read dword from memory, but to be 100% sure no invalid memory access happens, let's use a small buffer
             //uint8_t entry[4];
-            int entrySize = std::ceil(paletteBitWidth * 3 / 8.0);
-            uint16_t mask = (1 << paletteBitWidth) - 1;
+            const int entrySize = std::ceil(paletteBitWidth * 3 / 8.0);
+            const dword_t mask = (1 << paletteBitWidth) - 1;
 
             // 10110100 01101100
             // r 10110, b 10001, g 10110
@@ -464,24 +464,20 @@ void GameData::fillInItemImages()
             const int scale = std::max(8 - paletteBitWidth, 0); // scale lower ranges to one byte
             for (int i = 0; i < 256; ++i)
             {
-                //memcpy(entry, palettePtr + i * paletteBitWidth * 3, entrySize);
                 //uint32_t data = dword(entry);
-                dword_t data = dword(palettePtr + i * (int)std::ceil(paletteBitWidth * 3 / 8.0));
+                dword_t data = dword(palettePtr + i * entrySize);
                 //data = byteswap(data);
                 // extract bit groups
-                const int bitShiftFull = sizeof(data) * 8;
                 blue[i] = (data & mask) << scale;
                 green[i] = ((data >> paletteBitWidth) & mask) << scale;
                 red[i] = ((data >> (paletteBitWidth * 2)) & mask) << scale;
-//                     red[i] = ((data >> (bitShiftFull - paletteBitWidth)) & mask) << scale;
-//                     green[i] = ((data >> (bitShiftFull - paletteBitWidth * 2)) & mask) << scale;
-//                     blue[i] = ((data >> (bitShiftFull - paletteBitWidth * 3)) & mask) << scale;
             }
-            cache[CacheKey{_palettePtr, paletteBitWidth}] = CacheValue{ red, green, blue };
+            //cache[CacheKey{_palettePtr, paletteBitWidth}] = CacheValue{ red, green, blue };
         }
         else
         {
-            std::tie(red, green, blue) = pfr::structure_to_tuple(itr->second);
+            // NEVER called - console script confirmed each palette has distinct address, I thought they might be shared
+            //std::tie(red, green, blue) = pfr::structure_to_tuple(itr->second);
         }
 
         // MALLOC REQUIRED, wxWidgets will take care of deletion
