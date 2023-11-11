@@ -379,6 +379,7 @@ bool InventoryCtrl::moveStoredItemToInventory(ItemStoreElement& item, InventoryP
     wxASSERT_MSG(std::holds_alternative<ItemRefStored>(item.location), "Expected item in storage");
     auto visitor = [&](const auto& ref) {item.location = ref; }; // needed because inventoryType doesn't have stored item ref alternative
     item.pos = findFreePositionForItem(item);
+    bool ret = false;
     if (pos.x != -1 || item.pos.x != -1)
     {
         if (pos.x != -1)
@@ -387,7 +388,7 @@ bool InventoryCtrl::moveStoredItemToInventory(ItemStoreElement& item, InventoryP
             item.pos = pos;
         }
         std::visit(visitor, inventoryType);
-        return true;
+        ret = true;
     }
 
     if (pos.isValid())
@@ -395,7 +396,7 @@ bool InventoryCtrl::moveStoredItemToInventory(ItemStoreElement& item, InventoryP
         wxASSERT(canItemBePlacedAtPosition(item, pos));
         item.pos = pos;
         std::visit(visitor, inventoryType);
-        return true;
+        ret = true;
     }
     else
     {
@@ -405,10 +406,11 @@ bool InventoryCtrl::moveStoredItemToInventory(ItemStoreElement& item, InventoryP
             wxASSERT(canItemBePlacedAtPosition(item, pos2));
             item.pos = pos2;
             std::visit(visitor, inventoryType);
-            return true;
+            ret = true;
         }
     }
-    return false;
+    if (!playerAccessor->moveItemToInventoryPosition();
+    return ret;
 }
 
 bool InventoryCtrl::moveInventoryItemToStore(ItemStoreElement& item)

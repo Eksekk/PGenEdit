@@ -639,3 +639,25 @@ function nthNext(tbl, n)
 	end
 	return key, val
 end
+
+function equippedItemIndex(slot)
+	local item = Party[Game.CurrentPlayer]:GetEquippedItem(slot)
+	if item then
+		for i, item2 in Party[Game.CurrentPlayer].Items do
+			if item == item2 then
+				print(i)
+				return
+			end
+		end
+	end
+end
+
+function itemIndexByName(name)
+	for i, item in Party[Game.CurrentPlayer].Items do
+		if item:T().Name:lower():match(name:lower()) then
+			print(i)
+			return
+		end
+	end
+end
+

@@ -3,12 +3,17 @@
 * wxChoice doesn't react to mouse clicks during testing
 
 # Misc
-* Tooltips don't show - in wxDialog they do
 * Very long loading time for editor windows
+
+# GUI
+* add item dialog is broken when inserting items dynamically in subclasses of main class
+* Tooltips don't show - in wxDialog they do
+* inventory control - handle item position
 
 # Code
 * Auto convert structure parameters in hookFunction and hookReplaceCall to their addresses
 * Json persisting methods boolean return values should indicate actual error in all cases, not empty data or error
+* Fetching item images is broken - weird colors
 
 # Low level
 * automatically store hook restore data to abstract unhooking (see hookRestoreDataMap variable)
