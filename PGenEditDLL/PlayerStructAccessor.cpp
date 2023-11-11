@@ -643,19 +643,19 @@ void setFieldSizes_8()
 
 
 template<typename Player>
-bool TemplatedPlayerStructAccessor<Player>::moveItemToInventoryPosition(void* ptr, int x, int y)
+bool TemplatedPlayerStructAccessor<Player>::moveItemToInventoryPosition(const void* ptr, int x, int y)
 {
 	return ::setItemInventoryPosition(getPlayerToAffect(), reinterpret_cast<PlayerItemType*>(ptr), INVENTORY_WIDTH_PLAYER, INVENTORY_HEIGHT_PLAYER, x, y);
 }
 
 template<typename Player>
-bool TemplatedPlayerStructAccessor<Player>::moveItemToInventoryPosition(void* ptr, InventoryPosition pos)
+bool TemplatedPlayerStructAccessor<Player>::moveItemToInventoryPosition(const void* ptr, InventoryPosition pos)
 {
 	return moveItemToInventoryPosition(ptr, pos.x, pos.y);
 }
 
 template<typename Player>
-InventoryPosition TemplatedPlayerStructAccessor<Player>::getItemInventoryPosition(void* ptr)
+InventoryPosition TemplatedPlayerStructAccessor<Player>::getItemInventoryPosition(const void* ptr)
 {
 	return ::getItemInventoryPosition(getPlayerToAffect(), reinterpret_cast<PlayerItemType*>(ptr), INVENTORY_WIDTH_PLAYER, INVENTORY_HEIGHT_PLAYER);
 }

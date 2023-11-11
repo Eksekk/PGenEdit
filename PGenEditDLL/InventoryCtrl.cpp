@@ -325,15 +325,23 @@ bool InventoryCtrl::reloadReferencedItems()
     if (const ItemRefMapChest* ref = std::get_if<ItemRefMapChest>(&inventoryType))
     {
         // add items from chest
+        int arrayIndex = 0;
         auto callback = [&](AnyItemStruct auto* itemPtr)
         {
             mm7::Item convertedItem = itemAccessor->forItem(itemPtr)->convertToMM7Item();
             if (convertedItem.number != 0)
             {
-                auto elem = std::make_unique<ItemStoreElement>(convertedItem, ItemRefStored{}, ItemRefMapChest(*ref), InventoryPosition{ -1, -1 });
+                ItemRefMapChest origin(*ref);
+                origin.itemArrayIndex = arrayIndex;
+                // for make_unique need to explicitly specify InventoryPosition type, since it doesn't know that it's not an initializer list
+                auto elem = std::make_unique<ItemStoreElement>(convertedItem, origin, ItemRefStored{}, InventoryPosition{ -1, -1 });
+                // try at old position first
+                auto pos = playerAccessor->getItemInventoryPosition(itemPtr);
+                // this needs to return true, each item should fit, since stored items are not in inventory
                 moveStoredItemToInventory(*elem);
                 nextElements.push_back(std::move(elem));
             }
+            ++arrayIndex;
         };
         mapAccessor->forMapChestIndexItemsDo(ref->chestId, callback);
     }
@@ -343,16 +351,20 @@ bool InventoryCtrl::reloadReferencedItems()
         // also know which game's structs to use
         
         // add items from player
+        int arrayIndex = 0;
         auto callback = [&](AnyItemStruct auto* item)
         {
             mm7::Item convertedItem = itemAccessor->forItem(item)->convertToMM7Item();
             if (convertedItem.number != 0)
             {
-                // for make_unique need to explicitly specify InventoryPosition type, since it doesn't know that it's not an initializer list
-                auto elem = std::make_unique<ItemStoreElement>(convertedItem, ItemRefPlayerInventory(*ref), ItemRefStored{}, InventoryPosition{ -1, -1 });
-                moveStoredItemToInventory(*elem);
+                ItemRefPlayerInventory origin(*ref);
+                origin.itemArrayIndex = arrayIndex;
+                auto elem = std::make_unique<ItemStoreElement>(convertedItem, origin, ItemRefStored{}, InventoryPosition{ -1, -1 });
+                auto pos = playerAccessor->getItemInventoryPosition(item);
+                wxASSERT(moveStoredItemToInventory(*elem, pos));
                 nextElements.push_back(std::move(elem));
             }
+            ++arrayIndex;
         };
         void* items = playerAccessor->forPlayerRosterId(ref->rosterIndex)->getItemsPtr();
         int count = playerAccessor->getItemsSize();
@@ -554,7 +566,7 @@ InventoryCtrl::~InventoryCtrl()
     saveGameData.saveInventoryControl(*this);
 }
 
-ItemStoreElement::ItemStoreElement() : item{ 0 }, pos{ -1, -1 }, location{ ItemRefPlayerInventory{} }
+ItemStoreElement::ItemStoreElement() : item{ 0 }, pos{ -1, -1 }, location{ ItemRefStored{} }
 {
 
 }
@@ -662,6 +674,7 @@ bool ItemRefMapChest::persist(Json& json) const
         {"type", ITEM_LOC_CHEST},
         {"mapName", mapLower},
         {"chestId", chestId},
+        {"itemArrayIndex", itemArrayIndex}
     };
     return true;
 }
@@ -670,6 +683,7 @@ bool ItemRefMapChest::unpersist(const Json& json)
 {
     mapName = json["mapName"];
     chestId = json["chestId"];
+    itemArrayIndex = json["itemArrayIndex"];
     return true;
 }
 
@@ -678,12 +692,14 @@ bool ItemRefPlayerInventory::persist(Json& json) const
     jsonEnsureIsObject(json);
     json["type"] = ITEM_LOC_PLAYER;
     json["rosterIndex"] = rosterIndex;
+    json["itemArrayIndex"] = itemArrayIndex;
     return true;
 }
 
 bool ItemRefPlayerInventory::unpersist(const Json& json)
 {
     rosterIndex = json["rosterIndex"];
+    itemArrayIndex = json["itemArrayIndex"];
     return true;
 }
 
@@ -701,12 +717,12 @@ bool ItemRefStored::unpersist(const Json& json)
 
 bool operator==(const ItemRefMapChest& lhs, const ItemRefMapChest& rhs)
 {
-    return lhs.chestId == rhs.chestId && stringToLower(lhs.mapName) == stringToLower(rhs.mapName);
+    return lhs.chestId == rhs.chestId && stringToLower(lhs.mapName) == stringToLower(rhs.mapName) && lhs.itemArrayIndex == rhs.itemArrayIndex;
 }
 
 bool operator==(const ItemRefPlayerInventory& lhs, const ItemRefPlayerInventory& rhs)
 {
-    return lhs.rosterIndex == rhs.rosterIndex;
+    return lhs.rosterIndex == rhs.rosterIndex && lhs.itemArrayIndex == rhs.itemArrayIndex;
 }
 
 bool operator==(const ItemRefStored& lhs, const ItemRefStored& rhs)

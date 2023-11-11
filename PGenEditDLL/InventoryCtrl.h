@@ -9,6 +9,7 @@ struct ItemRefMapChest
 {
     std::string mapName;
     int chestId;
+    int itemArrayIndex;
 
     bool persist(Json& json) const;
     bool unpersist(const Json& json);
@@ -17,6 +18,7 @@ struct ItemRefMapChest
 struct ItemRefPlayerInventory
 {
     int rosterIndex;
+    int itemArrayIndex;
 
     bool persist(Json& json) const;
     bool unpersist(const Json& json);
@@ -56,8 +58,8 @@ struct ItemStoreElement
 {
     // TODO: automatically calculate cell width
 
-    ItemLocationType location; // first is when item is only stored (doesn't exist in any inventory)
-    ItemLocationType origin; // stores whether item was taken from player's inventory, chest or added artificially (to not duplicate inventory items when reloading)
+    ItemLocationType location; // first is when item is only stored (doesn't exist in any inventory), second and third mean it's inside control's inventory
+    ItemLocationType origin; // stores whether item was taken from player's inventory, chest or added artificially (to not duplicate inventory items when reloading); also stores array index when applicable
 
     bool persistItem(Json& json) const;
     bool unpersistItem(const Json& json);

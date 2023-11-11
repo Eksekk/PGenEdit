@@ -11,7 +11,7 @@ template<typename EntityTypeT, typename ItemTypeT>
 // while this deals in pointers and various templated types
 template<typename EntityTypeT, typename ItemTypeT>
     requires EntityItemTypesMatch<EntityTypeT, ItemTypeT>
-InventoryPosition getItemInventoryPosition(EntityTypeT* entity, ItemTypeT* item, int inventoryWidth, int inventoryHeight)
+InventoryPosition getItemInventoryPosition(const EntityTypeT* entity, const ItemTypeT* item, int inventoryWidth, int inventoryHeight)
 {
     // (Items index) for main item cell,  -(1 + main Inventory cell index) for other cells
     double itemsArrayIndexDbl = ((dword_t)item - (dword_t)&entity->items) / (double)sizeof(ItemTypeT);
@@ -43,7 +43,7 @@ InventoryPosition getItemInventoryPosition(EntityTypeT* entity, ItemTypeT* item,
 
 template<typename EntityTypeT, typename ItemTypeT>
     requires EntityItemTypesMatch<EntityTypeT, ItemTypeT>
-bool canItemBePlacedAtInventoryPosition(EntityTypeT* entity, ItemTypeT* item, int inventoryWidth, int inventoryHeight, int newX, int newY)
+bool canItemBePlacedAtInventoryPosition(const EntityTypeT* entity, const ItemTypeT* item, int inventoryWidth, int inventoryHeight, int newX, int newY)
 {
     auto& playerItem = GameData::items.at(item->number);
     wxASSERT_MSG(newX + playerItem->inventoryWidth < inventoryWidth && newY + playerItem->inventoryHeight < inventoryHeight,
@@ -76,7 +76,7 @@ bool canItemBePlacedAtInventoryPosition(EntityTypeT* entity, ItemTypeT* item, in
 
 template<typename EntityTypeT, typename ItemTypeT>
     requires EntityItemTypesMatch<EntityTypeT, ItemTypeT>
-bool setItemInventoryPosition(EntityTypeT* entity, ItemTypeT* item, int inventoryWidth, int inventoryHeight, int newX, int newY)
+bool setItemInventoryPosition(EntityTypeT* entity, const ItemTypeT* item, int inventoryWidth, int inventoryHeight, int newX, int newY)
 {
     // (Items index) for main item cell,  -(1 + main Inventory cell index) for other cells
     double dblIndex = ((dword_t)item - (dword_t)&entity->items) / (double)sizeof(ItemTypeT);

@@ -238,9 +238,9 @@ public:
 		}
 	}
 
-	[[nodiscard]] virtual InventoryPosition getItemInventoryPosition(void* ptr) = 0;
-	virtual bool moveItemToInventoryPosition(void* ptr, InventoryPosition pos) = 0;
-	virtual bool moveItemToInventoryPosition(void* ptr, int x, int y) = 0;
+	[[nodiscard]] virtual InventoryPosition getItemInventoryPosition(const void* ptr) = 0;
+	virtual bool moveItemToInventoryPosition(const void* ptr, InventoryPosition pos) = 0;
+	virtual bool moveItemToInventoryPosition(const void* ptr, int x, int y) = 0;
 };
 
 // ENTER CONFIRMS TEMPLATE FOR INTELLISENSE
@@ -377,9 +377,9 @@ public:
 
 	virtual int getRosterIndexFromPartyIndex(int idx) override;
 
-    [[nodiscard]] virtual InventoryPosition getItemInventoryPosition(void* ptr) override;
-    virtual bool moveItemToInventoryPosition(void* ptr, InventoryPosition pos) override;
-    virtual bool moveItemToInventoryPosition(void* ptr, int x, int y) override;
+    [[nodiscard]] virtual InventoryPosition getItemInventoryPosition(const void* ptr) override;
+    virtual bool moveItemToInventoryPosition(const void* ptr, InventoryPosition pos) override;
+    virtual bool moveItemToInventoryPosition(const void* ptr, int x, int y) override;
 };
 
 template<typename Player>
