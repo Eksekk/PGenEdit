@@ -3,130 +3,163 @@
 #include "InventoryCtrl.h"
 #include "GameData.h"
 
-template<typename EntityTypeT, typename ItemTypeT>
+namespace accessorDetail
+{
+    template<typename EntityTypeT, typename ItemTypeT>
     concept EntityItemTypesMatch = (AnyPlayerStruct<EntityTypeT> || AnyMapChestStruct<EntityTypeT>) && AnyItemStruct<ItemTypeT>
-&& (GameSpecificStructs<EntityTypeT>::gameVersion == GameSpecificStructs<ItemTypeT>::gameVersion);
+        && (GameSpecificStructs<EntityTypeT>::gameVersion == GameSpecificStructs<ItemTypeT>::gameVersion);
 
-// this doesn't belong to inventoryControl, because the inventory control uses identical wrapper classes for items,
-// while this deals in pointers and various templated types
-template<typename EntityTypeT, typename ItemTypeT>
-    requires EntityItemTypesMatch<EntityTypeT, ItemTypeT>
-InventoryPosition getItemInventoryPosition(const EntityTypeT* entity, const ItemTypeT* item, int inventoryWidth, int inventoryHeight)
-{
-    // (Items index) for main item cell,  -(1 + main Inventory cell index) for other cells
-    double itemsArrayIndexDbl = ((dword_t)item - (dword_t)&entity->items) / (double)sizeof(ItemTypeT);
-    size_t itemsArrayIndex = (dword_t)itemsArrayIndexDbl;
-    wxASSERT_MSG(itemsArrayIndexDbl == itemsArrayIndex,
-        wxString::Format("Got invalid index (%.3f) for item at 0x%X (entity types: '%s', '%s'",
-            itemsArrayIndexDbl, (dword_t)item, typeid(EntityTypeT).name(), typeid(ItemTypeT).name()
-        )
-    );
-    auto& playerItem = GameData::items.at(item->number);
-    int i = 0;
-    for (const auto& whatCellContains : entity->inventory)
+    std::stringstream ss;
+    void printInventory(int itemSize, const void* p, int width, int height)
     {
-        if (whatCellContains == itemsArrayIndex)
+        ss.clear();
+        char ch = ss.fill();
+        ss.fill(' ');
+        for (int y = 0; y < height; ++y)
         {
-            int x = i % inventoryWidth;
-            int y = i / inventoryWidth;
-            wxASSERT_MSG(x + playerItem->inventoryWidth < inventoryWidth && y + playerItem->inventoryHeight < inventoryHeight,
-                wxString::Format("Found invalid item position in inventory (x: %d, y: %d) - inventory size is x: %d, y: %d, item size (width: %d, height: %d)",
-                    x, y, inventoryWidth, inventoryHeight, playerItem->inventoryWidth, playerItem->inventoryHeight
-                )
-            );
-            return InventoryPosition{ x, y };
-        }
-        ++i;
-    }
-    return InventoryPosition::invalid();
-}
-
-template<typename EntityTypeT, typename ItemTypeT>
-    requires EntityItemTypesMatch<EntityTypeT, ItemTypeT>
-bool canItemBePlacedAtInventoryPosition(const EntityTypeT* entity, const ItemTypeT* item, int inventoryWidth, int inventoryHeight, int newX, int newY)
-{
-    auto& playerItem = GameData::items.at(item->number);
-    wxASSERT_MSG(newX + playerItem->inventoryWidth < inventoryWidth && newY + playerItem->inventoryHeight < inventoryHeight,
-        wxString::Format("Cannot place item at the requested inventory position (x: %d, y: %d), because item size at that spot exceeds inventory size"
-            "(width: %d, height: %d), item dimensions are (width: %d, height: %d)",
-            newX, newY, inventoryWidth, inventoryHeight, playerItem->inventoryWidth, playerItem->inventoryHeight
-        )
-    );
-    // check if all destination slots are free
-    for (int yAdd = 0; yAdd < playerItem->inventoryHeight; ++yAdd)
-    {
-        for (int xAdd = 0; xAdd < playerItem->inventoryWidth; ++xAdd)
-        {
-            int x = newX + xAdd, y = newY + yAdd;
-            int inventoryIndex = y * inventoryWidth + x;
-            auto& whatCellContains = entity->inventory[inventoryIndex];
-            if (whatCellContains != 0)
+            for (int x = 0; x < width; ++x)
             {
-                int itemIndex = whatCellContains > 0 ? whatCellContains : entity->inventory[-(whatCellContains + 1)];
-                wxFAIL_MSG(wxString::Format(
-                    "Inventory cell (x: %d, y: %d) is occupied by another item (index in 'Items' array: %d)",
-                    x, y, itemIndex
-                ));
-                return false;
+                int add = y * width + x;
+                // ternary conditional operands must have same type
+                std::string str = itemSize == 2 ? std::to_string(*((sword_t*)p + add)) : std::to_string(*((sdword_t*)p + add));
+                ss << std::setw(5) << str;
             }
+            ss << "\n";
+        }
+        ss.fill(ch);
+        if (IsDebuggerPresent())
+        {
+            OutputDebugStringA(ss.str().data());
+        }
+        else
+        {
+            std::cout << ss.str();
         }
     }
-    return true;
-}
-
-template<typename EntityTypeT, typename ItemTypeT>
-    requires EntityItemTypesMatch<EntityTypeT, ItemTypeT>
-bool setItemInventoryPosition(EntityTypeT* entity, const ItemTypeT* item, int inventoryWidth, int inventoryHeight, int newX, int newY)
-{
-    // (Items index) for main item cell,  -(1 + main Inventory cell index) for other cells
-    double dblIndex = ((dword_t)item - (dword_t)&entity->items) / (double)sizeof(ItemTypeT);
-    size_t itemsArrayIndex = (dword_t)dblIndex;
-    wxASSERT_MSG(dblIndex == itemsArrayIndex,
-        wxString::Format("Got invalid index (%.3f) for item at 0x%X (entity types: '%s', '%s'",
-            dblIndex, (dword_t)item, typeid(EntityTypeT).name(), typeid(ItemTypeT).name()
-        )
-    );
-    // check if item at destination slot wouldn't cross inventory bounds
-    auto& playerItem = GameData::items.at(item->number);
-    wxASSERT_MSG(newX + playerItem->inventoryWidth < inventoryWidth && newY + playerItem->inventoryHeight < inventoryHeight,
-        wxString::Format("Cannot place item at the requested inventory position (x: %d, y: %d), because item size at that spot exceeds inventory size"
-            "(itemSizeHorizontal: %d, height: %d), item dimensions are (itemSizeHorizontal: %d, height: %d)",
-            newX, newY, inventoryWidth, inventoryHeight, playerItem->inventoryWidth, playerItem->inventoryHeight
-        )
-    );
-    if (!canItemBePlacedAtInventoryPosition(entity, item, inventoryWidth, inventoryHeight, newX, newY))
+    // this doesn't belong to inventoryControl, because the inventory control uses identical wrapper classes for items,
+    // while this deals in pointers and various templated types
+    template<typename EntityTypeT, typename ItemTypeT>
+        requires EntityItemTypesMatch<EntityTypeT, ItemTypeT>
+    InventoryPosition getItemInventoryPosition(const EntityTypeT* entity, const ItemTypeT* item, int inventoryWidth, int inventoryHeight)
     {
-        return false;
-    }
-    // move item
-    int currentInventoryCellIndex = 0;
-    for (auto& whatCellContains : entity->inventory)
-    {
-        if (whatCellContains == itemsArrayIndex) // found main Inventory[] cell of item
+        // (Items index) for main item cell,  -(1 + main Inventory cell index) for other cells
+        double itemsArrayIndexDbl = ((dword_t)item - (dword_t)&entity->items) / (double)sizeof(ItemTypeT);
+        size_t itemsArrayIndex = (dword_t)itemsArrayIndexDbl;
+        wxASSERT_MSG(itemsArrayIndexDbl == itemsArrayIndex,
+            wxString::Format("Got invalid index (%.3f) for item at 0x%X (entity types: '%s', '%s'",
+                itemsArrayIndexDbl, (dword_t)item, typeid(EntityTypeT).name(), typeid(ItemTypeT).name()
+            )
+        );
+        ++itemsArrayIndex; // 0-based to 1-based
+        auto& playerItem = GameData::items.at(item->number);
+        int i = 0;
+        for (const auto& whatCellContains : entity->inventory)
         {
-            // since we're going left-right and top-bottom, first cell with item will always be top-left
-            int itemSizeHorizontal = playerItem->inventoryWidth, itemSizeVertical = playerItem->inventoryHeight;
-            int oldX = currentInventoryCellIndex % inventoryWidth, oldY = currentInventoryCellIndex / inventoryWidth;
-            entity->inventory[currentInventoryCellIndex] = 0; // clear first cell of old position
-            int inventoryArrayIndexToUse = newY * inventoryWidth + newX;
-            entity->inventory[inventoryArrayIndexToUse] = itemsArrayIndex; // set first cell (Items[] index) of new position
-            for (int yOffset = 0; yOffset < itemSizeVertical; ++yOffset)
+            if (whatCellContains == itemsArrayIndex)
             {
-                for (int xOffset = 0; xOffset < itemSizeHorizontal; ++xOffset)
+                int x = i % inventoryWidth;
+                int y = i / inventoryWidth;
+                wxASSERT_MSG(x + playerItem->inventoryWidth <= inventoryWidth && y + playerItem->inventoryHeight <= inventoryHeight,
+                    wxString::Format("Found invalid item position in inventory (x: %d, y: %d) - inventory size is x: %d, y: %d, item size (width: %d, height: %d)",
+                        x, y, inventoryWidth, inventoryHeight, playerItem->inventoryWidth, playerItem->inventoryHeight
+                    )
+                );
+                return InventoryPosition{ x, y };
+            }
+            ++i;
+        }
+        return InventoryPosition::invalid();
+    }
+
+    template<typename EntityTypeT, typename ItemTypeT>
+        requires EntityItemTypesMatch<EntityTypeT, ItemTypeT>
+    bool canItemBePlacedAtInventoryPosition(const EntityTypeT* entity, const ItemTypeT* item, int inventoryWidth, int inventoryHeight, int newX, int newY)
+    {
+        auto& playerItem = GameData::items.at(item->number);
+        wxASSERT_MSG(newX + playerItem->inventoryWidth <= inventoryWidth && newY + playerItem->inventoryHeight <= inventoryHeight,
+            wxString::Format("Invalid potential item position (x: %d, y: %d), because item size at that spot exceeds inventory size"
+                "(width: %d, height: %d), item dimensions are (width: %d, height: %d)",
+                newX, newY, inventoryWidth, inventoryHeight, playerItem->inventoryWidth, playerItem->inventoryHeight
+            )
+        );
+        // check if all destination slots are free
+        for (int yAdd = 0; yAdd < playerItem->inventoryHeight; ++yAdd)
+        {
+            for (int xAdd = 0; xAdd < playerItem->inventoryWidth; ++xAdd)
+            {
+                int x = newX + xAdd, y = newY + yAdd;
+                int inventoryIndex = y * inventoryWidth + x;
+                auto& whatCellContains = entity->inventory[inventoryIndex];
+                if (whatCellContains != 0)
                 {
-                    if (!xOffset && !yOffset)
-                    {
-                        continue; // first cell
-                    }
-                    int currentOldX = oldX + xOffset, currentOldY = oldY + yOffset;
-                    int currentNewX = newX + xOffset, currentNewY = newY + yOffset;
-                    entity->inventory[currentOldX + currentOldY * inventoryWidth] = 0; // clear old cell
-                    entity->inventory[currentNewX + currentNewY * inventoryWidth] = -(inventoryArrayIndexToUse + 1); // set new cell (uses Inventory[] index)
+                    int itemIndex = whatCellContains > 0 ? whatCellContains : entity->inventory[-(whatCellContains + 1)];
+                    wxFAIL_MSG(wxString::Format(
+                        "Inventory cell (x: %d, y: %d) is occupied by another item (index in 'Items' array: %d)",
+                        x, y, itemIndex
+                    ));
+                    return false;
                 }
             }
-            return true;
         }
-        ++currentInventoryCellIndex;
+        return true;
     }
-    return false;
-}
+
+    template<typename EntityTypeT, typename ItemTypeT>
+        requires EntityItemTypesMatch<EntityTypeT, ItemTypeT>
+    bool setItemInventoryPosition(EntityTypeT* entity, const ItemTypeT* item, int inventoryWidth, int inventoryHeight, int newX, int newY)
+    {
+        // (Items index) for main item cell,  -(1 + main Inventory cell index) for other cells
+        double dblIndex = ((dword_t)item - (dword_t)&entity->items) / (double)sizeof(ItemTypeT);
+        size_t itemsArrayIndex = (dword_t)dblIndex;
+        wxASSERT_MSG(dblIndex == itemsArrayIndex,
+            wxString::Format("Got invalid index (%.3f) for item at 0x%X (entity types: '%s', '%s'",
+                dblIndex, (dword_t)item, typeid(EntityTypeT).name(), typeid(ItemTypeT).name()
+            )
+        );
+        ++itemsArrayIndex; // 0-based to 1-based
+        // check if item at destination slot wouldn't cross inventory bounds
+        auto& playerItem = GameData::items.at(item->number);
+        wxASSERT_MSG(newX + playerItem->inventoryWidth <= inventoryWidth && newY + playerItem->inventoryHeight <= inventoryHeight,
+            wxString::Format("Cannot place item at the requested inventory position (x: %d, y: %d), because item size at that spot exceeds inventory size"
+                "(itemSizeHorizontal: %d, height: %d), item dimensions are (itemSizeHorizontal: %d, height: %d)",
+                newX, newY, inventoryWidth, inventoryHeight, playerItem->inventoryWidth, playerItem->inventoryHeight
+            )
+        );
+        if (!canItemBePlacedAtInventoryPosition(entity, item, inventoryWidth, inventoryHeight, newX, newY))
+        {
+            return false;
+        }
+        // move item
+        int currentInventoryCellIndex = 0;
+        for (auto& whatCellContains : entity->inventory)
+        {
+            if (whatCellContains == itemsArrayIndex) // found main Inventory[] cell of item
+            {
+                // since we're going left-right and top-bottom, first cell with item will always be top-left
+                int itemSizeHorizontal = playerItem->inventoryWidth, itemSizeVertical = playerItem->inventoryHeight;
+                int oldX = currentInventoryCellIndex % inventoryWidth, oldY = currentInventoryCellIndex / inventoryWidth;
+                entity->inventory[currentInventoryCellIndex] = 0; // clear first cell of old position
+                int inventoryArrayIndexToUse = newY * inventoryWidth + newX;
+                entity->inventory[inventoryArrayIndexToUse] = itemsArrayIndex; // set first cell (Items[] index) of new position
+                for (int yOffset = 0; yOffset < itemSizeVertical; ++yOffset)
+                {
+                    for (int xOffset = 0; xOffset < itemSizeHorizontal; ++xOffset)
+                    {
+                        if (!xOffset && !yOffset)
+                        {
+                            continue; // first cell
+                        }
+                        int currentOldX = oldX + xOffset, currentOldY = oldY + yOffset;
+                        int currentNewX = newX + xOffset, currentNewY = newY + yOffset;
+                        entity->inventory[currentOldX + currentOldY * inventoryWidth] = 0; // clear old cell
+                        entity->inventory[currentNewX + currentNewY * inventoryWidth] = -(inventoryArrayIndexToUse + 1); // set new cell (uses Inventory[] index)
+                    }
+                }
+                return true;
+            }
+            ++currentInventoryCellIndex;
+        }
+        return false;
+    }
+
+} // namespace accessorDetail

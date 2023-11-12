@@ -78,7 +78,7 @@ struct ItemStoreElement
     // exact equality
     friend bool operator==(const ItemStoreElement& a, const ItemStoreElement& b);
     ItemStoreElement();
-    ItemStoreElement(const mm7::Item& item, const ItemLocationType& origin = ItemRefStored{}, const ItemLocationType& location = ItemRefStored{}, InventoryPosition pos = { -1, -1 });
+    ItemStoreElement(const mm7::Item& item, const ItemLocationType& origin = ItemRefStored{}, const ItemLocationType& location = ItemRefStored{}, InventoryPosition pos = InventoryPosition::invalid());
 private:
     mm7::Item item; // mm7 item, because it has all required fields
     InventoryPosition pos;

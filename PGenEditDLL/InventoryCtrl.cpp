@@ -338,7 +338,7 @@ bool InventoryCtrl::reloadReferencedItems()
                 // try at old position first
                 auto pos = playerAccessor->getItemInventoryPosition(itemPtr);
                 // this needs to return true, each item should fit, since stored items are not in inventory
-                moveStoredItemToInventory(*elem);
+                moveStoredItemToInventory(*elem, pos);
                 nextElements.push_back(std::move(elem));
             }
             ++arrayIndex;
@@ -421,7 +421,8 @@ bool InventoryCtrl::moveStoredItemToInventory(ItemStoreElement& item, InventoryP
             ret = true;
         }
     }
-    if (!playerAccessor->moveItemToInventoryPosition();
+    // move only when items panel is destroyed
+    //if (!playerAccessor->moveItemToInventoryPosition();
     return ret;
 }
 
