@@ -391,7 +391,7 @@ void GameData::fillInItemImages()
     std::map<std::string, std::vector<int>> imageIdToNameMap;
     // NEED TO UNLOAD BITMAPS, otherwise crash might happen when loading any other from same lod, due to too high loaded bitmap count
     std::unordered_set<std::string> loaded; // store already-loaded bitmaps, to unload only those loaded by me
-    LodStructAccessor::forEachLodBitmapDo([&](const AnyLodBitmapStruct auto* bitmapPtr)
+    LodStructAccessor::forEachLodBitmapDo([&](const AnyLodBitmapStruct auto* bitmapPtr, int i)
         {
             loaded.insert(stringToLower(stringFromArray(bitmapPtr->name)));
         }, BITMAPS_LOD_ICONS);
@@ -443,7 +443,7 @@ void GameData::fillInItemImages()
             assert(false);
         }
         const uint8_t* palettePtr = _palettePtr;
-
+        // dump(Game.IconsLod.Bitmaps[Game.IconsLod:LoadBitmap"item001"])
         uint8_t red[256], blue[256], green[256];
         //auto itr = cache.find(CacheKey{ _palettePtr, paletteBitWidth });
         if (true)//(itr == cache.end())
@@ -472,8 +472,8 @@ void GameData::fillInItemImages()
                 //data = byteswap(data);
                 // extract bit groups
                 blue[i] = (data & mask) << scale;
-                green[i] = ((data >> paletteBitWidth) & mask) << scale;
-                red[i] = ((data >> (paletteBitWidth * 2)) & mask) << scale;
+                red[i] = ((data >> paletteBitWidth) & mask) << scale;
+                green[i] = ((data >> (paletteBitWidth * 2)) & mask) << scale;
             }
             //cache[CacheKey{_palettePtr, paletteBitWidth}] = CacheValue{ red, green, blue };
         }
@@ -538,6 +538,7 @@ bool GameData::processItemDataJson(const char* str)
 {
     try
     {
+        // this is post init, because it requires filled in skill information, and I don't want to depend on loading order
         addPostInitCallback([] {
             int itemIndex = 0;
             itemAccessor->forEachItemTxtDo([&](const AnyItemsTxtItemStruct auto* entry) -> void

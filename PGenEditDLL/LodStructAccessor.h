@@ -105,7 +105,18 @@ public:
         LodBitmap* bmp = reinterpret_cast<LodBitmap*>(lod->bitmaps.data());
         for (size_t i = 0; i < lod->bitmaps_size; ++i)
         {
-            func(bmp + i);
+            if constexpr (CalledWithPointerOnly<Function, BitmapsLod>)
+            {
+                func(bmp + i);
+            }
+            else if constexpr (CalledWithPointerAndIndex<Function, BitmapsLod>)
+            {
+                func(bmp + i, i);
+            }
+            else
+            {
+                wxFAIL;
+            }
         }
     }
 

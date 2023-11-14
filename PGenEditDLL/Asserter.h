@@ -20,6 +20,7 @@ public:
 	void flush();
 
 	Asserter(const std::string& category);
+	~Asserter();
 
 	Asserter(const Asserter&) = delete;
 	Asserter(Asserter&&) = delete;

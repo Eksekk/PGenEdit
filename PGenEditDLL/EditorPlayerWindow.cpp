@@ -82,7 +82,7 @@ EditorPlayerWindow::EditorPlayerWindow(wxWindow* parent, int playerIndex, int ro
 	mainPanel->SetSizer(mainSizer);
 
 	tabs = new NotebookReplaceableTabs(mainPanel, wxID_ANY);
-	static const wxSize tabsImageSize = wxSize(50, 30);
+	static const wxSize tabsImageSize(50, 30);
     wxImageList* tabsImages = new wxImageList(tabsImageSize.GetWidth(), tabsImageSize.GetHeight());
     tabs->AssignImageList(tabsImages);
 	// create placeholders, because combined panels hold too many controls and take too much time to create
@@ -94,6 +94,9 @@ EditorPlayerWindow::EditorPlayerWindow(wxWindow* parent, int playerIndex, int ro
 
 	mainSizer->Add(tabs, 1, wxEXPAND | wxALL, 5);
 	tabs->Bind(wxEVT_BOOKCTRL_PAGE_CHANGED, &EditorPlayerWindow::onTabChange, this);
+	
+	// this actually generates page changing events, contrary to header comment (as of 3.2.1)
+	tabs->SetSelection(ITEMS_PANEL_INDEX);
 
 	mainPanel->SetSizer(mainSizer);
 	mainPanel->Layout();

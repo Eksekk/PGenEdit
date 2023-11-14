@@ -22,3 +22,8 @@ That way we don't need to deal with item index while ingame, and during one edit
 - control should highlight the item in inventory when choosing item row in item table
 - optionally (checkbox?), control should focus and highlight table row corresponding to mouseover item in the control
 - should have game-specific backgrounds and look in the control
+
+# Quest bit / award bit switcher panel design
+- class and race promotion quests should be prioritized, grouped (maybe optionally [checkbox]) and done in a more robust way (like, add required item to a chest if already taken, reset mapvar in clanker's lab, respawn already killed monster etc.)
+- multiple qbit trees (switchable with radio buttons) - show those that affect only: promotions, certain map, main questline, side quests etc.
+- coloring of entries based on something?

@@ -84,6 +84,18 @@ public:
     }
 };
 
+template<typename Function, typename T>
+concept CalledWithPointerOnly = requires (T * t)
+{
+    (void)std::declval<Function>()(t);
+};
+
+template<typename Function, typename T>
+concept CalledWithPointerAndIndex = requires (T * t)
+{
+    (void)std::declval<Function>()(t, (int)1);
+};
+
 // base type for all struct accessors, contains some predefined game-specific struct pointers
 template<typename MainTypeActual, typename MainType6, typename MainType7, typename MainType8>
 class StructAccessor
@@ -163,7 +175,18 @@ protected:
     {
         for (int i = first; i < limit; ++i)
         {
-            func(ptr + i);
+            if constexpr (CalledWithPointerOnly<Function, T>)
+            {
+                func(ptr + i);
+            }
+            else if constexpr (CalledWithPointerAndIndex<Function, T>)
+            {
+                func(ptr + i, i);
+            }
+            else
+            {
+                wxFAIL;
+            }
         }
     }
 
@@ -296,6 +319,7 @@ protected:
 
     // executes a function for specific indexes of array
     template<typename Function, typename T>
+        
     static auto genericForSpecificArrayIndexesExecuteSpecialized(T* ptr, Function&& func, const std::vector<int>& baseIndexes, bool sort = false, int first = 0)
     {
         auto actualIndexes = baseIndexes;

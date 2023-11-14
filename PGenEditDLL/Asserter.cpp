@@ -6,6 +6,11 @@ Asserter::Asserter(const std::string& category)
     this->category = category;
 }
 
+Asserter::~Asserter()
+{
+    flush();
+}
+
 bool Asserter::logAutomatically = true;
 
 void Asserter::flush()

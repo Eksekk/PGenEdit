@@ -26,7 +26,7 @@ private:
 	// and I'm too lazy to debug it
 	int changingToPageIndex; // needed, because EVT_NOTEBOOK_PAGE_CHANGING doesn't provide proper GetSelection() value on Windows (it's the same as GetOldSelection())
 	bool changingPage;
-
+	static const bool REMEMBER_LAST_PANEL = false;
 protected:
 	wxPanel* mainPanel;
 	NotebookReplaceableTabs* tabs;
