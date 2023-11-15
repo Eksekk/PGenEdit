@@ -61,7 +61,7 @@ public:
     {
         // skips first null item
         ArrayData data = gameAccessor->getItemsTxtArrayData();
-        StructAccessorGenericFor::genericForEachDo<Function, mm6::ItemsTxtItem, mm7::ItemsTxtItem, mm8::ItemsTxtItem>(data.ptr(), data.size(), std::forward<Function>(func), 1);
+        StructAccessorGenericFor::genericForEachDo<Function, mm6::ItemsTxtItem, mm7::ItemsTxtItem, mm8::ItemsTxtItem>(data.ptr(), data.size() - 1, std::forward<Function>(func), 1);
     }
 
     template<typename Function>
