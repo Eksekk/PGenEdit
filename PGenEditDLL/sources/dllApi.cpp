@@ -218,8 +218,8 @@ extern "C"
         }
         else if (MMVER == 8)
         {
-			PlayerStructAccessor_8::_initMaps();
-			playerAccessor = new PlayerStructAccessor_8;
+            PlayerStructAccessor_8::_initMaps();
+            playerAccessor = new PlayerStructAccessor_8;
             partyAccessor = new PartyStructAccessor_8;
             gameAccessor = new GameStructAccessor_8;
             itemAccessor = new ItemStructAccessor_8;
@@ -228,7 +228,9 @@ extern "C"
             playerSize = sizeof(mm8::Player);
             playerStart = offsetof(mm8::GameParty, playersArray);
             playerCount = 50;
-		}
+        }
+        else assert(false);
+
         for (size_t i = 0; i < playerCount; ++i)
         {
             playersFullArray[i] = (void*)(playerStart + playerSize * i);
@@ -237,7 +239,6 @@ extern "C"
 
         setupHooks();
 
-        //run_wx_gui_from_dll();
         // wxWidgets init
         HINSTANCE hinstExe = GetModuleHandleA(nullptr); // HMODULE is convertible to HINSTANCE
         //wxEntry(hinstExe); // STARTS EVENT LOOP AND RUNS IT, OTHER CODE CAN'T EXECUTE
@@ -245,8 +246,6 @@ extern "C"
         {
             MessageBoxA(nullptr, "Party generator couldn't load", nullptr, 0);
             return;
-            // flush logs (saw it in some wxwidgets source file)
-            //delete wxLog::SetActiveTarget(NULL);
         }
 		app = &wxGetApp();
 		app->CallOnInit(); // create gui
@@ -263,8 +262,6 @@ extern "C"
         }
         initialized = true;
         
-        //MSGBOX((std::string("app: ") + std::to_string((int)app)).c_str());
-        //MSGBOX((std::string("window: ") + std::to_string((int)app->mainWindow)).c_str());
     }
 
     DLL_EXPORT int __stdcall setHook(int id, bool on)

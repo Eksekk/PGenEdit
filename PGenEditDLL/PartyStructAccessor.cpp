@@ -3,6 +3,9 @@
 
 PartyStructAccessor* partyAccessor = nullptr;
 
+#pragma warning(push)
+#pragma warning(disable : 6011) // Dereferencing NULL pointer 'game'
+
 PartyStructAccessor::~PartyStructAccessor() {}
 
 template<typename Game>
@@ -90,3 +93,5 @@ void TemplatedPartyStructAccessor<Game>::setFine(int value)
 template class TemplatedPartyStructAccessor<mm6::Game>;
 template class TemplatedPartyStructAccessor<mm7::Game>;
 template class TemplatedPartyStructAccessor<mm8::Game>;
+
+#pragma warning(pop)

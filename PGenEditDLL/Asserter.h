@@ -2,10 +2,14 @@
 #include "main.h"
 #include "Utility.h"
 
-#define myassert(cond, ...) (!!(cond) || myasserter(__FUNCTION__, __FILE__, __LINE__, "Assertion failed! (" #cond ")" __VA_OPT__(,) __VA_ARGS__))
+#define myassert(cond, ...) ((!!(cond)) || myasserter(__FUNCTION__, __FILE__, __LINE__, "Assertion failed! (" #cond ")" __VA_OPT__(,) __VA_ARGS__))
 
 // could also be simply macro invoking directly format function
-#define myassertf(cond, fmt, ...) (!!(cond) || myasserter.assertFormat(__FUNCTION__, __FILE__, __LINE__, wxString("Assertion failed! (" #cond "): ") + fmt __VA_OPT__(,) __VA_ARGS__))
+#define myassertf(cond, fmt, ...) ((!!(cond)) || myasserter.assertFormat(__FUNCTION__, __FILE__, __LINE__, wxString("Assertion failed! (" #cond "): ") + fmt __VA_OPT__(,) __VA_ARGS__))
+
+// using this to not require exact name "myasserter" to be written every time
+// still a primitive test system, but a bit better
+#define CREATE_ASSERTER(description) Asserter myasserter(description)
 
 class Asserter
 {

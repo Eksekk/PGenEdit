@@ -83,7 +83,6 @@ private:
     mm7::Item item; // mm7 item, because it has all required fields
     InventoryPosition pos;
 
-    //InventoryCtrl& invCtrl;
     friend class InventoryCtrl;
 };
 
@@ -119,8 +118,6 @@ namespace std
     {
         size_t operator()(const ItemStoreElement& elem) const noexcept
         {
-            //return hash<ItemLocationType>()(elem.location) ^ hash<ItemLocationType>()(elem.origin)
-            //    ^ pfr::hash_fields<mm7::Item>(elem.getItem()) ^ pfr::hash_fields<InventoryPosition>(elem.getPos());
             return 1;
         }
     };
@@ -129,14 +126,14 @@ namespace std
     {
         size_t operator()(const std::reference_wrapper<T>& elem) const noexcept
         {
-            //return hash<ItemLocationType>()(elem.location) ^ hash<ItemLocationType>()(elem.origin)
-            //    ^ pfr::hash_fields<mm7::Item>(elem.getItem()) ^ pfr::hash_fields<InventoryPosition>(elem.getPos());
             return hash<std::remove_cvref_t<T>>()(elem.get());
         }
     };
 }
 
-using ElementsContainer = std::vector<std::unique_ptr<ItemStoreElement>>;
+// REALLOCATION OF ELEMENTS IN VECTOR CRASHES TABLE VIEW MODEL
+// different container and/or notifying table model about changes?
+using ElementsContainer = std::unordered_set<std::unique_ptr<ItemStoreElement>>;
 using ItemsVariant = std::variant<mm6::Item*, mm7::Item*, mm8::Item*>;
 using ItemStoreElementPtr = std::unique_ptr<ItemStoreElement>;
 
@@ -174,7 +171,7 @@ public:
 
     bool moveStoredItemToInventory(ItemStoreElement& item, InventoryPosition pos = { -1, -1 }); // MODIFIES original inventory (chest's or player's)
     bool moveInventoryItemToStore(ItemStoreElement& item); // same as above
-    ItemStoreElement* getMouseoverItem(); // pointer to allow null value (no item at mouse position) | FIXMEEEE: vector reallocation will cause problems if code holds valid pointer for long
+    ItemStoreElement* getMouseoverItem(); // pointer to allow null value (no item at mouse position) | FIXME: vector reallocation will cause problems if code holds valid pointer for long
     ItemStoreElement* chooseItemWithMouse(bool allowNone = true); // enters item selecting mode, after clicking returns clicked item
     ItemStoreElement* addItem(const mm7::Item& item, const ItemLocationType& origin = ItemRefStored{}, const ItemLocationType& location = ItemRefStored{}, InventoryPosition pos = { -1, -1 });
     bool removeItem(ItemStoreElement&& item);

@@ -282,7 +282,7 @@ bool InventoryCtrl::unpersistInventory(const Json& json)
             elem->unpersist(entry);
             hasChest = hasChest || std::holds_alternative<ItemRefMapChest>(elem->origin);
             hasPlayerInventory = hasPlayerInventory || std::holds_alternative<ItemRefPlayerInventory>(elem->origin);
-            elements.push_back(std::move(elem));
+            elements.insert(std::move(elem));
         }
     }
     catch (const nlohmann::json::exception& ex)
@@ -316,11 +316,17 @@ bool InventoryCtrl::drawItemAt(wxPaintDC& dc, const ItemStoreElement& elem, int 
 
 bool InventoryCtrl::reloadReferencedItems()
 {
-    ElementsContainer nextElements; // will be assigned to elements
-    std::copy_if(std::make_move_iterator(elements.begin()), std::make_move_iterator(elements.end()), std::back_inserter(nextElements), [](const std::unique_ptr<ItemStoreElement>& elem)
+    for (auto itr = elements.begin(); itr != elements.end(); )
     {
-        return std::holds_alternative<ItemRefStored>(elem->origin);
-    });
+        if (std::holds_alternative<ItemRefStored>((*itr)->origin))
+        {
+            itr = elements.erase(itr);
+        }
+        else
+        {
+            ++itr;
+        }
+    }
 
     if (const ItemRefMapChest* ref = std::get_if<ItemRefMapChest>(&inventoryType))
     {
@@ -339,11 +345,11 @@ bool InventoryCtrl::reloadReferencedItems()
                 auto pos = playerAccessor->getItemInventoryPosition(itemPtr);
                 // this needs to return true, each item should fit, since stored items are not in inventory
                 moveStoredItemToInventory(*elem, pos);
-                nextElements.push_back(std::move(elem));
+                elements.insert(std::move(elem));
             }
             ++arrayIndex;
         };
-        mapAccessor->forMapChestIndexItemsDo(ref->chestId, callback);
+        MapStructAccessor::forMapChestIndexItemsDo(ref->chestId, callback);
     }
     else if (const ItemRefPlayerInventory* ref = std::get_if<ItemRefPlayerInventory>(&inventoryType))
     {
@@ -362,7 +368,7 @@ bool InventoryCtrl::reloadReferencedItems()
                 auto elem = std::make_unique<ItemStoreElement>(convertedItem, origin, ItemRefStored{}, InventoryPosition{ -1, -1 });
                 auto pos = playerAccessor->getItemInventoryPosition(item);
                 wxASSERT(moveStoredItemToInventory(*elem, pos));
-                nextElements.push_back(std::move(elem));
+                elements.insert(std::move(elem));
             }
             ++arrayIndex;
         };
@@ -374,7 +380,6 @@ bool InventoryCtrl::reloadReferencedItems()
     {
         wxFAIL;
     }
-    elements = std::move(nextElements);
     return false;
 }
 
@@ -448,17 +453,17 @@ ItemStoreElement* InventoryCtrl::addItem(const mm7::Item& item, const ItemLocati
 {
     auto elem = std::make_unique<ItemStoreElement>(item, origin, location, pos);
     ItemStoreElement* ptr = elem.get();
-    elements.push_back(std::move(elem));
+    elements.insert(std::move(elem));
     return ptr;
 }
 
 bool InventoryCtrl::removeItem(ItemStoreElement&& item)
 {
-    for (size_t i = 0; i < elements.size(); ++i)
+    for (auto itr = elements.begin(); itr != elements.end(); ++itr)
     {
-        if (item.isSameExceptPos(*elements[i]))
+        if (**itr == item)
         {
-            elements.erase(elements.begin() + i);
+            elements.erase(itr);
             return true;
         }
     }

@@ -15,6 +15,10 @@
 * Auto convert structure parameters in hookFunction and hookReplaceCall to their addresses
 * Json persisting methods boolean return values should indicate actual error in all cases, not empty data or error
 * Fetching item images is broken - weird colors
+* big one: should accessor "generic for" functions providing index to callback, provide the exact index that was used as first or 0-based index for iteration? Both have pros and cons:
+    * first option allows you to index a table with exact provided index if you needed to, but doesn't let you know which iteration of the loop is running;
+    * while second is inverse - you don't know how to index real data table, but know which iteration of the loop is currently running.
+    * I think the first one is better, because you can always know current iteration by capturing counter variable, while you might not know the exact index that is used as first
 
 # Low level
 * automatically store hook restore data to abstract unhooking (see hookRestoreDataMap variable)

@@ -74,7 +74,7 @@ HookElement::HookElement(HookElementType type, bool initialized) : type(type), a
 {
 }
 
-HookElement::HookElement(HookElement&& other) : type(other.type), initialized(other.initialized),
+HookElement::HookElement(HookElement&& other) noexcept : type(other.type), initialized(other.initialized),
     active(other.active), restorationData(std::move(other.restorationData))
 {
 

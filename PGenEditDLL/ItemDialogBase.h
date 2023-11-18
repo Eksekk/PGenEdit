@@ -1,6 +1,7 @@
 #pragma once
 #include "main.h"
 #include <wx/dataview.h>
+#include "Utility.h"
 
 class ItemDialogBase;
 class ItemTableViewModel : public wxDataViewModel
@@ -49,10 +50,22 @@ private:
             {
                 ptr = dynamic_cast<const T*>(list[i]->GetSizer());
             }
+            else
+            {
+                COMPILE_TIME_CONSTEXPR_IF_ERROR();
+            }
 
+            // possible problems:
+            // - parent not changed
+            // - not inserted into destination sizer
+            // - not detached from parent sizer
+            // - no layout refresh
+            
+            // CHECK RETURN VALUE
             if (ptr && ptr == before) // found
             {
                 wxWindow* destinationParent = sizer->GetContainingWindow();
+
                 if (item->IsWindow())
                 {
                     wxSizer* sizerContainingItem = item->GetWindow()->GetSizer();
@@ -60,7 +73,7 @@ private:
                     {
                         sizerContainingItem->Detach(item->GetWindow());
                     }
-                    item->GetWindow()->Reparent(destinationParent);
+                    wxASSERT(item->GetWindow()->Reparent(destinationParent));
                 }
                 else if (wxSizer* const itemAsSizer = item->GetSizer())
                 {
@@ -68,7 +81,7 @@ private:
                     // need to detach it from parent sizers or from containing window
                     if (wxWindow* w = itemAsSizer->GetContainingWindow())
                     {
-                        if (w->GetSizer() == itemAsSizer)
+                        if (w->GetSizer() == itemAsSizer) // main sizer of parent window
                         {
                             w->SetSizer(nullptr, false);
                         }
@@ -93,7 +106,7 @@ private:
                             }
                             else if (sizerItem->IsWindow())
                             {
-                                sizerItem->GetWindow()->Reparent(destinationParent);
+                                wxASSERT(sizerItem->GetWindow()->Reparent(destinationParent));
                             }
                         }
                     }

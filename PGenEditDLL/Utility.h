@@ -263,6 +263,10 @@ void showDeducedType(const T&&) {
     deduced_type<T>::show;
 }
 
+// don't know the exact terminology, but it needs to be "potentially-evaluated" if invalid constexpr if branch is entered, so can't be function
+// static_assert(false) always fails
+#define COMPILE_TIME_CONSTEXPR_IF_ERROR() ((void(*)())0x5)("a")
+
 /*
 template<typename T>
 struct is_temporary

@@ -444,7 +444,7 @@ void GameData::fillInItemImages()
         }
         const uint8_t* palettePtr = _palettePtr;
         // dump(Game.IconsLod.Bitmaps[Game.IconsLod:LoadBitmap"item001"])
-        uint8_t red[256], blue[256], green[256];
+        static uint8_t red[256], blue[256], green[256];
         //auto itr = cache.find(CacheKey{ _palettePtr, paletteBitWidth });
         if (true)//(itr == cache.end())
         {

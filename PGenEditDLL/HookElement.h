@@ -22,7 +22,7 @@ class HookElement
 {
 protected:
     bool active;
-    std::vector<uint8_t> restorationData;
+    ByteVector restorationData;
     bool initialized; // for debugging, probably need no arg constructor, but then the element is not initialized fully
     // make sure than when enabling it is initialized
     void makeInitialized();
@@ -31,7 +31,7 @@ public:
     bool isInitialized() const;
     virtual bool usesExtraData() const;
     virtual void* getExtraData() const;
-    std::vector<uint8_t> getRestorationData() const; // intentionally returns a copy
+    ByteVector getRestorationData() const; // intentionally returns a copy
     HookElementType getType() const;
     virtual void enable(bool enable = true) = 0;
     virtual void destroy(); // requested to free all memory etc.
@@ -40,7 +40,7 @@ public:
     bool isActive() const;
     HookElement(HookElementType type, bool initialized);
     HookElement(const HookElement&) = delete; // TODO: implement proper copy ctor
-    HookElement(HookElement&& other);
+    HookElement(HookElement&& other) noexcept;
     HookElement& operator=(const HookElement& elem) = delete;
     HookElement& operator=(HookElement&& elem) = delete; // explicitly delete - const non-class-type member does it implicitly
     // each subclass needs to override the destructor, calling virtual method from base class, when derived overrides it and has already been destroyed, causes a crash

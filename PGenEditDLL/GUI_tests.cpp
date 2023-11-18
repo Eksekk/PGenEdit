@@ -76,6 +76,10 @@ std::vector<wxString> GUI_tests::testEditorSkillsPanel()
     EditorPlayerWindow* window = eWindow->createPlayerWindow(index);
     window->tabs->SetSelection(PlayerWindowPanelType::SKILLS_PANEL_INDEX);
 	myassert(window);
+	if (!window)
+	{
+		return myasserter.errors;
+	}
 	EditorSkillsPanel* panel = dynamic_cast<EditorSkillsPanel*>(window->tabs->GetCurrentPage());
 	GuiTestHelper helper(*panel, sim, myasserter);
 	window->Show();

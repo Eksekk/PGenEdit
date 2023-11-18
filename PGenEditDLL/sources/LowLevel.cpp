@@ -376,6 +376,7 @@ void codeMemoryFullFree()
 	for (auto& [addr, size] : allAllocatedBlocks)
 	{
 		__assume(addr);
+		assert(addr);
 		wxASSERT_MSG(VirtualFree(addr, 0, MEM_RELEASE), wxString::Format("Couldn't free memory at 0x%X", addr));
 	}
 }

@@ -18,7 +18,6 @@ public:
 	std::vector<PlayerClass*> promotionClasses; // higher tier
 	std::unordered_map<int, Mastery> maximumSkillMasteries;
 	std::unordered_map<int, double> playerTypeAffinity; // how appropriate is this class for given player type
-	int classWindowId;
 
 	PlayerClass();
 	PlayerClass(int id, std::string name, int tier);

@@ -24,7 +24,7 @@ ItemStructAccessor::~ItemStructAccessor()
 void ff()
 {
     int x = 0;
-    itemAccessor->forEachItemDo2(nullptr, 5, [&](auto var)->void
+    itemAccessor->forEachItemDo2(nullptr, 5, [&](auto var)
         {
             std::visit([&](auto ptr) {
                 x = ptr->number;

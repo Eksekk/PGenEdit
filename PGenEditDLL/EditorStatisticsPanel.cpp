@@ -677,6 +677,7 @@ void EditorStatisticsPanel::processClassControlsChange(ClassChangeWhat what, boo
 	else
 	{
 		wxFAIL;
+		assert(false);
     }
     alignmentRadioBox->setSelection(clas->alignment);
     alignmentRadioBox->Enable(hasLight || hasDark);

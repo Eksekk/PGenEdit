@@ -4,6 +4,10 @@
 
 GameStructAccessor* gameAccessor = nullptr;
 
+#pragma warning(push)
+#pragma warning(disable : 6011) // Dereferencing NULL pointer 'game'
+
+
 GameStructAccessor::~GameStructAccessor() {}
 
 template<typename Game>
@@ -24,9 +28,6 @@ inline void TemplatedGameStructAccessor<Game>::setTime(int64_t time)
 {
 	game->time = time;
 }
-
-#pragma warning(push)
-#pragma warning(disable: 6001) // null pointer dereference
 
 template<typename Game>
 HWND TemplatedGameStructAccessor<Game>::getWindowHandle()
