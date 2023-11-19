@@ -160,7 +160,7 @@ bool SaveGameData::loadInventoryControl(InventoryCtrl& ctrl)
 
 void SaveGameData::resetPlayerCustomData(int playerIndex, int rosterIndex)
 {
-
+    
 }
 
 std::string SaveGameData::saveAllToString()

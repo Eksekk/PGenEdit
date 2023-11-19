@@ -4,6 +4,7 @@
 
 extern const std::string ITEM_LOC_STORED, ITEM_LOC_CHEST, ITEM_LOC_PLAYER;
 class PlayerItem;
+class wxDataViewModel;
 
 struct ItemRefMapChest
 {
@@ -133,6 +134,7 @@ namespace std
 
 // REALLOCATION OF ELEMENTS IN VECTOR CRASHES TABLE VIEW MODEL
 // different container and/or notifying table model about changes?
+// TODO: can probably get rid of unique_ptr indirection
 using ElementsContainer = std::unordered_set<std::unique_ptr<ItemStoreElement>>;
 using ItemsVariant = std::variant<mm6::Item*, mm7::Item*, mm8::Item*>;
 using ItemStoreElementPtr = std::unique_ptr<ItemStoreElement>;

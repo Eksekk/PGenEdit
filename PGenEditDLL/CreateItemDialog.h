@@ -11,7 +11,8 @@ class CreateItemDialog : public ItemDialogBase
 
 public:
     // create & edit
-    mm7::Item getNewItemModal();
+    // returns whether item was successfully created (user didn't exit dialog with cancel etc.)
+    std::optional<mm7::Item> getNewItemModal();
     CreateItemDialog(wxWindow* parent);
 };
 

@@ -3,6 +3,12 @@
 #include <wx/dataview.h>
 #include "Utility.h"
 
+enum class ShowModalReturn
+{
+    OK,
+    ABORTED
+};
+
 class ItemDialogBase;
 class ItemTableViewModel : public wxDataViewModel
 {
@@ -230,14 +236,9 @@ protected:
     mm7::Item buildItemFromControlValues();
 
     void onClose(wxCloseEvent& event);
+    void onOK(wxCommandEvent& event);
+    void onCancel(wxCommandEvent& event);
 public:
-
-    enum class Mode
-    {
-        CREATE,
-        EDIT
-    };
-    Mode mode;
     ItemDialogBase(wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = _("Create sizerItem"), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize(791, 794), long style = wxDEFAULT_DIALOG_STYLE);
 
     ~ItemDialogBase();

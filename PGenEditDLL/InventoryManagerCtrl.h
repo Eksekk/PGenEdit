@@ -15,7 +15,7 @@ class InventoryManagerCtrl : public wxPanel
     wxButton* modifyButton;
     wxButton* storeButton;
     wxButton* restoreButton;
-    wxDataViewCtrl* dataViewItemTable;
+    wxDataViewCtrl* tableItems;
 
     void onAddPress(wxCommandEvent& event);
     void onDeletePress(wxCommandEvent& event);

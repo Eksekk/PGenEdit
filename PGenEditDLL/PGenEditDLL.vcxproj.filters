@@ -399,6 +399,9 @@
     <ClInclude Include="accessorCommonCode.h">
       <Filter>Pliki nagłówkowe\GameStructs\Accessors</Filter>
     </ClInclude>
+    <ClInclude Include="EditItemDialog.h">
+      <Filter>Pliki nagłówkowe</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="sources\MainWindow.cpp">
@@ -670,6 +673,9 @@
     </ClCompile>
     <ClCompile Include="accessorCommonCode.cpp">
       <Filter>Pliki źródłowe\GameStructs\Accessors</Filter>
+    </ClCompile>
+    <ClCompile Include="EditItemDialog.cpp">
+      <Filter>Pliki źródłowe</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

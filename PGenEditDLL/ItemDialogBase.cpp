@@ -6,12 +6,6 @@
 #include "PlayerItem.h"
 #include "ItemStructAccessor.h"
 #include "GameData.h"
-
-enum class ShowModalReturn
-{
-    OK,
-    ABORTED
-};
 //auto x = wxGetMessageName(5);
 ItemDialogBase::ItemDialogBase(wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style) : wxDialog(parent, id, title, pos, size, style)
 {
@@ -68,6 +62,17 @@ ItemDialogBase::ItemDialogBase(wxWindow* parent, wxWindowID id, const wxString& 
 
     sizerMain->Add(sizerWandSettings, 0, wxEXPAND, 5);
 
+    sizerMain->Add(0, 5, 0, wxEXPAND, 5);
+    wxStdDialogButtonSizer* sizerButtons = new wxStdDialogButtonSizer();
+    wxButton* buttonOK = new wxButton(panelMain, wxID_OK);
+    buttonOK->Bind(wxEVT_BUTTON, &ItemDialogBase::onOK, this);
+    wxButton* buttonCancel = new wxButton(panelMain, wxID_CANCEL);
+    buttonCancel->Bind(wxEVT_BUTTON, &ItemDialogBase::onCancel, this);
+    // create method onCancel in class ItemDialogBase
+    sizerButtons->AddButton(buttonOK);
+    sizerButtons->AddButton(buttonCancel);
+    sizerButtons->Realize();
+    sizerMain->Add(sizerButtons, 0, wxEXPAND, 5);
 
     //this->SetSizer(sizerMain);
     panelMain->SetSizer(sizerMain);
@@ -484,6 +489,16 @@ void ItemDialogBase::onClose(wxCloseEvent& event)
     EndModal((int)ShowModalReturn::ABORTED);
 }
 
+void ItemDialogBase::onOK(wxCommandEvent& event)
+{
+    EndModal((int)ShowModalReturn::OK);
+}
+
+void ItemDialogBase::onCancel(wxCommandEvent& event)
+{
+    EndModal((int)ShowModalReturn::ABORTED);
+}
+
 void ItemTableViewModel::GetValue(wxVariant& variant, const wxDataViewItem& item, unsigned int col) const
 {
     const PlayerItem* playerItem = reinterpret_cast<const PlayerItem*>(&item);
@@ -561,4 +576,5 @@ wxString ItemTableViewModel::GetColumnType(unsigned int col) const
 
 ItemTableViewModel::ItemTableViewModel(ItemDialogBase& dialog) : dialog(dialog)
 {
+    
 }

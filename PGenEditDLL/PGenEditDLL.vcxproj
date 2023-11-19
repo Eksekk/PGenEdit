@@ -31,6 +31,7 @@
     <ClInclude Include="CreateItemDialog.h" />
     <ClInclude Include="DefaultPlayerPanel.h" />
     <ClInclude Include="dllApi.h" />
+    <ClInclude Include="EditItemDialog.h" />
     <ClInclude Include="EditorItemsPanel.h" />
     <ClInclude Include="EditorMainWindow.h" />
     <ClInclude Include="EditorPlayerPanel.h" />
@@ -129,6 +130,7 @@
     <ClCompile Include="ControlPanel.cpp" />
     <ClCompile Include="CreateItemDialog.cpp" />
     <ClCompile Include="DefaultPlayerPanel.cpp" />
+    <ClCompile Include="EditItemDialog.cpp" />
     <ClCompile Include="EditorItemsPanel.cpp" />
     <ClCompile Include="EditorMainWindow.cpp" />
     <ClCompile Include="EditorPlayerPanel.cpp" />
@@ -213,6 +215,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="..\todo.md" />
+    <None Include="ClassDiagram.cd" />
     <None Include="cpp.hint" />
     <None Include="Lib.def" />
   </ItemGroup>

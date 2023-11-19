@@ -1733,6 +1733,159 @@ static __declspec(naked) int __stdcall checkRegisters()
 
 }
 
+namespace
+{
+    namespace callTests
+    {
+        static int callFailReasonId;
+        static __declspec(naked) char __stdcall callTest1(int f, char c, bool b, const char* str)
+        {
+            static const char* cmpStr = "abbde";
+            static const int len = strlen(cmpStr);
+            _asm
+            {
+                mov callFailReasonId, 1
+                cmp dword ptr[esp + 4], 0x12345678 // int f
+                jne $fail
+                mov callFailReasonId, 2
+                cmp byte ptr[esp + 8], 0x12 // char c
+                jne $fail
+                mov callFailReasonId, 3
+                cmp byte ptr[esp + 12], 0x0 // bool b
+                jne $fail
+                mov callFailReasonId, 4
+
+                // compare the string pointed to by str with "abbde"
+                push edi
+                push esi
+
+                mov esi, dword ptr[esp + 16] // const char* str
+                mov edi, cmpStr
+                mov ecx, len
+                repe cmpsb
+                test ecx, ecx
+                pop esi
+                pop edi
+                jne $fail // not all characters equal
+
+                mov callFailReasonId, 0
+                jmp $exit
+
+                //
+                $fail:
+                mov al, 0
+                    $exit:
+                    ret 4*4
+            }
+        }
+
+        static __declspec(naked) int __stdcall callTest2(int a, int b, int c, int d, int e, int f, int g, int h, int i, int j)
+        {
+            _asm
+            {
+                mov eax, dword ptr[esp + 4]
+                add eax, dword ptr[esp + 8]
+                add eax, dword ptr[esp + 12]
+                add eax, dword ptr[esp + 16]
+                add eax, dword ptr[esp + 20]
+                add eax, dword ptr[esp + 24]
+                add eax, dword ptr[esp + 28]
+                add eax, dword ptr[esp + 32]
+                add eax, dword ptr[esp + 36]
+                add eax, dword ptr[esp + 40]
+                ret 10 * 4
+            }
+        }
+
+        static __declspec(naked) void __stdcall __callTest3(bool b, bool bb, dword_t d)
+        {
+            _asm
+            {
+                mov callFailReasonId, 1
+                test cl, cl
+                jne $fail
+
+                mov callFailReasonId, 2
+                test byte ptr [esp + 4], 0
+                jne $fail
+
+                mov callFailReasonId, 3
+                cmp dword ptr [esp + 8], 0x33994499
+                jne $fail
+
+                mov callFailReasonId, 0
+
+                $fail:
+                ret 2*4
+            }
+        }
+
+        // cast __callTest3 to function which uses thiscall calling convention
+        typedef void(__thiscall* __callTest3_thiscall)(bool b, bool bb, dword_t d);
+        static const __callTest3_thiscall callTest3 = (__callTest3_thiscall)__callTest3;
+
+        // design a function using __fastcall calling convention, which tests whether parameters passed to it have certain values, using callTest3 as a reference
+        static __declspec(naked) void __fastcall callTest4(bool b, byte_t needsToBe5, dword_t d)
+        {
+            _asm
+            {
+                mov callFailReasonId, 1
+                test cl, cl
+                jne $fail
+
+                mov callFailReasonId, 2
+                cmp dl, 5
+                jne $fail
+
+                mov callFailReasonId, 3
+                cmp dword ptr [esp + 8], 0x33994499
+                jne $fail
+
+                mov callFailReasonId, 0
+
+                $fail:
+                ret 1 * 4
+            }
+        }
+
+        static __declspec(naked) void __cdecl callTest5(void* p, float f, sdword_t sdw)
+        {
+            static const float cmpf = 3.12f;
+            static const int divVal = 5;
+            __asm
+            {
+                mov callFailReasonId, 1
+                cmp dword ptr [esp + 4], 0x12345678
+                jne $fail
+
+                mov callFailReasonId, 2
+                // check if loaded floating-point value is greater than 3.12
+                fld cmpf
+                fld dword ptr [esp + 8]
+                fcomip st(0), st(1)
+                fnstsw ax
+                // any of CF, PF, ZF must not be set
+                jz $fail
+                jp $fail
+                jc $fail
+                mov callFailReasonId, 3
+                // check if sdw divided by divVal is greater than or equal to 8
+                mov eax, dword ptr [esp + 12]
+                cdq
+                idiv divVal
+                cmp eax, 8
+                jl $fail
+
+
+                mov callFailReasonId, 0
+
+                $fail:
+                ret
+            }
+        }
+    }
+}
+
 template<typename Player, typename Game>
 static std::vector<wxString>
 HookTests::testMiscFunctions()
@@ -1891,6 +2044,24 @@ HookTests::testMiscFunctions()
         }
         ++i;
     }
+
+    // callMemoryAddress
+    using namespace callTests;
+    // check that after callTest1(...parameters defined in asm code above...), callFailReasonId is equal to 0
+    callMemoryAddress(callTest1, 0, 0x12345678, 0x12, false, "abbde");
+    myassertf(callFailReasonId == 0, "[callMemoryAddress] callTest1 caused error code %d", callFailReasonId);
+    // callTest2 must return 77
+    int ret = callMemoryAddress<int>(callTest2, 0, 2, 4, 6, 8, 1, 3, 5, 7, 22, 19);
+    myassertf(ret == 77, "[callMemoryAddress] callTest2 returned %d, expected 77", ret);
+    // check that after callTest3(...parameters defined in asm code above...), callFailReasonId is equal to 0
+    callMemoryAddress(callTest3, 1, false, false, 0x33994499);
+    myassertf(callFailReasonId == 0, "[callMemoryAddress] callTest3 caused error code %d", callFailReasonId);
+    // do like above for callTest4
+    callMemoryAddress(callTest4, 2, false, 5, 0x33994499);
+    myassertf(callFailReasonId == 0, "[callMemoryAddress] callTest4 caused error code %d", callFailReasonId);
+    // do like above for callTest5
+    callMemoryAddress(callTest5, -1, (void*)0x12345678, 3.13f, 40);
+    myassertf(callFailReasonId == 0, "[callMemoryAddress] callTest5 caused error code %d", callFailReasonId);
 
     // callMemoryAddressRegisters
     HookData testData;

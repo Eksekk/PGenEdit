@@ -7,6 +7,7 @@
 #include "MapStructAccessor.h"
 #include "SaveGameData.h"
 #include "PlayerItem.h"
+#include "wx/dataview.h"
 
 const std::string ITEM_LOC_STORED = "stored", ITEM_LOC_CHEST = "chest", ITEM_LOC_PLAYER = "player";
 
@@ -493,11 +494,6 @@ int test(char c)
     return c + 23;
 }
 
-RTTR_REGISTRATION
-{
-    rttr::registration::method("test", &test);
-}
-
 InventoryPosition InventoryCtrl::findFreePositionForItem(const ItemStoreElement& elem)
 {
     // mm7+/mm6 with Grayface patch placing order (prefer left side, not top)
@@ -734,4 +730,10 @@ bool operator==(const ItemRefPlayerInventory& lhs, const ItemRefPlayerInventory&
 bool operator==(const ItemRefStored& lhs, const ItemRefStored& rhs)
 {
     return true;
+}
+
+RTTR_REGISTRATION
+{
+    using namespace rttr;
+registration::class_<InventoryCtrl>("InventoryCtrl").method("addItem", &InventoryCtrl::addItem);
 }

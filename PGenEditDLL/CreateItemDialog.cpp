@@ -1,10 +1,16 @@
 #include "pch.h"
 #include "CreateItemDialog.h"
 
-mm7::Item CreateItemDialog::getNewItemModal()
+std::optional<mm7::Item> CreateItemDialog::getNewItemModal()
 {
-    ShowModal();
-    return buildItemFromControlValues();
+    if (static_cast<ShowModalReturn>(ShowModal()) == ShowModalReturn::OK)
+    {
+        return buildItemFromControlValues();
+    }
+    else
+    {
+        return std::nullopt;
+    }
 }
 
 CreateItemDialog::CreateItemDialog(wxWindow* parent) : ItemDialogBase(parent)

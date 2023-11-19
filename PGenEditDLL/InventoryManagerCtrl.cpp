@@ -22,7 +22,7 @@ void InventoryManagerCtrl::onModifyPress(wxCommandEvent& event)
 
 void InventoryManagerCtrl::onStorePress(wxCommandEvent& event)
 {
-    auto sel = dataViewItemTable->GetSelection();
+    auto sel = tableItems->GetSelection();
     if (sel.IsOk())
     {
         ItemStoreElement* item = reinterpret_cast<ItemStoreElement*>(sel.GetID());
@@ -35,7 +35,7 @@ void InventoryManagerCtrl::onStorePress(wxCommandEvent& event)
 
 void InventoryManagerCtrl::onRestorePress(wxCommandEvent& event)
 {
-    auto sel = dataViewItemTable->GetSelection();
+    auto sel = tableItems->GetSelection();
     if (sel.IsOk())
     {
         ItemStoreElement* item = reinterpret_cast<ItemStoreElement*>(sel.GetID());
@@ -49,13 +49,18 @@ void InventoryManagerCtrl::onRestorePress(wxCommandEvent& event)
 void InventoryManagerCtrl::addItem()
 {
     CreateItemDialog dialog(this);
-    mm7::Item item = dialog.getNewItemModal();
+    std::optional<mm7::Item> item = dialog.getNewItemModal();
     // item store element ownership problem
-    inventoryCtrl->addItem(item);
+    if (item.has_value())
+    {
+        auto* elem = inventoryCtrl->addItem(item.value());
+        tableItems->GetModel()->ItemAdded(wxDataViewItem(nullptr), wxDataViewItem(reinterpret_cast<void*>(elem)));
+    }
 }
 
 mm7::Item InventoryManagerCtrl::modifyItem(const mm7::Item& item)
 {
+    //tableItems->GetModel()->ItemChanged(wxDataViewItem(nullptr), wxDataViewItem(nullptr)); // TODO
     return mm7::Item();
 }
 
@@ -108,19 +113,19 @@ InventoryManagerCtrl::InventoryManagerCtrl(wxWindow* parent, int CELLS_ROW, int 
 
     auto renderer = [] { return new wxDataViewTextRenderer("string", wxDATAVIEW_CELL_INERT, wxALIGN_LEFT); };
 
-    dataViewItemTable = new wxDataViewCtrl(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, 0);
-    dataViewItemTable->AppendColumn(new wxDataViewColumn("#", renderer(), InventoryItemTableViewModel::COLUMN_INDEX_ID));
-    dataViewItemTable->AppendColumn(new wxDataViewColumn("Name", renderer(), InventoryItemTableViewModel::COLUMN_INDEX_NAME));
-    dataViewItemTable->AppendColumn(new wxDataViewColumn("Type", renderer(), InventoryItemTableViewModel::COLUMN_INDEX_TYPE));
-    dataViewItemTable->AppendColumn(new wxDataViewColumn("Skill", renderer(), InventoryItemTableViewModel::COLUMN_INDEX_SKILL));
-    dataViewItemTable->AppendColumn(new wxDataViewColumn("Stats", renderer(), InventoryItemTableViewModel::COLUMN_INDEX_STATS));
-    dataViewItemTable->AppendColumn(new wxDataViewColumn("Bonus", renderer(), InventoryItemTableViewModel::COLUMN_INDEX_BONUS));
-    dataViewItemTable->AppendColumn(new wxDataViewColumn("Condition", renderer(), InventoryItemTableViewModel::COLUMN_INDEX_CONDITION));
-    dataViewItemTable->AppendColumn(new wxDataViewColumn("Value", renderer(), InventoryItemTableViewModel::COLUMN_INDEX_VALUE));
+    tableItems = new wxDataViewCtrl(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, 0);
+    tableItems->AppendColumn(new wxDataViewColumn("#", renderer(), InventoryItemTableViewModel::COLUMN_INDEX_ID));
+    tableItems->AppendColumn(new wxDataViewColumn("Name", renderer(), InventoryItemTableViewModel::COLUMN_INDEX_NAME));
+    tableItems->AppendColumn(new wxDataViewColumn("Type", renderer(), InventoryItemTableViewModel::COLUMN_INDEX_TYPE));
+    tableItems->AppendColumn(new wxDataViewColumn("Skill", renderer(), InventoryItemTableViewModel::COLUMN_INDEX_SKILL));
+    tableItems->AppendColumn(new wxDataViewColumn("Stats", renderer(), InventoryItemTableViewModel::COLUMN_INDEX_STATS));
+    tableItems->AppendColumn(new wxDataViewColumn("Bonus", renderer(), InventoryItemTableViewModel::COLUMN_INDEX_BONUS));
+    tableItems->AppendColumn(new wxDataViewColumn("Condition", renderer(), InventoryItemTableViewModel::COLUMN_INDEX_CONDITION));
+    tableItems->AppendColumn(new wxDataViewColumn("Value", renderer(), InventoryItemTableViewModel::COLUMN_INDEX_VALUE));
 
-    dataViewItemTable->AssociateModel(new InventoryItemTableViewModel(*this));
+    tableItems->AssociateModel(new InventoryItemTableViewModel(*this));
     
-    itemsMainSizer->Add(dataViewItemTable, 0, wxALL | wxEXPAND, 5);
+    itemsMainSizer->Add(tableItems, 0, wxALL | wxEXPAND, 5);
 
     Fit();
     this->Layout();
