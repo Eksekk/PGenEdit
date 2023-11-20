@@ -251,3 +251,86 @@ struct GameVersionStructs<8>
 #undef GEN_DEF_CURRENT
 #undef GEN_STRUCT_DEFS
 #undef SAME_BASE
+
+#define GET_DISPATCH(type, ptr, fieldName) if (MMVER == 6)\
+{\
+    return reinterpret_cast<mm6::type*>(ptr)->fieldName;\
+}\
+else if (MMVER == 7)\
+{\
+    return reinterpret_cast<mm7::type*>(ptr)->fieldName;\
+}\
+else if (MMVER == 8)\
+{\
+    return reinterpret_cast<mm8::type*>(ptr)->fieldName;\
+}
+
+#define SET_DISPATCH(type, ptr, fieldName, value) if (MMVER == 6)\
+{\
+    reinterpret_cast<mm6::type*>(ptr)->fieldName = value;\
+}\
+else if (MMVER == 7)\
+{\
+    reinterpret_cast<mm7::type*>(ptr)->fieldName = value;\
+}\
+else if (MMVER == 8)\
+{\
+    reinterpret_cast<mm8::type*>(ptr)->fieldName = value;\
+}
+
+// create an abstract base class for getting/setting all three structure version fields (struct groups like like mm6::Player, mm7::Player, mm8::Player) with getters and setters, which take pointer to void as a parameter, dispatch on concrete derived classes, which use template argument for structure type, and let compiler get/set the required field. Do this only for fields which have same name and type in all three versions of Player structure, with exception of types, which are bigger value range versions (like, if fields are int8_t, int16_t, int32_t, functions should take and return int32_t). Structure fields should return void*. Use GET_DISPATCH and SET_DISPATCH macros inside getters/setters.
+
+
+
+class PlayerWrapper
+{
+protected:
+	void* playerPtr;
+public:
+	virtual int64_t getCursed() const = 0;
+	virtual void setCursed(int64_t value) = 0;
+	virtual int64_t getDisease() const = 0;
+	virtual void setDisease(int64_t value) = 0;
+	virtual int64_t getWeak() const = 0;
+	virtual void setWeak(int64_t value) = 0;
+	virtual int64_t getAsleep() const = 0;
+	virtual void setAsleep(int64_t value) = 0;
+	virtual int64_t getAfraid() const = 0;
+	virtual void setAfraid(int64_t value) = 0;
+	virtual int64_t getDrunk() const = 0;
+	virtual void setDrunk(int64_t value) = 0;
+	virtual int64_t getInsane() const = 0;
+	virtual void setInsane(int64_t value) = 0;
+	virtual int64_t getPoisoned() const = 0;
+	virtual void setPoisoned(int64_t value) = 0;
+	virtual int64_t getDead() const = 0;
+	virtual void setDead(int64_t value) = 0;
+	virtual int64_t getUnconcious() const = 0;
+	virtual void setUnconcious(int64_t value) = 0;
+	virtual int64_t getEradicated() const = 0;
+	virtual void setEradicated(int64_t value) = 0;
+	virtual int64_t getStoned() const = 0;
+	virtual void setStoned(int64_t value) = 0;
+	virtual int64_t getParalyzed() const = 0;
+	virtual void setParalyzed(int64_t value) = 0;
+	virtual int64_t getDying() const = 0;
+	virtual void setDying(int64_t value) = 0;
+	virtual int64_t getUnarmedSkill() const = 0;
+	virtual void setUnarmedSkill(int64_t value) = 0;
+
+};
+
+template<typename Player>
+class PlayerWrapperImpl : public PlayerWrapper
+{
+public:
+	virtual int64_t getCursed() const override
+	{
+		return reinterpret_cast<const Player*>(playerPtr)->cursed;
+	}
+	virtual void setCursed(int64_t value) override
+    {
+        reinterpret_cast<Player*>(playerPtr)->cursed = value;
+    }
+
+};

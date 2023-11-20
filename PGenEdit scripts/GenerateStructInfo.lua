@@ -2110,7 +2110,7 @@ function processConst(name)
 	table.insert(source, "")
 end
 
-local constsToProcess = {"Stats"--[[, "Skills"]], "Damage", "ItemType", "ItemSlot", "PlayerBuff", "PartyBuff", "MonsterBits", "MonsterBuff", "MonsterBonus", "MonsterKind", "HouseType", "HouseScreens", "FacetBits", "FaceAnimation", "Condition", "ChestBits", "AIState", "Spells"}
+local constsToProcess = {"Stats", "Skills", "Damage", "ItemType", "ItemSlot", "PlayerBuff", "PartyBuff", "MonsterBits", "MonsterBuff", "MonsterBonus", "MonsterKind", "HouseType", "HouseScreens", "FacetBits", "FaceAnimation", "Condition", "ChestBits", "AIState", "Spells"}
 function writeConsts()
 	for _, const in ipairs(constsToProcess) do
 		processConst(const)

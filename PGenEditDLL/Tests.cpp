@@ -1036,6 +1036,8 @@ public:
     {
         return i == other.i && str == other.str && vec == other.vec && arr == other.arr && map == other.map && u == other.u;
     }
+
+
 };
 
 RTTR_REGISTRATION

@@ -150,6 +150,8 @@ void setFieldSizes_8();
 // and since all accesses will be in one place, it's easy to add checks for invalid values
 // could be better (static checking), but like I said I don't like template verbosity
 
+// THIS CODE IS AUTOMATICALLY GENERATED, unless marked otherwise
+
 extern int
 STAT_MIGHT,
 STAT_INTELLECT,
@@ -234,6 +236,55 @@ extern std::vector<int> STATS_ALL;
 
 void checkStatValidity(int stat);
 void checkDamageTypeValidity(int dmg);
+extern int64_t
+SKILL_STAFF,
+SKILL_SWORD,
+SKILL_DAGGER,
+SKILL_AXE,
+SKILL_SPEAR,
+SKILL_BOW,
+SKILL_MACE,
+SKILL_BLASTER,
+SKILL_SHIELD,
+SKILL_LEATHER,
+SKILL_CHAIN,
+SKILL_PLATE,
+SKILL_FIRE,
+SKILL_AIR,
+SKILL_WATER,
+SKILL_EARTH,
+SKILL_SPIRIT,
+SKILL_MIND,
+SKILL_BODY,
+SKILL_LIGHT,
+SKILL_DARK,
+SKILL_IDENTIFY_ITEM,
+SKILL_MERCHANT,
+SKILL_REPAIR,
+SKILL_BODYBUILDING,
+SKILL_MEDITATION,
+SKILL_PERCEPTION,
+SKILL_DIPLOMACY,
+SKILL_THIEVERY,
+SKILL_DISARM_TRAPS,
+SKILL_LEARNING,
+SKILL_DODGING,
+SKILL_UNARMED,
+SKILL_IDENTIFY_MONSTER,
+SKILL_ARMSMASTER,
+SKILL_STEALING,
+SKILL_ALCHEMY,
+SKILL_DARK_ELF_ABILITY,
+SKILL_VAMPIRE_ABILITY,
+SKILL_DRAGON_ABILITY,
+SKILL_REGENERATION;
+
+extern std::vector<int64_t> ALL_SKILLS;
+extern std::map<int64_t, std::string> ENUM_TO_STRING_SKILLS;
+
+extern void makeEnumSkills_6();
+extern void makeEnumSkills_7();
+extern void makeEnumSkills_8();
 
 extern int64_t
 DMG_PHYS,
