@@ -24,6 +24,9 @@ public:
     LuaWrapper& rawget(int idx);
     LuaWrapper& rawset(int idx);
 
+    LuaWrapper& settop(int index);
+    int gettop();
+
     // internally uses pushlstring
     LuaWrapper& pushstring(const std::string& str);
     LuaWrapper& pushnumber(lua_Number num);
@@ -49,6 +52,9 @@ public:
     bool isThread(int index);
     bool isUserdata(int index);
     bool isLightuserdata(int index);
+    // return boolean if error occurred, error code, results?
+    bool loadstring(const std::string& str);
+    bool dostring(const std::string& str);
 
     // tries to get sequence of tables corresponding to given path separated with dots, uses global environment for first part
     // returns true if successful and only adds to the stack requested object, otherwise returns false and stack is fully restored

@@ -2,7 +2,13 @@
 - Redo Asserter class to use own log sink and log messages instead of converting them to text and concatenating, reason: ability to click on each error in error message rather than big block of text
 - more test functions in Asserter like assertTrue, assertFalse, assertAnyThrow (from googletest) etc.
 - project parts requiring tests:
-    -
+    - luaWrapper
+    - struct accessors
+    - some low level functions
+    - GUI classes
+    - all classes in game data (PlayerSkill, PlayerStat etc.)
+    - lua event system
+    - debug console
 
 # Misc
 
@@ -56,3 +62,7 @@
 - find a way to make LuaTypeInCpp work with RTTR
 - better error handling in lua wrapper
 - generate RTTR data for all classes
+- reflect all classes in lua code (using RTTR)
+- make debug console fully functional (GUI class and ability to execute lua code)
+- create a function, which calls a C++ std::function for each key/value pair in a lua table (can be also from stack) - some kind of iterator for lua tables
+- for extra fun, do the above using C++ coroutines to implement a kind of "generator"

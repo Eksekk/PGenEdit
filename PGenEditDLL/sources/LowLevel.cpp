@@ -677,7 +677,8 @@ static void __fastcall dispatchHook(uint32_t esp)
 		}
 		catch (const std::exception& ex)
 		{
-			wxLogError(ex.what());
+			wxLogError("Hook at 0x%X failed: %s", hookAddr, ex.what());
+
 			wxLog::FlushActive();
 		}
 	}

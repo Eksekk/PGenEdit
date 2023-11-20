@@ -405,6 +405,12 @@
     <ClInclude Include="Command.h">
       <Filter>Pliki nagłówkowe</Filter>
     </ClInclude>
+    <ClInclude Include="DebugConsole.h">
+      <Filter>Pliki nagłówkowe\Shared GUI</Filter>
+    </ClInclude>
+    <ClInclude Include="Reflection.h">
+      <Filter>Pliki nagłówkowe</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="sources\MainWindow.cpp">
@@ -681,6 +687,12 @@
       <Filter>Pliki źródłowe</Filter>
     </ClCompile>
     <ClCompile Include="Command.cpp">
+      <Filter>Pliki źródłowe</Filter>
+    </ClCompile>
+    <ClCompile Include="DebugConsole.cpp">
+      <Filter>Pliki źródłowe\Shared GUI</Filter>
+    </ClCompile>
+    <ClCompile Include="Reflection.cpp">
       <Filter>Pliki źródłowe</Filter>
     </ClCompile>
   </ItemGroup>

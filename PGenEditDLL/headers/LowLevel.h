@@ -98,7 +98,58 @@ struct HookData
 
     void push(uint32_t val);
     void ret(int stackNum);
+
+    // forward declaration, because this function depends on PackParams definition, while PackParams depends on HookData definition
+    template<int cc, typename... Args>
+    void getParams(std::tuple<Args...>& output);
+    // a version, which returns tuple instead of modifying existing one
+    template<int cc, typename... Args>
+    std::tuple<Args...> getParams();
 };
+
+// retrieves parameters from HookData object, casts them to appropriate types and stores result in tuple
+template<int index, int cc, typename... Args>
+struct PackParams
+{
+    static constexpr int ArgCount = (int)sizeof...(Args);
+    static constexpr int StackNum = std::max(0, ArgCount - std::max(cc, 0));
+    static constexpr int RegNum = ArgCount - StackNum;
+    static constexpr int StackIndex = index - RegNum;
+    using ParamType = std::tuple_element_t<index, std::tuple<Args...>>;
+    static void pack(std::tuple<Args...>& tup, HookData* d)
+    {
+        if constexpr (StackIndex < 0) // register parameter
+        {
+            std::get<index>(tup) = (ParamType)(index == 0 ? d->ecx : d->edx);
+        }
+        else
+        {
+            std::get<index>(tup) = (ParamType)dword(d->esp + 4 + StackIndex * 4);
+        }
+        if constexpr (index < ArgCount - 1) // not last one
+        {
+            PackParams<index + 1, cc, Args...>::pack(tup, d);
+        }
+    }
+};
+
+template<int cc, typename... Args>
+void HookData::getParams(std::tuple<Args...>& output)
+{
+    static_assert(cc >= -1 && cc <= 2, "Invalid calling convention");
+    if constexpr (sizeof...(Args) > 0)
+    {
+        PackParams<0, cc, Args...>::pack(output, this);
+    }
+}
+
+template<int cc, typename... Args>
+std::tuple<Args...> HookData::getParams()
+{
+    std::tuple<Args...> ret;
+    getParams<cc, Args...>(ret);
+    return ret;
+}
 #pragma pack(pop)
 
 typedef int(__stdcall* HookFuncPtr)(HookData*);
@@ -512,31 +563,6 @@ using CallableFunctionHookOrigFunc = typename std::function<ReturnType(Args...)>
 // type representing hook function
 template<typename ReturnType, typename... Args>
 using CallableFunctionHookFunc = typename std::function<uint32_t(HookData* d, CallableFunctionHookOrigFunc<ReturnType, Args...> func, Args... args)>;
-
-template<int index, int cc, typename... Args>
-struct PackParams
-{
-    static constexpr int ArgCount = (int)sizeof...(Args);
-    static constexpr int StackNum = std::max(0, ArgCount - std::max(cc, 0));
-    static constexpr int RegNum = ArgCount - StackNum;
-    static constexpr int StackIndex = index - RegNum;
-    using ParamType = std::tuple_element_t<index, std::tuple<Args...>>;
-    static void pack(std::tuple<Args...>& tup, HookData* d)
-    {
-        if constexpr (StackIndex < 0) // register parameter
-        {
-            std::get<index>(tup) = (ParamType) (index == 0 ? d->ecx : d->edx);
-        }
-        else
-        {
-            std::get<index>(tup) = (ParamType)dword(d->esp + 4 + StackIndex * 4);
-        }
-        if constexpr (index < ArgCount - 1) // not last one
-        {
-            PackParams<index + 1, cc, Args...>::pack(tup, d);
-        }
-    }
-};
 
 // template<int cc, typename Arg, int... Indexes, int i>
 // auto getParam(HookData* d)

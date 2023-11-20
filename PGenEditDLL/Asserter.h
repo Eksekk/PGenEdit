@@ -13,6 +13,17 @@
 
 class Asserter
 {
+	// wx log sink
+	class LogSink : public wxLog
+	{
+	public:
+		LogSink(Asserter* asserter);
+		~LogSink();
+		void DoLogTextAtLevel(wxLogLevel level, const wxString& msg) override;
+		void DoLogText(const wxString& msg) override;
+		void DoLogRecord(wxLogLevel level, const wxString& msg, const wxLogRecordInfo& info) override;
+	};
+	std::unique_ptr<LogSink> logSink;
 public:
 	std::vector<wxString> errors;
 	std::string category;

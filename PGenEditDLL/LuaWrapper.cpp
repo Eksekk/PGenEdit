@@ -61,6 +61,17 @@ LuaWrapper& LuaWrapper::rawset(int idx)
     return *this;
 }
 
+LuaWrapper& LuaWrapper::settop(int index)
+{
+    lua_settop(L, index);
+    return *this;
+}
+
+int LuaWrapper::gettop()
+{
+    return lua_gettop(L);
+}
+
 bool LuaWrapper::getPath(const std::string& path, bool lastMustBeTable, bool create)
 {
     auto parts = stringSplit(path, ".");
@@ -258,4 +269,14 @@ bool LuaWrapper::setPath(const std::string& path, int index)
 int LuaWrapper::makeAbsoluteStackIndex(int index)
 {
     return index >= 0 ? index : lua_gettop(L) + index + 1;
+}
+
+bool LuaWrapper::loadstring(const std::string& str)
+{
+    return static_cast<bool>(luaL_loadstring(L, str.c_str()));
+}
+
+bool LuaWrapper::dostring(const std::string& str)
+{
+    return static_cast<bool>(luaL_dostring(L, str.c_str()));
 }

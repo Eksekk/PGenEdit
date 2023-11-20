@@ -332,5 +332,9 @@ public:
     {
         reinterpret_cast<Player*>(playerPtr)->cursed = value;
     }
-
+	// getXSkill use enum for skill type
+	virtual int16_t getUnarmedSkill() const override
+    {
+        return reinterpret_cast<const Player*>(playerPtr)->unarmedSkill;
+    }
 };

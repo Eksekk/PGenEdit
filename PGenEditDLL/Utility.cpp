@@ -187,3 +187,48 @@ Bounds getBounds(int size)
 	}
 	return Bounds{ low, high };
 }
+
+template<typename... Types>
+class variant_wrapper
+{
+	using VariantType = std::variant<Types...>;
+	VariantType var;
+
+	public:
+		// operator -> can be used to access members of the contained object
+		VariantType* operator->()
+		{
+			return &var;
+		}
+        template<typename T>
+        variant_wrapper(T&& t) : var(std::forward<T>(t)) {}
+
+        template<typename T>
+        bool is() const
+        {
+            return std::holds_alternative<T>(var);
+        }
+
+        template<typename T>
+        T& get()
+        {
+            return std::get<T>(var);
+        }
+
+        template<typename T>
+        const T& get() const
+        {
+            return std::get<T>(var);
+        }
+	template<typename T>
+	T get_or(T&& t) const
+    {
+        return std::get_if<T>(&var) ? std::get<T>(var) : std::forward<T>(t);
+    }
+
+    template<typename T, std::enable_if_t<std::is_default_constructible_v<T>, bool> = true>
+    T get_or() const
+    {
+        return std::get_if<T>(&var) ? std::get<T>(var) : T();
+    }
+};
