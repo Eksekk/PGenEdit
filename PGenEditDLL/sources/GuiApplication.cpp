@@ -7,6 +7,15 @@
 #include "GameStructAccessor.h"
 #include "wx/evtloop.h"
 
+
+// create wxWidgets event handler, which handles all generated keypresses, but does nothing and calls "Skip()" to pass them to the default handler
+
+void GuiApplication::onChar(wxKeyEvent& event) { event.Skip(); }
+
+void GuiApplication::onKeyDown(wxKeyEvent& event) { event.Skip(); }
+
+void GuiApplication::onKeyUp(wxKeyEvent& event) { event.Skip(); }
+
 GuiApplication::GuiApplication() : eventLoop(nullptr), mainWindow(nullptr), editorMainWindow(nullptr), controlPanel(nullptr), idleEventTimer(nullptr)
 {
     // Keep the wx "main" thread running even without windows. This greatly

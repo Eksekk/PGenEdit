@@ -88,37 +88,37 @@ void TimeChooserCtrl::setTime(const GameTime& time)
     updateValuesFromTime();
 }
 
-int64_t TimeChooserCtrl::getYears()
+int64_t TimeChooserCtrl::getYears() const
 {
     return time.getYears();
 }
 
-int64_t TimeChooserCtrl::getMonths()
+int64_t TimeChooserCtrl::getMonths() const
 {
     return time.getMonths();
 }
 
-int64_t TimeChooserCtrl::getWeeks()
+int64_t TimeChooserCtrl::getWeeks() const
 {
     return time.getWeeks();
 }
 
-int64_t TimeChooserCtrl::getDays()
+int64_t TimeChooserCtrl::getDays() const
 {
     return time.getDays();
 }
 
-int64_t TimeChooserCtrl::getHours()
+int64_t TimeChooserCtrl::getHours() const
 {
     return time.getHours();
 }
 
-int64_t TimeChooserCtrl::getMinutes()
+int64_t TimeChooserCtrl::getMinutes() const
 {
     return time.getMinutes();
 }
 
-int64_t TimeChooserCtrl::getTicks()
+int64_t TimeChooserCtrl::getTicks() const
 {
     return time.getTicks();
 }
@@ -163,4 +163,48 @@ void TimeChooserCtrl::setTicks(int64_t val)
 {
     time.setTicks(val);
     updateValuesFromTime();
+}
+
+RTTR_REGISTRATION
+{
+
+    // generate RTTR registration code for TimeChooserCtrl
+    using namespace rttr;
+    registration::class_<TimeChooserCtrl>("TimeChooserCtrl")
+        .constructor<wxWindow*>()
+        .property("time", &TimeChooserCtrl::getTime, &TimeChooserCtrl::setTime)
+        .property("years", &TimeChooserCtrl::getYears, &TimeChooserCtrl::setYears)
+        .property("months", &TimeChooserCtrl::getMonths, &TimeChooserCtrl::setMonths)
+        .property("weeks", &TimeChooserCtrl::getWeeks, &TimeChooserCtrl::setWeeks)
+        .property("days", &TimeChooserCtrl::getDays, &TimeChooserCtrl::setDays)
+        .property("hours", &TimeChooserCtrl::getHours, &TimeChooserCtrl::setHours)
+        .property("minutes", &TimeChooserCtrl::getMinutes, &TimeChooserCtrl::setMinutes)
+        .property("ticks", &TimeChooserCtrl::getTicks, &TimeChooserCtrl::setTicks)
+        .property("valueTicks", &TimeChooserCtrl::valueTicks, registration::private_access)
+.property("valueMinutes", &TimeChooserCtrl::valueMinutes, registration::private_access)
+.property("valueHours", &TimeChooserCtrl::valueHours, registration::private_access)
+.property("valueDays", &TimeChooserCtrl::valueDays, registration::private_access)
+.property("labelTicks", &TimeChooserCtrl::labelTicks, registration::private_access)
+.property("labelMinutes", &TimeChooserCtrl::labelMinutes, registration::private_access)
+.property("labelHours", &TimeChooserCtrl::labelHours, registration::private_access)
+.property("labelDays", &TimeChooserCtrl::labelDays, registration::private_access)
+        .method("getTime", &TimeChooserCtrl::getTime)
+.method("setTime", &TimeChooserCtrl::setTime)
+.method("getYears", &TimeChooserCtrl::getYears)
+.method("getMonths", &TimeChooserCtrl::getMonths)
+.method("getWeeks", &TimeChooserCtrl::getWeeks)
+.method("getDays", &TimeChooserCtrl::getDays)
+.method("getHours", &TimeChooserCtrl::getHours)
+.method("getMinutes", &TimeChooserCtrl::getMinutes)
+.method("getTicks", &TimeChooserCtrl::getTicks)
+.method("setYears", &TimeChooserCtrl::setYears)
+.method("setMonths", &TimeChooserCtrl::setMonths)
+.method("setWeeks", &TimeChooserCtrl::setWeeks)
+.method("setDays", &TimeChooserCtrl::setDays)
+.method("setHours", &TimeChooserCtrl::setHours)
+.method("setMinutes", &TimeChooserCtrl::setMinutes)
+.method("setTicks", &TimeChooserCtrl::setTicks)
+        .method("updateValuesFromTime", &TimeChooserCtrl::updateValuesFromTime, registration::private_access)
+.method("updateTimeFromValues", &TimeChooserCtrl::updateTimeFromValues, registration::private_access)
+        ;
 }

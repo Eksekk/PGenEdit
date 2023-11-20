@@ -34,6 +34,8 @@ public:
 	static std::vector<wxString> testMisc();
 
 	static std::vector<wxString> testUtilityFunctions();
+
+	static std::vector<wxString> testReflection();
 };
 
 template<typename Player, typename Game>

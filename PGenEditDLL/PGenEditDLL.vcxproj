@@ -27,6 +27,7 @@
     <ClInclude Include="ClassInfoPanel.h" />
     <ClInclude Include="ClassSettingsTab.h" />
     <ClInclude Include="ClassWindow.h" />
+    <ClInclude Include="Command.h" />
     <ClInclude Include="ControlPanel.h" />
     <ClInclude Include="CreateItemDialog.h" />
     <ClInclude Include="DefaultPlayerPanel.h" />
@@ -127,6 +128,7 @@
     <ClCompile Include="ClassInfoPanel.cpp" />
     <ClCompile Include="ClassSettingsTab.cpp" />
     <ClCompile Include="ClassWindow.cpp" />
+    <ClCompile Include="Command.cpp" />
     <ClCompile Include="ControlPanel.cpp" />
     <ClCompile Include="CreateItemDialog.cpp" />
     <ClCompile Include="DefaultPlayerPanel.cpp" />

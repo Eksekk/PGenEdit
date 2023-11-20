@@ -23,6 +23,13 @@ public:
 	static bool logAutomatically;
 	void flush();
 
+	// generate code for assert() method, which takes same arguments as operator() and calls it with forwarded arguments
+	template<typename... Args>
+	bool assertTrue(const char* func, const char* file, int line, const wxString& rawErrorMsg, Args&&... args)
+    {
+        return operator()(func, file, line, rawErrorMsg, std::forward<Args>(args)...);
+    }
+
 	Asserter(const std::string& category);
 	~Asserter();
 

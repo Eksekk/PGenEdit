@@ -863,6 +863,294 @@ std::vector<wxString> Tests::testUtilityFunctions()
 	return myasserter.errors;
 }
 
+struct ReflectionSampleStruct
+{
+	int i;
+	std::string str;
+	std::vector<int> vec;
+	std::array<int, 5> arr;
+	std::unordered_map<std::string, int> map;
+	union UnionSample
+	{
+		qword_t i;
+		float fArray[2];
+		double d;
+		bool firstByteBool;
+		byte_t firstByte;
+
+		// this union and all other reflection test structs will have operators to modify it based on int argument
+		// this will allow to modify it generically (for change, then equality testing) with simple int addition
+		UnionSample& operator+=(int val)
+        {
+            i += val;
+            return *this;
+        }
+
+		UnionSample& operator+(int val) const
+        {
+			UnionSample u2(*this);
+            u2.i += val;
+            return u2;
+        }
+
+		// comparison operator for all fields
+		bool operator==(const UnionSample& other) const
+        {
+            return i == other.i && fArray[0] == other.fArray[0] && fArray[1] == other.fArray[1] && d == other.d && firstByteBool == other.firstByteBool && firstByte == other.firstByte;
+        }
+	} u;
+protected:
+	int protectedInt;
+	void* protectedPtr;
+private:
+	int privateInt;
+	void* privatePtr;
+public:
+	inline int get5() const
+	{
+		return 5;
+	}
+
+	inline void setInt(int val)
+	{
+		i = val;
+	}
+
+	void modifyMultiple(int val, std::string str, std::vector<int> vec)
+	{
+		i = val;
+		this->str = str;
+		this->vec = vec;
+	}
+
+	// this method should modify variables by for example adding to them
+	void modifyMultipleByOperation(int val, std::string str, std::vector<int> vec)
+	{
+		i += val;
+		this->str += str;
+		this->vec.insert(this->vec.end(), vec.begin(), vec.end());
+	}
+
+	struct InnerStruct
+	{
+		bool b, bb, bbb;
+		std::string str;
+		void allTrue()
+		{
+			b = true, bb = true, bbb = true;
+		}
+		void allFalse()
+		{
+			b = false, bb = false, bbb = false;
+		}
+
+		InnerStruct() : b(false), bb(false), bbb(false), str("default") {}
+
+		// virtual method
+		virtual int returnSizeof() const
+		{
+			return sizeof(InnerStruct);
+		}
+
+		// an operator which modifies the struct based on int argument passed to it
+		InnerStruct& operator+=(int val)
+        {
+			str += std::to_string(val);
+            return *this;
+        }
+
+		InnerStruct& operator+() const
+        {
+            InnerStruct u2(*this);
+            u2.str += "2";
+            return u2;
+        }
+
+		// comparison operator for all fields
+		bool operator==(const InnerStruct& other) const
+        {
+            return b == other.b && bb == other.bb && bbb == other.bbb && str == other.str;
+        }
+	};
+
+	struct InnerStruct2 : public InnerStruct
+	{
+		char ch;
+		int i;
+
+		virtual int returnSizeof() const override
+		{
+			return sizeof(InnerStruct2);
+		}
+
+		// an operator += which modifies the struct based on int argument passed to it
+		InnerStruct2& operator+=(int val)
+        {
+            i += val;
+            return *this;
+        }
+
+		InnerStruct2& operator+(int val) const
+        {
+            InnerStruct2 u2(*this);
+            u2.i += val;
+            return u2;
+        }
+
+		// comparison operator for all fields
+		bool operator==(const InnerStruct2& other) const
+        {
+            return ch == other.ch && i == other.i && InnerStruct::operator==(other);
+        }
+	};
+	// safeguard
+	static_assert(sizeof(InnerStruct) != sizeof(InnerStruct2), "Inner struct sizes are equal, this will break reflection tests");
+
+	InnerStruct inner;
+	InnerStruct2 inner2;
+
+	// add constructors like in registration code below
+	ReflectionSampleStruct() : i(0), str("default"), vec({ 1, 2, 3 }), arr({ 1, 2, 3, 4, 5 }), map({ {"a", 1}, {"b", 2}, {"c", 3} }), u({ 0 }) {}
+	ReflectionSampleStruct(int i) : i(i), str("default"), vec({ 1, 2, 3 }), arr({ 1, 2, 3, 4, 5 }), map({ {"a", 1}, {"b", 2}, {"c", 3} }), u({ 0 }) {}
+	ReflectionSampleStruct(int i, std::string str) : i(i), str(str), vec({ 1, 2, 3 }), arr({ 1, 2, 3, 4, 5 }), map({ {"a", 1}, {"b", 2}, {"c", 3} }), u({ 0 }) {}
+	ReflectionSampleStruct(int i, std::string str, std::vector<int> vec) : i(i), str(str), vec(vec), arr({ 1, 2, 3, 4, 5 }), map({ {"a", 1}, {"b", 2}, {"c", 3} }), u({ 0 }) {}
+	ReflectionSampleStruct(int i, std::string str, std::vector<int> vec, std::array<int, 5> arr) : i(i), str(str), vec(vec), arr(arr), map({ {"a", 1}, {"b", 2}, {"c", 3} }), u({ 0 }) {}
+	ReflectionSampleStruct(int i, std::string str, std::vector<int> vec, std::array<int, 5> arr, std::unordered_map<std::string, int> map) : i(i), str(str), vec(vec), arr(arr), map(map), u({ 0 }) {}
+	ReflectionSampleStruct(int i, std::string str, std::vector<int> vec, std::array<int, 5> arr, std::unordered_map<std::string, int> map, UnionSample u) : i(i), str(str), vec(vec), arr(arr), map(map), u(u) {}
+	// a operator += which modifies the struct based on int argument passed to it
+	ReflectionSampleStruct& operator+=(int val)
+	{
+		i += val;
+		return *this;
+	}
+
+	ReflectionSampleStruct& operator+(int val) const
+    {
+        ReflectionSampleStruct u2(*this);
+        u2.i += val;
+        return u2;
+    }
+
+	// comparison operator for all fields
+	bool operator==(const ReflectionSampleStruct& other) const
+    {
+        return i == other.i && str == other.str && vec == other.vec && arr == other.arr && map == other.map && u == other.u;
+    }
+};
+
+RTTR_REGISTRATION
+{
+	using namespace rttr;
+	using Inner2 = ReflectionSampleStruct::InnerStruct2;
+	using Inner = ReflectionSampleStruct::InnerStruct;
+
+	registration::class_<Inner2>("InnerStruct2")
+		.property("ch", &Inner2::ch)
+		.property("i", &Inner2::i)
+		.method("returnSizeof", &Inner2::returnSizeof)
+		.constructor<>();
+
+	registration::class_<Inner>("InnerStruct")
+		.property("b", &Inner::b)
+		.property("bb", &Inner::bb)
+		.property("bbb", &Inner::bbb)
+		.property("str", &Inner::str)
+		.method("allTrue", &Inner::allTrue)
+		.method("allFalse", &Inner::allFalse)
+		.method("returnSizeof", &Inner::returnSizeof)
+		.constructor<>();
+
+	registration::class_<ReflectionSampleStruct>("ReflectionSampleStruct")
+		.property("i", &ReflectionSampleStruct::i)
+		.property("str", &ReflectionSampleStruct::str)
+		.property("vec", &ReflectionSampleStruct::vec)
+		.property("arr", &ReflectionSampleStruct::arr)
+		.property("map", &ReflectionSampleStruct::map)
+		.property("u", &ReflectionSampleStruct::u)
+		.property("inner", &ReflectionSampleStruct::inner)
+		.property("inner2", &ReflectionSampleStruct::inner2)
+		.method("get5", &ReflectionSampleStruct::get5)
+		.method("setInt", &ReflectionSampleStruct::setInt)
+		.method("modifyMultiple", &ReflectionSampleStruct::modifyMultiple)
+		.method("modifyMultipleByOperation", &ReflectionSampleStruct::modifyMultipleByOperation)
+		.constructor<>()
+		.constructor<int>()
+		.constructor<int, std::string>()
+		.constructor<int, std::string, std::vector<int>>()
+		.constructor<int, std::string, std::vector<int>, std::array<int, 5>>()
+		.constructor<int, std::string, std::vector<int>, std::array<int, 5>, std::unordered_map<std::string, int>>()
+		.constructor<int, std::string, std::vector<int>, std::array<int, 5>, std::unordered_map<std::string, int>, ReflectionSampleStruct::UnionSample>();
+}
+
+template<typename Type>
+Type& getPropertyValue(const rttr::type& t, const std::string& name)
+{
+    return t.get_property(name).get_value().get_value<Type>();
+}
+
+template<typename PropType, typename Struct>
+void testPropertyGetSet(Asserter& myasserter, Struct& stru, PropType Struct::* propPtr, const std::string& name, int testIndex)
+{
+	auto prop = rttr::type::get<Struct>().get_property(name);
+    auto val = prop.get_value(stru).get_value<PropType>();
+
+    PropType newVal = val + 1;
+
+	constexpr auto tryToString = [](const auto& val) -> std::string
+		{
+			if constexpr (SAME(decay_fully<decltype(val)>, std::string))
+			{
+				return val;
+			}
+			else
+			{
+				return std::to_string(val);
+			}
+		};
+
+	// set with reflection
+    prop.set_value(stru, newVal);
+	//// get with reflection
+	PropType val2 = prop.get_value(stru).get_value<PropType>();
+    myassertf(val2 == newVal, "[Property '%s' get/set; test #%d] values changed using reflection and obtained with reflection don't match (expected: '%s', actual: '%s')", name, testIndex, tryToString(newVal), tryToString(val2));
+	// now do the same, but get property value directly from the struct
+	//// get directly
+	PropType val3 = stru.*propPtr;
+	myassertf(val3 == newVal, "[Property '%s' get/set; test #%d] values changed using reflection and obtained directly don't match (expected: '%s', actual: '%s')", testIndex, name, tryToString(newVal), tryToString(val3));
+	// now do the same as above two, but set value with provided pointer
+	// set directly
+	PropType newVal2 = newVal + (PropType)1;
+	stru.*propPtr = newVal2;
+	//// get with reflection
+	PropType val4 = prop.get_value(stru).get_value<PropType>();
+	myassertf(val4 == newVal2, "[Property '%s' get/set; test #%d] values changed directly and obtained with reflection don't match (expected: '%s', actual: '%s')", testIndex, name, tryToString(newVal2), tryToString(val4));
+	//// get directly
+	PropType val5 = stru.*propPtr;
+	myassertf(val5 == newVal2, "[Property '%s' get/set; test #%d] values changed directly and obtained directly don't match (expected: '%s', actual: '%s')", testIndex, name, tryToString(newVal2), tryToString(val5));
+}
+
+std::vector<wxString> Tests::testReflection()
+{
+	Asserter myasserter("Reflection");
+	using namespace rttr;
+	int testIndex = 0;
+	// property iteration
+
+	auto reflType = type::get("ReflectionSampleStruct");
+	ReflectionSampleStruct rss;
+	// call testPropertyGetSet for all properties of 'rss', without using a loop
+	testPropertyGetSet(myasserter, rss, &ReflectionSampleStruct::i, "i", testIndex++);
+	testPropertyGetSet(myasserter, rss, &ReflectionSampleStruct::str, "str", testIndex++);
+	testPropertyGetSet(myasserter, rss, &ReflectionSampleStruct::vec, "vec", testIndex++);
+	testPropertyGetSet(myasserter, rss, &ReflectionSampleStruct::arr, "arr", testIndex++);
+	testPropertyGetSet(myasserter, rss, &ReflectionSampleStruct::map, "map", testIndex++);
+	testPropertyGetSet(myasserter, rss, &ReflectionSampleStruct::u, "u", testIndex++);
+	testPropertyGetSet(myasserter, rss, &ReflectionSampleStruct::inner, "inner", testIndex++);
+	testPropertyGetSet(myasserter, rss, &ReflectionSampleStruct::inner2, "inner2", testIndex++);
+
+	return myasserter.errors;
+}
+
 #pragma warning(pop)
 
 template std::vector<wxString> Tests::testMisc<mm6::Player, mm6::Game>();

@@ -5,6 +5,7 @@
 #include <cstring>
 #include "wx/debug.h"
 #include "Hook.h"
+#include <Asserter.h>
 
 std::unordered_map<int, Hook> hooks;
 std::unordered_map<uint32_t, HookFunc> hookFuncMap;
@@ -381,6 +382,45 @@ void codeMemoryFullFree()
 	}
 }
 
+void testCodeMemoryAlloc()
+{
+	Asserter myasserter("Allocating code memory");
+	// create code of a test for codeMemoryAlloc function. Individual calls should allocate blocks of given size, and then free them with codeMemoryFree. Allocate a block of same size again, it should have same address as previously freed one.
+	int testIndex = 0;
+	auto singleTest = [&](int size)
+		{
+			// find index of allocated block of given size in vector
+			auto findIndex = [](int size, void* p = nullptr) -> int
+                {
+                    const std::vector<void*>& vec = freeAddressesBySize[size];
+                    int ret = -1;
+                    for (size_t i = 0; i < vec.size(); ++i)
+                    {
+                        if (!p || vec[i] == p)
+                        {
+                            ret = i;
+                            break;
+                        }
+                    }
+                    return ret;
+                };
+			// if there was already free address, new one should have same address as lowest free address of given size
+			// if there was no free address, new one should be last element of vector
+			int index = findIndex(size);
+			void* expectedAddr = index != -1 ? freeAddressesBySize[size][index] : freeAddressesBySize[size].back();
+			void* addr = (void*)codeMemoryAlloc(size);
+			if (!expectedAddr)
+            {
+                myassertf(addr == expectedAddr, wxString::Format("Allocated address 0x%X doesn't match lowest free address 0x%X of size %d", addr, expectedAddr, size));
+            }
+            else
+            {
+                myassertf(addr == expectedAddr, wxString::Format("Allocated address 0x%X doesn't match last free address 0x%X of size %d", addr, expectedAddr, size));
+            }
+			++testIndex;
+		};
+}
+
 uint32_t copyCode(uint32_t source, uint32_t size, bool writeJumpBack, uint32_t dest, uint32_t canJumpAfterCodeBytes)
 {
     std::vector<int> rel32Positions; // to fix calls/jumps
@@ -451,7 +491,7 @@ uint32_t copyCode(uint32_t source, uint32_t size, bool writeJumpBack, uint32_t d
 	return mem;
 }
 
-void* bytecodeHookCommon(uint32_t addr, std::string_view bytecode, std::vector<uint8_t>* storeAt, int size, bool before)
+static void* bytecodeHookCommon(uint32_t addr, std::string_view bytecode, std::vector<uint8_t>* storeAt, int size, bool before)
 {
     size = getRealHookSize(addr, size, 5);
     storeBytes(storeAt, addr, size);

@@ -36,3 +36,22 @@
 - complete callMemoryAddress tests
 - change all appropriate hook functions to call checkOverlap() before doing anything
 - test codeMemoryAlloc family of functions
+- create all struct accessors and their methods (generic for)
+- use ArrayData in all places where it is appropriate (mainly in struct accessor methods)
+- somehow handle differences in structs from elemental mod (and other mods, but this one has most)
+- test all methods in wrappers for game data (PlayerSkill, PlayerStat etc.) and add missing ones
+- use hook functions in real scenarios?
+- analyze base classes for GUI classes (like PlayerPanelBase), to see, if their interface should be changed
+- handle json serialization and deserialization for all classes (using RTTR when appropriate?)
+- create some tests for the above
+- find use cases for RTTR and use it
+- test GameTime and TimeChooserCtrl classes
+- document all classes and methods (using doxygen)
+- create lua scripts for getting all data from lua (for example, spell data is missing)
+- find a way to make all classes in the project have the same interface for serialization and deserialization
+- extend lua wrapper to allow calling functions with arbitrary number of arguments
+- overload appropriate LuaWrapper functions to accept LuaTypeInCpp as arguments
+- do something with LuaTypeInCpp to make it more useful
+- find a way to make LuaTypeInCpp work with RTTR
+- better error handling in lua wrapper
+- generate RTTR data for all classes
