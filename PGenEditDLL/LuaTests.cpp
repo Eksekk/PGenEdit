@@ -11,13 +11,13 @@ std::vector<wxString> LuaTests::run()
     // LuaTable
     auto luaTablePassthrough = [&](const LuaTable& orig, int index)
         {
-            orig.toLuaTable();
+            orig.pushToLuaStack();
             LuaTable created = LuaTable::fromLuaTable();
             if (created != orig)
             {
                 myassertf(false, "[LuaTable] Test #%d failed", index);
                 lua_getglobal(Lua, "dump");
-                created.toLuaTable();
+                created.pushToLuaStack();
                 if (lua_pcall(Lua, 1, 1, 0))
                 {
                     wxLogError("pcall to dump table failed: '%s'", luaWrapper.tostring(-1));

@@ -30,11 +30,11 @@ void luaTypeInCppToStack(const LuaTypeInCpp& val)
     }
     else if (const LuaTable* tbl = std::get_if<LuaTable>(&val))
     {
-        tbl->toLuaTable();
+        tbl->pushToLuaStack();
     }
 }
 
-void LuaTable::toLuaTable() const
+void LuaTable::pushToLuaStack() const
 {
     luaWrapper.newtable();
     for (const auto& [key, value] : values)
@@ -309,7 +309,7 @@ RTTR_REGISTRATION
 .method("operator=", select_overload<LuaTable&(const LuaTable&)>(&LuaTable::operator=))
 .method("operator=", select_overload<LuaTable&(LuaTable&&)>(&LuaTable::operator=))
 .method("operator[]", &LuaTable::operator[])
-.method("toLuaTable", &LuaTable::toLuaTable, registration::public_access)
+.method("pushToLuaStack", &LuaTable::pushToLuaStack, registration::public_access)
 .method("begin", select_overload<LuaTableValues::iterator()>(&LuaTable::begin), registration::public_access)//reinterpret_cast<typename LuaTableValues::iterator(__thiscall *)()>(&LuaTable::begin)
 .method("end", select_overload<LuaTableValues::iterator()>(&LuaTable::end), registration::public_access)
 .method("begin", select_overload<LuaTableValues::const_iterator() const>(&LuaTable::begin), registration::public_access)

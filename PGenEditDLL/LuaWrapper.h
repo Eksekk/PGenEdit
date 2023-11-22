@@ -32,6 +32,8 @@ public:
     LuaWrapper& pushnumber(lua_Number num);
     LuaWrapper& pushboolean(int b);
     LuaWrapper& pushnil();
+    LuaWrapper& pushcfunction(lua_CFunction func);
+    LuaWrapper& pushlightuserdata(void* p);
 
     // internally uses tolstring
     std::string tostring(int index);

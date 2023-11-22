@@ -155,6 +155,17 @@ T&& mmv(T&& e6, T&& e7, T&& e8)
 	}
 }
 
+template<typename Vector>
+constexpr Vector compileTimeMergeVectors(std::initializer_list<Vector> list)
+{
+    Vector out;
+    for (auto& vec : list)
+    {
+        out.insert(out.end(), vec.begin(), vec.end());
+    }
+    return out;
+}
+
 struct BaseBonus
 {
 	int base, bonus;
@@ -265,6 +276,7 @@ void showDeducedType(const T&&) {
 
 // don't know the exact terminology, but it needs to be "potentially-evaluated" if invalid constexpr if branch is entered, so can't be function
 // static_assert(false) always fails
+// TODO: support custom message
 #define COMPILE_TIME_CONSTEXPR_IF_ERROR() ((void(*)())0x5)("a")
 
 /*

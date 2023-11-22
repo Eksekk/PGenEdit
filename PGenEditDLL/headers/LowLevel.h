@@ -14,6 +14,18 @@
 
 using ByteVector = std::vector<uint8_t>;
 
+// get or set either byte/word/dword/qword (unsigned 1/2/4/8 byte integer)
+#define byte(addr) (*(uint8_t*)(addr))
+#define word(addr) (*(uint16_t*)(addr))
+#define dword(addr) (*(uint32_t*)(addr))
+#define qword(addr) (*(uint64_t*)(addr))
+
+// signed
+#define sbyte(addr) (*(int8_t*)(addr))
+#define sword(addr) (*(int16_t*)(addr))
+#define sdword(addr) (*(int32_t*)(addr))
+#define sqword(addr) (*(int64_t*)(addr))
+
 #pragma pack(push, 1)
 struct HookData
 {
@@ -215,18 +227,6 @@ uint32_t findCall(Address beginAddr, Address2 findAddr = 0)
     }
     return 0;
 }
-
-// get or set either byte/word/dword/qword (unsigned 1/2/4/8 byte integer)
-#define byte(addr) (*(uint8_t*)(addr))
-#define word(addr) (*(uint16_t*)(addr))
-#define dword(addr) (*(uint32_t*)(addr))
-#define qword(addr) (*(uint64_t*)(addr))
-
-// signed
-#define sbyte(addr) (*(int8_t*)(addr))
-#define sword(addr) (*(int16_t*)(addr))
-#define sdword(addr) (*(int32_t*)(addr))
-#define sqword(addr) (*(int64_t*)(addr))
 
 uint32_t relJumpCallTarget(uint32_t addr);
 

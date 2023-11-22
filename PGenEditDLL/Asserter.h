@@ -16,6 +16,7 @@ class Asserter
 	// wx log sink
 	class LogSink : public wxLog
 	{
+        Asserter* asserter;
 	public:
 		LogSink(Asserter* asserter);
 		~LogSink();

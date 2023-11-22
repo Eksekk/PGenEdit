@@ -45,11 +45,19 @@ void DebugConsole::processCommand()
 DebugConsole::DebugConsole(wxWindow* parent) : wxFrame(parent, wxID_ANY, "Debug console", wxDefaultPosition, wxSize(800, 600))
 {
     textCtrl = new wxTextCtrl(this, wxID_ANY, "", wxDefaultPosition, wxDefaultSize, wxTE_MULTILINE);
-    runScriptButton = new wxButton(this, wxID_ANY, "Run script");
-    runScriptButton->SetSize(wxSize(100, 30));
     sizerMain = new wxBoxSizer(wxVERTICAL);
     sizerMain->Add(textCtrl, wxSizerFlags(1).Border(wxALL, 5).Expand());
-    sizerMain->Add(runScriptButton, wxSizerFlags(0).Border(wxALL, 5));
+    sizerButtons = new wxBoxSizer(wxHORIZONTAL);
+    static const wxSizerFlags buttonFlags = wxSizerFlags().Border(wxALL, 5);
+    sizerMain->Add(sizerButtons, wxSizerFlags().Expand().Border(wxALL, 5));
+    static const wxSize buttonSize(100, 30);
+    // TODO: make buttons able to be stretched if text doesn't fit in provided size
+    runScriptButton = new wxButton(this, wxID_ANY, "Run script");
+    runScriptButton->SetSize(buttonSize);
+    clearTextButton = new wxButton(this, wxID_ANY, "Clear text");
+    clearTextButton->SetSize(buttonSize);
+    clearHistoryButton = new wxButton(this, wxID_ANY, "Clear command history");
+    clearHistoryButton->SetSize(buttonSize);
 }
 
 DebugConsole::~DebugConsole()
@@ -74,7 +82,7 @@ void DebugConsole::onChar(wxKeyEvent& event)
     // alt + up arrow should go through history
     bool shouldGoThroughHistoryForwards = event.AltDown() && event.GetKeyCode() == WXK_UP;
     bool shouldGoThroughHistoryBackwards = event.AltDown() && event.GetKeyCode() == WXK_DOWN;
-    if (shouldGoThroughHistoryForwards && historyIndex < history.size() - 1)
+    if (shouldGoThroughHistoryForwards && historyIndex < (int)history.size() - 1)
     {
         textCtrl->SetValue(textCtrl->GetValue().substr(lastResultEnd) + history[historyIndex]);
         historyIndex++;
@@ -96,4 +104,16 @@ void DebugConsole::onSize(wxSizeEvent& event)
 
 void DebugConsole::onClose(wxCloseEvent& event)
 {
+}
+
+void DebugConsole::onClearText(wxCommandEvent& event)
+{
+    textCtrl->SetValue("");
+    lastResultEnd = 0;
+}
+
+void DebugConsole::onClearHistory(wxCommandEvent& event)
+{
+    history.clear();
+    historyIndex = 0;
 }

@@ -1093,6 +1093,11 @@ Type& getPropertyValue(const rttr::type& t, const std::string& name)
 template<typename PropType, typename Struct>
 void testPropertyGetSet(Asserter& myasserter, Struct& stru, PropType Struct::* propPtr, const std::string& name, int testIndex)
 {
+	// wow, this actually worked
+	// bring some string operators into scope to prefer them (otherwise it will be ambiguous)
+	using std::string::operator+=;
+	using operator+(const std::string& a, const std::string& b);
+
 	auto prop = rttr::type::get<Struct>().get_property(name);
     auto val = prop.get_value(stru).get_value<PropType>();
 

@@ -149,6 +149,18 @@ LuaWrapper& LuaWrapper::pushnil()
     return *this;
 }
 
+LuaWrapper& LuaWrapper::pushcfunction(lua_CFunction func)
+{
+    lua_pushcfunction(L, func);
+    return *this;
+}
+
+LuaWrapper& LuaWrapper::pushlightuserdata(void* p)
+{
+    lua_pushlightuserdata(L, p);
+    return *this;
+}
+
 std::string LuaWrapper::tostring(int index)
 {
     size_t s;

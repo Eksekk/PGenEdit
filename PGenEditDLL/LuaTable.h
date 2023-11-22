@@ -54,7 +54,7 @@ struct LuaTable // TODO: storing array part and hashed part separately - will im
     // values and table as unique_ptrs don't work with std::unordered_map
     // values and table as unique_ptrs work with std::map
     LuaTableValues values;
-    void toLuaTable() const; // converts this structure into lua table on top of the stack
+    void pushToLuaStack() const; // converts this structure into lua table on top of the stack
     // TODO: a version updating lua table at specified index
     // converts table at specified stack index into this value
     static LuaTable fromLuaTable(int index = -1);
