@@ -863,6 +863,12 @@ std::vector<wxString> Tests::testUtilityFunctions()
 	return myasserter.errors;
 }
 
+namespace
+{
+	using VectorType = std::vector<int>;
+using ArrayType = std::array<int, 5>;
+using MapType = std::unordered_map<std::string, int>;
+}
 struct ReflectionSampleStruct
 {
 	int i;
@@ -886,12 +892,14 @@ struct ReflectionSampleStruct
             return *this;
         }
 
-		UnionSample& operator+(int val) const
+		UnionSample operator+(int val) const
         {
 			UnionSample u2(*this);
             u2.i += val;
             return u2;
         }
+
+		friend std::string to_string(const UnionSample& u);
 
 		// comparison operator for all fields
 		bool operator==(const UnionSample& other) const
@@ -945,6 +953,11 @@ public:
 		}
 
 		InnerStruct() : b(false), bb(false), bbb(false), str("default") {}
+		// default copy ctor
+		InnerStruct(const InnerStruct&) = default;
+		InnerStruct(InnerStruct&&) = default;
+		InnerStruct& operator=(const InnerStruct&) = default;
+		InnerStruct& operator=(InnerStruct&&) = default;
 
 		// virtual method
 		virtual int returnSizeof() const
@@ -959,12 +972,14 @@ public:
             return *this;
         }
 
-		InnerStruct& operator+() const
+		InnerStruct operator+(int val) const
         {
             InnerStruct u2(*this);
-            u2.str += "2";
+            u2.str += std::to_string(val);
             return u2;
         }
+
+		friend std::string to_string(const InnerStruct& u);
 
 		// comparison operator for all fields
 		bool operator==(const InnerStruct& other) const
@@ -990,12 +1005,14 @@ public:
             return *this;
         }
 
-		InnerStruct2& operator+(int val) const
+		InnerStruct2 operator+(int val) const
         {
             InnerStruct2 u2(*this);
             u2.i += val;
             return u2;
         }
+
+		friend std::string to_string(const InnerStruct2& u);
 
 		// comparison operator for all fields
 		bool operator==(const InnerStruct2& other) const
@@ -1024,7 +1041,7 @@ public:
 		return *this;
 	}
 
-	ReflectionSampleStruct& operator+(int val) const
+	ReflectionSampleStruct operator+(int val) const
     {
         ReflectionSampleStruct u2(*this);
         u2.i += val;
@@ -1037,8 +1054,32 @@ public:
         return i == other.i && str == other.str && vec == other.vec && arr == other.arr && map == other.map && u == other.u;
     }
 
-
+	friend std::string to_string(const ReflectionSampleStruct& u);
 };
+
+std::string to_string(const ReflectionSampleStruct::UnionSample& u)
+{
+    // join all fields separated by ;, like this: i=5;
+    return wxString::Format("i=%lld;fArray[0]=%f;fArray[1]=%f;d=%f;firstByteBool=%d;firstByte=%d", u.i, u.fArray[0], u.fArray[1], u.d, u.firstByteBool, u.firstByte).ToStdString();
+}
+
+std::string to_string(const ReflectionSampleStruct::InnerStruct& u)
+{
+    // join all fields separated by ;, like this: b=true;bb=false;bbb=true;str=abc;
+    return wxString::Format("b=%d;bb=%d;bbb=%d;str=%s", u.b, u.bb, u.bbb, u.str).ToStdString();
+}
+
+std::string to_string(const ReflectionSampleStruct::InnerStruct2& u)
+{
+    // join all fields separated by ;, like this: ch=a;i=5;b=true;bb=false;bbb=true;str=abc;
+    return wxString::Format("ch=%c;i=%d;%s", u.ch, u.i, to_string(static_cast<const ReflectionSampleStruct::InnerStruct&>(u)).c_str()).ToStdString();
+}
+
+std::string to_string(const ReflectionSampleStruct& u)
+{
+    // join all fields separated by ;, like this: i=5;str=abc;vec=1,2,3;arr=1,2,3,4,5;map=a:1,b:2,c:3;u=i=5;fArray[0]=1.000000;fArray[1]=2.000000;d=0.000000;firstByteBool=0;firstByte=0;
+    return wxString::Format("i=%d;str=%s;vec=%s;arr=%s;map=%s;u=%s", u.i, u.str, containerToString(u.vec), containerToString(u.arr), containerToString(u.map), to_string(u.u)).ToStdString();
+}
 
 RTTR_REGISTRATION
 {
@@ -1090,18 +1131,57 @@ Type& getPropertyValue(const rttr::type& t, const std::string& name)
     return t.get_property(name).get_value().get_value<Type>();
 }
 
+// changes provided value by addition operator, works for strings too (concatenates)
+template<typename T>
+auto increaseBy(const T& val, int by)
+{
+	if constexpr (SAME_BASE_TYPE(val, std::string))
+	{
+		return val + std::to_string(by);
+    }
+	else if constexpr (SAME_BASE_TYPE(val, wxString))
+	{
+		return val + std::to_string(by);
+	}
+	else if constexpr (SAME_BASE_TYPE(val, VectorType))
+	{
+		VectorType vec = val;
+		for (auto& i : vec)
+		{
+			i += by;
+		}
+		return vec;
+	}
+	else if constexpr (SAME_BASE_TYPE(val, ArrayType))
+    {
+		ArrayType arr = val;
+        for (auto& i : arr)
+        {
+            i += by;
+        }
+        return arr;
+    }
+	else if constexpr (SAME_BASE_TYPE(val, MapType))
+    {
+		MapType map = val;
+        for (auto& [key, value] : map)
+        {
+            value += by;
+        }
+        return map;
+    }
+    else
+    {
+        return val + by;
+	}
+}
+
 template<typename PropType, typename Struct>
 void testPropertyGetSet(Asserter& myasserter, Struct& stru, PropType Struct::* propPtr, const std::string& name, int testIndex)
 {
-	// wow, this actually worked
-	// bring some string operators into scope to prefer them (otherwise it will be ambiguous)
-	using std::string::operator+=;
-	using operator+(const std::string& a, const std::string& b);
-
 	auto prop = rttr::type::get<Struct>().get_property(name);
     auto val = prop.get_value(stru).get_value<PropType>();
-
-    PropType newVal = val + 1;
+    PropType newVal = increaseBy(val, 1);
 
 	constexpr auto tryToString = [](const auto& val) -> std::string
 		{
@@ -1109,9 +1189,14 @@ void testPropertyGetSet(Asserter& myasserter, Struct& stru, PropType Struct::* p
 			{
 				return val;
 			}
+			else if constexpr (SAME_BASE_TYPE(val, VectorType) || SAME_BASE_TYPE(val, ArrayType) || SAME_BASE_TYPE(val, MapType))
+			{
+				return containerToString(val);
+			}
 			else
 			{
-				return std::to_string(val);
+				using std::to_string; // allow ADL to work
+				return to_string(val);
 			}
 		};
 
@@ -1126,7 +1211,7 @@ void testPropertyGetSet(Asserter& myasserter, Struct& stru, PropType Struct::* p
 	myassertf(val3 == newVal, "[Property '%s' get/set; test #%d] values changed using reflection and obtained directly don't match (expected: '%s', actual: '%s')", testIndex, name, tryToString(newVal), tryToString(val3));
 	// now do the same as above two, but set value with provided pointer
 	// set directly
-	PropType newVal2 = newVal + (PropType)1;
+	PropType newVal2 = increaseBy(newVal, 1);
 	stru.*propPtr = newVal2;
 	//// get with reflection
 	PropType val4 = prop.get_value(stru).get_value<PropType>();

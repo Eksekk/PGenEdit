@@ -409,7 +409,7 @@
       <Filter>Pliki nagłówkowe\Shared GUI</Filter>
     </ClInclude>
     <ClInclude Include="Reflection.h">
-      <Filter>Pliki nagłówkowe</Filter>
+      <Filter>Pliki nagłówkowe\Misc</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -693,7 +693,10 @@
       <Filter>Pliki źródłowe\Shared GUI</Filter>
     </ClCompile>
     <ClCompile Include="Reflection.cpp">
-      <Filter>Pliki źródłowe</Filter>
+      <Filter>Pliki źródłowe\Misc</Filter>
+    </ClCompile>
+    <ClCompile Include="wxWidgetsReflectionRegistration.cpp">
+      <Filter>Pliki źródłowe\Misc</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

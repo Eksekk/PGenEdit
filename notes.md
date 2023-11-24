@@ -26,4 +26,12 @@ That way we don't need to deal with item index while ingame, and during one edit
 # Quest bit / award bit switcher panel design
 - class and race promotion quests should be prioritized, grouped (maybe optionally [checkbox]) and done in a more robust way (like, add required item to a chest if already taken, reset mapvar in clanker's lab, respawn already killed monster etc.)
 - multiple qbit trees (switchable with radio buttons) - show those that affect only: promotions, certain map, main questline, side quests etc.
-- coloring of entries based on something?
+- coloring of entries based on something
+
+# GitHub Copilot notes
+- method names can tell it, what to generate/help with
+- comments also help
+- comments seem to encompass more than one definition, for example, if you write that you want your functions to throw exception on failure, copilot will suggest to actually throw exception on failure, not do nothing or return false/invalid value
+- sometimes, waiting a bit longer (up to 10-15 seconds) will give better results - copilot can generate a ton of repetitive code
+- for doing repetitive code, it's good to write first few cases on your own, so that it knows what to do. Ideally, the cases should include all possible options (like, if you want to do something with all signed/unsigned integer types of different bit width, writing first two signed and first unsigned will be enough)
+- copilot can generate code, which is not correct, but can be easily fixed

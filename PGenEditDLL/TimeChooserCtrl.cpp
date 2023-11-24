@@ -14,7 +14,7 @@ void TimeChooserCtrl::updateValuesFromTime()
 
 void TimeChooserCtrl::updateTimeFromValues()
 {
-    time.setTicks(valueTicks->GetValue());
+    time.setTicksExclusive(valueTicks->GetValue());
     time.setMinutes(valueMinutes->GetValue());
     time.setHours(valueHours->GetValue());
     time.setDays(valueDays->GetValue());
@@ -161,7 +161,7 @@ void TimeChooserCtrl::setMinutes(int64_t val)
 
 void TimeChooserCtrl::setTicks(int64_t val)
 {
-    time.setTicks(val);
+    time.setTicksExclusive(val);
     updateValuesFromTime();
 }
 

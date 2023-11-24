@@ -140,6 +140,7 @@ public:
             break;
         }
         case LUA_TSTRING:
+        {
             size_t s;
             const char* str = lua_tolstring(Lua, stackIndex, &s);
             if (existsInVector(TYPE_IDS_STRINGS, typ))
@@ -163,6 +164,7 @@ public:
                 return static_cast<bool>(str);
             }
             break;
+        }
         case LUA_TBOOLEAN:
             if (typ == TYPE_ID_BOOL)
             {
@@ -422,12 +424,12 @@ public:
     // throws exception with additional info if conversion of any parameter fails
     static std::vector<rttr::variant> convertLuaParametersToCppForReflection(const std::vector<rttr::type>& requiredTypes)
     {
-        wxASSERT_MSG(luaWrapper.gettop() >= requiredTypes.size(), "Not enough parameters on lua stack to convert to C++ types");
+        wxASSERT_MSG(luaWrapper.gettop() >= (int)requiredTypes.size(), "Not enough parameters on lua stack to convert to C++ types");
         std::vector<rttr::variant> result(requiredTypes.size());
         int stackTop = luaWrapper.gettop();
         int firstStackIndex = stackTop - requiredTypes.size() + 1; // have to go to the top of the stack for proper argument order
         std::vector<wxString> errorParts;
-        for (int i = 0; i < requiredTypes.size(); ++i)
+        for (int i = 0; i < (int)requiredTypes.size(); ++i)
         {
             int currentStackIndex = firstStackIndex + i;
             auto&& type = requiredTypes[i];
@@ -455,7 +457,7 @@ public:
     static rttr::variant callWithLuaParamsCommon(const std::string& name, T* instancePtr)
     {
         bool isMemberFunc = instancePtr != nullptr;
-        rttr::method meth = isMemberFunc ? instancePtr->get_type().get_method(name) : rttr::type::get_global_method(name);
+        rttr::method meth = isMemberFunc ? rttr::type::get<T>().get_method(name) : rttr::type::get_global_method(name);
         if (!meth.is_valid())
         {
             return false;
@@ -472,7 +474,7 @@ public:
         {
             params.push_back(arg);
         }
-        rttr::variant result = meth.invoke_variadic(isMemberFunc ? instancePtr : {}, params);
+        rttr::variant result = meth.invoke_variadic(isMemberFunc ? instancePtr : rttr::instance(), params);
         return result;
     }
 
@@ -487,12 +489,12 @@ public:
     static rttr::variant getVariableToLuaStackCommon(const std::string& name, Class* instancePtr)
     {
         bool isMemberFunc = instancePtr != nullptr;
-        rttr::property prop = isMemberFunc ? instancePtr->get_type().get_property(name) : rttr::type::get_global_property(name);
+        rttr::property prop = isMemberFunc ? rttr::type::get<Class>().get_property(name) : rttr::type::get_global_property(name);
         if (!prop.is_valid())
         {
             return false;
         }
-        return prop.get_value(isMemberFunc ? instancePtr : {});
+        return prop.get_value(isMemberFunc ? instancePtr : rttr::instance());
     }
 
     // nullptr_t version
@@ -507,7 +509,7 @@ public:
     {
         stackIndex = luaWrapper.makeAbsoluteStackIndex(stackIndex);
         bool isMemberFunc = instancePtr != nullptr;
-        rttr::property prop = isMemberFunc ? instancePtr->get_type().get_property(name) : rttr::type::get_global_property(name);
+        rttr::property prop = isMemberFunc ? rttr::type::get<Class>().get_property(name) : rttr::type::get_global_property(name);
         if (!prop.is_valid())
         {
             return false;
@@ -517,7 +519,7 @@ public:
         {
             return false;
         }
-        prop.set_value(isMemberFunc ? instancePtr : {}, value);
+        prop.set_value(isMemberFunc ? instancePtr : rttr::instance(), value);
         return true;
     }
 
@@ -582,7 +584,7 @@ public:
 
     bool canConvertLuaParameters(const std::vector<rttr::parameter_info>& required)
     {
-        for (int i = 0; i < required.size(); ++i)
+        for (int i = 0; i < (int)required.size(); ++i)
         {
             int stackIndex = luaWrapper.makeAbsoluteStackIndex(luaWrapper.gettop() - required.size() + i + 1);
             if (!canConvertLuaParameter(stackIndex, required[i]))
@@ -601,7 +603,7 @@ public:
         for (rttr::constructor ctor : rttr::type::get<Class>().get_constructors())
         {
             auto info = ctor.get_parameter_infos();
-            std::vector<parameter_info> vec(info.begin(), info.end());
+            std::vector<rttr::parameter_info> vec(info.begin(), info.end());
             if (canConvertLuaParameters(vec))
             {
                 std::vector<rttr::variant> variants = convertLuaParametersToCppForReflection(vec);
@@ -611,9 +613,11 @@ public:
                     params.push_back(arg);
                 }
                 rttr::variant result = ctor.invoke_variadic(params);
-                return result.get_value<Class*>();
+                return result.is_valid() ? result.get_value<Class*>() : nullptr;
             }
         }
         return nullptr;
     }
+
+    // store reflectively created class instances as userdata/light userdata inside lua? (so that we can get them back later)
 };

@@ -218,6 +218,7 @@
     <ClCompile Include="CommandManager.cpp" />
     <ClCompile Include="TimeChooserCtrl.cpp" />
     <ClCompile Include="Utility.cpp" />
+    <ClCompile Include="wxWidgetsReflectionRegistration.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\todo.md" />

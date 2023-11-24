@@ -9,6 +9,8 @@
     - all classes in game data (PlayerSkill, PlayerStat etc.)
     - lua event system
     - debug console
+    - all classes and most functions in utility
+    - GameTime
 
 # Misc
 

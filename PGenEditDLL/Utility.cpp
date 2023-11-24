@@ -188,6 +188,11 @@ Bounds getBounds(int size)
 	return Bounds{ low, high };
 }
 
+std::string to_string(const std::string& str)
+{
+	return str;
+}
+
 template<typename... Types>
 class variant_wrapper
 {

@@ -7,7 +7,12 @@ class GameTime
     void calculateValuesFromTicks();
 public:
 
+    // returns ONLY ticks value, for full ticks use getFullTicks()
     int64_t getTicks() const;
+    int64_t getFullTicks() const;
+    // zeroes all values except ticks
+    void setTicksExclusive(int64_t val);
+    // changes ticks value and recalculates all other values
     void setTicks(int64_t val);
     int64_t getMinutes() const;
     void setMinutes(int64_t val);
@@ -22,6 +27,9 @@ public:
     int64_t getYears() const;
     void setYears(int64_t val);
 
+    // normalize values (for example 1 hour 70 minutes -> 2 hours 10 minutes)
+    void normalize();
+
     double getFullTimeInMinutes() const;
     double getFullTimeInHours() const;
     double getFullTimeInDays() const;
@@ -29,9 +37,9 @@ public:
     double getFullTimeInMonths() const;
     double getFullTimeInYears() const;
 
-    int64_t calcTicksFromFullTime() const;
-
     GameTime();
+    GameTime(int64_t ticks);
+    GameTime(int64_t years, int64_t months, int64_t weeks, int64_t days, int64_t hours, int64_t minutes, int64_t ticks);
     GameTime(const GameTime& time) = default;
     GameTime& operator=(const GameTime& time) = default;
     static GameTime current();
@@ -47,8 +55,13 @@ public:
 
     GameTime& operator-=(const GameTime& rhs);
     GameTime& operator+=(const GameTime& rhs);
+    friend GameTime operator-(const GameTime& lhs, const GameTime& rhs);
+    friend GameTime operator+(const GameTime& lhs, const GameTime& rhs);
+    // comparison operators
+    friend bool operator==(const GameTime& lhs, const GameTime& rhs);
+    friend bool operator!=(const GameTime& lhs, const GameTime& rhs);
+    friend bool operator<(const GameTime& lhs, const GameTime& rhs);
+    friend bool operator>(const GameTime& lhs, const GameTime& rhs);
+    friend bool operator<=(const GameTime& lhs, const GameTime& rhs);
+    friend bool operator>=(const GameTime& lhs, const GameTime& rhs);
 };
-
-GameTime operator-(const GameTime& lhs, const GameTime& rhs);
-GameTime operator+(const GameTime& lhs, const GameTime& rhs);
-

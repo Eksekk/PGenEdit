@@ -279,6 +279,62 @@ void showDeducedType(const T&&) {
 // TODO: support custom message
 #define COMPILE_TIME_CONSTEXPR_IF_ERROR() ((void(*)())0x5)("a")
 
+// to avoid ambiguity with std::to_string
+std::string to_string(const std::string& str);
+
+// allows to use std::format with std::pair
+// TODO: support more types
+namespace std
+{
+	template<typename T, typename U>
+	struct formatter<std::pair<T, U>>
+    {
+        template<typename ParseContext>
+        constexpr auto parse(ParseContext& ctx)
+        {
+            return ctx.begin();
+        }
+
+        template<typename FormatContext>
+        auto format(const std::pair<T, U>& pair, FormatContext& ctx) const
+        {
+            return format_to(ctx.out(), "({}, {})", pair.first, pair.second);
+        }
+    };
+}
+
+template<typename T, typename U>
+std::string to_string(const std::pair<T, U>& pair)
+{
+	// using std::to_string; // ADL
+    return std::format("{}", pair);
+}
+
+// TODO: support associative containers
+template<template<typename, typename, typename...> typename Container, typename T, typename... Extra>
+std::string containerToString(const Container<T, Extra...>& container, const std::string& separator = ", ")
+{
+    std::string s = "";
+    const int size = container.size();
+    int i = 0;
+    for (const auto& val : container)
+    {
+		//using std::to_string; // ADL
+        s += std::format("{}", val);
+        if (i++ < size - 1)
+        {
+            s += separator;
+        }
+    }
+    return "{ " + s + " }";
+}
+
+template<typename T, size_t S>
+std::string containerToString(const std::array<T, S>& container, const std::string& separator = ", ")
+{
+	return containerToString(std::vector<T>(container.begin(), container.end()), separator);
+}
+
 /*
 template<typename T>
 struct is_temporary
