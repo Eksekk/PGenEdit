@@ -111,6 +111,7 @@
     <ClInclude Include="PrimaryStatWidget.h" />
     <ClInclude Include="Profiler.h" />
     <ClInclude Include="Reflection.h" />
+    <ClInclude Include="ReflectionTests.h" />
     <ClInclude Include="ResistanceWidget.h" />
     <ClInclude Include="SaveGameData.h" />
     <ClInclude Include="SpecificClassChooserPanel.h" />
@@ -180,6 +181,7 @@
     <ClCompile Include="PrimaryStatWidget.cpp" />
     <ClCompile Include="Profiler.cpp" />
     <ClCompile Include="Reflection.cpp" />
+    <ClCompile Include="ReflectionTests.cpp" />
     <ClCompile Include="ResistanceWidget.cpp" />
     <ClCompile Include="SaveGameData.cpp" />
     <ClCompile Include="sources\GuiApplication.cpp" />

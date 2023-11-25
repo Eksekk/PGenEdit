@@ -500,36 +500,69 @@ public:
     // receives a vector of required types, and converts lua parameters to C++ types, which are required by the method
     // throws exception with additional info if conversion of any parameter fails
     // by default pops converted parameters from lua stack, but can be disabled
-    static std::vector<rttr::variant> convertLuaParametersToCppForReflection(const std::vector<rttr::type>& requiredTypes, bool pop = true)
+    // nArgs is intended to be set by lua side to show how many arguments were passed to the function (to allow to use default values)
+    static std::vector<rttr::variant> convertLuaParametersToCppForReflection(const std::vector<rttr::parameter_info>& requiredParameters, int nArgs, bool pop = true)
     {
-        wxASSERT_MSG(luaWrapper.gettop() >= (int)requiredTypes.size(), "Not enough parameters on lua stack to convert to C++ types");
-        std::vector<rttr::variant> result(requiredTypes.size());
-        int stackTop = luaWrapper.gettop();
-        int firstStackIndex = stackTop - requiredTypes.size() + 1; // have to go to the top of the stack for proper argument order
         std::vector<wxString> errorParts;
-        for (int i = 0; i < (int)requiredTypes.size(); ++i)
+        if (nArgs == -1)
         {
-            int currentStackIndex = firstStackIndex + i;
-            auto&& type = requiredTypes[i];
-            result[i] = convertStackIndexToType(currentStackIndex, type, true);
-            // failsafe to check that lua stack top has not changed (shouldn't happen, but just in case)
-            if (luaWrapper.gettop() != stackTop)
+            nArgs = requiredParameters.size();
+        }
+        else if (nArgs > (int)requiredParameters.size())
+        {
+            errorParts.push_back(wxString::Format("Too many parameters passed by lua function (expected %d, got %d)", requiredParameters.size(), nArgs));
+        }
+        else if (nArgs < (int)requiredParameters.size())
+        {
+            bool haveDefault = true;
+            for (int i = nArgs; i < (int)requiredParameters.size(); ++i)
             {
-                int top = luaWrapper.gettop();
-                if (pop) // restore stack to original state
+                if (!requiredParameters[i].has_default_value())
                 {
-                    luaWrapper.settop(stackTop - requiredTypes.size());
+                    haveDefault = false;
+                    break;
                 }
-                throw std::runtime_error(wxString::Format("Lua stack top changed during conversion of lua parameters to C++ types (from %d to %d)", stackTop, top));
             }
-            if (!result[i].is_valid()) // got invalid (not supported) type
+            if (!haveDefault)
             {
-                errorParts.push_back(wxString::Format("Parameter %d (stack index %d) of lua type '%s' to C++ type '%s'", i + 1, currentStackIndex, lua_typename(Lua, currentStackIndex), type.get_name().data()));
+                errorParts.push_back(wxString::Format("Not enough parameters passed by lua function (expected %d, got %d), can't recover using default values", requiredParameters.size(), nArgs));
+            }
+        }
+        int defaultCount = requiredParameters.size() - nArgs;
+        wxASSERT_MSG(luaWrapper.gettop() >= nArgs, "Not enough parameters on lua stack to convert to C++ types");
+        std::vector<rttr::variant> result(requiredParameters.size());
+        int stackTop = luaWrapper.gettop();
+        int firstStackIndex = stackTop - nArgs + 1; // have to go to the top of the stack for proper argument order
+        for (int i = 0; i < (int)requiredParameters.size(); ++i)
+        {
+            if (i < nArgs) // use passed parameter
+            {
+                int currentStackIndex = firstStackIndex + i;
+                auto&& param = requiredParameters[i];
+                result[i] = convertStackIndexToType(currentStackIndex, param.get_type(), true);
+                // failsafe to check that lua stack top has not changed (shouldn't happen, but just in case)
+                if (luaWrapper.gettop() != stackTop)
+                {
+                    int top = luaWrapper.gettop();
+                    if (pop) // restore stack to original state
+                    {
+                        luaWrapper.settop(stackTop - nArgs);
+                    }
+                    throw std::runtime_error(wxString::Format("Lua stack top changed during conversion of lua parameters to C++ types (from %d to %d)", stackTop, top));
+                }
+                if (!result[i].is_valid()) // got invalid (not supported) type
+                {
+                    errorParts.push_back(wxString::Format("Parameter %d (stack index %d, name '%s') of lua type '%s' to C++ type '%s'", i + 1, currentStackIndex, param.get_name().data(), lua_typename(Lua, currentStackIndex), param.get_type().get_name().data()));
+                }
+            }
+            else // use default value
+            {
+                result[i] = requiredParameters[i].get_default_value();
             }
         }
         if (pop)
         {
-            luaWrapper.pop(requiredTypes.size());
+            luaWrapper.settop(stackTop - nArgs);
         }
         if (!errorParts.empty())
         {
@@ -541,7 +574,7 @@ public:
 public:
 
     template<typename T>
-    static rttr::variant callWithLuaParamsCommon(const std::string& name, T* instancePtr)
+    static rttr::variant callWithLuaParamsCommon(const std::string& name, T* instancePtr, int nArgs = -1)
     {
         bool isMemberFunc = instancePtr != nullptr;
         rttr::method meth = isMemberFunc ? rttr::type::get<T>().get_method(name) : rttr::type::get_global_method(name);
@@ -550,25 +583,21 @@ public:
             return false;
         }
         auto paramsArray = meth.get_parameter_infos();
-        std::vector<rttr::type> types;
-        for (rttr::parameter_info param : paramsArray)
-        {
-            types.push_back(param.get_type());
-        }
-        std::vector<rttr::variant> variants = convertLuaParametersToCppForReflection(types);
-        std::vector<rttr::argument> params;
+        std::vector<rttr::parameter_info> params(paramsArray.begin(), paramsArray.end());
+        std::vector<rttr::variant> variants = convertLuaParametersToCppForReflection(params, nArgs);
+        std::vector<rttr::argument> args;
         for (rttr::variant& arg : variants)
         {
-            params.push_back(arg);
+            args.push_back(arg);
         }
-        rttr::variant result = meth.invoke_variadic(isMemberFunc ? instancePtr : rttr::instance(), params);
+        rttr::variant result = meth.invoke_variadic(isMemberFunc ? instancePtr : rttr::instance(), args);
         return result;
     }
 
     // to allow calling above function with nullptr (in reality it's not a pointer type, so can't bind to T*, we need to overload it)
-    static rttr::variant callWithLuaParamsCommon(const std::string& name, std::nullptr_t instancePtr)
+    static rttr::variant callWithLuaParamsCommon(const std::string& name, std::nullptr_t instancePtr, int nArgs = -1)
     {
-        return callWithLuaParamsCommon(name, static_cast<void*>(nullptr));
+        return callWithLuaParamsCommon(name, static_cast<void*>(nullptr), nArgs);
     }
 
     // generic function to get variable, either global or instance
@@ -616,9 +645,9 @@ public:
         return setVariableFromLuaStackCommon(name, static_cast<void*>(nullptr), stackIndex);
     }
 
-    static rttr::variant callFreeFunctionWithLuaParams(const std::string& name)
+    static rttr::variant callFreeFunctionWithLuaParams(const std::string& name, int nArgs = -1)
     {
-        return callWithLuaParamsCommon(name, nullptr);
+        return callWithLuaParamsCommon(name, nullptr, nArgs);
     }
 
     // get global variable to lua stack
@@ -636,9 +665,9 @@ public:
     }
 
     template<typename Class>
-    static rttr::variant callInstanceMethodWithLuaParams(Class* instance, const std::string& methodName)
+    static rttr::variant callInstanceMethodWithLuaParams(Class* instance, const std::string& methodName, int nArgs = -1)
     {
-        return callWithLuaParamsCommon(methodName, instance);
+        return callWithLuaParamsCommon(methodName, instance, nArgs);
     }
 
     // get property into lua stack
@@ -669,11 +698,35 @@ public:
         return val.is_valid();
     }
 
-    static bool canConvertLuaParameters(const std::vector<rttr::parameter_info>& required)
+    static bool canConvertLuaParameters(const std::vector<rttr::parameter_info>& required, int nArgs = -1)
     {
-        for (int i = 0; i < (int)required.size(); ++i)
+        if (nArgs == -1)
         {
-            int stackIndex = luaWrapper.makeAbsoluteStackIndex(luaWrapper.gettop() - required.size() + i + 1);
+            nArgs = required.size();
+        }
+        else if (nArgs > (int)required.size())
+        {
+            return false;
+        }
+        else if (nArgs < (int)required.size())
+        {
+            bool haveDefault = true;
+            for (int i = nArgs; i < (int)required.size(); ++i)
+            {
+                if (!required[i].has_default_value())
+                {
+                    haveDefault = false;
+                    break;
+                }
+            }
+            if (!haveDefault)
+            {
+                return false;
+            }
+        }
+        for (int i = 0; i < nArgs; ++i)
+        {
+            int stackIndex = luaWrapper.makeAbsoluteStackIndex(luaWrapper.gettop() - nArgs + i + 1);
             if (!canConvertLuaParameter(stackIndex, required[i]))
             {
                 return false;
@@ -693,17 +746,18 @@ public:
                 {
                     continue;
                 }
+
                 std::vector<rttr::parameter_info> vec(info.begin(), info.end());
-                if (canConvertLuaParameters(vec))
+                if (canConvertLuaParameters(vec, nArgs))
                 {
-                    std::vector<rttr::variant> variants = convertLuaParametersToCppForReflection(vec);
+                    std::vector<rttr::variant> variants = convertLuaParametersToCppForReflection(vec, nArgs);
                     std::vector<rttr::argument> params;
                     for (rttr::variant& arg : variants)
                     {
                         params.push_back(arg);
                     }
                     rttr::variant result = ctor.invoke_variadic(params);
-                    return std::move(result);
+                    return result;
                 }
             }
             return rttr::variant();
@@ -713,7 +767,7 @@ public:
     // creates instance of given class by calling constructor with matching parameters
     // returns pointer to created instance, or nullptr if no matching constructor was found
     template<typename Class>
-    static Class* createInstanceByConstructorFromLuaStack(int nArgs)
+    static Class* createInstanceByConstructorFromLuaStack(int nArgs = -1)
     {
         auto result = findAndInvokeConstructorWithLuaArgs(rttr::type::get<Class>(), nArgs);
         return result.is_valid() ? &result.get_value<Class>() : nullptr;

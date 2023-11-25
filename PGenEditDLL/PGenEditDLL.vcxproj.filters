@@ -411,6 +411,9 @@
     <ClInclude Include="Reflection.h">
       <Filter>Pliki nagłówkowe\Misc</Filter>
     </ClInclude>
+    <ClInclude Include="ReflectionTests.h">
+      <Filter>Pliki nagłówkowe</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="sources\MainWindow.cpp">
@@ -697,6 +700,9 @@
     </ClCompile>
     <ClCompile Include="wxWidgetsReflectionRegistration.cpp">
       <Filter>Pliki źródłowe\Misc</Filter>
+    </ClCompile>
+    <ClCompile Include="ReflectionTests.cpp">
+      <Filter>Pliki źródłowe</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

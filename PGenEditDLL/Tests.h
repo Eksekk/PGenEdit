@@ -7,6 +7,7 @@
 #include "GUI_tests.h"
 #include "HookTests.h"
 #include "LuaTests.h"
+#include "ReflectionTests.h"
 
 extern Generator* generator;
 
@@ -34,8 +35,6 @@ public:
 	static std::vector<wxString> testMisc();
 
 	static std::vector<wxString> testUtilityFunctions();
-
-	static std::vector<wxString> testReflection();
 };
 
 template<typename Player, typename Game>
@@ -43,7 +42,7 @@ std::vector<wxString> Tests::run()
 {
 	testingNow = true;
 	auto ret = mergeVectors({ testMisc<Player, Game>(), testUtilityFunctions(), testSkillFunctions()/*, testJson()*///, GUI_tests::testGui<Player, Game>()
-		, testPlayerStructAccessor<Player, Game>(), HookTests::run<Player, Game>(), LuaTests::run(), testReflection()
+		, testPlayerStructAccessor<Player, Game>(), HookTests::run<Player, Game>(), LuaTests::run(), ReflectionTests::run()
 	});
 	testingNow = false;
 	return ret;
