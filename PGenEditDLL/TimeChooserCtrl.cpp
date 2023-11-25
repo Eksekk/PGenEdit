@@ -14,7 +14,7 @@ void TimeChooserCtrl::updateValuesFromTime()
 
 void TimeChooserCtrl::updateTimeFromValues()
 {
-    time.setTicksExclusive(valueTicks->GetValue());
+    time.setTicks(valueTicks->GetValue());
     time.setMinutes(valueMinutes->GetValue());
     time.setHours(valueHours->GetValue());
     time.setDays(valueDays->GetValue());
@@ -77,12 +77,12 @@ TimeChooserCtrl::TimeChooserCtrl(wxWindow* parent) : wxPanel(parent)
     Layout();
 }
 
-GameTime TimeChooserCtrl::getTime()
+GameTime TimeChooserCtrl::getTime() const
 {
     return time;
 }
 
-void TimeChooserCtrl::setTime(const GameTime& time)
+void TimeChooserCtrl::setTime(GameTime time)
 {
     this->time = time;
     updateValuesFromTime();
@@ -123,6 +123,11 @@ int64_t TimeChooserCtrl::getTicks() const
     return time.getTicks();
 }
 
+int64_t TimeChooserCtrl::getTotalTicks() const
+{
+    return time.getTotalTicks();
+}
+
 void TimeChooserCtrl::setYears(int64_t val)
 {
     time.setYears(val);
@@ -160,6 +165,12 @@ void TimeChooserCtrl::setMinutes(int64_t val)
 }
 
 void TimeChooserCtrl::setTicks(int64_t val)
+{
+    time.setTicks(val);
+    updateValuesFromTime();
+}
+
+void TimeChooserCtrl::setTicksExclusive(int64_t val)
 {
     time.setTicksExclusive(val);
     updateValuesFromTime();

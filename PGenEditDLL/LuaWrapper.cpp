@@ -61,6 +61,18 @@ LuaWrapper& LuaWrapper::rawset(int idx)
     return *this;
 }
 
+LuaWrapper& LuaWrapper::getglobal(const char* name)
+{
+    lua_getglobal(L, name);
+    return *this;
+}
+
+LuaWrapper& LuaWrapper::setglobal(const char* name)
+{
+    lua_setglobal(L, name);
+    return *this;
+}
+
 LuaWrapper& LuaWrapper::settop(int index)
 {
     lua_settop(L, index);

@@ -64,92 +64,155 @@ public:
     // lightuserdata -> void*
     // any lua type representable in cpp -> LuaTypeInCpp, rttr::variant
 
+    template<typename T>
+    static rttr::variant tryConvertNumberToType(T val, type_id typeId, bool allowCrossTypeConversions = false)
+    {
+        if (typeId == TYPE_ID_CHAR)
+        {
+            return static_cast<char>(val);
+        }
+        else if (typeId == TYPE_ID_UNSIGNED_CHAR)
+        {
+            return static_cast<unsigned char>(val);
+        }
+        else if (typeId == TYPE_ID_SHORT)
+        {
+            return static_cast<short>(val);
+        }
+        else if (typeId == TYPE_ID_UNSIGNED_SHORT)
+        {
+            return static_cast<unsigned short>(val);
+        }
+        else if (typeId == TYPE_ID_INT)
+        {
+            return static_cast<int>(val);
+        }
+        else if (typeId == TYPE_ID_UNSIGNED_INT)
+        {
+            return static_cast<unsigned int>(val);
+        }
+        else if (typeId == TYPE_ID_LONG)
+        {
+            return static_cast<long>(val);
+        }
+        else if (typeId == TYPE_ID_UNSIGNED_LONG)
+        {
+            return static_cast<unsigned long>(val);
+        }
+        else if (typeId == TYPE_ID_LONG_LONG)
+        {
+            return static_cast<long long>(val);
+        }
+        else if (typeId == TYPE_ID_UNSIGNED_LONG_LONG)
+        {
+            return static_cast<unsigned long long>(val);
+        }
+        else if (typeId == TYPE_ID_FLOAT)
+        {
+            return static_cast<float>(val);
+        }
+        else if (typeId == TYPE_ID_DOUBLE)
+        {
+            return static_cast<double>(val);
+        }
+        else if (typeId == TYPE_ID_LONG_DOUBLE)
+        {
+            return static_cast<long double>(val);
+        }
+        else if (allowCrossTypeConversions)
+        {
+            if (typeId == TYPE_ID_BOOL)
+            {
+                return static_cast<bool>((long long)val); // second cast is for doubles, which can't be cast to bool directly
+            }
+            // strings
+            else if (typeId == TYPE_ID_STRING)
+            {
+                return std::to_string(val);
+            }
+            else if (typeId == TYPE_ID_STRING_VIEW)
+            {
+                return std::string_view(std::to_string(val));
+            }
+        }
+        return rttr::variant();
+    }
+
+    static rttr::variant convertLuaTypeInCppToVariantByTypeId(const LuaTypeInCpp& var, const type_id& typeId, bool allowCrossTypeConversions = false)
+    {
+        // let's assume integers can be converted to floats and vice versa, even if allowCrossTypeConversions is false
+        if (const sqword_t* val = std::get_if<sqword_t>(&var))
+        {
+            return tryConvertNumberToType(*val, typeId, allowCrossTypeConversions);
+        }
+        else if (const lua_Number* val = std::get_if<lua_Number>(&var))
+        {
+            return tryConvertNumberToType(*val, typeId, allowCrossTypeConversions);
+        }
+        else if (const std::string* val = std::get_if<std::string>(&var))
+        {
+            if (typeId == TYPE_ID_STRING)
+            {
+                return *val;
+            }
+            else if (typeId == TYPE_ID_STRING_VIEW)
+            {
+                return std::string_view(*val);
+            }
+            else if (allowCrossTypeConversions)
+            {
+                if (typeId == TYPE_ID_BOOL)
+                {
+                     return !val->empty();
+                }
+
+                try
+                {
+                    return tryConvertNumberToType(std::stod(*val), typeId, allowCrossTypeConversions);
+                }
+                catch (const std::exception&)
+                {
+                    // ignore
+                }
+
+                try 
+                {
+                    return tryConvertNumberToType(std::stoll(*val), typeId, allowCrossTypeConversions);
+                }
+                catch (const std::exception&)
+                {
+                    // ignore
+                }
+            }
+        }
+        return rttr::variant();
+    }
+
+
     // converts lua parameter from stack to given type (using RTTR type_id)
     // allowCrossTypeCategoryConversions allows to convert lua types to C++ types, which are not exactly matching, but are compatible (like number to boolean)
-    static rttr::variant convertStackIndexToTypeById(int stackIndex, const type_id& typ, bool allowCrossTypeCategoryConversions = false)
+    static rttr::variant convertStackIndexToType(int stackIndex, const rttr::type& typ, bool allowCrossTypeCategoryConversions = false)
     {
+        type_id typeId = typ.get_id();
         stackIndex = luaWrapper.makeAbsoluteStackIndex(stackIndex);
         switch (lua_type(Lua, stackIndex))
         {
         case LUA_TNUMBER:
         {
             lua_Number num = lua_tonumber(Lua, stackIndex);
-            if (existsInVector(TYPE_IDS_NUMBERS, typ))
-            {
-                if (typ == TYPE_ID_CHAR)
-                {
-                    return static_cast<char>(num);
-                }
-                else if (typ == TYPE_ID_UNSIGNED_CHAR)
-                {
-                    return static_cast<unsigned char>(num);
-                }
-                else if (typ == TYPE_ID_SHORT)
-                {
-                    return static_cast<short>(num);
-                }
-                else if (typ == TYPE_ID_UNSIGNED_SHORT)
-                {
-                    return static_cast<unsigned short>(num);
-                }
-                else if (typ == TYPE_ID_INT)
-                {
-                    return static_cast<int>(num);
-                }
-                else if (typ == TYPE_ID_UNSIGNED_INT)
-                {
-                    return static_cast<unsigned int>(num);
-                }
-                else if (typ == TYPE_ID_LONG)
-                {
-                    return static_cast<long>(num);
-                }
-                else if (typ == TYPE_ID_UNSIGNED_LONG)
-                {
-                    return static_cast<unsigned long>(num);
-                }
-                else if (typ == TYPE_ID_LONG_LONG)
-                {
-                    return static_cast<long long>(num);
-                }
-                else if (typ == TYPE_ID_UNSIGNED_LONG_LONG)
-                {
-                    return static_cast<unsigned long long>(num);
-                }
-                else if (typ == TYPE_ID_FLOAT)
-                {
-                    return static_cast<float>(num);
-                }
-                else if (typ == TYPE_ID_DOUBLE)
-                {
-                    return static_cast<double>(num);
-                }
-                else if (typ == TYPE_ID_LONG_DOUBLE)
-                {
-                    return static_cast<long double>(num);
-                }
-                else
-                {
-                    return rttr::variant();
-                }
-            }
-            else if (allowCrossTypeCategoryConversions && typ == TYPE_ID_BOOL)
-            {
-                return static_cast<bool>(num);
-            }
-            break;
+            return tryConvertNumberToType(num, typeId, allowCrossTypeCategoryConversions);
         }
         case LUA_TSTRING:
         {
             size_t s;
             const char* str = lua_tolstring(Lua, stackIndex, &s);
-            if (existsInVector(TYPE_IDS_STRINGS, typ))
+            if (existsInVector(TYPE_IDS_STRINGS, typeId))
             {
-                if (typ == TYPE_ID_STRING)
+                if (typeId == TYPE_ID_STRING)
                 {
                     return std::string(str, s);
                 }
-                else if (typ == TYPE_ID_STRING_VIEW)
+                else if (typeId == TYPE_ID_STRING_VIEW)
                 {
                     return std::string_view(str, s);
                 }
@@ -158,7 +221,7 @@ public:
                     return rttr::variant();
                 }
             }
-            else if (allowCrossTypeCategoryConversions && typ == TYPE_ID_BOOL)
+            else if (allowCrossTypeCategoryConversions && typeId == TYPE_ID_BOOL)
             {
                 // TODO: decide how I would want string to bool conversion to work
                 return static_cast<bool>(str);
@@ -166,50 +229,50 @@ public:
             break;
         }
         case LUA_TBOOLEAN:
-            if (typ == TYPE_ID_BOOL)
+            if (typeId == TYPE_ID_BOOL)
             {
                 return static_cast<bool>(lua_toboolean(Lua, stackIndex));
             }
-            else if (allowCrossTypeCategoryConversions && existsInVector(TYPE_IDS_INTEGERS, typ))
+            else if (allowCrossTypeCategoryConversions && existsInVector(TYPE_IDS_INTEGERS, typeId))
             {
                 int b = lua_toboolean(Lua, stackIndex);
-                if (typ == TYPE_ID_CHAR)
+                if (typeId == TYPE_ID_CHAR)
                 {
                     return static_cast<char>(b);
                 }
-                else if (typ == TYPE_ID_UNSIGNED_CHAR)
+                else if (typeId == TYPE_ID_UNSIGNED_CHAR)
                 {
                     return static_cast<unsigned char>(b);
                 }
-                else if (typ == TYPE_ID_SHORT)
+                else if (typeId == TYPE_ID_SHORT)
                 {
                     return static_cast<short>(b);
                 }
-                else if (typ == TYPE_ID_UNSIGNED_SHORT)
+                else if (typeId == TYPE_ID_UNSIGNED_SHORT)
                 {
                     return static_cast<unsigned short>(b);
                 }
-                else if (typ == TYPE_ID_INT)
+                else if (typeId == TYPE_ID_INT)
                 {
                     return static_cast<int>(b);
                 }
-                else if (typ == TYPE_ID_UNSIGNED_INT)
+                else if (typeId == TYPE_ID_UNSIGNED_INT)
                 {
                     return static_cast<unsigned int>(b);
                 }
-                else if (typ == TYPE_ID_LONG)
+                else if (typeId == TYPE_ID_LONG)
                 {
                     return static_cast<long>(b);
                 }
-                else if (typ == TYPE_ID_UNSIGNED_LONG)
+                else if (typeId == TYPE_ID_UNSIGNED_LONG)
                 {
                     return static_cast<unsigned long>(b);
                 }
-                else if (typ == TYPE_ID_LONG_LONG)
+                else if (typeId == TYPE_ID_LONG_LONG)
                 {
                     return static_cast<long long>(b);
                 }
-                else if (typ == TYPE_ID_UNSIGNED_LONG_LONG)
+                else if (typeId == TYPE_ID_UNSIGNED_LONG_LONG)
                 {
                     return static_cast<unsigned long long>(b);
                 }
@@ -218,18 +281,18 @@ public:
                     return rttr::variant();
                 }
             }
-            else if (allowCrossTypeCategoryConversions && existsInVector(TYPE_IDS_FLOATS, typ))
+            else if (allowCrossTypeCategoryConversions && existsInVector(TYPE_IDS_FLOATS, typeId))
             {
                 int b = lua_toboolean(Lua, stackIndex);
-                if (typ == TYPE_ID_FLOAT)
+                if (typeId == TYPE_ID_FLOAT)
                 {
                     return static_cast<float>(b);
                 }
-                else if (typ == TYPE_ID_DOUBLE)
+                else if (typeId == TYPE_ID_DOUBLE)
                 {
                     return static_cast<double>(b);
                 }
-                else if (typ == TYPE_ID_LONG_DOUBLE)
+                else if (typeId == TYPE_ID_LONG_DOUBLE)
                 {
                     return static_cast<long double>(b);
                 }
@@ -238,15 +301,15 @@ public:
                     return rttr::variant();
                 }
             }
-            else if (allowCrossTypeCategoryConversions && existsInVector(TYPE_IDS_STRINGS, typ))
+            else if (allowCrossTypeCategoryConversions && existsInVector(TYPE_IDS_STRINGS, typeId))
             {
                 // TODO: decide how I would want bool to string conversion to work
                 int b = lua_toboolean(Lua, stackIndex);
-                if (typ == TYPE_ID_STRING)
+                if (typeId == TYPE_ID_STRING)
                 {
                     return std::string(b ? "true" : "false");
                 }
-                else if (typ == TYPE_ID_STRING_VIEW)
+                else if (typeId == TYPE_ID_STRING_VIEW)
                 {
                     return std::string_view(b ? "true" : "false");
                 }
@@ -257,11 +320,25 @@ public:
             }
             break;
         case LUA_TTABLE:
-            if (typ == TYPE_ID_LUA_TABLE)
+            if (typeId == TYPE_ID_LUA_TABLE)
             {
                 return LuaTable::fromLuaTable(stackIndex);
             }
-            else if (allowCrossTypeCategoryConversions && typ == TYPE_ID_BOOL)
+            else if (typ.is_sequential_container())
+            {
+                // have to extract information from lua table into rttr::variant containing desired container
+                rttr::type wrappedType = typ.get_wrapped_type();
+                rttr::variant var = typ.create();
+                rttr::variant_sequential_view seqView = var.create_sequential_view();
+                LuaTable t = LuaTable::fromLuaTable(stackIndex);
+                auto arr = t.getArrayPart();
+                seqView.set_size(arr.size());
+                for (int i = 0; const LuaTypeInCpp& val : arr)
+                {
+                    seqView.set_value(i++, val);
+                }
+            }
+            else if (allowCrossTypeCategoryConversions && typeId == TYPE_ID_BOOL)
             {
                 return true;
             }
@@ -271,11 +348,11 @@ public:
             }
             break;
         case LUA_TNIL:
-            if (typ == TYPE_ID_NIL)
+            if (typeId == TYPE_ID_NIL)
             {
                 return Nil;
             }
-            else if (allowCrossTypeCategoryConversions && typ == TYPE_ID_BOOL)
+            else if (allowCrossTypeCategoryConversions && typeId == TYPE_ID_BOOL)
             {
                 return false;
             }
@@ -422,7 +499,8 @@ public:
 
     // receives a vector of required types, and converts lua parameters to C++ types, which are required by the method
     // throws exception with additional info if conversion of any parameter fails
-    static std::vector<rttr::variant> convertLuaParametersToCppForReflection(const std::vector<rttr::type>& requiredTypes)
+    // by default pops converted parameters from lua stack, but can be disabled
+    static std::vector<rttr::variant> convertLuaParametersToCppForReflection(const std::vector<rttr::type>& requiredTypes, bool pop = true)
     {
         wxASSERT_MSG(luaWrapper.gettop() >= (int)requiredTypes.size(), "Not enough parameters on lua stack to convert to C++ types");
         std::vector<rttr::variant> result(requiredTypes.size());
@@ -433,16 +511,25 @@ public:
         {
             int currentStackIndex = firstStackIndex + i;
             auto&& type = requiredTypes[i];
-            result[i] = convertStackIndexToTypeById(currentStackIndex, type.get_id(), true);
+            result[i] = convertStackIndexToType(currentStackIndex, type, true);
             // failsafe to check that lua stack top has not changed (shouldn't happen, but just in case)
             if (luaWrapper.gettop() != stackTop)
             {
-                throw std::runtime_error(wxString::Format("Lua stack top changed during conversion of lua parameters to C++ types (from %d to %d)", stackTop, luaWrapper.gettop()));
+                int top = luaWrapper.gettop();
+                if (pop) // restore stack to original state
+                {
+                    luaWrapper.settop(stackTop - requiredTypes.size());
+                }
+                throw std::runtime_error(wxString::Format("Lua stack top changed during conversion of lua parameters to C++ types (from %d to %d)", stackTop, top));
             }
             if (!result[i].is_valid()) // got invalid (not supported) type
             {
                 errorParts.push_back(wxString::Format("Parameter %d (stack index %d) of lua type '%s' to C++ type '%s'", i + 1, currentStackIndex, lua_typename(Lua, currentStackIndex), type.get_name().data()));
             }
+        }
+        if (pop)
+        {
+            luaWrapper.pop(requiredTypes.size());
         }
         if (!errorParts.empty())
         {
@@ -514,7 +601,7 @@ public:
         {
             return false;
         }
-        rttr::variant value = convertStackIndexToTypeById(stackIndex, prop.get_type().get_id());
+        rttr::variant value = convertStackIndexToType(stackIndex, prop.get_type());
         if (!value.is_valid())
         {
             return false;
@@ -570,7 +657,7 @@ public:
 
     // not using convertLuaParametersToCppForReflection here, because it throws exception on failure, and we want to return false instead
 
-    bool canConvertLuaParameter(int stackIndex, const rttr::parameter_info& required)
+    static bool canConvertLuaParameter(int stackIndex, const rttr::parameter_info& required)
     {
         // check validity of stack index
         if (stackIndex < 1 || stackIndex > luaWrapper.gettop())
@@ -578,11 +665,11 @@ public:
             wxFAIL_MSG(wxString::Format("Invalid stack index %d (current size is %d)", stackIndex, luaWrapper.gettop()));
             return false;
         }
-        rttr::variant val = convertStackIndexToTypeById(stackIndex, required.get_type().get_id());
+        rttr::variant val = convertStackIndexToType(stackIndex, required.get_type());
         return val.is_valid();
     }
 
-    bool canConvertLuaParameters(const std::vector<rttr::parameter_info>& required)
+    static bool canConvertLuaParameters(const std::vector<rttr::parameter_info>& required)
     {
         for (int i = 0; i < (int)required.size(); ++i)
         {
@@ -595,28 +682,54 @@ public:
         return true;
     }
 
+    private:
+        // also takes a nArgs parameter, which specifies, how many arguments should be passed to constructor (if -1, then any number of arguments is allowed)
+        static rttr::variant findAndInvokeConstructorWithLuaArgs(const rttr::type& type, int nArgs = -1)
+        {
+            for (rttr::constructor ctor : type.get_constructors())
+            {
+                auto info = ctor.get_parameter_infos();
+                if (nArgs != -1 && info.size() != nArgs)
+                {
+                    continue;
+                }
+                std::vector<rttr::parameter_info> vec(info.begin(), info.end());
+                if (canConvertLuaParameters(vec))
+                {
+                    std::vector<rttr::variant> variants = convertLuaParametersToCppForReflection(vec);
+                    std::vector<rttr::argument> params;
+                    for (rttr::variant& arg : variants)
+                    {
+                        params.push_back(arg);
+                    }
+                    rttr::variant result = ctor.invoke_variadic(params);
+                    return std::move(result);
+                }
+            }
+            return rttr::variant();
+        }
+    public:
+
     // creates instance of given class by calling constructor with matching parameters
     // returns pointer to created instance, or nullptr if no matching constructor was found
     template<typename Class>
-    static Class* createInstanceByConstructorFromLuaStack()
+    static Class* createInstanceByConstructorFromLuaStack(int nArgs)
     {
-        for (rttr::constructor ctor : rttr::type::get<Class>().get_constructors())
+        auto result = findAndInvokeConstructorWithLuaArgs(rttr::type::get<Class>(), nArgs);
+        return result.is_valid() ? &result.get_value<Class>() : nullptr;
+    }
+
+    // creates instance of given class by calling constructor with matching parameters
+    // returns variant containing instance or invalid value in case of error
+    template<typename Class>
+    static rttr::variant createInstanceByConstructorFromLuaStack(const std::string& className, int nArgs = -1)
+    {
+        rttr::type type = rttr::type::get_by_name(className);
+        if (!type.is_valid())
         {
-            auto info = ctor.get_parameter_infos();
-            std::vector<rttr::parameter_info> vec(info.begin(), info.end());
-            if (canConvertLuaParameters(vec))
-            {
-                std::vector<rttr::variant> variants = convertLuaParametersToCppForReflection(vec);
-                std::vector<rttr::argument> params;
-                for (rttr::variant& arg : variants)
-                {
-                    params.push_back(arg);
-                }
-                rttr::variant result = ctor.invoke_variadic(params);
-                return result.is_valid() ? result.get_value<Class*>() : nullptr;
-            }
+            return rttr::variant();
         }
-        return nullptr;
+        return std::move(findAndInvokeConstructorWithLuaArgs(type, nArgs));
     }
 
     // store reflectively created class instances as userdata/light userdata inside lua? (so that we can get them back later)

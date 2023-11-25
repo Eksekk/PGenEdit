@@ -45,8 +45,10 @@ bool essentiallyEqualFloats(Float a, Float b)
 bool operator==(const LuaTypeInCpp& a, const LuaTypeInCpp& b);
 bool operator!=(const LuaTypeInCpp& a, const LuaTypeInCpp& b);
 
+using LuaValuePair = std::pair<LuaTypeInCpp, LuaTypeInCpp>;
 
 using LuaTableValues = std::map<LuaTypeInCpp, LuaTypeInCpp>;
+using LuaTableValuesWithArray = std::set<std::variant<LuaTypeInCpp, LuaValuePair>>;
 using LuaTableValuesUPtr = std::unique_ptr<LuaTableValues>;
 struct LuaTable // TODO: storing array part and hashed part separately - will improve table to lua conversion time, but will require tricky code
 {
@@ -65,6 +67,10 @@ struct LuaTable // TODO: storing array part and hashed part separately - will im
     LuaTableValues::const_iterator end() const;
     LuaTable(const LuaTableValues& values);
     LuaTable(LuaTableValues&& values);
+
+    // unfortunately, can't make this a constructor, because it will be ambiguous with LuaTableValues when passed initializer_list
+    static LuaTable constructFromValuesWithArray(LuaTableValuesWithArray&& values);
+    static LuaTable constructFromValuesWithArray(const LuaTableValuesWithArray& values);
     LuaTable(const LuaTable& other) = default;
     LuaTable& operator=(const LuaTable& other) = default;//FIX
     LuaTable& operator=(LuaTable&& other) = default;//FIX
@@ -75,6 +81,9 @@ struct LuaTable // TODO: storing array part and hashed part separately - will im
     const LuaTypeInCpp& at(const LuaTypeInCpp& type) const;
     LuaTypeInCpp& at(const LuaTypeInCpp& type);
     bool contains(const LuaTypeInCpp& type) const;
+    // gets consecutive integer keys' values as a vector
+    // stops on first missing index
+    std::vector<LuaTypeInCpp> getArrayPart() const;
 private:
     LuaTable() = default; // this is private, so lua tables without provided values won't be created
     static void luaConvertTypeCommon(LuaTypeInCpp& val, int stack);
@@ -86,8 +95,6 @@ private:
 
     RTTR_REGISTRATION_FRIEND
 };
-
-using LuaValuePair = std::pair<LuaTypeInCpp, LuaTypeInCpp>;
 
 inline bool operator==(const LuaValuePair& lhs, const LuaValuePair& rhs)
 {

@@ -23,6 +23,8 @@ public:
     LuaWrapper& settable(int idx);
     LuaWrapper& rawget(int idx);
     LuaWrapper& rawset(int idx);
+    LuaWrapper& getglobal(const char* name);
+    LuaWrapper& setglobal(const char* name);
 
     LuaWrapper& settop(int index);
     int gettop();

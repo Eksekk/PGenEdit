@@ -68,6 +68,7 @@ void DebugConsole::onEnter(wxCommandEvent& event)
 {
     // when is OnEnter called?
     // when enter is pressed in the text control
+    event.Skip();
     processCommand();
 }
 
@@ -100,10 +101,12 @@ void DebugConsole::onChar(wxKeyEvent& event)
 
 void DebugConsole::onSize(wxSizeEvent& event)
 {
+    event.Skip();
 }
 
 void DebugConsole::onClose(wxCloseEvent& event)
 {
+    event.Skip();
 }
 
 void DebugConsole::onClearText(wxCommandEvent& event)

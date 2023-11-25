@@ -1759,7 +1759,7 @@ namespace
                 push edi
                 push esi
 
-                mov esi, dword ptr[esp + 16] // const char* str
+                mov esi, dword ptr[esp + 16 + 8] // const char* str, 8 added because of pushed registers
                 mov edi, cmpStr
                 mov ecx, len
                 repe cmpsb
@@ -1821,6 +1821,7 @@ namespace
         }
 
         // cast __callTest3 to function which uses thiscall calling convention
+        // function pointer cast hack is needed, because you can't directly declare __thiscall function in c++ code (at least in MSVC)
         typedef void(__thiscall* __callTest3_thiscall)(bool b, bool bb, dword_t d);
         static const __callTest3_thiscall callTest3 = (__callTest3_thiscall)__callTest3;
 
@@ -1838,7 +1839,7 @@ namespace
                 jne $fail
 
                 mov callFailReasonId, 3
-                cmp dword ptr [esp + 8], 0x33994499
+                cmp dword ptr [esp + 4], 0x33994499
                 jne $fail
 
                 mov callFailReasonId, 0
@@ -1864,6 +1865,7 @@ namespace
                 fld dword ptr [esp + 8]
                 fcomip st(0), st(1)
                 fnstsw ax
+                // test ax, ax // this is not correct here, because "fcomip" sets flags by itself, version which wouldn't set them is "fcomp"
                 // any of CF, PF, ZF must not be set
                 jz $fail
                 jp $fail
@@ -2062,6 +2064,8 @@ HookTests::testMiscFunctions()
     // do like above for callTest5
     callMemoryAddress(callTest5, -1, (void*)0x12345678, 3.13f, 40);
     myassertf(callFailReasonId == 0, "[callMemoryAddress] callTest5 caused error code %d", callFailReasonId);
+
+    // if there's no crash until this point, this means calling convention behavior is correct
 
     // callMemoryAddressRegisters
     HookData testData;

@@ -7,9 +7,9 @@ class GameTime
     void calculateValuesFromTicks();
 public:
 
-    // returns ONLY ticks value, for full ticks use getFullTicks()
+    // returns ONLY ticks value, for full ticks use getTotalTicks()
     int64_t getTicks() const;
-    int64_t getFullTicks() const;
+    int64_t getTotalTicks() const;
     // zeroes all values except ticks
     void setTicksExclusive(int64_t val);
     // changes ticks value and recalculates all other values

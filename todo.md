@@ -29,6 +29,7 @@
 # Low level
 - automatically store hook restore data to abstract unhooking (see hookRestoreDataMap variable)
 - redoing asm compiling functions to two-pass system (compile, get size, alloc memory, compile again with origin at this memory), allowing to have "absolute" keyword as in MMExt
+- hook Windows "Heaven's Gate" to allow running 64-bit code from 32-bit process (see https://github.com/dadas190/Heavens-Gate-2.0); no real use case for this, but it would be cool to have
 
 # Design
 - simple "randomize item" dialog, where you would input item type, treasure level etc. and call vanilla function

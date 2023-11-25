@@ -270,6 +270,51 @@ LuaTypeInCpp& LuaTable::operator[](const LuaTypeInCpp& type)
     return values[type];
 }
 
+LuaTable LuaTable::constructFromValuesWithArray(LuaTableValuesWithArray&& values)
+{
+    LuaTableValues converted;
+    int lastArrayIndex = 1;
+    for (const auto& value : values)
+    {
+        if (const LuaValuePair* pair = std::get_if<LuaValuePair>(&value))
+        {
+            converted.emplace(tryToIntegerRet(pair->first), tryToIntegerRet(pair->second));
+        }
+        else if (const LuaTypeInCpp* val = std::get_if<LuaTypeInCpp>(&value))
+        {
+            converted.emplace(lastArrayIndex++, *val);
+        }
+    }
+
+    LuaTable t;
+    t.values = std::move(converted);
+    return t;
+}
+
+LuaTable LuaTable::constructFromValuesWithArray(const LuaTableValuesWithArray& values)
+{
+    auto values2 = values;
+    return constructFromValuesWithArray(std::move(values2));
+}
+
+std::vector<LuaTypeInCpp> LuaTable::getArrayPart() const
+{
+    std::vector<LuaTypeInCpp> arrayPart;
+    for (int i = 1; ; ++i)
+    {
+        LuaTypeInCpp key = i;
+        if (values.contains(key))
+        {
+            arrayPart.push_back(values.at(key));
+        }
+        else
+        {
+            break;
+        }
+    }
+    return arrayPart;
+}
+
 bool operator==(const LuaTypeInCpp& a, const LuaTypeInCpp& b)
 {
     // cleanest way to have default operator for most types and custom behavior for some, without endless recursion, is this lambda way, I think
@@ -306,6 +351,8 @@ RTTR_REGISTRATION
 .constructor<const LuaTable&>(registration::public_access)
 .constructor<LuaTable&&>(registration::public_access)
 .constructor<>(registration::private_access)
+.method("constructFromValuesWithArray", select_overload<LuaTable(const LuaTableValuesWithArray&)>(&LuaTable::constructFromValuesWithArray), registration::public_access)
+.method("constructFromValuesWithArray", select_overload<LuaTable(LuaTableValuesWithArray&&)>(&LuaTable::constructFromValuesWithArray), registration::public_access)
 .method("operator=", select_overload<LuaTable&(const LuaTable&)>(&LuaTable::operator=))
 .method("operator=", select_overload<LuaTable&(LuaTable&&)>(&LuaTable::operator=))
 .method("operator[]", &LuaTable::operator[])
@@ -317,6 +364,7 @@ RTTR_REGISTRATION
 .method("emplace", &LuaTable::emplace, registration::public_access)
 .method("at", select_overload<const LuaTypeInCpp&(const LuaTypeInCpp&) const>(&LuaTable::at), registration::public_access)
 .method("at", select_overload<LuaTypeInCpp&(const LuaTypeInCpp&)>(&LuaTable::at), registration::public_access)
+.method("getArrayPart", &LuaTable::getArrayPart, registration::public_access)
 .method("contains", &LuaTable::contains, registration::public_access)
 .method("fromLuaTable", &LuaTable::fromLuaTable)
 .method("luaConvertTypeCommon", &LuaTable::luaConvertTypeCommon, registration::private_access)

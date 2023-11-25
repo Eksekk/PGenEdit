@@ -33,8 +33,6 @@ public:
     DebugConsole(wxWindow* parent);
     ~DebugConsole();
 
-    wxDECLARE_EVENT_TABLE();
-
     // returns string with result and whether it was successful
     std::pair<std::string, bool> runLua(const std::string& str);
 

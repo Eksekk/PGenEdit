@@ -43,7 +43,7 @@ std::vector<wxString> Tests::run()
 {
 	testingNow = true;
 	auto ret = mergeVectors({ testMisc<Player, Game>(), testUtilityFunctions(), testSkillFunctions()/*, testJson()*///, GUI_tests::testGui<Player, Game>()
-		, testPlayerStructAccessor<Player, Game>(), HookTests::run<Player, Game>(), LuaTests::run()
+		, testPlayerStructAccessor<Player, Game>(), HookTests::run<Player, Game>(), LuaTests::run(), testReflection()
 	});
 	testingNow = false;
 	return ret;

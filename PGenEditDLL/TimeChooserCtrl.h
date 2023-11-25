@@ -27,8 +27,9 @@ class TimeChooserCtrl : public wxPanel
 public:
     TimeChooserCtrl(wxWindow* parent);
 
-    GameTime getTime();
-    void setTime(const GameTime& time);
+    GameTime getTime() const;
+    // even though this makes an unnecessary copy of GameTime, it's still necessary (because of RTTR requirements)
+    void setTime(GameTime time);
 
     int64_t getYears() const;
     int64_t getMonths() const;
@@ -37,6 +38,7 @@ public:
     int64_t getHours() const;
     int64_t getMinutes() const;
     int64_t getTicks() const;
+    int64_t getTotalTicks() const;
 
     void setYears(int64_t val);
     void setMonths(int64_t val);
@@ -45,6 +47,7 @@ public:
     void setHours(int64_t val);
     void setMinutes(int64_t val);
     void setTicks(int64_t val);
+    void setTicksExclusive(int64_t val);
 
     RTTR_REGISTRATION_FRIEND
 };

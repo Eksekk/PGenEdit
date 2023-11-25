@@ -36,7 +36,7 @@ void GameTime::setTicksExclusive(int64_t val)
 
 void GameTime::setTicks(int64_t val)
 {
-    ticks = getFullTicks() + val;
+    ticks = getTotalTicks() + val;
     calculateValuesFromTicks();
 }
 
@@ -82,7 +82,7 @@ double GameTime::getFullTimeInYears() const
     return (double)ticks / TIME_TICKS_IN_YEAR;
 }
 
-int64_t GameTime::getFullTicks() const
+int64_t GameTime::getTotalTicks() const
 {
     std::initializer_list<std::pair<const int64_t&, int>> vals =
     {
@@ -106,7 +106,7 @@ int64_t GameTime::getFullTicks() const
 
 void GameTime::normalize()
 {
-    ticks = getFullTicks();
+    ticks = getTotalTicks();
     calculateValuesFromTicks();
 }
 
@@ -196,29 +196,29 @@ GameTime GameTime::current()
 
 GameTime& GameTime::operator-=(const GameTime& rhs)
 {
-    setTicksExclusive(getFullTicks() - rhs.getFullTicks());
+    setTicksExclusive(getTotalTicks() - rhs.getTotalTicks());
     return *this;
 }
 
 GameTime& GameTime::operator+=(const GameTime& rhs)
 {
-    setTicksExclusive(getFullTicks() + rhs.getFullTicks());
+    setTicksExclusive(getTotalTicks() + rhs.getTotalTicks());
     return *this;
 }
 
 GameTime operator-(const GameTime& lhs, const GameTime& rhs)
 {
-    return GameTime(lhs.getFullTicks() - rhs.getFullTicks());
+    return GameTime(lhs.getTotalTicks() - rhs.getTotalTicks());
 }
 
 GameTime operator+(const GameTime& lhs, const GameTime& rhs)
 {
-    return GameTime(lhs.getFullTicks() + rhs.getFullTicks());
+    return GameTime(lhs.getTotalTicks() + rhs.getTotalTicks());
 }
 
 bool operator==(const GameTime& lhs, const GameTime& rhs)
 {
-    return lhs.getFullTicks() == rhs.getFullTicks();
+    return lhs.getTotalTicks() == rhs.getTotalTicks();
 }
 
 bool operator!=(const GameTime& lhs, const GameTime& rhs)
@@ -228,7 +228,7 @@ bool operator!=(const GameTime& lhs, const GameTime& rhs)
 
 bool operator<(const GameTime& lhs, const GameTime& rhs)
 {
-    return lhs.getFullTicks() < rhs.getFullTicks();
+    return lhs.getTotalTicks() < rhs.getTotalTicks();
 }
 
 bool operator>(const GameTime& lhs, const GameTime& rhs)
@@ -270,10 +270,10 @@ registration::class_<GameTime>("GameTime")
 .property_readonly("fullTimeInWeeks", &GameTime::getFullTimeInWeeks)
 .property_readonly("fullTimeInMonths", &GameTime::getFullTimeInMonths)
 .property_readonly("fullTimeInYears", &GameTime::getFullTimeInYears)
-.property_readonly("fullTicks", &GameTime::getFullTicks)
+.property_readonly("totalTicks", &GameTime::getTotalTicks)
 
 .method("getTicks", &GameTime::getTicks)
-.method("getFullTicks", &GameTime::getFullTicks)
+.method("getTotalTicks", &GameTime::getTotalTicks)
 .method("getYears", &GameTime::getYears)
 .method("getMonths", &GameTime::getMonths)
 .method("getWeeks", &GameTime::getWeeks)

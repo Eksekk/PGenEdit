@@ -14,6 +14,9 @@
 #include "PartyStructAccessor.h"
 #include "GameData.h"
 #include "LowLevel.h"
+#include "LuaTable.h"
+#include "LuaWrapper.h"
+#include "Reflection.h"
 
 extern Generator* generator;
 
@@ -959,11 +962,17 @@ public:
 		InnerStruct& operator=(const InnerStruct&) = default;
 		InnerStruct& operator=(InnerStruct&&) = default;
 
-		// virtual method
+		// virtual methods
 		virtual int returnSizeof() const
 		{
 			return sizeof(InnerStruct);
 		}
+
+		// in derived class will return double the value
+		virtual int addAllArguments(int a, int b, int c, int d) const
+		{
+            return a + b + c + d;
+        }
 
 		// an operator which modifies the struct based on int argument passed to it
 		InnerStruct& operator+=(int val)
@@ -997,6 +1006,11 @@ public:
 		{
 			return sizeof(InnerStruct2);
 		}
+
+		virtual int addAllArguments(int a, int b, int c, int d) const override
+		{
+            return 2 * (a + b + c + d);
+        }
 
 		// an operator += which modifies the struct based on int argument passed to it
 		InnerStruct2& operator+=(int val)
@@ -1056,6 +1070,28 @@ public:
 
 	friend std::string to_string(const ReflectionSampleStruct& u);
 };
+
+// returns 0 for success, 1 and above for failure (specific error codes)
+static int __declspec(naked) __fastcall fastcallGlobalFunctionTest(int argEcx, int argEdx, int argEsp)
+{
+    __asm
+    {
+        mov eax, 1
+        cmp ecx, 0x77777777
+        jne $fail
+        inc eax
+        cmp edx, 0x3333333
+        jne $fail
+        inc eax
+        cmp dword ptr[esp + 4], 0x88888888
+        jne $fail
+        mov eax, 0
+        ret 4
+
+        $fail:
+        ret 4
+    }
+}
 
 std::string to_string(const ReflectionSampleStruct::UnionSample& u)
 {
@@ -1239,6 +1275,31 @@ std::vector<wxString> Tests::testReflection()
 	testPropertyGetSet(myasserter, rss, &ReflectionSampleStruct::u, "u", testIndex++);
 	testPropertyGetSet(myasserter, rss, &ReflectionSampleStruct::inner, "inner", testIndex++);
 	testPropertyGetSet(myasserter, rss, &ReflectionSampleStruct::inner2, "inner2", testIndex++);
+
+	// methods, in particular using Reflection class for tests
+// 	auto unpackParamsFromLuaTableToStack = [](const LuaTable& t)
+// 		{
+// 			int stack = luaWrapper.gettop();
+// 			luaWrapper.getglobal("unpack");
+// 		};
+
+	// test calling methods with reflection
+
+	testIndex = 0;
+	auto result = Reflection::callInstanceMethodWithLuaParams(&rss, "get5");
+	myassertf(result == 5, "[call methods with reflection; test #%d] incorrect result (expected: 5, actual: %d)", testIndex++, result.get_value<int>());
+	luaWrapper.pushnumber(10.0); // also test implicit conversion to int
+	result = Reflection::callInstanceMethodWithLuaParams(&rss, "setInt");
+	myassertf(rss.i == 10, "[call methods with reflection; test #%d] incorrect result (expected: 10, actual: %d)", testIndex++, rss.i);
+	luaWrapper.pushnumber(-2);
+	Reflection::callInstanceMethodWithLuaParams(&rss, "setInt");
+	myassertf(rss.i == -2, "[call methods with reflection; test #%d] incorrect result (expected: -2, actual: %d)", testIndex++, rss.i);
+	//result = Reflection::callInstanceMethodWithLuaParams(&rss, 
+
+	// test constructors
+	testIndex = 0;
+	luaWrapper.pushnumber(5).pushstring("abc");
+	ReflectionSampleStruct* p = Reflection::createInstanceByConstructorFromLuaStack<ReflectionSampleStruct>();
 
 	return myasserter.errors;
 }
