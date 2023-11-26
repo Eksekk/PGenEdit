@@ -69,7 +69,9 @@ struct LuaTable // TODO: storing array part and hashed part separately - will im
     LuaTable(LuaTableValues&& values);
 
     // unfortunately, can't make this a constructor, because it will be ambiguous with LuaTableValues when passed initializer_list
+    // also accepts normal key-value pairs in addition to individual array elements
     static LuaTable constructFromValuesWithArray(LuaTableValuesWithArray&& values);
+    // also accepts normal key-value pairs in addition to individual array elements
     static LuaTable constructFromValuesWithArray(const LuaTableValuesWithArray& values);
     LuaTable(const LuaTable& other) = default;
     LuaTable& operator=(const LuaTable& other) = default;//FIX

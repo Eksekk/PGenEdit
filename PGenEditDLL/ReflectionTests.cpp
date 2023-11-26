@@ -215,6 +215,9 @@ public:
         map = { {"a", 1}, {"b", 2}, {"c", 3} };
         u = { 0 };
     }
+
+    // copy ctor
+    ReflectionSampleStruct(const ReflectionSampleStruct&) = default;
     
     // a operator += which modifies the struct based on int argument passed to it
     ReflectionSampleStruct& operator+=(int val)
@@ -475,44 +478,64 @@ std::vector<wxString> ReflectionTests::run()
     testIndex = 0;
     static const wxString constructorCheckFormat = "[constructors; test #%d] incorrect result (expected: %s, actual: %s)";
     // helper to avoid null pointer problems when accessing the created instance (constructor could not be found)
-    auto checkNonNull = [&](const std::unique_ptr<ReflectionSampleStruct>& p)
+    auto checkNonNull = [&](const std::shared_ptr<ReflectionSampleStruct>& p)
         {
             myassertf(p != nullptr, constructorCheckFormat, testIndex, "not null", "null");
             return p != nullptr;
         };
+    auto checkVariantValid = [&](const rttr::variant& var)
+        {
+            myassertf(var.is_valid(), constructorCheckFormat, testIndex, "valid", "invalid");
+            return var.is_valid();
+        };
+    // skip fully reflective object creation for now, because I don't know how to convert arbitrary rttr variant to string, and don't want to write a lot of code for this/accept that something I made is not working fully :)
     luaWrapper.pushnumber(5).pushstring("abc");
-    std::unique_ptr<ReflectionSampleStruct> p(Reflection::createInstanceByConstructorFromLuaStack<ReflectionSampleStruct>(2));
-    if (checkNonNull(p))
+    std::shared_ptr<ReflectionSampleStruct> pValue(Reflection::createInstanceByConstructorFromLuaStack<ReflectionSampleStruct>(2));
+    if (checkNonNull(pValue))
     {
-        myassertf(p->i == 5 && p->str == "abc", constructorCheckFormat, testIndex, "i = 5; str = abc;", to_string(*p).c_str());
+        myassertf(pValue->i == 5 && pValue->str == "abc", constructorCheckFormat, testIndex, "i = 5; str = abc;", to_string(*pValue).c_str());
     }
     ++testIndex;
     luaWrapper.pushnumber(5).pushnumber(3);
-    p.reset(Reflection::createInstanceByConstructorFromLuaStack<ReflectionSampleStruct>(2));
-    if (checkNonNull(p))
+    pValue = Reflection::createInstanceByConstructorFromLuaStack<ReflectionSampleStruct>(2);
+    if (checkNonNull(pValue))
     {
-        myassertf(p->i == 5 + 3, constructorCheckFormat, testIndex, "i = 5; str = default;", to_string(*p).c_str());
+        myassertf(pValue->i == 5 + 3 + 20 + 5, constructorCheckFormat, testIndex, "i = 5 + 3 + 20 + 5", to_string(*pValue).c_str());
     }
     ++testIndex;
     luaWrapper.pushboolean(true);
-    p.reset(Reflection::createInstanceByConstructorFromLuaStack<ReflectionSampleStruct>(1));
-    if (checkNonNull(p))
+    pValue = Reflection::createInstanceByConstructorFromLuaStack<ReflectionSampleStruct>(1);
+    if (checkNonNull(pValue))
     {
-        myassertf(p->i == 21 && p->str == "a", constructorCheckFormat, testIndex, "i = 21; str = a;", to_string(*p).c_str());
+        myassertf(pValue->i == 21 && pValue->str == "a", constructorCheckFormat, testIndex, "i = 21; str = a;", to_string(*pValue).c_str());
+    }
+    ++testIndex;
+    luaWrapper.pushboolean(true);
+    rttr::variant var = Reflection::createInstanceByConstructorFromLuaStack("ReflectionSampleStruct", 1);
+    if (checkVariantValid(var))
+    {
+        pValue = var.get_value<std::shared_ptr<ReflectionSampleStruct>>();
+        myassertf(pValue->i == 21 && pValue->str == "a", constructorCheckFormat, testIndex, "i = 21; str = a;", to_string(*pValue).c_str());
+        // now similar to above, but get all fields reflectively
+        int reflI = Reflection::getPropertyValueFromInstance(var, "i").get_value<int>();
+        std::string reflStr = Reflection::getPropertyValueFromInstance(var, "str").get_value<std::string>();
+        myassertf(reflI == 21 && reflStr == "a", constructorCheckFormat, testIndex, "i = 21;", to_string(*pValue).c_str());
     }
     ++testIndex;
     // provide custom int, string, vector
     luaWrapper.pushnumber(55).pushstring("ddde");
-    LuaTable::constructFromValuesWithArray({ 1, 2, 3 }).pushToLuaStack();
-    p.reset(Reflection::createInstanceByConstructorFromLuaStack<ReflectionSampleStruct>(3));
-    if (checkNonNull(p))
+    LuaTable::constructFromValuesWithArray({ 2, 3, 5 }).pushToLuaStack();
+    pValue = Reflection::createInstanceByConstructorFromLuaStack<ReflectionSampleStruct>(3);
+    if (checkNonNull(pValue))
     {
         // extra parentheses to avoid commas inside initializer list, which break the macro
-        myassertf((p->i == 55 && p->str == "ddde" && p->vec == VectorType{ 1, 2, 3 }), constructorCheckFormat, testIndex, "i = 55; str = ddde; vec = 1,2,3;", to_string(*p).c_str());
-        Inner* inner = &p->inner2;
+        myassertf((pValue->i == 55 && pValue->str == "ddde" && pValue->vec == VectorType{ 2, 3, 5 }), constructorCheckFormat, testIndex, "i = 55; str = ddde; vec = {2,3,5};", to_string(*pValue).c_str());
+        Inner* inner = &pValue->inner2;
         myassertf(Reflection::callInstanceMethodWithLuaParams(inner, "returnSizeof", 0).get_value<int>() == sizeof(Inner2), "[constructors; test #%d] virtual method call with reflection failed", testIndex);
     }
     ++testIndex;
+
+    // manipulate LuaTable class 100% reflectively
 
     return myasserter.errors;
 }

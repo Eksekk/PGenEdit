@@ -736,16 +736,26 @@ public:
     }
 
     private:
-        // also takes a nArgs parameter, which specifies, how many arguments should be passed to constructor (if -1, then any number of arguments is allowed)
+        // also takes a nArgs parameter, which specifies, how many arguments from lua stack should be passed to constructor (if -1, then any number of arguments is allowed). It needs to be greater or equal to the number of non-default parameters
         static rttr::variant findAndInvokeConstructorWithLuaArgs(const rttr::type& type, int nArgs = -1)
         {
             for (rttr::constructor ctor : type.get_constructors())
             {
                 auto info = ctor.get_parameter_infos();
-                if (nArgs != -1 && info.size() != nArgs)
-                {
-                    continue;
-                }
+//                 int defaultCount = 0;
+//                 for (const auto& entry : info)
+//                 {
+//                     if (entry.has_default_value())
+//                     {
+//                         ++defaultCount;
+//                     }
+//                 }
+//                 // int f(int a, int b, int c, int d = 20, int e = 8) -> total args = 5, defaultCount = 2
+//                 // consider only constructors, where all non-default parameters are passed, and default ones might be passed or not
+//                 if (nArgs != -1 && nArgs < (int)info.size() - defaultCount)
+//                 {
+//                     continue;
+//                 }
 
                 std::vector<rttr::parameter_info> vec(info.begin(), info.end());
                 if (canConvertLuaParameters(vec, nArgs))
@@ -767,24 +777,42 @@ public:
     // creates instance of given class by calling constructor with matching parameters
     // returns pointer to created instance, or nullptr if no matching constructor was found
     template<typename Class>
-    static Class* createInstanceByConstructorFromLuaStack(int nArgs = -1)
+    static std::shared_ptr<Class> createInstanceByConstructorFromLuaStack(int nArgs = -1)
     {
         auto result = findAndInvokeConstructorWithLuaArgs(rttr::type::get<Class>(), nArgs);
-        return result.is_valid() ? &result.get_value<Class>() : nullptr;
+        // we need to do copy construction, because there are three options for constructor policies regarding object creation:
+        // 1) create a new object with automatic storage duration
+        // 2) create a new object and return std::shared_ptr<Class> (default)
+        // 3) create a new object with dynamic storage duration (Class*), which needs to be properly .destroy()-ed later
+        // third option is best for this use case IMO, but it requires explicitly changing policy in each class constructor registration, and I would obviously forget about it many times, ~~so I will just create a dynamic copy of automatic storage object~~ (decided to use shared_ptr's instead)
+        static_assert(std::is_copy_constructible_v<Class>, "Class must be copy constructible (for now)");
+        // TODO: require that "dynamic creation" policy is set if class is not copy constructible
+        wxASSERT_MSG(result.is_type<Class>(), result.get_type().get_name().data());
+        return result.is_valid() ? result.get_value<std::shared_ptr<Class>>() : nullptr;
     }
 
     // creates instance of given class by calling constructor with matching parameters
-    // returns variant containing instance or invalid value in case of error
-    template<typename Class>
+    // returns a variant with std::shared_ptr to dynamically-allocated variant containing instance. Variant is invalid if no matching constructor was found
     static rttr::variant createInstanceByConstructorFromLuaStack(const std::string& className, int nArgs = -1)
     {
         rttr::type type = rttr::type::get_by_name(className);
         if (!type.is_valid())
         {
-            return rttr::variant();
+            return nullptr;
         }
-        return std::move(findAndInvokeConstructorWithLuaArgs(type, nArgs));
+        auto result = findAndInvokeConstructorWithLuaArgs(type, nArgs);
+        // now hopefully has shared_ptr inside, pointing to new instance of class
+        return result;
     }
+
+//     static std::string toString(const rttr::variant& var)
+//     {
+//         for (const auto& prop : var.get_type().get_properties())
+//         {
+//             prop.get_name();
+//             prop.
+//         }
+//     }
 
     // store reflectively created class instances as userdata/light userdata inside lua? (so that we can get them back later)
 };
