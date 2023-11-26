@@ -27,11 +27,16 @@ class Asserter
 	std::unique_ptr<LogSink> logSink;
 public:
 	std::vector<wxString> errors;
-	std::string category;
+    std::string category;
+	// called when assert failure happens, handles logging and adding to errors vector
+    template<typename... Args>
+    bool operator()(const char* func, const char* file, int line, const wxString& rawErrorMsg, Args&&... args);
 	template<typename... Args>
-	bool operator()(const char* func, const char* file, int line, const wxString& rawErrorMsg, Args&&... args);
-	template<typename... Args>
-	bool assertFormat(const char* func, const char* file, int line, Args&&... args);
+    bool assertFormat(const char* func, const char* file, int line, Args&&... args);
+    template<typename... Args>
+    bool fail(const wxString& str);
+    template<typename... Args>
+    bool failFormat(const wxString& format, Args&&... args);
 	static bool logAutomatically;
 	void flush();
 
@@ -80,4 +85,18 @@ template<typename... Args>
 bool Asserter::assertFormat(const char* func, const char* file, int line, Args&&... args)
 {
 	return operator()(func, file, line, wxString::Format(args...));
+}
+
+template<typename ...Args>
+inline bool Asserter::fail(const wxString& str)
+{
+	const std::source_location& loc = std::source_location::current();
+	return operator()(loc.function_name(), loc.file_name(), loc.line(), str);
+}
+
+template<typename ...Args>
+inline bool Asserter::failFormat(const wxString& format, Args && ...args)
+{
+	const std::source_location& loc = std::source_location::current();
+	return operator()(loc.function_name(), loc.file_name(), loc.line(), wxString::Format(format, std::forward<Args>(args)...));
 }

@@ -600,9 +600,9 @@ public:
         return callWithLuaParamsCommon(name, static_cast<void*>(nullptr), nArgs);
     }
 
-    // generic function to get variable, either global or instance
+    // generic templated function to get variable, either global or instance
     template<typename Class>
-    static rttr::variant getVariableToLuaStackCommon(const std::string& name, Class* instancePtr)
+    static rttr::variant getVariableTemplatedCommon(const std::string& name, Class* instancePtr)
     {
         bool isMemberFunc = instancePtr != nullptr;
         rttr::property prop = isMemberFunc ? rttr::type::get<Class>().get_property(name) : rttr::type::get_global_property(name);
@@ -612,11 +612,12 @@ public:
         }
         return prop.get_value(isMemberFunc ? instancePtr : rttr::instance());
     }
+    // generic function to get
 
     // nullptr_t version
-    static rttr::variant getVariableToLuaStackCommon(const std::string& name, std::nullptr_t instancePtr)
+    static rttr::variant getVariableTemplatedCommon(const std::string& name, std::nullptr_t instancePtr)
     {
-        return getVariableToLuaStackCommon(name, static_cast<void*>(nullptr));
+        return getVariableTemplatedCommon(name, static_cast<void*>(nullptr));
     }
 
     // generic function to set variable, either global or instance
@@ -654,7 +655,8 @@ public:
     // returns if operation was successful, in case of failure, lua stack is not modified
     static bool getGlobalVariableToLuaStack(const std::string& variableName, int stackIndex = -1)
     {
-        getVariableToLuaStackCommon(variableName, nullptr);
+
+        return convertToLuaTypeOnStackByTypeId(getVariableTemplatedCommon(variableName, nullptr));
     }
 
     // set global variable from lua stack
@@ -672,9 +674,9 @@ public:
 
     // get property into lua stack
     template<typename Class>
-    static void getPropertyToLuaStack(Class* instance, const std::string& propertyName)
+    static bool getPropertyToLuaStack(Class* instance, const std::string& propertyName)
     {
-        getVariableToLuaStackCommon(propertyName, instance);
+        return convertToLuaTypeOnStackByTypeId(getVariableTemplatedCommon(propertyName, instance));
     }
 
     // set property from lua stack
@@ -786,8 +788,8 @@ public:
         // 3) create a new object with dynamic storage duration (Class*), which needs to be properly .destroy()-ed later
         // third option is best for this use case IMO, but it requires explicitly changing policy in each class constructor registration, and I would obviously forget about it many times, ~~so I will just create a dynamic copy of automatic storage object~~ (decided to use shared_ptr's instead)
         static_assert(std::is_copy_constructible_v<Class>, "Class must be copy constructible (for now)");
+
         // TODO: require that "dynamic creation" policy is set if class is not copy constructible
-        wxASSERT_MSG(result.is_type<Class>(), result.get_type().get_name().data());
         return result.is_valid() ? result.get_value<std::shared_ptr<Class>>() : nullptr;
     }
 
@@ -802,6 +804,9 @@ public:
         }
         auto result = findAndInvokeConstructorWithLuaArgs(type, nArgs);
         // now hopefully has shared_ptr inside, pointing to new instance of class
+        // can methods be invoked reflectively on raw pointers to class?
+        auto baseType = result.extract_wrapped_value().get_type().get_raw_type();
+        wxASSERT(!baseType.is_wrapper() && !baseType.is_pointer());
         return result;
     }
 

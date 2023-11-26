@@ -44,6 +44,7 @@
 #include <regex>
 #include <set>
 #include <unordered_set>
+#include <source_location>
 
 #include <boost/pfr.hpp>
 namespace pfr = boost::pfr;
