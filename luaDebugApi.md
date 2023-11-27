@@ -18,8 +18,32 @@ local format = string.format
 
 local classObjectMT = {name = "<unknown>"}
 
+local function createObjectMetatable(name, ...)
+	local mt = {}
+	mt.__index = mt
+	mt.__name = name
+	mt.__new = function(...)
+		local obj = api.createObjectOfClass(name, ...)
+		setmetatable(obj, mt)
+		return obj
+	end
+	mt.__gc = function(obj)
+		api.destroyObject(obj)
+	end
+	return mt
+end
+
+local function makeClass(name, ...)
+	local mt = createObjectMetatable(name, ...)
+	mt.__call = function(...)
+		return mt.__new(...)
+	end
+	return mt
+end
+
 local class = {}
 pgenedit.class = class
+-- pgenedit.class.wxWindow.new("test", nil, 0, 0, 0, 0)
 function classMT.new(...)
 	local obj = api.createObjectOfClass(classMT.name, ...)
 	setmetatable(obj, classObjectMT)

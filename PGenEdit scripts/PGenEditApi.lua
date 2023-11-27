@@ -8,12 +8,18 @@ local format = string.format
 -- 4. handle inheritance by performing lookup for fields in base classes
 -- 5. provide a method to check if object is of a given class (or any of its derived classes)
 -- 6. rich error messages for function wrapper (including parameter names and types)
+-- 7. currently only userdata represents C++ objects. Since they are garbage-collected by Lua, it's possible to have objects with invalid state in C++ after some debug calls and gc execution. Need to add a way to create a "weak" object, which will not be garbage-collected by Lua, but will be destroyed only when object is destroyed from C++ side, and will be just as functional as a regular object (except for __gc metamethod, which will not be called).
+-- Obviously need to use tables to represent such objects, since they too support metatables, and aren't garbage collected.
+-- Such objects will be used, if user wants to keep a reference to an object, which is owned by C++ (global variable for example).
+-- TODO: notify lua about object destruction from C++ side?
 
 -- for functions need to handle:
 -- 1. type checking for arguments and return types (including small value types range compatibility), C++ will also check this, but it's better to check it here too
 -- 2. objects as arguments and return values
 -- 3. error handling
 -- 4. pass the number of arguments to C++ (for functions with default arguments or for checking if parameters are missing/extra)
+
+-- minor style convention I adopted: functions in metatables should be qualified with __, for consistency with built-in metamethods, and also to disambiguate them from regular functions
 
 pgenedit.debug.attemptTypeConversion = true -- if true, will attempt to convert parameters to correct type, if false, will throw an error
 
@@ -24,29 +30,37 @@ local class = {}
 cpp.class = class
 -- pgenedit.cpp.class
 -- pgenedit.cpp.global
-local mt = {}
-function mt.__index(t, key) -- if __index fires, this means that class is not yet created
+local classContainerMT = {}
+function classContainerMT.__index(t, key) -- if __index fires, this means that class is not yet created
 	local cls = makeClass(key)
 	rawset(t, key, cls)
 	return cls
 end
-function mt.__newindex(t, key, value)
+function classContainerMT.__newindex(t, key, value)
 	error(format("Attempt to set class %q", key), 2)
 end
-setmetatable(class, mt)
+setmetatable(class, classContainerMT)
 -- pgenedit.class.wxWindow.new("test", nil, 0, 0, 0, 0)
 
-local function isClassOrDerived(this, checkName)
-	local mt = getmetatable(this) or {}
-	-- support both class name and class metatable
-	checkName = type(checkName == "table") and checkName.__name or checkName
-	if mt.__className == checkName then -- same class
+-- userdata are objects created by lua, tables are objects created by C++ (so no automatic garbage collection happens)
+local function isClassObject(obj)
+	return (type(obj) == "userdata" or type(obj) == "table") and getmetatable(obj) and getmetatable(obj).className
+end
+
+local function isObjectOfClassOrDerived(obj, checkName)
+	if not isClassObject(obj) then
+		return false
+	end
+	local objMT = getmetatable(obj)
+	-- support both class name and class table
+	checkName = type(checkName == "table") and getmetatable(checkName).name or checkName
+	if objMT.className == checkName then -- same class
 		return true
-	elseif table.find(mt.bases, checkName) then
+	elseif table.find(objMT.classMetatable.bases, checkName) then -- first-level base class
 		return true
-	elseif cpp.class[checkName] then
+	elseif cpp.class[checkName] then -- check recursively for all base classes
 		for i, name in ipairs(getmetatable(cpp.class[checkName]).bases) do
-			if isClassOrDerived(this, name) then
+			if isObjectOfClassOrDerived(obj, name) then
 				return true
 			end
 		end
@@ -167,10 +181,10 @@ local function validateOrConvertParameter(value, cppType, paramIndex, funcNameFo
 	elseif cppTypeName == "nil" then -- shouldn't ever happen
 		error(format("'%s': Parameter #%d (%q) of type %q and value %q: requested C++ type is 'nil'", funcNameForMessage, paramIndex, expectedParamData.name, type(value), value), 3)
 	elseif expectedParamData.isClass then
-		if type(value) ~= "userdata" or not getmetatable(value) or not getmetatable(value).__className then
+		if type(value) ~= "userdata" or not getmetatable(value) or not getmetatable(value).className then
 			error(format(sNotAnObject, funcNameForMessage, paramIndex, value), 3)
-		elseif getmetatable(cppTypeName).__className ~= getmetatable(value).__className and not isClassOrDerived(value, cppTypeName) then
-			error(format("'%s': Parameter %d (%q) is of invalid class (expected %q or any derived, got %q)", funcNameForMessage, paramIndex, expectedParamData.name, cppTypeName, getmetatable(value).__className), 3)
+		elseif getmetatable(cppTypeName).className ~= getmetatable(value).className and not isObjectOfClassOrDerived(value, cppTypeName) then
+			error(format("'%s': Parameter %d (%q) is of invalid class (expected %q or any derived, got %q)", funcNameForMessage, paramIndex, expectedParamData.name, cppTypeName, getmetatable(value).className), 3)
 		else
 			return value
 		end
@@ -228,8 +242,8 @@ local function funcWrapper(className, funcName)
 				error(format("Invalid object instance (first parameter), received %q", this), 2)
 			elseif not getmetatable(this) then
 				error(format("Object instance is not a valid object (no metatable)", this), 2)
-			elseif getmetatable(this).__className ~= className then
-				error(format("Object instance is of invalid class (expected %q, got %q)", this, className, getmetatable(this).__className), 2)
+			elseif getmetatable(this).className ~= className then
+				error(format("Object instance is of invalid class (expected %q, got %q)", this, className, getmetatable(this).className), 2)
 			end
 		end
 		return api.callMethod(className, funcName, #args, unpack(args))
@@ -238,17 +252,19 @@ end
 
 -- creates metatable, which will be used to give object ability to access its fields and methods
 local function createObjectMetatable(classMT)
-	local mt = {}
-	local className = classMT.__name
-	mt.__className = className
-	mt.classMetatable = classMT
-	function mt.__index(obj, key)
-		if getmetatable(obj).__className ~= className then
-			error(format("Received object of type %q, expected %q", getmetatable(obj).__className, className), 2)
+	local objMT = {}
+	local className = classMT.name
+	objMT.className = className
+	objMT.classMetatable = classMT
+
+	function objMT.__index(obj, key)
+		-- check for correct object type (inheritance won't change much, still original object is passed, just different metatable functions are called)
+		if getmetatable(obj).className ~= className then
+			error(format("Received object of type %q, expected %q", getmetatable(obj).className, className), 2)
 		end
 		if api.isMethodOfClass(className, key) then
 			local f = funcWrapper(className, key)
-			rawset(obj, key, f)
+			rawset(obj, key, f) -- cache future accesses to methods
 			return f
 		elseif api.isFieldOfClass(className, key) then
 			return api.getFieldOfClass(obj, className, key)
@@ -256,10 +272,12 @@ local function createObjectMetatable(classMT)
 			error(format("Attempt to access unknown field %q of class %q", key, className), 2)
 		end
 	end
-	function mt.__newindex(obj, key, value)
-		if getmetatable(obj).__className ~= className then
-			error(format("Received object of type %q, expected %q", getmetatable(obj).__className, className), 2)
+
+	function objMT.__newindex(obj, key, value)
+		if getmetatable(obj).className ~= className then
+			error(format("Received object of type %q, expected %q", getmetatable(obj).className, className), 2)
 		end
+		 -- note: due to the fact that methods are cached (created only once), it's possible to set a method to different function after it's created, or even non-function value, which will cause an error when trying to call it. It will be user's responsibility to not do that.
 		if api.isMethodOfClass(className, key) then
 			error(format("Attempt to set method %q of class %q", key, className), 2)
 		elseif not api.isFieldOfClass(className, key) then
@@ -267,23 +285,26 @@ local function createObjectMetatable(classMT)
 		end
 		api.setFieldOfClass(obj, className, key, value)
 	end
-	function mt.__new(...)
+
+	function objMT.__new(...)
 		-- TODO: find constructor matching parameters (count, types and possible conversions between types) and default arguments, if no matching constructor found, throw an error
 		local obj = api.createObject(className, ...)
-		setmetatable(obj, mt)
+		setmetatable(obj, objMT)
 		return obj
 	end
-	function mt.__gc(obj)
+
+	function objMT.__gc(obj)
 		api.destroyObject(obj)
 	end
-	function mt.__copy(this)
+
+	function objMT.__copy(this)
 		local obj = api.copyObject(this)
-		setmetatable(obj, mt)
+		setmetatable(obj, objMT)
 		return obj
 	end
 	-- TODO: dumpAllProperties (including functions shown clearly as such)
 	-- TODO: readonly properties
-	return mt
+	return objMT
 end
 
 -- call stack: user code -> pgenedit.class index -> makeClass -> createObjectMetatable
@@ -296,7 +317,7 @@ end
 		error(format("Class %q does not exist", name), 3)
 	end
 	local classMT = {}
-	classMT.__name = name
+	classMT.name = name
 	local objMT = createObjectMetatable(classMT)
 	classMT.objectMetatable = objMT
 	classMT.__call = function(...)
