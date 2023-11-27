@@ -1,6 +1,14 @@
 local api = require("luaDebugApi")
 local format = string.format
 
+-- remaining to do:
+-- 1. add support for enums
+-- 2. add support for const methods
+-- 3. add support for overloaded methods
+-- 4. handle inheritance by performing lookup for fields in base classes
+-- 5. provide a method to check if object is of a given class (or any of its derived classes)
+-- 6. rich error messages for function wrapper (including parameter names and types)
+
 -- for functions need to handle:
 -- 1. type checking for arguments and return types (including small value types range compatibility), C++ will also check this, but it's better to check it here too
 -- 2. objects as arguments and return values
@@ -8,6 +16,43 @@ local format = string.format
 -- 4. pass the number of arguments to C++ (for functions with default arguments or for checking if parameters are missing/extra)
 
 pgenedit.debug.attemptTypeConversion = true -- if true, will attempt to convert parameters to correct type, if false, will throw an error
+
+local cpp = tget(pgenedit, "cpp")
+
+local makeClass
+local class = {}
+cpp.class = class
+-- pgenedit.cpp.class
+-- pgenedit.cpp.global
+local mt = {}
+function mt.__index(t, key) -- if __index fires, this means that class is not yet created
+	local cls = makeClass(key)
+	rawset(t, key, cls)
+	return cls
+end
+function mt.__newindex(t, key, value)
+	error(format("Attempt to set class %q", key), 2)
+end
+setmetatable(class, mt)
+-- pgenedit.class.wxWindow.new("test", nil, 0, 0, 0, 0)
+
+local function isClassOrDerived(this, checkName)
+	local mt = getmetatable(this) or {}
+	-- support both class name and class metatable
+	checkName = type(checkName == "table") and checkName.__name or checkName
+	if mt.__className == checkName then -- same class
+		return true
+	elseif table.find(mt.bases, checkName) then
+		return true
+	elseif cpp.class[checkName] then
+		for i, name in ipairs(getmetatable(cpp.class[checkName]).bases) do
+			if isClassOrDerived(this, name) then
+				return true
+			end
+		end
+	end
+	return false
+end
 
 local integerTypeRanges = 
 {
@@ -22,19 +67,28 @@ local integerTypeRanges =
 	["long long"] = {min = -9223372036854775808, max = 9223372036854775807},
 	["unsigned long long"] = {min = 0, max = 18446744073709551615},
 }
-
-local sIntOutOfRange = "'%s': Parameter %d is out of range for type %q (value is %d)"
-local sCantConvertToNumber = "'%s': Parameter %d (%q) is not a number and can't be converted to it"
-local sCantConvertToBoolean = "'%s': Parameter %d (%q) is not a boolean and can't be converted to it"
-local sCantConvertToString = "'%s': Parameter %d (%q) is not a string and can't be converted to it"
-local sCantConvertToTable = "'%s': Parameter %d (%q) is not a table and can't be converted to it"
-local sNotAnObject = "Argument %d (%q) is not an object [userdata]"
-local function validateOrConvertParameter(value, typ, paramIndex, funcName)
+--error(format(sCantConvertToNumber, funcNameForMessage, paramIndex, value), 3)
+local sIntOutOfRange = "'%s': Parameter #%d is out of range for type %q (value is %d)"
+local genericParamFormatStr = "'%s': Parameter #%d (%q) of type %q and value %q can't be converted to C++ type %q"
+local sNotAnObject = "Argument #%d (%q) is not an object [userdata]"
+local function validateOrConvertParameter(value, cppType, paramIndex, funcNameForMessage)
+	local expectedParamData = cppType
+	local expectedCppTypeStr = expectedParamData.type
+	if expectedParamData.isClass then
+		expectedCppTypeStr = expectedParamData.type
+	elseif expectedParamData.isPointer then
+		expectedCppTypeStr = expectedCppTypeStr .. "*"
+	elseif expectedParamData.isReference then
+		expectedCppTypeStr = expectedCppTypeStr .. "&"
+	elseif expectedParamData.isConst then
+		expectedCppTypeStr = "const " .. expectedCppTypeStr
+	end
 	local conv = pgenedit.debug.attemptTypeConversion
-	if integerTypeRanges[typ] then
+	local cppTypeName = cppType.name
+	if integerTypeRanges[cppTypeName] then
 		if type(value) == "number" then
-			if value < integerTypeRanges[typ].min or value > integerTypeRanges[typ].max then
-				error(format(sIntOutOfRange, funcName, paramIndex, typ, value), 3)
+			if value < integerTypeRanges[cppTypeName].min or value > integerTypeRanges[cppTypeName].max then
+				error(format(sIntOutOfRange, funcNameForMessage, paramIndex, cppTypeName, value), 3)
 			end
 			return value
 		elseif conv then
@@ -45,15 +99,16 @@ local function validateOrConvertParameter(value, typ, paramIndex, funcName)
 			elseif type(value) == "string" then
 				local num = tonumber(value)
 				if num then
-					if num < integerTypeRanges[typ].min or num > integerTypeRanges[typ].max then
-						error(format(sIntOutOfRange, funcName, paramIndex, typ, num), 3)
+					if num < integerTypeRanges[cppTypeName].min or num > integerTypeRanges[cppTypeName].max then
+						error(format(sIntOutOfRange, funcNameForMessage, paramIndex, cppTypeName, num), 3)
 					end
 					return num
 				end
 			end
 		end
-		error(format(sCantConvertToNumber, funcName, paramIndex, value), 3)
-	elseif typ == "float" or typ == "double" or typ == "long double" then
+		--local genericParamFormatStr = "'%s': Parameter #%d (%q) of type %q and value %q can't be converted to C++ type %q"
+		error(format(genericParamFormatStr, funcNameForMessage, paramIndex, expectedParamData.name, type(value), value, expectedCppTypeStr), 3)
+	elseif cppTypeName == "float" or cppTypeName == "double" or cppTypeName == "long double" then
 		if type(value) == "number" then
 			return value
 		elseif conv then
@@ -68,8 +123,8 @@ local function validateOrConvertParameter(value, typ, paramIndex, funcName)
 				end
 			end
 		end
-		error(format(sCantConvertToNumber, funcName, paramIndex, value), 3)
-	elseif typ == "bool" then
+		error(format(genericParamFormatStr, funcNameForMessage, paramIndex, expectedParamData.name, type(value), value, expectedCppTypeStr), 3)
+	elseif cppTypeName == "bool" then
 		if type(value) == "boolean" then
 			return value
 		-- TODO: consider if always doing nil -> false conversion, regardless of conv, is a good idea
@@ -86,8 +141,8 @@ local function validateOrConvertParameter(value, typ, paramIndex, funcName)
 				end
 			end
 		end
-		error(format(sCantConvertToBoolean, funcName, paramIndex, value), 3)
-	elseif typ == "string" then -- for std::string, const char* and std::string_view
+		error(format(genericParamFormatStr, funcNameForMessage, paramIndex, expectedParamData.name, type(value), value, expectedCppTypeStr), 3)
+	elseif cppTypeName == "string" then -- for std::string, const char* and std::string_view
 		if type(value) == "string" then
 			return value
 		elseif conv then
@@ -99,8 +154,8 @@ local function validateOrConvertParameter(value, typ, paramIndex, funcName)
 				return tostring(value)
 			end
 		end
-		error(format(sCantConvertToString, funcName, paramIndex, value), 3)
-	elseif typ == "table" then
+		error(format(genericParamFormatStr, funcNameForMessage, paramIndex, expectedParamData.name, type(value), value, expectedCppTypeStr), 3)
+	elseif cppTypeName == "table" then
 		if type(value) == "table" then
 			return value
 		elseif conv then
@@ -108,53 +163,62 @@ local function validateOrConvertParameter(value, typ, paramIndex, funcName)
 				return {}
 			end
 		end
-		error(format(sCantConvertToTable, funcName, paramIndex, value), 3)
-	elseif typ == "nil" then -- shouldn't ever happen
-		error(format("'%s': Parameter %d requested type is 'nil'", funcName, paramIndex), 3)
-	elseif typ == "object" then
+		error(format(genericParamFormatStr, funcNameForMessage, paramIndex, expectedParamData.name, type(value), value, expectedCppTypeStr), 3)
+	elseif cppTypeName == "nil" then -- shouldn't ever happen
+		error(format("'%s': Parameter #%d (%q) of type %q and value %q: requested C++ type is 'nil'", funcNameForMessage, paramIndex, expectedParamData.name, type(value), value), 3)
+	elseif expectedParamData.isClass then
 		if type(value) ~= "userdata" or not getmetatable(value) or not getmetatable(value).__className then
-			error(format(sNotAnObject, funcName, paramIndex, value), 3)
+			error(format(sNotAnObject, funcNameForMessage, paramIndex, value), 3)
+		elseif getmetatable(cppTypeName).__className ~= getmetatable(value).__className and not isClassOrDerived(value, cppTypeName) then
+			error(format("'%s': Parameter %d (%q) is of invalid class (expected %q or any derived, got %q)", funcNameForMessage, paramIndex, expectedParamData.name, cppTypeName, getmetatable(value).__className), 3)
+		else
+			return value
 		end
 	end
 end
 
+local function getDefParamCount(params)
+	local defCount = 0
+	for i = #params, 1, -1 do
+		if params[i].hasDefaultValue then
+			defCount = defCount + 1
+		else
+			break
+		end
+	end
+	return defCount
+end
+
 -- if className is nil, then it's treated as a global/static function
 local function funcWrapper(className, funcName)
-	local paramInfos = api.getMethodArgumentInfos(className, funcName)
-	-- single parameter table has following fields:
+	local fullFuncName = className and format("%s::%s", className, funcName) or funcName
+	local params = api.getMethodArgumentInfo(className, funcName)
+	-- single parameter table can have following fields:
 	-- name - as it appears in C++ code
-	-- type - for objects of any kind it's "object", specific type name will be stored in className
-	-- className - only for class objects, name of the class
+	-- type - if isClass is true, then this is class name, otherwise it's type name
 	-- hasDefaultValue - true if parameter has default value
 	-- defaultValue - default value, if hasDefaultValue is true
+	-- isClass
 	-- isConst
 	-- isReference
 	-- isPointer
 
-	-- isStatic
+	-- in the future:
 	-- isEnum
-	-- isClass
-	-- isFunction
-	-- isMethod
-	-- isField
-	-- isVariable
-	-- isGlobal
-	-- isStaticMethod
-	-- isStaticField
 	local argTypes = api.getMethodArgumentTypes(className, funcName)
-	local argCount, defCount = api.getMethodArgumentCount(className, funcName), api.getDefaultArgumentCount(className, funcName)
-	assert(argCount >= defCount, format("'%s': Argument count (%d) is less than default argument count (%d)", funcName, argCount, defCount))
-	assert(#argTypes == argCount, format("'%s': Argument type count (%d) is not equal to argument count (%d)", funcName, #argTypes, argCount))
+	local argCount, defCount = #params, getDefParamCount(params)
+	assert(argCount >= defCount, format("'%s': Argument count (%d) is less than default argument count (%d)", fullFuncName, argCount, defCount))
+	assert(#argTypes == argCount, format("'%s': Argument type count (%d) is not equal to argument count (%d)", fullFuncName, #argTypes, argCount))
 	return function(...)
 		local args = {...}
 		if #args < argCount - defCount then
-			error(format("'%s': Not enough arguments (expected at least %d, got %d)", funcName, argCount - defCount, #args), 2)
+			error(format("'%s': Not enough arguments (expected at least %d, got %d)", fullFuncName, argCount - defCount, #args), 2)
 		elseif #args > argCount then
-			error(format("'%s': Too many arguments (expected at most %d, got %d)", funcName, argCount, #args), 2)
+			error(format("'%s': Too many arguments (expected at most %d, got %d)", fullFuncName, argCount, #args), 2)
 		end
 		for i = className and 2 or 1, #argTypes do -- if class method, skip first argument, it's processed later
 			local typ = argTypes[i]
-			args[i] = validateOrConvertParameter(args[i], typ, i, funcName)
+			args[i] = validateOrConvertParameter(args[i], typ, i, fullFuncName)
 		end
 		if className then
 			local this = args[1]
@@ -173,9 +237,11 @@ local function funcWrapper(className, funcName)
 end
 
 -- creates metatable, which will be used to give object ability to access its fields and methods
-local function createObjectMetatable(className)
+local function createObjectMetatable(classMT)
 	local mt = {}
+	local className = classMT.__name
 	mt.__className = className
+	mt.classMetatable = classMT
 	function mt.__index(obj, key)
 		if getmetatable(obj).__className ~= className then
 			error(format("Received object of type %q, expected %q", getmetatable(obj).__className, className), 2)
@@ -223,14 +289,15 @@ end
 -- call stack: user code -> pgenedit.class index -> makeClass -> createObjectMetatable
 -- !!! if called from __index or __newindex of metatable, then stack is: user code -> our function (max 2 depth)
 
-local function makeClass(name, ...)
+--[[local ]]function makeClass(name, ...)
 	if name == nil then
 		error("Class name is nil", 3)
 	elseif not api.classExists(name) then
 		error(format("Class %q does not exist", name), 3)
 	end
 	local classMT = {}
-	local objMT = createObjectMetatable(name)
+	classMT.__name = name
+	local objMT = createObjectMetatable(classMT)
 	classMT.objectMetatable = objMT
 	classMT.__call = function(...)
 		return objMT.__new(...)
@@ -238,6 +305,8 @@ local function makeClass(name, ...)
 	classMT.new = function(...)
 		return objMT.__new(...)
 	end
+	classMT.bases = api.getClassBases(name) -- classes, which this class inherits from
+	classMT.deriveds = api.getClassDeriveds(name) -- classes, which inherit from this class
 	-- static variables
 	function classMT.__index(t, str)
 		if api.isStaticMethodOfClass(name, str) then
@@ -261,23 +330,9 @@ local function makeClass(name, ...)
 	return setmetatable({}, classMT)
 end
 
-local class = {}
-pgenedit.class = class
-local mt = {}
-function mt.__index(t, key) -- if __index fires, this means that class is not yet created
-	local cls = makeClass(key)
-	rawset(t, key, cls)
-	return cls
-end
-function mt.__newindex(t, key, value)
-	error(format("Attempt to set class %q", key), 2)
-end
-setmetatable(class, mt)
--- pgenedit.class.wxWindow.new("test", nil, 0, 0, 0, 0)
-
 -- now global functions/variables
 local global = {}
-pgenedit.global = global
+cpp.global = global
 local mt = {}
 setmetatable(global, mt)
 function mt.__index(t, key)
