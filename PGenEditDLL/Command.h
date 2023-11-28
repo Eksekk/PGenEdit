@@ -47,4 +47,5 @@ RTTR_REGISTRATION
                 value("DONE", Command::State::DONE),
                 value("REDONE", Command::State::REDONE)
             );
+    registerExtra<Command>();
 }

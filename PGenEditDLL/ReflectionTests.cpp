@@ -293,6 +293,22 @@ RTTR_REGISTRATION
     using namespace rttr;
     using Inner2 = ReflectionSampleStruct::InnerStruct2;
     using Inner = ReflectionSampleStruct::InnerStruct;
+using UnionSample = ReflectionSampleStruct::UnionSample;
+
+    registration::class_<UnionSample>("UnionSample")
+.property("i", &UnionSample::i)
+        .property("fArray", &UnionSample::fArray)
+        .property("d", &UnionSample::d)
+        .property("firstByteBool", &UnionSample::firstByteBool)
+        .property("firstByte", &UnionSample::firstByte)
+        .constructor<>()
+.constructor<const UnionSample&>()
+
+        .method("operator+=", static_cast<UnionSample& (UnionSample::*)(int)>(&UnionSample::operator+=))
+        .method("operator+", static_cast<UnionSample(UnionSample::*)(int) const>(&UnionSample::operator+))
+        .method("operator==", &UnionSample::operator==)
+        ;
+    registerExtra<UnionSample>();
 
     registration::class_<Inner2>("InnerStruct2")
         .property("ch", &Inner2::ch)
@@ -301,6 +317,7 @@ RTTR_REGISTRATION
         .method("addAllArguments", &Inner2::addAllArguments)
         
         .constructor<>();
+registerExtra<Inner2>();
 
     registration::class_<Inner>("InnerStruct")
         .property("b", &Inner::b)
@@ -312,6 +329,7 @@ RTTR_REGISTRATION
         .method("returnSizeof", &Inner::returnSizeof)
         .method("addAllArguments", &Inner::addAllArguments)
         .constructor<>();
+registerExtra<Inner>();
 
     registration::class_<ReflectionSampleStruct>("ReflectionSampleStruct")
         .property("i", &ReflectionSampleStruct::i)
@@ -334,6 +352,7 @@ RTTR_REGISTRATION
         .constructor<bool, int, char>()(default_arguments(20, 'a'))
         .constructor<int, int, int, int>()(default_arguments(5, 20))
         ;
+registerExtra<ReflectionSampleStruct>();
 }
 
 template<typename Type>

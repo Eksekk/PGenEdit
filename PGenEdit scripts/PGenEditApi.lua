@@ -271,21 +271,22 @@ local function createObjectMetatable(classMT)
 	-- somehow dereference the pointer
 
 	-- contrary to its name, for methods it uses rawset in addition to returning function, to cache the functions, because their creation might be expensive
-	local function currentOrInheritedMemberLookup(obj, key, what, treatAsClass)
+	-- as single table is used for all polymorphic objects, I can't use __index and __newindex metamethods to check for field existence, because I would have to call them manually from metatable (ugly)
+	local function currentOrInheritedMemberLookup(obj, key, treatAsClass)
 		-- since treatAsClass is passed only for first function call, we don't need to check the object hierarchy validity in subsequent calls, as it's already checked
 		if not treatAsClass and getmetatable(obj).className ~= className and not isObjectOfClassOrDerived(obj, className) then
 			error(format("Received object of type %q, expected %q", getmetatable(obj).className, className), 3)
 		end
 		local bases = getmetatable(treatAsClass and cpp.class[treatAsClass] or obj).bases
-		for i, cls in bases do
-			if what == "field" and api.isFieldOfClass(cls, key) then -- base class has field
+		for i, cls in ipairs(bases) do
+			if api.isFieldOfClass(cls, key) then -- base class has field
 				return api.getFieldOfClass(obj, cls, key)
-			elseif what == "method" and api.isMethodOfClass(cls, key) then -- base class has method
+			elseif api.isMethodOfClass(cls, key) then -- base class has method
 				local f = funcWrapper(className, key)
 				rawset(obj, key, f) -- cache future accesses to methods
 				return f
 			else
-				local val = currentOrInheritedMemberLookup(obj, key, what, cls) -- recursively check base classes
+				local val = currentOrInheritedMemberLookup(obj, key, cls) -- recursively check base classes
 				if val ~= nil then -- if found, return the value
 					return val
 				end
@@ -294,9 +295,31 @@ local function createObjectMetatable(classMT)
 		end
 	end
 
+	-- now same as above, but for setting (__newindex), using behavior from below __newindex
+	-- returns if value was set somewhere in the hierarchy
+	local function currentOrInheritedMemberSet(obj, key, value, treatAsClass)
+		if not treatAsClass and getmetatable(obj).className ~= className and not isObjectOfClassOrDerived(obj, className) then
+			error(format("Received object of type %q, expected %q", getmetatable(obj).className, className), 3)
+		end
+		local bases = getmetatable(treatAsClass and cpp.class[treatAsClass] or obj).bases
+		for i, cls in ipairs(bases) do
+			if api.isFieldOfClass(cls, key) then -- base class has field
+				api.setFieldOfClass(obj, cls, key, value)
+				return true
+			elseif api.isMethodOfClass(cls, key) then -- base class has method
+				error(format("Attempt to set method %q of class %q", key, className), 3)
+			else
+				if currentOrInheritedMemberSet(obj, key, value, cls) then -- recursively check base classes
+					return true
+				end
+				-- otherwise continue to next base class
+			end
+		end
+	end
+
 	function objMT.__index(obj, key)
 		-- check for correct object type (inheritance won't change much, still original object is passed, just different metatable functions are called)
-		local val = currentOrInheritedMemberLookup(obj, key, "field")
+		local val = currentOrInheritedMemberLookup(obj, key)
 		if val ~= nil then
 			return val
 		else
@@ -305,16 +328,7 @@ local function createObjectMetatable(classMT)
 	end
 
 	function objMT.__newindex(obj, key, value)
-		if getmetatable(obj).className ~= className then
-			error(format("Received object of type %q, expected %q", getmetatable(obj).className, className), 2)
-		end
-		 -- note: due to the fact that methods are cached (created only once), it's possible to set a method to different function after it's created, or even non-function value, which will cause an error when trying to call it. It will be user's responsibility to not do that.
-		if api.isMethodOfClass(className, key) then
-			error(format("Attempt to set method %q of class %q", key, className), 2)
-		elseif not api.isFieldOfClass(className, key) then
-			error(format("Attempt to set unknown field %q of class %q", key, className), 2)
-		end
-		api.setFieldOfClass(obj, className, key, value)
+		currentOrInheritedMemberSet(obj, key, value)
 	end
 
 	function objMT.__new(...)

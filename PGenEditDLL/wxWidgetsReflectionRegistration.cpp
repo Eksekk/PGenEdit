@@ -8,6 +8,7 @@ RTTR_REGISTRATION
 // .method("IsEmpty", &wxWindowList::IsEmpty)
 // .method("Item", &wxWindowList::Item)
 // .method("Find", &wxWindowList::Find)
+//  registerExtra<wxWindowList>();
 // ;
 //     // register all public data members and methods of wxWindowBase class
 //     registration::class_<wxWindowBase>("wxWindowBase")
@@ -17,4 +18,5 @@ RTTR_REGISTRATION
 //         .method("GetChildren", select_overload<const wxWindowList&() const>(&wxWindowBase::GetChildren))
 //         .method("GetChildren", select_overload<wxWindowList&()>(&wxWindowBase::GetChildren))
 //         .method("GetChildren", &wxWindowBase::GetChildren);
+//  registerExtra<wxWindowBase>();
 }

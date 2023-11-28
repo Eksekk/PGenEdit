@@ -324,4 +324,14 @@ registration::class_<GameTime>("GameTime")
 .property_readonly("TIME_WEEKS_IN_MONTH", &GameTime::TIME_WEEKS_IN_MONTH)
 .property_readonly("TIME_MONTHS_IN_YEAR", &GameTime::TIME_MONTHS_IN_YEAR)
         ;
+        registration::enumeration<GameTimeUnit>("GameTimeUnit")
+            (
+                value("Minute", GameTimeUnit::Minute),
+                value("Hour", GameTimeUnit::Hour),
+                value("Day", GameTimeUnit::Day),
+                value("Week", GameTimeUnit::Week),
+                value("Month", GameTimeUnit::Month),
+                value("Year", GameTimeUnit::Year)
+            );
+        registerExtra<GameTime>();
 }

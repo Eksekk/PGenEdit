@@ -98,4 +98,52 @@ void registerPointerConversionFunc()
     rttr::type::register_converter_func(convertPtr<T>);
 }
 
+struct TypeIds
+{
+    // basic types
+    rttr::type::type_id base, pointer, reference;
+    // const types
+    rttr::type::type_id const_, const_pointer, const_reference, pointer_to_const;
+    // volatile types
+    rttr::type::type_id volatile_, volatile_pointer, volatile_reference, pointer_to_volatile;
+    // const volatile types
+    rttr::type::type_id const_volatile, const_volatile_pointer, const_volatile_reference, pointer_to_const_volatile;
+
+    static const TypeIds& findByType(rttr::type::type_id id);
+    static bool isTypeAnyOf(rttr::type::type_id id, const TypeIds& typeIds);
+    // pointers and references
+    static bool isTypeAnyIndirection(rttr::type::type_id id);
+    static bool isTypeAnyConst(rttr::type::type_id id);
+    static bool isTypeAnyVolatile(rttr::type::type_id id);
+    static bool isTypeAnyPointer(rttr::type::type_id id);
+    static bool isTypeAnyReference(rttr::type::type_id id);
+};
+
+extern std::map<std::string, TypeIds> g_typeIdsByTypeName;
+
+template<typename T>
+TypeIds& getTypeIds()
+{
+    return g_typeIdsByTypeName.at(rttr::type::get<T>().get_name().to_string());
+}
+
+template<typename T>
+void generateTypeIdData()
+{
+    TypeIds typeIds;
+    using rttr::type;
+    typeIds.base = type::get<T>().get_id(), typeIds.pointer = type::get<T*>().get_id(), typeIds.reference = type::get<T&>().get_id();
+typeIds.const_ = type::get<const T>().get_id(), typeIds.pointer_to_const = type::get<const T*>().get_id(), typeIds.const_pointer = type::get<T* const>().get_id(), typeIds.const_reference = type::get<const T&>().get_id();
+typeIds.volatile_ = type::get<volatile T>().get_id(), typeIds.pointer_to_volatile = type::get<volatile T*>().get_id(), typeIds.volatile_pointer = type::get<T* volatile>().get_id(), typeIds.volatile_reference = type::get<volatile T&>().get_id();
+typeIds.const_volatile = type::get<const volatile T>().get_id(), typeIds.pointer_to_const_volatile = type::get<const volatile T*>().get_id(), typeIds.const_volatile_pointer = type::get<T* const volatile>().get_id(), typeIds.const_volatile_reference = type::get<const volatile T&>().get_id();
+    g_typeIdsByTypeName[type::get<T>().get_name().to_string()] = typeIds;
+}
+
+template<typename T>
+void registerExtra()
+{
+    generateTypeIdData<T>();
+    registerPointerConversionFunc<T>();
+}
+
 #endif // __MAIN_H__

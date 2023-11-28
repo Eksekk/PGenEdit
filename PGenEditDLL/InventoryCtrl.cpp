@@ -736,4 +736,10 @@ RTTR_REGISTRATION
 {
     using namespace rttr;
 registration::class_<InventoryCtrl>("InventoryCtrl").method("addItem", &InventoryCtrl::addItem);
+
+registerExtra<InventoryCtrl>;
+registerExtra<ItemStoreElement>;
+registerExtra<ItemRefMapChest>;
+registerExtra<ItemRefPlayerInventory>;
+registerExtra<ItemRefStored>;
 }

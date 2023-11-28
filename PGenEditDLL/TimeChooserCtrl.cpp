@@ -215,7 +215,9 @@ RTTR_REGISTRATION
 .method("setHours", &TimeChooserCtrl::setHours)
 .method("setMinutes", &TimeChooserCtrl::setMinutes)
 .method("setTicks", &TimeChooserCtrl::setTicks)
+.method("setTicksExclusive", &TimeChooserCtrl::setTicksExclusive)
         .method("updateValuesFromTime", &TimeChooserCtrl::updateValuesFromTime, registration::private_access)
 .method("updateTimeFromValues", &TimeChooserCtrl::updateTimeFromValues, registration::private_access)
         ;
+    registerExtra<TimeChooserCtrl>();
 }

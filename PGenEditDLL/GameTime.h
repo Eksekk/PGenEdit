@@ -1,12 +1,23 @@
 #pragma once
 #include "main.h"
+enum GameTimeUnit
+{
+    Tick,
+    Minute,
+    Hour,
+    Day,
+    Week,
+    Month,
+    Year
+};
+
 class GameTime
 {
+    // TODO: maybe having only ticks here is better?
     int64_t ticks, minutes, hours, days, weeks, months, years;
 
     void calculateValuesFromTicks();
 public:
-
     // returns ONLY ticks value, for full ticks use getTotalTicks()
     int64_t getTicks() const;
     int64_t getTotalTicks() const;
