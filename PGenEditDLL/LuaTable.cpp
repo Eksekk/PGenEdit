@@ -374,4 +374,5 @@ RTTR_REGISTRATION
 .method("tryToIntegerFull", select_overload<LuaTableValues(const LuaTableValues&)>(&LuaTable::tryToIntegerFull), registration::private_access)
 .method("tryToIntegerFull", select_overload<LuaTableValues(LuaTableValues&&)>(&LuaTable::tryToIntegerFull), registration::private_access)
        ;
+    registerPointerConversionFunc<LuaTable>();
 }

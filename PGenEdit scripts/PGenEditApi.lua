@@ -68,6 +68,10 @@ local function isObjectOfClassOrDerived(obj, checkName)
 	return false
 end
 
+local function isCppObjectType(val)
+	return (type(val) == "table" or type(val) == "userdata") and getmetatable(val) and getmetatable(val).className
+end
+
 local integerTypeRanges = 
 {
 	["char"] = {min = -128, max = 127},
@@ -181,7 +185,7 @@ local function validateOrConvertParameter(value, cppType, paramIndex, funcNameFo
 	elseif cppTypeName == "nil" then -- shouldn't ever happen
 		error(format("'%s': Parameter #%d (%q) of type %q and value %q: requested C++ type is 'nil'", funcNameForMessage, paramIndex, expectedParamData.name, type(value), value), 3)
 	elseif expectedParamData.isClass then
-		if type(value) ~= "userdata" or not getmetatable(value) or not getmetatable(value).className then
+		if type(value) ~= "userdata" orj not getmetatable(value) or not getmetatable(value).className then
 			error(format(sNotAnObject, funcNameForMessage, paramIndex, value), 3)
 		elseif getmetatable(cppTypeName).className ~= getmetatable(value).className and not isObjectOfClassOrDerived(value, cppTypeName) then
 			error(format("'%s': Parameter %d (%q) is of invalid class (expected %q or any derived, got %q)", funcNameForMessage, paramIndex, expectedParamData.name, cppTypeName, getmetatable(value).className), 3)
@@ -238,7 +242,7 @@ local function funcWrapper(className, funcName)
 			local this = args[1]
 			if not api.classExists(className) then
 				error(format("Class %q does not exist", className), 2)
-			elseif type(this) ~= "userdata" then
+			elseif type(this) ~= "userdata" and type(this) ~= "table" then
 				error(format("Invalid object instance (first parameter), received %q", this), 2)
 			elseif not getmetatable(this) then
 				error(format("Object instance is not a valid object (no metatable)", this), 2)
@@ -257,17 +261,44 @@ local function createObjectMetatable(classMT)
 	objMT.className = className
 	objMT.classMetatable = classMT
 
+	-- so, value can be either userdata or table
+	-- with userdata passing the objects to C++ is easy, with table it's not
+	-- probably best way is to have "?ptr" field which C++ will use
+
+	-- C++ side to receive object should::
+	-- put pointer to int (or anything else) inside variant, with value equal to table field "?ptr"
+	-- convert the pointer internally to pointer to object (might need writing custom converter)
+	-- somehow dereference the pointer
+
+	-- contrary to its name, for methods it uses rawset in addition to returning function, to cache the functions, because their creation might be expensive
+	local function currentOrInheritedMemberLookup(obj, key, what, treatAsClass)
+		-- since treatAsClass is passed only for first function call, we don't need to check the object hierarchy validity in subsequent calls, as it's already checked
+		if not treatAsClass and getmetatable(obj).className ~= className and not isObjectOfClassOrDerived(obj, className) then
+			error(format("Received object of type %q, expected %q", getmetatable(obj).className, className), 3)
+		end
+		local bases = getmetatable(treatAsClass and cpp.class[treatAsClass] or obj).bases
+		for i, cls in bases do
+			if what == "field" and api.isFieldOfClass(cls, key) then -- base class has field
+				return api.getFieldOfClass(obj, cls, key)
+			elseif what == "method" and api.isMethodOfClass(cls, key) then -- base class has method
+				local f = funcWrapper(className, key)
+				rawset(obj, key, f) -- cache future accesses to methods
+				return f
+			else
+				local val = currentOrInheritedMemberLookup(obj, key, what, cls) -- recursively check base classes
+				if val ~= nil then -- if found, return the value
+					return val
+				end
+				-- otherwise continue to next base class
+			end
+		end
+	end
+
 	function objMT.__index(obj, key)
 		-- check for correct object type (inheritance won't change much, still original object is passed, just different metatable functions are called)
-		if getmetatable(obj).className ~= className then
-			error(format("Received object of type %q, expected %q", getmetatable(obj).className, className), 2)
-		end
-		if api.isMethodOfClass(className, key) then
-			local f = funcWrapper(className, key)
-			rawset(obj, key, f) -- cache future accesses to methods
-			return f
-		elseif api.isFieldOfClass(className, key) then
-			return api.getFieldOfClass(obj, className, key)
+		local val = currentOrInheritedMemberLookup(obj, key, "field")
+		if val ~= nil then
+			return val
 		else
 			error(format("Attempt to access unknown field %q of class %q", key, className), 2)
 		end
@@ -288,7 +319,7 @@ local function createObjectMetatable(classMT)
 
 	function objMT.__new(...)
 		-- TODO: find constructor matching parameters (count, types and possible conversions between types) and default arguments, if no matching constructor found, throw an error
-		local obj = api.createObject(className, ...)
+		local obj = api.createObject(className, select("#", ...), ...)
 		setmetatable(obj, objMT)
 		return obj
 	end

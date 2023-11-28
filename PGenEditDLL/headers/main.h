@@ -81,4 +81,21 @@ using SimpleCallback = std::function<void()>;
 // undo system "instant edit + undo/redo" and "edit only on confirm + undo/redo" are equivalent -
 // to implement second just rollback all edits in first if user didn't confirm
 
+// I want to receive a table containg "?ptr" field and convert it to a pointer to a class, **based on rttr::type object**, not template parameter
+// would need to support conversion of void* to all registered classes' object pointers, TODO: with checking the validity of the pointer? seems very hard to do
+// for now lua will manage type checking and won't try to call a registered method of some class with other class name inside metatable
+// it's required, because accessing existing C++ objects from lua can't work without it (rttr doesn't support something like reinterpret_cast<T*> based on rttr::type object)
+template<typename T>
+T* convertPtr(void* ptr, bool& ok)
+{
+    ok = true; // TODO: check if ptr is valid? seems very hard to do
+    return static_cast<T*>(ptr);
+}
+
+template<typename T>
+void registerPointerConversionFunc()
+{
+    rttr::type::register_converter_func(convertPtr<T>);
+}
+
 #endif // __MAIN_H__
