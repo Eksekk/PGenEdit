@@ -772,80 +772,95 @@ public:
         return true;
     }
 
-    private:
-        // also takes a nArgs parameter, which specifies, how many arguments from lua stack should be passed to constructor (if -1, then any number of arguments is allowed). It needs to be greater or equal to the number of non-default parameters
-        static rttr::variant findAndInvokeConstructorWithLuaArgs(const rttr::type& type, int nArgs = -1)
-        {
-            for (rttr::constructor ctor : type.get_constructors())
-            {
-                auto info = ctor.get_parameter_infos();
+    // so, I need to be able to put object, variant containing object or something like that into userdata allocated by lua
+    // idk if rttr variants are moveable (if there is a way to avoid copying), but I will assume they are not
+    // possible options:
+    // 1) pass a pointer to variant containing [object or pointer to object] to lua, and then create userdata of it
+    // 2) pass variant containing [object or pointer to object] to lua, and then create userdata of it - probably will be hard to avoid unnecessary copying
+    // we can't use raw pointers to class, because I don't know, which type it is, and I don't want to use void* (because it's not type safe)
+    // for now I will use variant passed by copy, which contains a pointer to object (userdata will contain variant class)
 
-                std::vector<rttr::parameter_info> vec(info.begin(), info.end());
-                if (canConvertLuaParameters(vec, nArgs))
+    // also takes a nArgs parameter, which specifies, how many arguments from lua stack should be passed to constructor (if -1, then any number of arguments is allowed). It needs to be greater or equal to the number of non-default parameters
+    // returns variant containing pointer to created object, or invalid variant if no matching constructor was found
+    static rttr::variant findAndInvokeConstructorWithLuaArgs(const rttr::type& type, int nArgs = -1)
+    {
+        for (rttr::constructor ctor : type.get_constructors())
+        {
+            auto info = ctor.get_parameter_infos();
+
+            std::vector<rttr::parameter_info> vec(info.begin(), info.end());
+            if (canConvertLuaParameters(vec, nArgs))
+            {
+                std::vector<rttr::variant> variants = convertLuaParametersToCppForReflection(vec, nArgs);
+                std::vector<rttr::argument> params;
+                for (rttr::variant& arg : variants)
                 {
-                    std::vector<rttr::variant> variants = convertLuaParametersToCppForReflection(vec, nArgs);
-                    std::vector<rttr::argument> params;
-                    for (rttr::variant& arg : variants)
+                    params.push_back(arg);
+                }
+                rttr::variant result = ctor.invoke_variadic(params);
+                // object is std::shared_ptr<Class>, so we need to extract it
+                result.get_type().get_method("release").invoke(result); // release ownership of object
+                return result.extract_wrapped_value();
+            }
+        }
+        return rttr::variant();
+    }
+
+private:
+    static int defaultArgumentCount(const std::vector<rttr::parameter_info>& paramInfo)
+    {
+        int result = 0;
+        int i = 0;
+        for (auto itr = paramInfo.rbegin(); itr != paramInfo.rend(); ++itr, ++i)
+        {
+            if (!itr->has_default_value())
+            {
+                return i;
+            }
+        }
+        // all default
+        return paramInfo.size();
+    }
+
+public:
+    // returns variant containing pointer to created object, or invalid variant if no matching constructor was found
+    static rttr::variant findAndInvokeConstructorWithCppArgs(const rttr::type& type, const std::vector<rttr::variant>& args)
+    {
+        for (rttr::constructor ctor : type.get_constructors())
+        {
+            auto info = ctor.get_parameter_infos();
+
+            std::vector<rttr::parameter_info> vec(info.begin(), info.end());
+            int defCount = defaultArgumentCount(vec);
+            if (args.size() >= info.size() - defCount && args.size() <= vec.size()) // have to check that we have enough arguments, but not too many
+            {
+                bool canConvert = true;
+                for (int i = 0; i < (int)vec.size(); ++i)
+                {
+                    if (args[i].get_type().get_id() != vec[i].get_type().get_id())
                     {
-                        params.push_back(arg);
+                        wxLogError("Can't convert argument %d from type '%s' to type '%s'", i + 1, args[i].get_type().get_name().data(), vec[i].get_type().get_name().data());
+                        wxLog::FlushActive();
+                        canConvert = false;
+                        break;
                     }
+                }
+                if (canConvert)
+                {
+                    auto r = args | std::views::transform([](const rttr::variant& var) { return static_cast<rttr::argument>(var); });
+                    std::vector<rttr::argument> params(r.begin(), r.end());
                     rttr::variant result = ctor.invoke_variadic(params);
-                    return result;
+                    result.get_type().get_method("release").invoke(result); // release ownership of object
+                    return result.extract_wrapped_value();
                 }
             }
-            return rttr::variant();
         }
-    public:
-        static int defaultArgumentCount(const std::vector<rttr::parameter_info>& paramInfo)
-        {
-            int result = 0;
-            int i = 0;
-            for (auto itr = paramInfo.rbegin(); itr != paramInfo.rend(); ++itr, ++i)
-            {
-                if (!itr->has_default_value())
-                {
-                    return i;
-                }
-            }
-            // all default
-            return paramInfo.size();
-        }
-
-        static rttr::variant findAndInvokeConstructorWithCppArgs(const rttr::type& type, const std::vector<rttr::variant>& args)
-        {
-            for (rttr::constructor ctor : type.get_constructors())
-            {
-                auto info = ctor.get_parameter_infos();
-
-                std::vector<rttr::parameter_info> vec(info.begin(), info.end());
-                int defCount = defaultArgumentCount(vec);
-                if (args.size() >= info.size() - defCount && args.size() <= vec.size()) // have to check that we have enough arguments, but not too many
-                {
-                    bool canConvert = true;
-                    for (int i = 0; i < (int)vec.size(); ++i)
-                    {
-                        if (args[i].get_type().get_id() != vec[i].get_type().get_id())
-                        {
-                            wxLogError("Can't convert argument %d from type '%s' to type '%s'", i + 1, args[i].get_type().get_name().data(), vec[i].get_type().get_name().data());
-                            wxLog::FlushActive();
-                            canConvert = false;
-                            break;
-                        }
-                    }
-                    if (canConvert)
-                    {
-                        auto r = args | std::views::transform([](const rttr::variant& var) { return static_cast<rttr::argument>(var); });
-                        std::vector<rttr::argument> params(r.begin(), r.end());
-                        rttr::variant result = ctor.invoke_variadic(params);
-                        return result;
-                    }
-                }
-            }
-            return rttr::variant();
-        }
+        return rttr::variant();
+    }
 
     // creates instance of given class by calling constructor with matching parameters
-    // returns pointer to created instance, or nullptr if no matching constructor was found
+    // returns shared_ptr to created instance, or nullptr if no matching constructor was found
+    // this one returns shared_ptr, because it's provided with a class type, so it can have nicer form of usage
     template<typename Class>
     static std::shared_ptr<Class> createInstanceByConstructorFromLuaStack(int nArgs = -1)
     {
@@ -863,6 +878,7 @@ public:
 
     // creates instance of given class by calling constructor with matching parameters
     // returns a variant with std::shared_ptr to dynamically-allocated variant containing instance. Variant is invalid if no matching constructor was found
+    // returns variant containing pointer to created object, or invalid variant if no matching constructor was found
     static rttr::variant createInstanceByConstructorFromLuaStack(const std::string& className, int nArgs = -1)
     {
         rttr::type type = rttr::type::get_by_name(className);
@@ -873,8 +889,6 @@ public:
         auto result = findAndInvokeConstructorWithLuaArgs(type, nArgs);
         // now hopefully has shared_ptr inside, pointing to new instance of class
         // can methods be invoked reflectively on raw pointers to class?
-        auto baseType = result.extract_wrapped_value().get_type().get_raw_type();
-        wxASSERT(!baseType.is_wrapper() && !baseType.is_pointer());
         return result;
     }
 

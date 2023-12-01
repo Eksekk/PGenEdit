@@ -94,7 +94,8 @@ local function validateOrConvertParameter(value, cppType, paramIndex, funcNameFo
 	local expectedCppTypeStr = expectedParamData.type
 	if expectedParamData.isClass then
 		expectedCppTypeStr = expectedParamData.type
-	elseif expectedParamData.isPointer then
+	end
+	if expectedParamData.isPointer then
 		expectedCppTypeStr = expectedCppTypeStr .. "*"
 	elseif expectedParamData.isReference then
 		expectedCppTypeStr = expectedCppTypeStr .. "&"
@@ -185,7 +186,7 @@ local function validateOrConvertParameter(value, cppType, paramIndex, funcNameFo
 	elseif cppTypeName == "nil" then -- shouldn't ever happen
 		error(format("'%s': Parameter #%d (%q) of type %q and value %q: requested C++ type is 'nil'", funcNameForMessage, paramIndex, expectedParamData.name, type(value), value), 3)
 	elseif expectedParamData.isClass then
-		if type(value) ~= "userdata" orj not getmetatable(value) or not getmetatable(value).className then
+		if type(value) ~= "userdata" or not getmetatable(value) or not getmetatable(value).className then
 			error(format(sNotAnObject, funcNameForMessage, paramIndex, value), 3)
 		elseif getmetatable(cppTypeName).className ~= getmetatable(value).className and not isObjectOfClassOrDerived(value, cppTypeName) then
 			error(format("'%s': Parameter %d (%q) is of invalid class (expected %q or any derived, got %q)", funcNameForMessage, paramIndex, expectedParamData.name, cppTypeName, getmetatable(value).className), 3)
@@ -208,9 +209,9 @@ local function getDefParamCount(params)
 end
 
 -- if className is nil, then it's treated as a global/static function
-local function funcWrapper(className, funcName, memberData)
-	local fullFuncName = className and format("%s::%s", className, funcName) or funcName
-	local params = api.getMethodArgumentInfo(className, funcName)
+local function funcWrapper(className, memberName, memberData)
+	local fullFuncName = className and format("%s::%s", className, memberName) or memberName
+	local params = memberData.params
 	-- single parameter table can have following fields:
 	-- name - as it appears in C++ code
 	-- type - if isClass is true, then this is class name, otherwise it's type name
@@ -223,10 +224,9 @@ local function funcWrapper(className, funcName, memberData)
 
 	-- in the future:
 	-- isEnum
-	local argTypes = api.getMethodArgumentTypes(className, funcName)
 	local argCount, defCount = #params, getDefParamCount(params)
 	assert(argCount >= defCount, format("'%s': Argument count (%d) is less than default argument count (%d)", fullFuncName, argCount, defCount))
-	assert(#argTypes == argCount, format("'%s': Argument type count (%d) is not equal to argument count (%d)", fullFuncName, #argTypes, argCount))
+	assert(#params == argCount, format("'%s': Argument type count (%d) is not equal to argument count (%d)", fullFuncName, #params, argCount))
 	return function(...)
 		local args = {...}
 		if #args < argCount - defCount then
@@ -234,30 +234,38 @@ local function funcWrapper(className, funcName, memberData)
 		elseif #args > argCount then
 			error(format("'%s': Too many arguments (expected at most %d, got %d)", fullFuncName, argCount, #args), 2)
 		end
-		for i = className and 2 or 1, #argTypes do -- if class method, skip first argument, it's processed later
-			local typ = argTypes[i]
-			args[i] = validateOrConvertParameter(args[i], typ, i, fullFuncName)
-		end
-		if className then
-			local this = args[1]
-			if not api.classExists(className) then
-				error(format("Class %q does not exist", className), 2)
-			elseif type(this) ~= "userdata" and type(this) ~= "table" then
-				error(format("Invalid object instance (first parameter), received %q", this), 2)
-			elseif not getmetatable(this) then
-				error(format("Object instance is not a valid object (no metatable)", this), 2)
-			elseif getmetatable(this).className ~= className then
-				error(format("Object instance is of invalid class (expected %q, got %q)", this, className, getmetatable(this).className), 2)
+		if not memberData.isConstructor then
+			for i = className and 2 or 1, #params do -- if class method, skip first argument, it's processed later
+				local typ = params[i].type
+				args[i] = validateOrConvertParameter(args[i], typ, i, fullFuncName)
+			end
+			-- if member is static or a field (std::function for example), then we don't need to process it
+			if className and not memberData.isStatic and not memberData.isField then
+				local this = args[1]
+				if not api.classExists(className) then
+					error(format("Class %q does not exist", className), 2)
+				elseif type(this) ~= "userdata" and type(this) ~= "table" then
+					error(format("Invalid object instance (first parameter), received %q", this), 2)
+				elseif not getmetatable(this) then
+					error(format("Object instance is not a valid object (no metatable)", this), 2)
+				elseif getmetatable(this).className ~= className then
+					error(format("Object instance is of invalid class (expected %q, got %q)", this, className, getmetatable(this).className), 2)
+				end
 			end
 		end
-		return api.callMethod(className, funcName, #args, unpack(args))
+		-- convert objects to pointers if possible
+		-- COMMENTED OUT, because C++ needs to know the exact type of passed object
+		-- for i, arg in pairs(args) do
+		-- 	args[i] = type(arg) == "table" and arg["?ptr"] or arg
+		-- end
+		return api.invokeCallable(className, memberName, #args, unpack(args))
 	end
 end
 
+-- TODO: Boost.PP for easy & nice definition of accessor getters/setters (and other macros)
 -- contrary to its name, for methods it uses rawset in addition to returning function, to cache the functions, because their creation might be expensive
 -- as single table is used for all polymorphic objects, I can't use __index and __newindex metamethods to check for field existence, because I would have to call them manually from metatable (ugly)
 
--- FIXME: those functions don't actually check first class
 local function currentOrInheritedMemberLookup(obj, key, className, treatAsClass, shouldBeStatic)
 	-- since treatAsClass is passed only for first function call, we don't need to check the object hierarchy validity in subsequent calls, as it's already checked
 	if not treatAsClass and getmetatable(obj).className ~= className and not isObjectOfClassOrDerived(obj, className) then
@@ -265,7 +273,7 @@ local function currentOrInheritedMemberLookup(obj, key, className, treatAsClass,
 	end
 	local data = getmetatable(obj).getMemberData(key)
 	if data.isField and data.isStatic == shouldBeStatic then -- current class has matching field
-		return api.getFieldOfClass(obj, className, key)
+		return api.getClassObjectField(obj, className, key)
 	elseif data.isCallable and data.isStatic == shouldBeStatic then -- current class has matching method
 		local f = funcWrapper(className, key, data)
 		rawset(obj, key, f) -- cache future accesses to methods
@@ -278,8 +286,8 @@ local function currentOrInheritedMemberLookup(obj, key, className, treatAsClass,
 			if val ~= nil then -- if found, return the value
 				return val
 			end
+			-- otherwise continue to next base class
 		end
-		-- otherwise continue to next base class
 	end
 end
 
@@ -291,7 +299,7 @@ local function currentOrInheritedMemberSet(obj, key, value, className, treatAsCl
 	end
 	local data = getmetatable(obj).getMemberData(key)
 	if data.isField and data.isStatic == shouldBeStatic then -- base class has field
-		api.setFieldOfClass(obj, className, key, value)
+		api.setClassObjectField(obj, className, key, value)
 		return true
 	elseif data.isMethod and data.isStatic == shouldBeStatic then -- base class has method
 		error(format("Attempt to set method %q of class %q", key, className), 3)
@@ -302,8 +310,8 @@ local function currentOrInheritedMemberSet(obj, key, value, className, treatAsCl
 			if currentOrInheritedMemberSet(obj, key, value, className, cls, shouldBeStatic) then
 				return true
 			end
+			-- otherwise continue to next base class
 		end
-		-- otherwise continue to next base class
 	end
 end
 
@@ -356,26 +364,25 @@ end
 -- call stack: user code -> pgenedit.class index -> makeClass -> createObjectMetatable
 -- !!! if called from __index or __newindex of metatable, then stack is: user code -> our function (max 2 depth)
 
---[[local ]]function makeClass(name, ...)
-	if name == nil then
+--[[local ]]function makeClass(className, ...)
+	if className == nil then
 		error("Class name is nil", 3)
-	elseif not api.classExists(name) then
-		error(format("Class %q does not exist", name), 3)
+	elseif not api.classExists(className) then
+		error(format("Class %q does not exist", className), 3)
 	end
 	
 	local classMT = {}
-	classMT.name = name
-	classMT.bases = api.getClassBases(name) -- classes, which this class inherits from
-	classMT.deriveds = api.getClassDeriveds(name) -- classes, which inherit from this class
-	-- name, type, isConst, isReference, isPointer, isClass, isEnum, hasDefaultValue, defaultValue, isStatic
-	-- isCallable (for example std::function, functions as fields), if so, then callableData field is function data like below, isField = true, isMethod = false
-	local fields = api.getClassFieldInfo(name) -- array of field properties
-	-- name, returnType, isConst, isVolatile, isStatic, isField = false, isMethod = true, isCallable = true
-	local methods = api.getClassMethodInfo(name) -- array of method properties
-	classMT.fields = fields -- important that it happens before createObjectMetatable, as it uses fields
-	classMT.methods = methods -- this too
-	local function getMemberData(name)
-		return fields[name] or methods[name]
+	classMT.name = className
+	local info = api.getClassInfo(className)
+	classMT.bases = info.bases -- classes, which this class inherits from
+	classMT.deriveds = info.deriveds -- classes, which inherit from this class
+	-- name, type, isConst, isReference, isPointer, isClass, isEnum, hasDefaultValue, defaultValue, isStatic, isField, isMethod, isCallable
+	-- isCallable (for example std::function, functions as fields)
+	-- returnType
+	local members = api.getClassFieldInfo(className) -- array of field properties
+	classMT.members = members -- important that it happens before createObjectMetatable, as it uses members
+	local function getMemberData(memberName)
+		return members[memberName]
 	end
 	classMT.getMemberData = getMemberData
 
@@ -383,7 +390,7 @@ end
 	classMT.objectMetatable = objMT
 	local function new(...)
 		-- TODO: find constructor matching parameters (count, types and possible conversions between types) and default arguments, if no matching constructor found, throw an error
-		local obj = api.createObject(name, select("#", ...), ...)
+		local obj = api.createObject(className, select("#", ...), ...)
 		setmetatable(obj, objMT)
 		return obj
 	end
@@ -394,23 +401,23 @@ end
 	function classMT.__index(t, str)
 		local data = getMemberData(str)
 		if data.isCallable and data.isStatic then
-			local f = funcWrapper(name, str)
-			rawset(t, str, f)
+			local f = funcWrapper(className, str)
+			--rawset(t, str, f)
 			return f
 		elseif not data.isCallable and data.isStatic then
-			return api.getStaticFieldOfClass(name, str)
+			return api.getClassField(className, str)
 		else
-			error(format("Attempt to access unknown static field %q of class %q", str, name), 2)
+			error(format("Attempt to access unknown static field %q of class %q", str, className), 2)
 		end
 	end
 	function classMT.__newindex(t, key, value)
 		local data = getMemberData(key)
 		-- changing callable members that aren't methods is not allowed, because they are not expecting possible lua errors/type differences from writing lua callback to be called from C++ via field
-		assert(not data.isCallable, format("Attempt to set callable member %q of class %q", key, name), 2)
+		assert(not data.isCallable, format("Attempt to set callable member %q of class %q", key, className), 2)
 		if data.isStatic then
-			api.setStaticFieldOfClass(name, key, value)
+			api.setClassField(className, key, value)
 		else
-			error(format("Attempt to set unknown static field %q of class %q", key, name), 2)
+			error(format("Attempt to set unknown static field %q of class %q", key, className), 2)
 		end
 	end
 	return setmetatable({}, classMT)
@@ -421,28 +428,40 @@ local global = {}
 cpp.global = global
 local mt = {}
 setmetatable(global, mt)
+local members = api.getGlobalFields()
+mt.members = members
 function mt.__index(t, key)
-	if api.isGlobalFunction(key) then
+	local data = members[key]
+	if not data then
+		error(format("Attempt to access unknown global function/variable %q", key), 2)
+	end
+	if data.isCallable then
 		local f = funcWrapper(nil, key)
-		rawset(t, key, f)
+		--rawset(t, key, f) -- commented out, because std::function fields might theoretically change their value
 		return f
-	elseif api.isGlobalVariable(key) then
-		return api.getGlobalVariable(key)
-	else
-		error(format("Attempt to access unknown global function/variable %q", key))
+	elseif data.isField then
+		return api.getGlobal(key)
 	end
 end
 
 function mt.__newindex(t, key, value)
-	assert(not api.isGlobalFunction(key), format("Attempt to set global function %q", key))
-	if api.isGlobalVariable(key) then
-		api.setGlobalVariable(key, value)
-	else
-		error(format("Attempt to set unknown global variable %q", key))
+	local data = members[key]
+	if not data then
+		error(format("Attempt to set unknown global function/variable %q", key))
 	end
+	if data.isCallable then
+		error(format("Attempt to set global callable %q", key), 2)
+	end
+	api.setGlobal(key, value)
 end
 
 -- these calls are just to make code above not grayed out
 createObjectMetatable()
 makeClass()
 validateOrConvertParameter()
+
+-- tests
+local function tests()
+	local stru = cpp.class.ReflectionSampleStruct
+	local inst = stru.new()
+end

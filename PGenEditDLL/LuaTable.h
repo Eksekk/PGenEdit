@@ -73,6 +73,7 @@ struct LuaTable // TODO: storing array part and hashed part separately - will im
     static LuaTable constructFromValuesWithArray(LuaTableValuesWithArray&& values);
     // also accepts normal key-value pairs in addition to individual array elements
     static LuaTable constructFromValuesWithArray(const LuaTableValuesWithArray& values);
+    LuaTable() = default;
     LuaTable(const LuaTable& other) = default;
     LuaTable& operator=(const LuaTable& other) = default;//FIX
     LuaTable& operator=(LuaTable&& other) = default;//FIX
@@ -87,7 +88,6 @@ struct LuaTable // TODO: storing array part and hashed part separately - will im
     // stops on first missing index
     std::vector<LuaTypeInCpp> getArrayPart() const;
 private:
-    LuaTable() = default; // this is private, so lua tables without provided values won't be created
     static void luaConvertTypeCommon(LuaTypeInCpp& val, int stack);
     static void tryToIntegerRef(LuaTypeInCpp& type);
     static LuaTypeInCpp tryToIntegerRet(const LuaTypeInCpp& type);

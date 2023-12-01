@@ -135,6 +135,16 @@ TypeIds& getTypeIds()
     return g_typeIdsByTypeName.at(rttr::type::get<T>().get_name().to_string());
 }
 
+TypeIds& getTypeIds(const std::string& str)
+{
+    return g_typeIdsByTypeName.at(str);
+}
+
+TypeIds& getTypeIds(const rttr::type& t)
+{
+    return g_typeIdsByTypeName.at(t.get_name().data());
+}
+
 template<typename T>
 void generateTypeIdData()
 {

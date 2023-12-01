@@ -350,7 +350,7 @@ RTTR_REGISTRATION
 .constructor<LuaTableValues&&>(registration::public_access)
 .constructor<const LuaTable&>(registration::public_access)
 .constructor<LuaTable&&>(registration::public_access)
-.constructor<>(registration::private_access)
+.constructor<>()
 .method("constructFromValuesWithArray", select_overload<LuaTable(const LuaTableValuesWithArray&)>(&LuaTable::constructFromValuesWithArray), registration::public_access)
 .method("constructFromValuesWithArray", select_overload<LuaTable(LuaTableValuesWithArray&&)>(&LuaTable::constructFromValuesWithArray), registration::public_access)
 .method("operator=", select_overload<LuaTable&(const LuaTable&)>(&LuaTable::operator=))
