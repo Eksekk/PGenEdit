@@ -93,9 +93,17 @@ T* convertPtr(void* ptr, bool& ok)
 }
 
 template<typename T>
+void* convertPtrToVoid(T* ptr, bool& ok)
+{
+    ok = true; // TODO: check if ptr is valid? seems very hard to do
+    return reinterpret_cast<void*>(ptr);
+}
+
+template<typename T>
 void registerPointerConversionFunc()
 {
     rttr::type::register_converter_func(convertPtr<T>);
+    rttr::type::register_converter_func(convertPtrToVoid<T>);
 }
 
 struct TypeIds

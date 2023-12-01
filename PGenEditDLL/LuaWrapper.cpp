@@ -180,6 +180,26 @@ std::string LuaWrapper::tostring(int index)
     return std::string(p, s);
 }
 
+lua_Number LuaWrapper::tonumber(int index)
+{
+    return lua_tonumber(L, index);
+}
+
+bool LuaWrapper::toboolean(int index)
+{
+    return lua_toboolean(L, index);
+}
+
+void* LuaWrapper::touserdata(int index)
+{
+    return lua_touserdata(L, index);
+}
+
+lua_CFunction LuaWrapper::tocfunction(int index)
+{
+    return lua_tocfunction(L, index);
+}
+
 int LuaWrapper::checkstack(int extra)
 {
     lua_checkstack(L, extra);

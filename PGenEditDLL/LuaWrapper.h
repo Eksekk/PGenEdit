@@ -39,6 +39,11 @@ public:
 
     // internally uses tolstring
     std::string tostring(int index);
+    lua_Number tonumber(int index);
+    bool toboolean(int index);
+    void* touserdata(int index);
+    lua_CFunction tocfunction(int index);
+
     int checkstack(int extra);
     LuaWrapper& concat(int n);
     LuaWrapper& createtable(int narr, int nrec);

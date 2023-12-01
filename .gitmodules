@@ -13,3 +13,6 @@
 [submodule "PGenEditDLL/rttr"]
 	path = PGenEditDLL/rttr
 	url = https://github.com/rttrorg/rttr.git
+[submodule "PGenEditDLL/preprocessor"]
+	path = PGenEditDLL/preprocessor
+	url = https://github.com/boostorg/preprocessor.git

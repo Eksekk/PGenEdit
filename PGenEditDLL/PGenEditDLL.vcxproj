@@ -287,7 +287,7 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <TargetName>PGenEdit</TargetName>
-    <IncludePath>headers;headers\structs;.;.\wxWidgets-3.2.1\include;.\openresty-luajit\src;.\Zydis\include;.\Zydis\dependencies\zycore\include;.\pfr\include;.\rttr\build\install\include</IncludePath>
+    <IncludePath>headers;headers\structs;.;.\wxWidgets-3.2.1\include;.\openresty-luajit\src;.\Zydis\include;.\Zydis\dependencies\zycore\include;.\pfr\include;.\rttr\build\install\include;.\preprocessor\include</IncludePath>
     <SourcePath>.;sources;.\wxWidgets-3.2.1\src\common;.\wxWidgets-3.2.1\src\msw;.\wxWidgets-3.2.1\src\generic;openresty-luajit\src;.\rttr\src\rttr</SourcePath>
     <EnableMicrosoftCodeAnalysis>true</EnableMicrosoftCodeAnalysis>
     <ExternalIncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);json</ExternalIncludePath>
@@ -309,7 +309,7 @@
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>.\wxWidgets-3.2.1\lib\vc_dll\mswud;.\wxWidgets-3.2.1\include;json;openresty-luajit\src</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>.\wxWidgets-3.2.1\lib\vc_dll\mswud;.\wxWidgets-3.2.1\include;json;openresty-luajit\src;.\preprocessor\include</AdditionalIncludeDirectories>
       <TreatWarningAsError>true</TreatWarningAsError>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <FloatingPointExceptions>true</FloatingPointExceptions>

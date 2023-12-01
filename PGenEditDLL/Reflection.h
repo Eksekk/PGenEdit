@@ -2,9 +2,44 @@
 #include "main.h"
 #include "CallEvents.h"
 #include "LuaWrapper.h"
+#include "Utility.h"
 
 template<typename T>
 concept IsCvUnqualifiedTopLevel = !(std::is_const_v<std::remove_reference_t<T>> || std::is_volatile_v<std::remove_reference_t<T>>);
+
+
+// custom exception, which will be thrown as part one of generating lua error from C++
+// using this, because it properly invokes destructors of objects
+// this exception should be caught by C++ function directly called by lua, and it should execute its own stack objects' destructors and generate lua error
+class LuaErrorException : public std::runtime_error
+{
+    // TODO: have more fields (like what type of error it is, and what are error parameters, so for type mismatch we can show expected type and actual type) to facilitate unit testing
+    public:
+        LuaErrorException(const std::string& msg) : std::runtime_error(msg) {}
+};
+
+template<typename... Args>
+void callDestructors(Args&&... args)
+{
+    (args.~Args(), ...);
+}
+
+// lua debug api
+namespace luaDebug
+{
+    extern "C"
+    {
+        static int classExists(lua_State* L);
+        static int copyObject(lua_State* L);
+        static int createObject(lua_State* L);
+        static int destroyObject(lua_State* L);
+        static int getClassFields(lua_State* L);
+        static int getClassInfo(lua_State* L);
+        static int getField(lua_State* L);
+        static int invokeCallable(lua_State* L);
+        static int setField(lua_State* L);
+    }
+}
 
 // will contain utils for dealing with RTTR reflection system, like a template method for calling any method by name, converting lua types to required C++ types etc.
 class Reflection
@@ -653,7 +688,7 @@ public:
 
     // get global variable to lua stack
     // returns if operation was successful, in case of failure, lua stack is not modified
-    static bool getGlobalVariableToLuaStack(const std::string& variableName, int stackIndex = -1)
+    static bool getGlobalVariableToLuaStack(const std::string& variableName)
     {
 
         return convertToLuaTypeOnStackByTypeId(getVariableTemplatedCommon(variableName, nullptr));
@@ -744,20 +779,6 @@ public:
             for (rttr::constructor ctor : type.get_constructors())
             {
                 auto info = ctor.get_parameter_infos();
-//                 int defaultCount = 0;
-//                 for (const auto& entry : info)
-//                 {
-//                     if (entry.has_default_value())
-//                     {
-//                         ++defaultCount;
-//                     }
-//                 }
-//                 // int f(int a, int b, int c, int d = 20, int e = 8) -> total args = 5, defaultCount = 2
-//                 // consider only constructors, where all non-default parameters are passed, and default ones might be passed or not
-//                 if (nArgs != -1 && nArgs < (int)info.size() - defaultCount)
-//                 {
-//                     continue;
-//                 }
 
                 std::vector<rttr::parameter_info> vec(info.begin(), info.end());
                 if (canConvertLuaParameters(vec, nArgs))
@@ -775,6 +796,53 @@ public:
             return rttr::variant();
         }
     public:
+        static int defaultArgumentCount(const std::vector<rttr::parameter_info>& paramInfo)
+        {
+            int result = 0;
+            int i = 0;
+            for (auto itr = paramInfo.rbegin(); itr != paramInfo.rend(); ++itr, ++i)
+            {
+                if (!itr->has_default_value())
+                {
+                    return i;
+                }
+            }
+            // all default
+            return paramInfo.size();
+        }
+
+        static rttr::variant findAndInvokeConstructorWithCppArgs(const rttr::type& type, const std::vector<rttr::variant>& args)
+        {
+            for (rttr::constructor ctor : type.get_constructors())
+            {
+                auto info = ctor.get_parameter_infos();
+
+                std::vector<rttr::parameter_info> vec(info.begin(), info.end());
+                int defCount = defaultArgumentCount(vec);
+                if (args.size() >= info.size() - defCount && args.size() <= vec.size()) // have to check that we have enough arguments, but not too many
+                {
+                    bool canConvert = true;
+                    for (int i = 0; i < (int)vec.size(); ++i)
+                    {
+                        if (args[i].get_type().get_id() != vec[i].get_type().get_id())
+                        {
+                            wxLogError("Can't convert argument %d from type '%s' to type '%s'", i + 1, args[i].get_type().get_name().data(), vec[i].get_type().get_name().data());
+                            wxLog::FlushActive();
+                            canConvert = false;
+                            break;
+                        }
+                    }
+                    if (canConvert)
+                    {
+                        auto r = args | std::views::transform([](const rttr::variant& var) { return static_cast<rttr::argument>(var); });
+                        std::vector<rttr::argument> params(r.begin(), r.end());
+                        rttr::variant result = ctor.invoke_variadic(params);
+                        return result;
+                    }
+                }
+            }
+            return rttr::variant();
+        }
 
     // creates instance of given class by calling constructor with matching parameters
     // returns pointer to created instance, or nullptr if no matching constructor was found
