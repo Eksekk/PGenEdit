@@ -396,107 +396,64 @@ int getFieldCommon(lua_State* L)
     }
 }
 
+[[noreturn]] void throwLuaError(lua_State* L, const std::string& msg)
+{
+    luaL_error(L, msg.c_str());
+}
+
 // receives class name as string
 int luaDebug::classExists(lua_State* L)
 {
-    LuaWrapper w(L);
-    if (w.gettop() != 1)
+    try
     {
-        w.pushboolean(false);
+        LuaWrapper w(L);
+        if (w.gettop() != 1)
+        {
+            w.pushboolean(false);
+            return 1;
+        }
+        std::string s = getLuaTypeOrError<std::string>(L, 1);
+        rttr::type t = rttr::type::get_by_name(s);
+        w.pushboolean(t.is_class());
         return 1;
     }
-    std::string s = getLuaTypeOrError<std::string>(L, 1);
-    rttr::type t = rttr::type::get_by_name(s);
-    w.pushboolean(t.is_class());
-    return 1;
+    catch (const LuaErrorException& e)
+    {
+        luaL_error(L, e.what());
+        return 0;
+    }
 }
 
 // receives object pointer (userdata) of address equal to pointer to object
 int luaDebug::copyObject(lua_State* L)
 {
-    LuaWrapper w(L);
-    luaExpectStackSize(1);
-    void* ptr = luaGetObjectPtr(L, 1);
-    if (!ptr)
+    try
     {
-        luaError("Couldn't copy object - pointer is null");
-        return 0;
-    }
-    rttr::variant var = convertToObjectPointer(ptr, getLuaTableMetafieldOrError<std::string>(1, "className"));
-    if (!var.is_valid())
-    {
-        luaError("Couldn't copy object - couldn't convert to object pointer");
-        return 0;
-    }
-    rttr::variant obj = Reflection::findAndInvokeConstructorWithCppArgs(var.get_type(), { var });
-    if (!obj.is_valid())
-    {
-        luaError("Couldn't copy object - couldn't find ctor");
-        return 0;
-    }
-    else
-    {
-        if (!obj.convert(rttr::type::get<void*>()))
+        LuaWrapper w(L);
+        luaExpectStackSize(1);
+        void* ptr = luaGetObjectPtr(L, 1);
+        if (!ptr)
         {
-            luaError("Couldn't copy object - couldn't convert to void pointer");
+            luaError("Couldn't copy object - pointer is null");
             return 0;
         }
-        else
+        rttr::variant var = convertToObjectPointer(ptr, getLuaTableMetafieldOrError<std::string>(1, "className"));
+        if (!var.is_valid())
         {
-            void* objPtr = obj.get_value<void*>();
-            void* ud = lua_newuserdata(L, sizeof(rttr::variant)); // automatically pushed to stack
-            new(ud) rttr::variant(objPtr);
-            // TODO: set __gc here?
-            return 1;
-        }
-    }
-    //...
-}
-
-// receives class name as string, number of arguments and optionally, arguments
-int luaDebug::createObject(lua_State* L)
-{
-    LuaWrapper w(L);
-    auto name = getLuaTypeOrError<std::string>(L, 1);
-    int nargs;
-    if (w.gettop() == 1) // assume no arguments
-    {
-        nargs = 0;
-    }
-    else
-    {
-        nargs = getLuaTypeOrError<int>(L, 2);
-        int realArgCount = w.gettop() - 2;
-        if (realArgCount != nargs)
-        {
-            luaError("Expected {} arguments, got {}", nargs, realArgCount);
+            luaError("Couldn't copy object - couldn't convert to object pointer");
             return 0;
         }
-    }
-    auto t = rttr::type::get_by_name(name);
-    if (!t.is_valid())
-    {
-        luaError("Couldn't get class '{}'", name);
-        return 0;
-    }
-    else if (!t.is_class())
-    {
-        luaError("Couldn't create object of type '{}', it's not a class", name);
-        return 0;
-    }
-    else
-    {
-        rttr::variant obj = Reflection::findAndInvokeConstructorWithLuaArgs(t, nargs);
+        rttr::variant obj = Reflection::findAndInvokeConstructorWithCppArgs(var.get_type(), { var });
         if (!obj.is_valid())
         {
-            luaError("Couldn't create object of type '{}'", name);
+            luaError("Couldn't copy object - couldn't find ctor");
             return 0;
         }
         else
         {
             if (!obj.convert(rttr::type::get<void*>()))
             {
-                luaError("Couldn't create object of type '{}' - couldn't convert to void pointer", name);
+                luaError("Couldn't copy object - couldn't convert to void pointer");
                 return 0;
             }
             else
@@ -504,9 +461,81 @@ int luaDebug::createObject(lua_State* L)
                 void* objPtr = obj.get_value<void*>();
                 void* ud = lua_newuserdata(L, sizeof(rttr::variant)); // automatically pushed to stack
                 new(ud) rttr::variant(objPtr);
+                // TODO: set __gc here?
                 return 1;
             }
         }
+    }
+    catch (const LuaErrorException& e)
+    {
+        luaL_error(L, e.what());
+        return 0;
+    }
+    //...
+}
+
+// receives class name as string, number of arguments and optionally, arguments
+int luaDebug::createObject(lua_State* L)
+{
+    try
+    {
+        LuaWrapper w(L);
+        auto name = getLuaTypeOrError<std::string>(L, 1);
+        int nargs;
+        if (w.gettop() == 1) // assume no arguments
+        {
+            nargs = 0;
+        }
+        else
+        {
+            nargs = getLuaTypeOrError<int>(L, 2);
+            int realArgCount = w.gettop() - 2;
+            if (realArgCount != nargs)
+            {
+                luaError("Expected {} arguments, got {}", nargs, realArgCount);
+                return 0;
+            }
+        }
+        auto t = rttr::type::get_by_name(name);
+        if (!t.is_valid())
+        {
+            luaError("Couldn't get class '{}'", name);
+            return 0;
+        }
+        else if (!t.is_class())
+        {
+            luaError("Couldn't create object of type '{}', it's not a class", name);
+            return 0;
+        }
+        else
+        {
+            rttr::variant obj = Reflection::findAndInvokeConstructorWithLuaArgs(t, nargs);
+            if (!obj.is_valid())
+            {
+                luaError("Couldn't create object of type '{}'", name);
+                return 0;
+            }
+            else
+            {
+                if (!obj.convert(rttr::type::get<void*>()))
+                {
+                    luaError("Couldn't create object of type '{}' - couldn't convert to void pointer", name);
+                    return 0;
+                }
+                else
+                {
+                    void* objPtr = obj.get_value<void*>();
+                    void* ud = lua_newuserdata(L, sizeof(rttr::variant)); // automatically pushed to stack
+                    new(ud) rttr::variant(objPtr);
+                    return 1;
+                }
+            }
+        }
+    }
+    catch (const LuaErrorException& e)
+    {
+        luaL_error(L, e.what());
+        return 0;
     }
 }
 

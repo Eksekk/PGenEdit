@@ -12,6 +12,7 @@ local format = string.format
 -- Obviously need to use tables to represent such objects, since they too support metatables, and aren't garbage collected.
 -- Such objects will be used, if user wants to keep a reference to an object, which is owned by C++ (global variable for example).
 -- TODO: notify lua about object destruction from C++ side?
+-- 8. BIG ONE: implement struct operators as metamethods if appropriate (for example, __add for operator+), and also implement __eq for all classes (for operator==)
 
 -- for functions need to handle:
 -- 1. type checking for arguments and return types (including small value types range compatibility), C++ will also check this, but it's better to check it here too
@@ -464,7 +465,258 @@ makeClass()
 validateOrConvertParameter()
 
 -- tests
-local function tests()
-	local stru = cpp.class.ReflectionSampleStruct
-	local inst = stru.new()
+function tests()
+	local stru = cpp.class.ReflectionSampleStruct.new()
+	local errors = {}
+	local function assert(...)
+		table.insert(errors, format(...))
+	end
+	local function defCmp(a, b)
+		return a == b
+	end
+	local function testGetProp(name, value, cmpFunc)
+		local val = stru[name]
+		cmpFunc = cmpFunc or defCmp
+		if not cmpFunc(val, value) then
+			assert("stru.%s == %q, expected %q", name, val, value)
+		end
+	end
+	local function testSetProp(name, value, cmpFunc)
+		stru[name] = value
+		cmpFunc = cmpFunc or defCmp
+		local val = stru[name]
+		if not cmpFunc(val, value) then
+			assert("stru.%s == %q, expected %q", name, val, value)
+		end
+	end
+
+	local function cmpArrayVector(a, b)
+		if #a ~= #b then
+			return false
+		end
+		for i, v in ipairs(a) do
+			if v ~= b[i] then
+				return false
+			end
+		end
+		return true
+	end
+	local function cmpAssociativeContainer(a, b)
+		for k, v in pairs(a) do
+			if v ~= b[k] then
+				return false
+			end
+		end
+		local countB = 0 -- "b" may have more or less keys than "a", of which all existing in "a" happen to compare equal
+		for k, v in pairs(b) do
+			countB = countB + 1
+		end
+		return countB == #a
+	end
+	local function mmv(a, b, c)
+		local v = select(mmv - 5, a, b, c)
+		_G.assert(v ~= nil)
+		return v
+	end
+
+	-- get/set property tests
+	testGetProp("i", 0)
+	testGetProp("str", "default")
+	testSetProp("i", 1)
+	testSetProp("str", "test")
+	testSetProp("i", 837248237)
+	testSetProp("str", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaatest")
+	testGetProp("vec", {1, 2, 3}, cmpArrayVector)
+	testGetProp("arr", {1, 2, 3, 4, 5}, cmpArrayVector)
+	testGetProp("map", {a = 1, b = 2, c = 3}, cmpAssociativeContainer)
+	-- TODO: implement sets: testGetProp("set", {1, 2, 3}, cmpAssociativeContainer)
+	testSetProp("vec", {4, 5, 6}, cmpArrayVector)
+	testSetProp("arr", {6, 5, 4, 3, 2}, cmpArrayVector)
+	testSetProp("map", {a = 3, b = 2, c = 1}, cmpAssociativeContainer)
+	testSetProp("map", {akey = 4434, bkey = 5525, ckey = 66536}, cmpAssociativeContainer)
+	-- TODO: map test with different key/value types
+
+	-- test different instance
+	local struOld = stru
+	stru = cpp.class.ReflectionSampleStruct()
+	testGetProp("i", 0)
+	testGetProp("str", "default")
+	testGetProp("vec", {1, 2, 3}, cmpArrayVector)
+	testGetProp("arr", {1, 2, 3, 4, 5}, cmpArrayVector)
+	testGetProp("map", {a = 1, b = 2, c = 3}, cmpAssociativeContainer)
+	stru = struOld
+
+	-- function call tests
+
+	stru.modifyMultiple(3, "cddd", {5, 6})
+	testGetProp("i", 3)
+	testGetProp("str", "cddd")
+	testGetProp("vec", {5, 6})
+	-- adds or inserts
+	stru.modifyMultipleByOperation(88, "ap", {1})
+	testGetProp("i", 91)
+	testGetProp("str", "cdddap")
+	testGetProp("vec", {5, 6, 1})
+
+	assert(stru.get5() == 5, "[1st] stru.get5() == %d, expected 5", stru.get5())
+	assert(stru.get5() == 5, "[2nd] stru.get5() == %d, expected 5", stru.get5())
+
+	-- globals
+	local global = cpp.global
+	-- static int __declspec(naked) __fastcall fastcallGlobalFunctionTest(int argEcx, int argEdx, int argEsp)
+	-- has to have values 0x77777777, 0x3333333, 0x88888888
+	-- returns index of first nonmatching argument or 0 if all match
+	local function fastcallGlobalFunctionTest(argEcx, argEdx, argEsp)
+		return global.fastcallGlobalFunctionTest(argEcx, argEdx, argEsp)
+	end
+	assert(fastcallGlobalFunctionTest(0x77777777, 0x3333333, 0x88888888) == 0, "fastcallGlobalFunctionTest(0x77777777, 0x3333333, 0x88888888) == %d, expected 0", fastcallGlobalFunctionTest(0x77777777, 0x3333333, 0x88888888))
+	assert(fastcallGlobalFunctionTest(0x0, 0x1, 0x2) == 1, "fastcallGlobalFunctionTest(0x0, 0x1, 0x2) == %d, expected 1", fastcallGlobalFunctionTest(0x0, 0x1, 0x2))
+	assert(fastcallGlobalFunctionTest(0x77777777, 0x0, 0x2) == 2, "fastcallGlobalFunctionTest(0x77777777, 0x0, 0x2) == %d, expected 2", fastcallGlobalFunctionTest(0x77777777, 0x0, 0x2))
+	assert(fastcallGlobalFunctionTest(0x77777777, 0x3333333, 0x0) == 3, "fastcallGlobalFunctionTest(0x77777777, 0x3333333, 0x0) == %d, expected 3", fastcallGlobalFunctionTest(0x77777777, 0x3333333, 0x0))
+	local MMVER = global.MMVER
+	assert(MMVER == Game.Version, "MMVER == %d, expected %d", MMVER, Game.Version)
+	local inGame = global.inGame
+	assert(inGame == internal.InGame, "inGame == %s, expected %s", tostring(inGame), tostring(internal.InGame))
+	local playersFullArray = global.PlayersFullArray
+	for i = 0, Game.PlayersArray.Count do
+		assert(playersFullArray[i] == Game.PlayersArray[i], "playersFullArray[%d] == %s, expected %s", i, tostring(playersFullArray[i]), tostring(Game.PlayersArray[i]))
+	end
+
+	-- throw error tests
+	local function shouldThrow(func, condStr, ...)
+		local ok = pcall(func, ...)
+		if ok then
+			assert("%q did not throw an error", func, condStr)
+		end
+	end
+
+	-- getting/setting nonexisting properties should throw error
+	shouldThrow(function() local v = stru.nonexisting end, "stru.nonexisting")
+	shouldThrow(function() stru.nonexisting = 1 end, "stru.nonexisting = 1")
+	-- reassigning functions should throw error
+	shouldThrow(function() stru.get5 = 1 end, "stru.get5 = 1")
+	shouldThrow(function() stru.modifyMultiple = function() end end, "stru.modifyMultiple = function() end")
+
+	-- assignment to array which changes amount of elements should throw lua error
+	shouldThrow(function() stru.arr = {1, 2, 3, 4, 5, 6, 7, 8} end, "stru.arr = {1, 2, 3, 4, 5, 6, 7, 8}")
+	-- can't define new globals
+	shouldThrow(function() global.newGlobal = 1 end, "global.newGlobal = 1")
+	-- or get values of nonexisting globals
+	shouldThrow(function() local v = global.newGlobal end, "global.newGlobal")
+	-- can't get classes as globals
+	shouldThrow(function() local v = global.ReflectionSampleStruct end, "global.ReflectionSampleStruct")
+	-- or set them
+	shouldThrow(function() global.ReflectionSampleStruct = 1 end, "global.ReflectionSampleStruct = 1")
+	inGame = internal.InGame
+	-- setting invalid value types should throw error
+	shouldThrow(function() global.inGame = 1 end, "global.inGame = 1")
+	shouldThrow(function() global.inGame = "test" end, "global.inGame = \"test\"")
+	global.inGame = inGame -- just in case, restore original value
+
+	-- test inner classes
+	-- indexing a class field which is another class should return a table type with "?ptr" set
+	local innerStruct = stru.innerStruct
+	assert(type(innerStruct) == "table", "type(innerStruct) == %q, expected %q", type(innerStruct), "table")
+	assert(type(innerStruct["?ptr"]) == "number", "type(innerStruct[\"?ptr\"]) == %q, expected %q", type(innerStruct["?ptr"]), "number")
+	assert(innerStruct["?ptr"] ~= 0, "innerStruct[\"?ptr\"] == %d, expected nonzero", innerStruct["?ptr"])
+	assert(getmetatable(innerStruct).className == "InnerStruct", "getmetatable(innerStruct).className == %q, expected %q", getmetatable(innerStruct).className, "InnerStruct")
+
+	--[[
+		struct InnerStruct
+{
+    bool b, bb, bbb;
+    std::string str;
+    void allTrue()
+    {
+        b = true, bb = true, bbb = true;
+    }
+    void allFalse()
+    {
+        b = false, bb = false, bbb = false;
+    }
+
+    InnerStruct() : b(false), bb(false), bbb(false), str("default") {}
+    // default copy ctor
+    InnerStruct(const InnerStruct&) = default;
+    InnerStruct(InnerStruct&&) = default;
+    InnerStruct& operator=(const InnerStruct&) = default;
+    InnerStruct& operator=(InnerStruct&&) = default;
+
+    // virtual methods
+    virtual int returnSizeof() const
+    {
+        return sizeof(InnerStruct);
+    }
+
+    // in derived class will return double the value
+    virtual int addAllArguments(int a, int b, int c, int d) const
+    {
+        return a + b + c + d;
+    }
+
+    // an operator which modifies the struct based on int argument passed to it
+    InnerStruct& operator+=(int val)
+    {
+        str += std::to_string(val);
+        return *this;
+    }
+
+    InnerStruct operator+(int val) const
+    {
+        InnerStruct u2(*this);
+        u2.str += std::to_string(val);
+        return u2;
+    }
+
+    friend std::string to_string(const InnerStruct& u);
+
+    // comparison operator for all fields
+    bool operator==(const InnerStruct& other) const
+    {
+        return b == other.b && bb == other.bb && bbb == other.bbb && str == other.str;
+    }
+
+    RTTR_ENABLE()
+};
+	]]
+	local struOld = stru
+	stru = innerStruct
+	testGetProp("b", false)
+	testGetProp("bb", false)
+	stru.allTrue()
+	testGetProp("b", true)
+	testGetProp("bb", true)
+	testGetProp("bbb", true)
+	testSetProp("b", false)
+	stru.allFalse()
+	testGetProp("b", false)
+	testGetProp("bb", false)
+	testGetProp("str", "default")
+	testSetProp("str", "test")
+	testGetProp("str", "test")
+	assert(stru.addAllArguments(1, 2, 3, 4) == 10, "stru.addAllArguments(1, 2, 3, 4) == %d, expected 10", stru.addAllArguments(1, 2, 3, 4))
+
+	local inner = cpp.class.InnerStruct.new()
+	local inner2 = cpp.class.InnerStruct2.new()
+
+	-- basic virtual function test, TODO: more complex tests
+	assert(inner.returnSizeof() ~= inner2.returnSizeof(), "inner.returnSizeof() == %d, inner2.returnSizeof() == %d, expected different values", inner.returnSizeof(), inner2.returnSizeof())
+	-- derived class "addAllArguments" should return double the value
+	assert(inner.addAllArguments(1, 2, 3, 4) == 10, "inner.addAllArguments(1, 2, 3, 4) == %d, expected 10", inner.addAllArguments(1, 2, 3, 4))
+	assert(inner2.addAllArguments(1, 2, 3, 4) == 20, "inner2.addAllArguments(1, 2, 3, 4) == %d, expected 20", inner2.addAllArguments(1, 2, 3, 4))
+
+	-- basic inheritance test
+	-- inner2 should have members and methods of inner
+	local struOld2 = stru
+	stru = inner2
+	testGetProp("b", false)
+	testGetProp("bb", false)
+	stru.allTrue()
+	testGetProp("b", true)
+	testGetProp("bb", true)
+	testGetProp("bbb", true)
+	stru = struOld2
+
+
+	stru = struOld
 end

@@ -11,6 +11,8 @@ namespace
     using ArrayType = std::array<int, 5>;
     using MapType = std::unordered_map<std::string, int>;
 }
+
+// WARNING: when modifying this struct, also modify the registration code below and lua debug api script (tests part)
 struct ReflectionSampleStruct
 {
     int i;
