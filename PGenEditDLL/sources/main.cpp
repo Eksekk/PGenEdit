@@ -45,6 +45,11 @@ bool TypeIds::isTypeAnyOf(rttr::type::type_id id, const TypeIds& typeIds)
         typeIds.const_volatile == id || typeIds.const_volatile_pointer == id || typeIds.const_volatile_reference == id;
 }
 
+bool TypeIds::isTypeAnyOf(rttr::type::type_id id) const
+{
+    return isTypeAnyOf(id, *this);
+}
+
 bool TypeIds::isTypeAnyIndirection(rttr::type::type_id id)
 {
     const TypeIds& typeIds = findByType(id);

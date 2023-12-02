@@ -65,6 +65,8 @@ struct LuaTable // TODO: storing array part and hashed part separately - will im
     LuaTableValues::iterator end();
     LuaTableValues::const_iterator begin() const;
     LuaTableValues::const_iterator end() const;
+    LuaTableValues::const_iterator cbegin() const;
+    LuaTableValues::const_iterator cend() const;
     LuaTable(const LuaTableValues& values);
     LuaTable(LuaTableValues&& values);
 

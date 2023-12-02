@@ -31,13 +31,6 @@ const std::vector<type_id> Reflection::TYPE_IDS_NUMBERS{ compileTimeMergeVectors
 // this one doesn't use "pointer" vector to merge, because strings already contain char pointers
 const std::vector<type_id> Reflection::TYPE_IDS_ALL_TYPES{ compileTimeMergeVectors({TYPE_IDS_NUMBERS, TYPE_IDS_STRINGS, {TYPE_ID_BOOL, TYPE_ID_VOID_PTR, TYPE_ID_NIL} }) };
 
-// creates "safe" lua error, that is not skipping C++ destructors
-template<typename... Args>
-[[noreturn]] void luaError(const std::string& msg, Args&&... args)
-{
-    throw LuaErrorException(std::vformat(msg, std::make_format_args(std::forward<Args>(args)...)));
-}
-
 // a function like below, but returning boolean if value is of given type and doesn't throw
 template<typename T>
 bool isLuaType(lua_State* L, int index)

@@ -17,6 +17,13 @@ class LuaErrorException : public std::runtime_error
         LuaErrorException(const std::string& msg) : std::runtime_error(msg) {}
 };
 
+// creates "safe" lua error, that is not skipping C++ destructors
+template<typename... Args>
+[[noreturn]] void luaError(const std::string& msg, Args&&... args)
+{
+    throw LuaErrorException(std::vformat(msg, std::make_format_args(std::forward<Args>(args)...)));
+}
+
 template<typename... Args>
 void callDestructors(Args&&... args)
 {
@@ -327,6 +334,20 @@ private:
                 {
                     seqView.set_value(i++, val);
                 }
+                return var;
+            }
+            else if (typ.is_associative_container())
+            {
+                // have to extract information from lua table into rttr::variant containing desired container
+                rttr::type wrappedType = typ.get_wrapped_type();
+                rttr::variant var = typ.create();
+                rttr::variant_associative_view assocView = var.create_associative_view();
+                LuaTable t = LuaTable::fromLuaTable(stackIndex);
+                for (auto&& [key, value] : t)
+                {
+                    assocView.insert(std::move(key), std::move(value));
+                }
+                return var;
             }
             else if (allowCrossTypeCategoryConversions && typeId == TYPE_ID_BOOL)
             {
@@ -400,6 +421,111 @@ private:
         }
     }
 
+    static LuaTypeInCpp convertVariantToLuaTypeInCpp(const rttr::variant& var)
+    {
+        type_id typ = var.get_type().get_id();
+        if (var.is_sequential_container())
+        {
+            // create table from sequential container
+            rttr::variant_sequential_view seqView = var.create_sequential_view();
+            LuaTable t;
+            for (int i = 0; auto& value : seqView)
+            {
+                t[i++] = convertVariantToLuaTypeInCpp(value);
+            }
+        }
+        else if (var.is_associative_container())
+        {
+            // create table from associative container
+            rttr::variant_associative_view assocView = var.create_associative_view();
+            LuaTable t;
+            for (auto&& [key, value] : assocView)
+            {
+                t[convertVariantToLuaTypeInCpp(key)] = convertVariantToLuaTypeInCpp(value);
+            }
+        }
+        else if (typ == TYPE_ID_NIL)
+        {
+            return Nil;
+        }
+        else if (typ == TYPE_ID_LUA_TABLE)
+        {
+            return var.get_value<LuaTable>();
+        }
+        else if (typ == TYPE_ID_BOOL)
+        {
+            return var.get_value<bool>();
+        }
+        else if (typ == TYPE_ID_CHAR)
+        {
+            return var.get_value<char>();
+        }
+        else if (typ == TYPE_ID_UNSIGNED_CHAR)
+        {
+            return var.get_value<unsigned char>();
+        }
+        else if (typ == TYPE_ID_SHORT)
+        {
+            return var.get_value<short>();
+        }
+        else if (typ == TYPE_ID_UNSIGNED_SHORT)
+        {
+            return var.get_value<unsigned short>();
+        }
+        else if (typ == TYPE_ID_INT)
+        {
+            return var.get_value<int>();
+        }
+        else if (typ == TYPE_ID_UNSIGNED_INT)
+        {
+            return var.get_value<unsigned int>();
+        }
+        else if (typ == TYPE_ID_LONG)
+        {
+            return var.get_value<long>();
+        }
+        else if (typ == TYPE_ID_UNSIGNED_LONG)
+        {
+            return var.get_value<unsigned long>();
+        }
+        else if (typ == TYPE_ID_LONG_LONG)
+        {
+            return var.get_value<long long>();
+        }
+        else if (typ == TYPE_ID_UNSIGNED_LONG_LONG)
+        {
+            return static_cast<sqword_t>(var.get_value<unsigned long long>());
+        }
+        else if (typ == TYPE_ID_FLOAT)
+        {
+            return var.get_value<float>();
+        }
+        else if (typ == TYPE_ID_DOUBLE)
+        {
+            return var.get_value<double>();
+        }
+        else if (typ == TYPE_ID_LONG_DOUBLE)
+        {
+            return static_cast<double>(var.get_value<long double>());
+        }
+        else if (typ == TYPE_ID_STRING)
+        {
+            return var.get_value<std::string>();
+        }
+        else if (typ == TYPE_ID_STRING_VIEW)
+        {
+            return (std::string)var.get_value<std::string_view>();
+        }
+        else if (typ == TYPE_ID_VOID_PTR)
+        {
+            return (dword_t)var.get_value<void*>();
+        }
+        else
+        {
+            luaError("Unsupported type '%s' in convertVariantToLuaTypeInCpp", var.get_type().get_name().to_string());
+        }
+    }
+
     static rttr::variant convertLuaTypeInCppToVariantByTypeId(const LuaTypeInCpp& var, const type_id& typeId, bool allowCrossTypeConversions = false)
     {
         // let's assume integers can be converted to floats and vice versa, even if allowCrossTypeConversions is false
@@ -447,6 +573,87 @@ private:
                 }
             }
         }
+        else if (const bool* val = std::get_if<bool>(&var))
+        {
+            if (typeId == TYPE_ID_BOOL)
+            {
+                return *val;
+            }
+            else if (allowCrossTypeConversions)
+            {
+                if (typeId == TYPE_ID_CHAR)
+                {
+                    return static_cast<char>(*val);
+                }
+                else if (typeId == TYPE_ID_UNSIGNED_CHAR)
+                {
+                    return static_cast<unsigned char>(*val);
+                }
+                else if (typeId == TYPE_ID_SHORT)
+                {
+                    return static_cast<short>(*val);
+                }
+                else if (typeId == TYPE_ID_UNSIGNED_SHORT)
+                {
+                    return static_cast<unsigned short>(*val);
+                }
+                else if (typeId == TYPE_ID_INT)
+                {
+                    return static_cast<int>(*val);
+                }
+                else if (typeId == TYPE_ID_UNSIGNED_INT)
+                {
+                    return static_cast<unsigned int>(*val);
+                }
+                else if (typeId == TYPE_ID_LONG)
+                {
+                    return static_cast<long>(*val);
+                }
+                else if (typeId == TYPE_ID_UNSIGNED_LONG)
+                {
+                    return static_cast<unsigned long>(*val);
+                }
+                else if (typeId == TYPE_ID_LONG_LONG)
+                {
+                    return static_cast<long long>(*val);
+                }
+                else if (typeId == TYPE_ID_UNSIGNED_LONG_LONG)
+                {
+                    return static_cast<unsigned long long>(*val);
+                }
+                else if (typeId == TYPE_ID_FLOAT)
+                {
+                    return static_cast<float>(*val);
+                }
+                else if (typeId == TYPE_ID_DOUBLE)
+                {
+                    return static_cast<double>(*val);
+                }
+                else if (typeId == TYPE_ID_LONG_DOUBLE)
+                {
+                    return static_cast<long double>(*val);
+                }
+                else if (typeId == TYPE_ID_STRING)
+                {
+                    return std::string(*val ? "true" : "false");
+                }
+                else if (typeId == TYPE_ID_STRING_VIEW)
+                {
+                    return std::string_view(*val ? "true" : "false");
+                }
+            }
+        }
+        else if (const LuaTable* val = std::get_if<LuaTable>(&var))
+        {
+            if (typeId == TYPE_ID_LUA_TABLE)
+            {
+                return *val;
+            }
+            else if (allowCrossTypeConversions && typeId == TYPE_ID_BOOL)
+            {
+                return true;
+            }
+        }
         return rttr::variant();
     }
 
@@ -454,6 +661,74 @@ private:
     static bool convertToLuaTypeOnStackByTypeId(const rttr::variant& val)
     {
         type_id typ = val.get_type().get_id();
+        if (val.is_sequential_container())
+        {
+            // create table from sequential container
+            rttr::type wrappedType = val.get_type().get_wrapped_type();
+            rttr::variant_sequential_view seqView = val.create_sequential_view();
+            LuaTable t;
+            for (int i = 0; auto& value : seqView)
+            {
+                if (value.get_type().get_id() != wrappedType.get_id())
+                {
+                    throw std::runtime_error("Can't convert sequential container to lua table, because it contains elements of different types");
+                }
+                t[i++] = convertVariantToLuaTypeInCpp(value);
+            }
+            t.pushToLuaStack();
+        }
+        else if (val.is_associative_container())
+        {
+            // create table from associative container
+            rttr::type wrappedType = val.get_type().get_wrapped_type();
+            rttr::variant_associative_view assocView = val.create_associative_view();
+            LuaTable t;
+            for (auto&& [key, value] : assocView)
+            {
+                t[convertVariantToLuaTypeInCpp(key)] = convertVariantToLuaTypeInCpp(value);
+            }
+            t.pushToLuaStack();
+        }
+        else if (typ == TYPE_ID_NIL)
+        {
+            luaWrapper.pushnil();
+        }
+        else if (typ == TYPE_ID_LUA_TABLE)
+        {
+            val.get_value<LuaTable>().pushToLuaStack();
+        }
+        else if (typ == TYPE_ID_BOOL)
+        {
+            luaWrapper.pushboolean(val.get_value<bool>());
+        }
+        else if (typ == TYPE_ID_CHAR)
+        {
+            luaWrapper.pushnumber(static_cast<lua_Number>(val.get_value<char>()));
+        }
+        else if (typ == TYPE_ID_UNSIGNED_CHAR)
+        {
+            luaWrapper.pushnumber(static_cast<lua_Number>(val.get_value<unsigned char>()));
+        }
+        else if (typ == TYPE_ID_SHORT)
+        {
+            luaWrapper.pushnumber(static_cast<lua_Number>(val.get_value<short>()));
+        }
+        else if (typ == TYPE_ID_UNSIGNED_SHORT)
+        {
+            luaWrapper.pushnumber(static_cast<lua_Number>(val.get_value<unsigned short>()));
+        }
+        else if (typ == TYPE_ID_INT)
+        {
+            luaWrapper.pushnumber(static_cast<lua_Number>(val.get_value<int>()));
+        }
+        else if (typ == TYPE_ID_UNSIGNED_INT)
+        {
+            luaWrapper.pushnumber(static_cast<lua_Number>(val.get_value<unsigned int>()));
+        }
+        else if (typ == TYPE_ID_LONG)
+        {
+            luaWrapper.pushnumber(static_cast<lua)
+        }
         if (typ == TYPE_ID_NIL)
         {
             luaWrapper.pushnil();

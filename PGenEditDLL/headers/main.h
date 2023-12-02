@@ -119,6 +119,7 @@ struct TypeIds
 
     static TypeIds findByType(rttr::type::type_id id);
     static bool isTypeAnyOf(rttr::type::type_id id, const TypeIds& typeIds);
+    bool isTypeAnyOf(rttr::type::type_id id) const;
     // pointers and references
     static bool isTypeAnyIndirection(rttr::type::type_id id);
     static bool isTypeAnyConst(rttr::type::type_id id);

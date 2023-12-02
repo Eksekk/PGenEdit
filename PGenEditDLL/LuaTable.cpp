@@ -178,6 +178,16 @@ LuaTableValues::const_iterator LuaTable::end() const
     return values.end();
 }
 
+LuaTableValues::const_iterator LuaTable::cbegin() const
+{
+    return values.cbegin();
+}
+
+LuaTableValues::const_iterator LuaTable::cend() const
+{
+    return values.cend();
+}
+
 LuaTable::LuaTable(const LuaTableValues& values) : values(tryToIntegerFull(values))
 {
 

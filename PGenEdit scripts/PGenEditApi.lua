@@ -468,8 +468,15 @@ validateOrConvertParameter()
 function tests()
 	local stru = cpp.class.ReflectionSampleStruct.new()
 	local errors = {}
-	local function assert(...)
-		table.insert(errors, format(...))
+	local function addError(level, fmt, ...)
+		local info = debug.getinfo(level + 1, "l")
+		local msg = format("[line %d]: ", info.currentline) .. format(fmt, ...)
+		table.insert(errors, msg)
+	end
+	local function assert(cond, ...)
+		if not cond then
+			addError(2, ...)
+		end
 	end
 	local function defCmp(a, b)
 		return a == b
@@ -478,7 +485,7 @@ function tests()
 		local val = stru[name]
 		cmpFunc = cmpFunc or defCmp
 		if not cmpFunc(val, value) then
-			assert("stru.%s == %q, expected %q", name, val, value)
+			addError("stru.%s == %q, expected %q", name, val, value)
 		end
 	end
 	local function testSetProp(name, value, cmpFunc)
@@ -486,7 +493,7 @@ function tests()
 		cmpFunc = cmpFunc or defCmp
 		local val = stru[name]
 		if not cmpFunc(val, value) then
-			assert("stru.%s == %q, expected %q", name, val, value)
+			addError("stru.%s == %q, expected %q", name, val, value)
 		end
 	end
 
@@ -696,6 +703,55 @@ function tests()
 	testGetProp("str", "test")
 	assert(stru.addAllArguments(1, 2, 3, 4) == 10, "stru.addAllArguments(1, 2, 3, 4) == %d, expected 10", stru.addAllArguments(1, 2, 3, 4))
 
+	--[[
+		// few constructors with default arguments
+ReflectionSampleStruct(bool b, int i = 20, char ch = 'a') : ReflectionSampleStruct() // this call also initializes other fields with default values
+{
+    this->i = i + b;
+    str = std::string(1, ch);
+    vec = { 1, 2, 3 };
+    arr = { 1, 2, 3, 4, 5 };
+    map = { {"a", 1}, {"b", 2}, {"c", 3} };
+    u = { 0 };
+}
+
+ReflectionSampleStruct(int a, int b, int c = 5, int d = 20) : ReflectionSampleStruct()
+{
+    i = a + b + c + d;
+    str = "default";
+    vec = { 1, 2, 3 };
+    arr = { 1, 2, 3, 4, 5 };
+    map = { {"a", 1}, {"b", 2}, {"c", 3} };
+    u = { 0 };
+}
+	]]
+	stru = cpp.class.ReflectionSampleStruct.new(true)
+	testGetProp("i", 21)
+	testGetProp("str", "a")
+	testGetProp("vec", {1, 2, 3}, cmpArrayVector)
+	stru = cpp.class.ReflectionSampleStruct.new(false, 5)
+	testGetProp("i", 5)
+	testGetProp("str", "a")
+	-- the other constructor
+	stru = cpp.class.ReflectionSampleStruct.new(1, 2)
+	testGetProp("i", 28)
+	testGetProp("str", "default")
+
+	stru = cpp.class.ReflectionSampleStruct.new(2, 3, 4)
+	testGetProp("i", 29)
+	stru = cpp.class.ReflectionSampleStruct.new(2, 3, 4, 5)
+	testGetProp("i", 14)
+	-- more arguments should throw
+	shouldThrow(function() stru = cpp.class.ReflectionSampleStruct.new(2, 3, 4, 5, 6) end, "cpp.class.ReflectionSampleStruct.new(2, 3, 4, 5, 6)")
+
+	stru = struOld
+
+	-- void setArrayWithDefaultArgs(int a, int b, int c = 12, int d = 33, int e = -5)
+	stru.setArrayWithDefaultArgs(1, 2)
+	testGetProp("arr", {1, 2, 12, 33, -5}, cmpArrayVector)
+	stru.setArrayWithDefaultArgs(1, 2, 3)
+	testGetProp("arr", {1, 2, 3, 33, -5}, cmpArrayVector)
+
 	local inner = cpp.class.InnerStruct.new()
 	local inner2 = cpp.class.InnerStruct2.new()
 
@@ -707,7 +763,7 @@ function tests()
 
 	-- basic inheritance test
 	-- inner2 should have members and methods of inner
-	local struOld2 = stru
+	struOld = stru
 	stru = inner2
 	testGetProp("b", false)
 	testGetProp("bb", false)
@@ -715,8 +771,5 @@ function tests()
 	testGetProp("b", true)
 	testGetProp("bb", true)
 	testGetProp("bbb", true)
-	stru = struOld2
-
-
 	stru = struOld
 end
