@@ -76,3 +76,4 @@
 
 # Current
 * change functions in Reflection class to use parameter_info instead of raw types - can use default values for parameters etc., also pass nArgs to every function
+* change functions in Reflection class to return specific error codes, to allow better error messages in lua-called functions

@@ -48,7 +48,7 @@ bool isLuaType(lua_State* L, int index)
     }
     else if constexpr (std::is_same_v<T, int>)
     {
-        return lua_isinteger(L, index);
+        return lua_isnumber(L, index); // conscious choice to truncate values like 1.5 to 1, because otherwise 2 might be treated as integer, but 2.00000001, which is essentially equal to 2, will be treated as noninteger
     }
     else if constexpr (std::is_same_v<T, double>)
     {
@@ -94,9 +94,21 @@ T getLuaTypeOrError(lua_State* L, int index)
     }
     else if constexpr (std::is_same_v<T, int>)
     {
-        if (!lua_isinteger(L, index))
+        if (!lua_isnumber(L, index))
         {
-            luaError("Expected integer at index {}, got {}", index, lua_typename(L, index));
+            luaError("Expected number at index {}, got {}", index, lua_typename(L, index));
+        }
+        else
+        {
+            lua_Number num = lua_tonumber(L, index);
+            if (num > std::numeric_limits<int>::max() || num < std::numeric_limits<int>::min())
+            {
+                luaError("Expected number at index {}, got {}, but it's out of range of int", index, lua_typename(L, index));
+            }
+            else if (!essentiallyEqualFloats(num, (lua_Number)(sqword_t)num))
+            {
+                luaError("Expected number at index {}, got {}, but it's not an integer", index, lua_typename(L, index));
+            }
         }
         return lua_tointeger(L, index);
     }
@@ -543,7 +555,6 @@ int luaDebug::getClassInfo(lua_State* L)
     return 1;
 }
 
-// receives: [class name, field name, object] or [field name] (global)
 int getFieldCommon(lua_State* L)
 {
     LuaWrapper w(L);
@@ -570,23 +581,24 @@ int getFieldCommon(lua_State* L)
     }
     else // get class field
     {
-        rttr::type t = rttr::type::get_by_name(w.tostring(1));
+        std::string className = w.tostring(1);
+        rttr::type t = rttr::type::get_by_name(className);
         if (!t.is_valid())
         {
-            luaError("Couldn't get class '" + w.tostring(1) + "'");
+            luaError("Couldn't get class '" + className + "'");
             return 0;
         }
         else if (!t.is_class())
         {
-            luaError("Couldn't get class '" + w.tostring(1) + "' - it's not a class");
+            luaError("Couldn't get class '" + className + "' - it's not a class");
             return 0;
         }
         else
         {
-            rttr::variant var = convertToObjectPointer(luaGetObjectPtr(L, 3), w.tostring(1));
+            rttr::variant var = convertToObjectPointer(luaGetObjectPtr(L, 3), className);
             if (!var.is_valid())
             {
-                luaError("Couldn't get class '" + w.tostring(1) + "' - couldn't convert to object pointer");
+                luaError("Couldn't get class '" + className + "' - couldn't convert to object pointer");
                 return 0;
             }
             else
@@ -594,32 +606,69 @@ int getFieldCommon(lua_State* L)
                 rttr::property prop = t.get_property(w.tostring(2));
                 if (!prop.is_valid())
                 {
-                    luaError("Couldn't get property '" + w.tostring(2) + "' of class '" + w.tostring(1) + "'");
+                    luaError("Couldn't get property '" + w.tostring(2) + "' of class '" + className + "'");
                     return 0;
                 }
                 else
                 {
-                    Reflection::getPropertyToLuaStack(var, w.tostring(2));
+                    Reflection::getClassObjectFieldToLuaStack(className, prop.get_name().to_string(), var);
+                    return 1;
                 }
             }
         }
-        rttr::property p = .get_property(w.tostring(2));
     }
 }
 
+// receives: [class name, field name, object]
 int luaDebug::getClassObjectField(lua_State* L)
 {
-    
+    auto className = getLuaTypeOrError<std::string>(L, 1);
+    if (!Reflection::getClassObjectFieldToLuaStack(className, getLuaTypeOrError<std::string>(L, 2), convertToObjectPointer(luaGetObjectPtr(L, 3), className)))
+    {
+        luaError("Couldn't get field '{}' of class '{}'", getLuaTypeOrError<std::string>(L, 2), className);
+        return 0;
+    }
+    return 1;
 }
 
+int luaDebug::getClassField(lua_State* L)
+{
+    return 0;
+}
+
+// receives global name
 int luaDebug::getGlobalField(lua_State* L)
 {
-    return 0;
+    if (!Reflection::getGlobalVariableToLuaStack(getLuaTypeOrError<std::string>(L, 1)))
+    {
+        luaError("Couldn't get global '{}'", getLuaTypeOrError<std::string>(L, 1));
+        return 0;
+    }
+    return 1;
 }
 
+// receives global name and value
 int luaDebug::setGlobalField(lua_State* L)
 {
-    return 0;
+    LuaWrapper w(L);
+    luaExpectStackSize(2);
+    std::string name = getLuaTypeOrError<std::string>(L, 1);
+    rttr::type t = rttr::type::get_by_name(name);
+    if (!t.is_valid())
+    {
+        luaError("Global '{}' doesn't exist", name);
+        return 0;
+    }
+    else if (t.is_class())
+    {
+        luaError("Couldn't set global '{}' - it's a class", name);
+        return 0;
+    }
+    else
+    {
+        Reflection::setGlobalVariableFromLuaStack(name, 2);
+        return 0;
+    }
 }
 
 int luaDebug::invokeClassMethod(lua_State* L)
@@ -632,12 +681,44 @@ int luaDebug::invokeFunctionOrCallableObject(lua_State* L)
     return 0;
 }
 
-int luaDebug::invokeCallable(lua_State* L)
-{
-    return 0;
-}
-
+// receives object, property name, value
 int luaDebug::setClassObjectField(lua_State* L)
 {
-    return 0;
+    LuaWrapper w(L);
+    luaExpectStackSize(3);
+    std::string className = getLuaTypeOrError<std::string>(L, 1);
+    rttr::type t = rttr::type::get_by_name(className);
+    if (!t.is_valid())
+    {
+        luaError("Type '{}' is not registered", className);
+        return 0;
+    }
+    else if (!t.is_class())
+    {
+        luaError("Couldn't get class '{}', it's not a class", className);
+        return 0;
+    }
+    else
+    {
+        rttr::variant var = convertToObjectPointer(luaGetObjectPtr(L, 1), className);
+        if (!var.is_valid())
+        {
+            luaError("Couldn't get class '{}', couldn't convert to object pointer", className);
+            return 0;
+        }
+        else
+        {
+            if (!Reflection::setClassObjectFieldFromLuaStack(var, getLuaTypeOrError<std::string>(L, 2), 3))
+            {
+                luaError("Couldn't set field '{}' of class '{}'", getLuaTypeOrError<std::string>(L, 2), className);
+                return 0;
+            }
+        }
+    }
+}
+
+// receives class name, property name, value
+int luaDebug::setClassField(lua_State* L)
+{
+    LuaWrapper w(L);
 }

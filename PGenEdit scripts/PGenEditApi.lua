@@ -349,7 +349,10 @@ local function createObjectMetatable(classMT)
 	end
 
 	function objMT.__gc(obj)
-		api.destroyObject(obj)
+		-- destroy only objects created by lua
+		if type(obj) == "userdata" then
+			api.destroyObject(obj)
+		end
 	end
 
 	function objMT.__copy(this)

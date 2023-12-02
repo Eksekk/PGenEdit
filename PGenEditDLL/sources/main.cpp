@@ -21,7 +21,7 @@ const rttr::detail::public_access rttr::registration::public_access;
 const rttr::detail::protected_access rttr::registration::protected_access;
 const rttr::detail::private_access rttr::registration::private_access;
 
-const TypeIds& TypeIds::findByType(rttr::type::type_id id)
+TypeIds TypeIds::findByType(rttr::type::type_id id)
 {
     // TODO: better way to do this? this will be horrendously slow
     for (auto& [name, typeIds] : g_typeIdsByTypeName)

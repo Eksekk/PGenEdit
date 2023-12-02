@@ -117,7 +117,7 @@ struct TypeIds
     // const volatile types
     rttr::type::type_id const_volatile, const_volatile_pointer, const_volatile_reference, pointer_to_const_volatile;
 
-    static const TypeIds& findByType(rttr::type::type_id id);
+    static TypeIds findByType(rttr::type::type_id id);
     static bool isTypeAnyOf(rttr::type::type_id id, const TypeIds& typeIds);
     // pointers and references
     static bool isTypeAnyIndirection(rttr::type::type_id id);

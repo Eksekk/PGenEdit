@@ -7,7 +7,6 @@
 template<typename T>
 concept IsCvUnqualifiedTopLevel = !(std::is_const_v<std::remove_reference_t<T>> || std::is_volatile_v<std::remove_reference_t<T>>);
 
-
 // custom exception, which will be thrown as part one of generating lua error from C++
 // using this, because it properly invokes destructors of objects
 // this exception should be caught by C++ function directly called by lua, and it should execute its own stack objects' destructors and generate lua error
@@ -35,11 +34,13 @@ namespace luaDebug
         static int destroyObject(lua_State* L);
         static int getClassInfo(lua_State* L);
         static int getClassObjectField(lua_State* L);
+        static int getClassField(lua_State* L);
         static int getGlobalField(lua_State* L);
+        static int setClassObjectField(lua_State* L);
+        static int setClassField(lua_State* L);
         static int setGlobalField(lua_State* L);
         static int invokeClassMethod(lua_State* L);
         static int invokeFunctionOrCallableObject(lua_State* L);
-        static int setClassObjectField(lua_State* L);
     }
 }
 
@@ -100,6 +101,8 @@ public:
     // userdata -> void*
     // lightuserdata -> void*
     // any lua type representable in cpp -> LuaTypeInCpp, rttr::variant
+
+private:
 
     template<typename T>
     static rttr::variant tryConvertNumberToType(T val, type_id typeId, bool allowCrossTypeConversions = false)
@@ -174,58 +177,7 @@ public:
         }
         return rttr::variant();
     }
-
-    static rttr::variant convertLuaTypeInCppToVariantByTypeId(const LuaTypeInCpp& var, const type_id& typeId, bool allowCrossTypeConversions = false)
-    {
-        // let's assume integers can be converted to floats and vice versa, even if allowCrossTypeConversions is false
-        if (const sqword_t* val = std::get_if<sqword_t>(&var))
-        {
-            return tryConvertNumberToType(*val, typeId, allowCrossTypeConversions);
-        }
-        else if (const lua_Number* val = std::get_if<lua_Number>(&var))
-        {
-            return tryConvertNumberToType(*val, typeId, allowCrossTypeConversions);
-        }
-        else if (const std::string* val = std::get_if<std::string>(&var))
-        {
-            if (typeId == TYPE_ID_STRING)
-            {
-                return *val;
-            }
-            else if (typeId == TYPE_ID_STRING_VIEW)
-            {
-                return std::string_view(*val);
-            }
-            else if (allowCrossTypeConversions)
-            {
-                if (typeId == TYPE_ID_BOOL)
-                {
-                     return !val->empty();
-                }
-
-                try
-                {
-                    return tryConvertNumberToType(std::stod(*val), typeId, allowCrossTypeConversions);
-                }
-                catch (const std::exception&)
-                {
-                    // ignore
-                }
-
-                try 
-                {
-                    return tryConvertNumberToType(std::stoll(*val), typeId, allowCrossTypeConversions);
-                }
-                catch (const std::exception&)
-                {
-                    // ignore
-                }
-            }
-        }
-        return rttr::variant();
-    }
-
-
+    public:
     // converts lua parameter from stack to given type (using RTTR type_id)
     // allowCrossTypeCategoryConversions allows to convert lua types to C++ types, which are not exactly matching, but are compatible (like number to boolean)
     static rttr::variant convertStackIndexToType(int stackIndex, const rttr::type& typ, bool allowCrossTypeCategoryConversions = false)
@@ -406,6 +358,7 @@ public:
     }
 
     // will be used to allow reflected methods to return values in lua
+    // takes constituent types of LuaTypeInCpp and converts them to lua types
     template<typename T>
     static void convertToLuaTypeOnStack(const T& val)
     {
@@ -444,6 +397,56 @@ public:
             showDeducedType(val);
             COMPILE_TIME_CONSTEXPR_IF_ERROR();
         }
+    }
+
+    static rttr::variant convertLuaTypeInCppToVariantByTypeId(const LuaTypeInCpp& var, const type_id& typeId, bool allowCrossTypeConversions = false)
+    {
+        // let's assume integers can be converted to floats and vice versa, even if allowCrossTypeConversions is false
+        if (const sqword_t* val = std::get_if<sqword_t>(&var))
+        {
+            return tryConvertNumberToType(*val, typeId, allowCrossTypeConversions);
+        }
+        else if (const lua_Number* val = std::get_if<lua_Number>(&var))
+        {
+            return tryConvertNumberToType(*val, typeId, allowCrossTypeConversions);
+        }
+        else if (const std::string* val = std::get_if<std::string>(&var))
+        {
+            if (typeId == TYPE_ID_STRING)
+            {
+                return *val;
+            }
+            else if (typeId == TYPE_ID_STRING_VIEW)
+            {
+                return std::string_view(*val);
+            }
+            else if (allowCrossTypeConversions)
+            {
+                if (typeId == TYPE_ID_BOOL)
+                {
+                     return !val->empty();
+                }
+
+                try
+                {
+                    return tryConvertNumberToType(std::stod(*val), typeId, allowCrossTypeConversions);
+                }
+                catch (const std::exception&)
+                {
+                    // ignore
+                }
+
+                try 
+                {
+                    return tryConvertNumberToType(std::stoll(*val), typeId, allowCrossTypeConversions);
+                }
+                catch (const std::exception&)
+                {
+                    // ignore
+                }
+            }
+        }
+        return rttr::variant();
     }
 
     // now similar function to above, but using runtime type_id of rttr::variant perform the conversions
@@ -608,160 +611,8 @@ public:
         return result;
     }
 
-public:
+   private:
 
-    template<typename T>
-    static rttr::variant callWithLuaParamsCommon(const std::string& name, T* instancePtr, int nArgs = -1)
-    {
-        bool isMemberFunc = instancePtr != nullptr;
-        rttr::method meth = isMemberFunc ? rttr::type::get<T>().get_method(name) : rttr::type::get_global_method(name);
-        if (!meth.is_valid())
-        {
-            return false;
-        }
-        auto paramsArray = meth.get_parameter_infos();
-        std::vector<rttr::parameter_info> params(paramsArray.begin(), paramsArray.end());
-        std::vector<rttr::variant> variants = convertLuaParametersToCppForReflection(params, nArgs);
-        std::vector<rttr::argument> args;
-        for (rttr::variant& arg : variants)
-        {
-            args.push_back(arg);
-        }
-        rttr::variant result = meth.invoke_variadic(isMemberFunc ? instancePtr : rttr::instance(), args);
-        return result;
-    }
-
-    // to allow calling above function with nullptr (in reality it's not a pointer type, so can't bind to T*, we need to overload it)
-    static rttr::variant callWithLuaParamsCommon(const std::string& name, std::nullptr_t instancePtr, int nArgs = -1)
-    {
-        return callWithLuaParamsCommon(name, static_cast<void*>(nullptr), nArgs);
-    }
-
-    // generic templated function to get variable, either global or instance
-    template<typename Class>
-    static rttr::variant getVariableTemplatedCommon(const std::string& name, Class* instancePtr)
-    {
-        bool isMemberFunc = instancePtr != nullptr;
-        rttr::property prop = isMemberFunc ? rttr::type::get<Class>().get_property(name) : rttr::type::get_global_property(name);
-        if (!prop.is_valid())
-        {
-            return false;
-        }
-        return prop.get_value(isMemberFunc ? instancePtr : rttr::instance());
-    }
-    
-    // gets static field of class to lua stack
-    static rttr::variant getClassFieldToLuaStack(const std::string& className, const std::string& fieldName)
-    {
-        rttr::type type = rttr::type::get_by_name(className);
-        if (!type.is_valid())
-        {
-            return rttr::variant();
-        }
-        rttr::property prop = type.get_property(fieldName);
-        if (!prop.is_valid())
-        {
-            return rttr::variant();
-        }
-        return convertToLuaTypeOnStackByTypeId(prop.get_value(rttr::instance()));
-    }
-
-    // variant must contain pointer to real object type, not void*
-    static rttr::variant getClassObjectFieldToLuaStack(const std::string& className, const std::string& fieldName, const rttr::variant& instance)
-    {
-        rttr::type type = rttr::type::get_by_name(className);
-        if (!type.is_valid())
-        {
-            return rttr::variant();
-        }
-        rttr::property prop = type.get_property(fieldName);
-        if (!prop.is_valid())
-        {
-            return rttr::variant();
-        }
-        return convertToLuaTypeOnStackByTypeId(prop.get_value(instance));
-    }
-
-    static rttr::variant getGlobalFieldToLuaStack(const std::string& fieldName)
-    {
-        rttr::property prop = rttr::type::get_global_property(fieldName);
-        if (!prop.is_valid())
-        {
-            return rttr::variant();
-        }
-        return convertToLuaTypeOnStackByTypeId(prop.get_value(rttr::instance()));
-    }
-
-    // nullptr_t version
-    static rttr::variant getVariableTemplatedCommon(const std::string& name, std::nullptr_t instancePtr)
-    {
-        return getVariableTemplatedCommon(name, static_cast<void*>(nullptr));
-    }
-
-    // get global variable to lua stack
-    // returns if operation was successful, in case of failure, lua stack is not modified
-    static bool getGlobalVariableToLuaStack(const std::string& variableName)
-    {
-        return convertToLuaTypeOnStackByTypeId(getVariableTemplatedCommon(variableName, nullptr));
-    }
-
-    // get property into lua stack
-    template<typename Class>
-    static bool getPropertyToLuaStackTemplated(Class* instance, const std::string& propertyName)
-    {
-        return convertToLuaTypeOnStackByTypeId(getVariableTemplatedCommon(propertyName, instance));
-    }
-
-    // generic function to set variable, either global or instance
-    template<typename Class>
-    static bool setVariableFromLuaStackCommon(const std::string& name, Class* instancePtr, int stackIndex = -1)
-    {
-        stackIndex = luaWrapper.makeAbsoluteStackIndex(stackIndex);
-        bool isMemberFunc = instancePtr != nullptr;
-        rttr::property prop = isMemberFunc ? rttr::type::get<Class>().get_property(name) : rttr::type::get_global_property(name);
-        if (!prop.is_valid())
-        {
-            return false;
-        }
-        rttr::variant value = convertStackIndexToType(stackIndex, prop.get_type());
-        if (!value.is_valid())
-        {
-            return false;
-        }
-        prop.set_value(isMemberFunc ? instancePtr : rttr::instance(), value);
-        return true;
-    }
-
-    // nullptr_t version
-    static bool setVariableFromLuaStackCommon(const std::string& name, std::nullptr_t instancePtr, int stackIndex = -1)
-    {
-        return setVariableFromLuaStackCommon(name, static_cast<void*>(nullptr), stackIndex);
-    }
-
-    static rttr::variant callFreeFunctionWithLuaParams(const std::string& name, int nArgs = -1)
-    {
-        return callWithLuaParamsCommon(name, nullptr, nArgs);
-    }
-
-    // set global variable from lua stack
-    // returns if operation was successful, in case of failure, lua stack is not modified
-    static bool setGlobalVariableFromLuaStack(const std::string& variableName, int stackIndex = -1)
-    {
-        setVariableFromLuaStackCommon(variableName, nullptr, stackIndex);
-    }
-
-    template<typename Class>
-    static rttr::variant callInstanceMethodWithLuaParams(Class* instance, const std::string& methodName, int nArgs = -1)
-    {
-        return callWithLuaParamsCommon(methodName, instance, nArgs);
-    }
-
-    // set property from lua stack
-    template<typename Class>
-    static bool setPropertyFromLuaStackTemplated(Class* instance, const std::string& propertyName, int stackIndex = -1)
-    {
-        return setPropertyFromLuaStackCommon(propertyName, instance, stackIndex);
-    }
 
     // not using convertLuaParametersToCppForReflection here, because it throws exception on failure, and we want to return false instead
 
@@ -814,6 +665,233 @@ public:
         return true;
     }
 
+    template<typename T>
+    static rttr::variant callWithLuaParamsCommon(const std::string& name, T* instancePtr, int nArgs = -1)
+    {
+        bool isMemberFunc = instancePtr != nullptr;
+        rttr::method meth = isMemberFunc ? rttr::type::get<T>().get_method(name) : rttr::type::get_global_method(name);
+        if (!meth.is_valid())
+        {
+            return false;
+        }
+        auto paramsArray = meth.get_parameter_infos();
+        std::vector<rttr::parameter_info> params(paramsArray.begin(), paramsArray.end());
+        std::vector<rttr::variant> variants = convertLuaParametersToCppForReflection(params, nArgs);
+        std::vector<rttr::argument> args;
+        for (rttr::variant& arg : variants)
+        {
+            args.push_back(arg);
+        }
+        rttr::variant result = meth.invoke_variadic(isMemberFunc ? instancePtr : rttr::instance(), args);
+        return result;
+    }
+
+    // to allow calling above function with nullptr (in reality it's not a pointer type, so can't bind to T*, we need to overload it)
+    static rttr::variant callWithLuaParamsCommon(const std::string& name, std::nullptr_t instancePtr, int nArgs = -1)
+    {
+        return callWithLuaParamsCommon(name, static_cast<void*>(nullptr), nArgs);
+    }
+
+    static int defaultArgumentCount(const std::vector<rttr::parameter_info>& paramInfo)
+    {
+        int result = 0;
+        int i = 0;
+        for (auto itr = paramInfo.rbegin(); itr != paramInfo.rend(); ++itr, ++i)
+        {
+            if (!itr->has_default_value())
+            {
+                return i;
+            }
+        }
+        // all default
+        return paramInfo.size();
+    }
+
+public:
+    /// property getters
+
+    // generic templated function to get variable, either global or instance
+//     template<typename Class>
+//     static rttr::variant getVariableTemplatedCommon(const std::string& name, Class* instancePtr)
+//     {
+//         bool isMemberFunc = instancePtr != nullptr;
+//         rttr::property prop = isMemberFunc ? rttr::type::get<Class>().get_property(name) : rttr::type::get_global_property(name);
+//         if (!prop.is_valid())
+//         {
+//             return false;
+//         }
+//         return prop.get_value(isMemberFunc ? instancePtr : rttr::instance());
+//     }
+//     
+//     // nullptr_t version
+//     static rttr::variant getVariableTemplatedCommon(const std::string& name, std::nullptr_t instancePtr)
+//     {
+//         return getVariableTemplatedCommon(name, static_cast<void*>(nullptr));
+//     }
+
+    // get property into lua stack, templated
+//     template<typename Class>
+//     static bool getClassObjectFieldToLuaStackTemplated(Class* instance, const std::string& propertyName)
+//     {
+//         return convertToLuaTypeOnStackByTypeId(getVariableTemplatedCommon(propertyName, instance));
+//     }
+
+    // gets static field of class to lua stack
+    static bool getClassFieldToLuaStack(const std::string& className, const std::string& fieldName)
+    {
+        rttr::type type = rttr::type::get_by_name(className);
+        if (!type.is_valid())
+        {
+            return false;
+        }
+        rttr::property prop = type.get_property(fieldName);
+        if (!prop.is_valid())
+        {
+            return false;
+        }
+        return convertToLuaTypeOnStackByTypeId(prop.get_value(rttr::instance()));
+    }
+
+    // variant must contain pointer to real object type, not void*
+    static bool getClassObjectFieldToLuaStack(const std::string& className, const std::string& fieldName, const rttr::variant& instance)
+    {
+        rttr::type type = rttr::type::get_by_name(className);
+        if (!type.is_valid())
+        {
+            return false;
+        }
+        rttr::property prop = type.get_property(fieldName);
+        if (!prop.is_valid())
+        {
+            return false;
+        }
+        return convertToLuaTypeOnStackByTypeId(prop.get_value(instance));
+    }
+
+    static bool getGlobalVariableToLuaStack(const std::string& fieldName)
+    {
+        rttr::property prop = rttr::type::get_global_property(fieldName);
+        if (!prop.is_valid())
+        {
+            return false;
+        }
+        return convertToLuaTypeOnStackByTypeId(prop.get_value(rttr::instance()));
+    }
+
+    /// property setters
+
+    // uses variants
+    static bool setClassObjectFieldFromLuaStack(const rttr::variant& instance, const std::string& propertyName, int stackIndex = -1)
+    {
+        rttr::property prop = instance.get_type().get_raw_type().get_property(propertyName);
+        if (!prop.is_valid())
+        {
+            return false;
+        }
+        rttr::variant value = convertStackIndexToType(stackIndex, prop.get_type());
+        if (!value.is_valid())
+        {
+            return false;
+        }
+        return prop.set_value(instance, value);
+    }
+
+    static bool setClassFieldFromLuaStack(const std::string& className, const std::string& propertyName, int stackIndex = -1)
+    {
+        rttr::type type = rttr::type::get_by_name(className);
+        if (!type.is_valid())
+        {
+            return false;
+        }
+        rttr::property prop = type.get_property(propertyName);
+        if (!prop.is_valid())
+        {
+            return false;
+        }
+        else if (!prop.is_static()) // not class field
+        {
+            return false;
+        }
+        rttr::variant value = convertStackIndexToType(stackIndex, prop.get_type());
+        if (!value.is_valid())
+        {
+            return false;
+        }
+        return prop.set_value(rttr::instance(), value);
+    }
+
+    static bool setGlobalVariableFromLuaStack(const std::string& variableName, int stackIndex = -1)
+    {
+        rttr::property prop = rttr::type::get_global_property(variableName);
+        if (!prop.is_valid())
+        {
+            return false;
+        }
+        rttr::variant value = convertStackIndexToType(stackIndex, prop.get_type());
+        if (!value.is_valid())
+        {
+            return false;
+        }
+        return prop.set_value(rttr::instance(), value);
+    }
+
+    // generic function to set variable, either global or instance, templated
+//     template<typename Class>
+//     static bool setVariableFromLuaStackCommonTemplated(const std::string& name, Class* instancePtr, int stackIndex = -1)
+//     {
+//         stackIndex = luaWrapper.makeAbsoluteStackIndex(stackIndex);
+//         bool isMemberFunc = instancePtr != nullptr;
+//         rttr::property prop = isMemberFunc ? rttr::type::get<Class>().get_property(name) : rttr::type::get_global_property(name);
+//         if (!prop.is_valid())
+//         {
+//             return false;
+//         }
+//         rttr::variant value = convertStackIndexToType(stackIndex, prop.get_type());
+//         if (!value.is_valid())
+//         {
+//             return false;
+//         }
+//         prop.set_value(isMemberFunc ? instancePtr : rttr::instance(), value);
+//     }
+// 
+//     // nullptr_t version
+//     static bool setVariableFromLuaStackCommonTemplated(const std::string& name, std::nullptr_t instancePtr, int stackIndex = -1)
+//     {
+//         return setVariableFromLuaStackCommonTemplated(name, static_cast<void*>(nullptr), stackIndex);
+//     }
+
+    // set global variable from lua stack
+    // returns if operation was successful, in case of failure, lua stack is not modified
+//     static bool setGlobalVariableFromLuaStack(const std::string& variableName, int stackIndex = -1)
+//     {
+//         return setVariableFromLuaStackCommonTemplated(variableName, nullptr, stackIndex);
+//     }
+// 
+//     // set property from lua stack
+//     template<typename Class>
+//     static bool setClassObjectFieldFromLuaStackTemplated(Class* instance, const std::string& propertyName, int stackIndex = -1)
+//     {
+//         return setVariableFromLuaStackCommonTemplated(propertyName, instance, stackIndex);
+//     }
+// 
+//     // set class property from lua stack
+//     template<typename Class>
+//     static bool setClassFieldFromLuaStackTemplated(const std::string& className, const std::string& propertyName, int stackIndex = -1)
+//     {
+//         return setVariableFromLuaStackCommonTemplated(propertyName, nullptr, stackIndex);
+//     }
+
+    static rttr::variant callFreeFunctionWithLuaParams(const std::string& name, int nArgs = -1)
+    {
+        return callWithLuaParamsCommon(name, nullptr, nArgs);
+    }
+
+    template<typename Class>
+    static rttr::variant callInstanceMethodWithLuaParams(Class* instance, const std::string& methodName, int nArgs = -1)
+    {
+        return callWithLuaParamsCommon(methodName, instance, nArgs);
+    }
+
     // so, I need to be able to put object, variant containing object or something like that into userdata allocated by lua
     // idk if rttr variants are moveable (if there is a way to avoid copying), but I will assume they are not
     // possible options:
@@ -846,22 +924,6 @@ public:
             }
         }
         return rttr::variant();
-    }
-
-private:
-    static int defaultArgumentCount(const std::vector<rttr::parameter_info>& paramInfo)
-    {
-        int result = 0;
-        int i = 0;
-        for (auto itr = paramInfo.rbegin(); itr != paramInfo.rend(); ++itr, ++i)
-        {
-            if (!itr->has_default_value())
-            {
-                return i;
-            }
-        }
-        // all default
-        return paramInfo.size();
     }
 
 public:
