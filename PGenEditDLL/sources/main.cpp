@@ -21,6 +21,8 @@ const rttr::detail::public_access rttr::registration::public_access;
 const rttr::detail::protected_access rttr::registration::protected_access;
 const rttr::detail::private_access rttr::registration::private_access;
 
+std::map<std::string, TypeIds> g_typeIdsByTypeName;
+
 TypeIds TypeIds::findByType(rttr::type::type_id id)
 {
     // TODO: better way to do this? this will be horrendously slow

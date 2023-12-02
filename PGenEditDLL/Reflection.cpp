@@ -35,7 +35,7 @@ const std::vector<type_id> Reflection::TYPE_IDS_ALL_TYPES{ compileTimeMergeVecto
 template<typename... Args>
 [[noreturn]] void luaError(const std::string& msg, Args&&... args)
 {
-    throw LuaErrorException(std::format(msg, std::forward<Args>(args)...));
+    throw LuaErrorException(std::vformat(msg, std::make_format_args(std::forward<Args>(args)...)));
 }
 
 // a function like below, but returning boolean if value is of given type and doesn't throw
@@ -259,6 +259,143 @@ static rttr::variant convertToObjectPointer(void* ptr, const std::string& typeNa
     }
 }
 
+// handles both userdata and table
+static void* luaGetObjectPtr(lua_State* L, int index)
+{
+    void* ptr = nullptr;
+    if (lua_isuserdata(L, index))
+    {
+        ptr = lua_touserdata(L, index);
+        if (!ptr)
+        {
+            luaError("Couldn't get object - userdata is null");
+        }
+        return ptr;
+        //className = getLuaTableMetafieldOrError<std::string>(index, "className");
+    }
+    else if (lua_istable(L, index))
+    {
+        lua_getfield(L, index, "?ptr"); // class object table field
+        if (!lua_isnumber(L, -1))
+        {
+            luaError("Couldn't get object - table doesn't have a pointer");
+            lua_pop(L, 1);
+            return nullptr;
+        }
+        ptr = (void*)(dword_t)lua_tonumber(L, -1);
+        lua_pop(L, 1);
+        return ptr;
+        //className = getLuaTableMetafieldOrError<std::string>(index, "className");
+    }
+    else
+    {
+        luaError("Couldn't get object - first argument is neither userdata nor table");
+        return nullptr;
+    }
+}
+
+LuaTable getBasicTypeDataTable(const rttr::type& type)
+{
+    LuaTable typeInfo;
+    const rttr::type::type_id typeId = type.get_id();
+    typeInfo["name"] = type.get_name().to_string();
+    typeInfo["isConst"] = TypeIds::isTypeAnyConst(typeId);
+    typeInfo["isReference"] = TypeIds::isTypeAnyReference(typeId);
+    typeInfo["isPointer"] = TypeIds::isTypeAnyPointer(typeId);
+    typeInfo["isClass"] = type.is_class();
+    typeInfo["isEnum"] = type.is_enumeration();
+    rttr::type rawType = type.get_raw_type();
+    if (typeId != rawType.get_id()) // avoid infinite recursion
+    {
+        typeInfo["raw"] = getBasicTypeDataTable(rawType);
+    }
+    return typeInfo;
+}
+
+LuaTable getCallableParamInfo(const rttr::parameter_info& param)
+{
+    LuaTable paramInfo;
+    paramInfo["type"] = getBasicTypeDataTable(param.get_type());
+    paramInfo["hasDefaultValue"] = param.has_default_value();
+    paramInfo["defaultValue"] = param.get_default_value().to_string(); // FIXME: this is not a string, but a variant
+    return paramInfo;
+}
+
+LuaTable getCallableParamsTable(const rttr::array_range<rttr::parameter_info>& params)
+{
+    LuaTable paramsTable;
+    int i = 1;
+    for (auto& param : params)
+    {
+        paramsTable[i++] = getCallableParamInfo(param);
+    }
+    return paramsTable;
+}
+
+int getFieldCommon(lua_State* L)
+{
+    LuaWrapper w(L);
+    if (w.gettop() == 1) // get global
+    {
+        // get global
+        std::string name = w.tostring(2);
+        auto t = rttr::type::get_by_name(name);
+        if (!t.is_valid())
+        {
+            luaError("Couldn't get global '" + w.tostring(2) + "'");
+            return 0;
+        }
+        else if (t.is_class())
+        {
+            luaError("Couldn't get global '" + w.tostring(2) + "' - it's a class");
+            return 0;
+        }
+        else
+        {
+            Reflection::getGlobalVariableToLuaStack(name);
+            return 1;
+        }
+    }
+    else // get class field
+    {
+        std::string className = w.tostring(1);
+        rttr::type t = rttr::type::get_by_name(className);
+        if (!t.is_valid())
+        {
+            luaError("Couldn't get class '" + className + "'");
+            return 0;
+        }
+        else if (!t.is_class())
+        {
+            luaError("Couldn't get class '" + className + "' - it's not a class");
+            return 0;
+        }
+        else
+        {
+            rttr::variant var = convertToObjectPointer(luaGetObjectPtr(L, 3), className);
+            if (!var.is_valid())
+            {
+                luaError("Couldn't get class '" + className + "' - couldn't convert to object pointer");
+                return 0;
+            }
+            else
+            {
+                rttr::property prop = t.get_property(w.tostring(2));
+                if (!prop.is_valid())
+                {
+                    luaError("Couldn't get property '" + w.tostring(2) + "' of class '" + className + "'");
+                    return 0;
+                }
+                else
+                {
+                    Reflection::getClassObjectFieldToLuaStack(className, prop.get_name().to_string(), var);
+                    return 1;
+                }
+            }
+        }
+    }
+}
+
 // receives class name as string
 int luaDebug::classExists(lua_State* L)
 {
@@ -272,37 +409,6 @@ int luaDebug::classExists(lua_State* L)
     rttr::type t = rttr::type::get_by_name(s);
     w.pushboolean(t.is_class());
     return 1;
-}
-
-// handles both userdata and table
-static void* luaGetObjectPtr(lua_State* L, int index)
-{
-    void* ptr = nullptr;
-    if (lua_isuserdata(L, index))
-    {
-        ptr = lua_touserdata(L, index);
-        if (!ptr)
-        {
-            luaError("Couldn't get object - userdata is null");
-        }
-        //className = getLuaTableMetafieldOrError<std::string>(index, "className");
-    }
-    else if (lua_istable(L, index))
-    {
-        lua_getfield(L, index, "?ptr"); // class object table field
-        if (!lua_isnumber(L, -1))
-        {
-            lua_pop(L, 1);
-            luaError("Couldn't get object - table doesn't have a pointer");
-        }
-        return (void*)(dword_t)lua_tonumber(L, -1);
-        lua_pop(L, 1);
-        //className = getLuaTableMetafieldOrError<std::string>(index, "className");
-    }
-    else
-    {
-        luaError("Couldn't get object - first argument is neither userdata nor table");
-    }
 }
 
 // receives object pointer (userdata) of address equal to pointer to object
@@ -430,44 +536,6 @@ int luaDebug::destroyObject(lua_State* L)
     return 0;
 }
 
-LuaTable getBasicTypeDataTable(const rttr::type& type)
-{
-    LuaTable typeInfo;
-    const rttr::type::type_id typeId = type.get_id();
-    typeInfo["name"] = type.get_name().to_string();
-    typeInfo["isConst"] = TypeIds::isTypeAnyConst(typeId);
-    typeInfo["isReference"] = TypeIds::isTypeAnyReference(typeId);
-    typeInfo["isPointer"] = TypeIds::isTypeAnyPointer(typeId);
-    typeInfo["isClass"] = type.is_class();
-    typeInfo["isEnum"] = type.is_enumeration();
-    rttr::type rawType = type.get_raw_type();
-    if (typeId != rawType.get_id()) // avoid infinite recursion
-    {
-        typeInfo["raw"] = getBasicTypeDataTable(rawType);
-    }
-    return typeInfo;
-}
-
-LuaTable getCallableParamInfo(const rttr::parameter_info& param)
-{
-    LuaTable paramInfo;
-    paramInfo["type"] = getBasicTypeDataTable(param.get_type());
-    paramInfo["hasDefaultValue"] = param.has_default_value();
-    paramInfo["defaultValue"] = param.get_default_value().to_string(); // FIXME: this is not a string, but a variant
-    return paramInfo;
-}
-
-LuaTable getCallableParamsTable(const rttr::array_range<rttr::parameter_info>& params)
-{
-    LuaTable paramsTable;
-    int i = 1;
-    for (auto& param : params)
-    {
-        paramsTable[i++] = getCallableParamInfo(param);
-    }
-    return paramsTable;
-}
-
 // receives: class name
 int luaDebug::getClassInfo(lua_State* L)
 {
@@ -553,70 +621,6 @@ int luaDebug::getClassInfo(lua_State* L)
 
     info.pushToLuaStack();
     return 1;
-}
-
-int getFieldCommon(lua_State* L)
-{
-    LuaWrapper w(L);
-    if (w.gettop() == 1) // get global
-    {
-        // get global
-        std::string name = w.tostring(2);
-        auto t = rttr::type::get_by_name(name);
-        if (!t.is_valid())
-        {
-            luaError("Couldn't get global '" + w.tostring(2) + "'");
-            return 0;
-        }
-        else if (t.is_class())
-        {
-            luaError("Couldn't get global '" + w.tostring(2) + "' - it's a class");
-            return 0;
-        }
-        else
-        {
-            Reflection::getGlobalVariableToLuaStack(name);
-            return 1;
-        }
-    }
-    else // get class field
-    {
-        std::string className = w.tostring(1);
-        rttr::type t = rttr::type::get_by_name(className);
-        if (!t.is_valid())
-        {
-            luaError("Couldn't get class '" + className + "'");
-            return 0;
-        }
-        else if (!t.is_class())
-        {
-            luaError("Couldn't get class '" + className + "' - it's not a class");
-            return 0;
-        }
-        else
-        {
-            rttr::variant var = convertToObjectPointer(luaGetObjectPtr(L, 3), className);
-            if (!var.is_valid())
-            {
-                luaError("Couldn't get class '" + className + "' - couldn't convert to object pointer");
-                return 0;
-            }
-            else
-            {
-                rttr::property prop = t.get_property(w.tostring(2));
-                if (!prop.is_valid())
-                {
-                    luaError("Couldn't get property '" + w.tostring(2) + "' of class '" + className + "'");
-                    return 0;
-                }
-                else
-                {
-                    Reflection::getClassObjectFieldToLuaStack(className, prop.get_name().to_string(), var);
-                    return 1;
-                }
-            }
-        }
-    }
 }
 
 // receives: [class name, field name, object]
@@ -772,7 +776,7 @@ int luaDebug::invokeGlobalMethod(lua_State* L)
     {
         luaError("Couldn't call global function '{}'", getLuaTypeOrError<std::string>(L, 1));
         return 0;
-    }
+    }  
     else
     {
         Reflection::convertToLuaTypeOnStackByTypeId(result);

@@ -685,6 +685,7 @@ private:
             args.push_back(arg);
         }
         rttr::variant result = meth.invoke_variadic(inst.is_valid() ? inst : rttr::instance(), args);
+        return result;
     }
 
     template<typename T>
