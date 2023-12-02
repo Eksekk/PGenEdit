@@ -33,11 +33,13 @@ namespace luaDebug
         static int copyObject(lua_State* L);
         static int createObject(lua_State* L);
         static int destroyObject(lua_State* L);
-        static int getClassFields(lua_State* L);
         static int getClassInfo(lua_State* L);
-        static int getField(lua_State* L);
-        static int invokeCallable(lua_State* L);
-        static int setField(lua_State* L);
+        static int getClassObjectField(lua_State* L);
+        static int getGlobalField(lua_State* L);
+        static int setGlobalField(lua_State* L);
+        static int invokeClassMethod(lua_State* L);
+        static int invokeFunctionOrCallableObject(lua_State* L);
+        static int setClassObjectField(lua_State* L);
     }
 }
 
@@ -647,12 +649,67 @@ public:
         }
         return prop.get_value(isMemberFunc ? instancePtr : rttr::instance());
     }
-    // generic function to get
+    
+    // gets static field of class to lua stack
+    static rttr::variant getClassFieldToLuaStack(const std::string& className, const std::string& fieldName)
+    {
+        rttr::type type = rttr::type::get_by_name(className);
+        if (!type.is_valid())
+        {
+            return rttr::variant();
+        }
+        rttr::property prop = type.get_property(fieldName);
+        if (!prop.is_valid())
+        {
+            return rttr::variant();
+        }
+        return convertToLuaTypeOnStackByTypeId(prop.get_value(rttr::instance()));
+    }
+
+    // variant must contain pointer to real object type, not void*
+    static rttr::variant getClassObjectFieldToLuaStack(const std::string& className, const std::string& fieldName, const rttr::variant& instance)
+    {
+        rttr::type type = rttr::type::get_by_name(className);
+        if (!type.is_valid())
+        {
+            return rttr::variant();
+        }
+        rttr::property prop = type.get_property(fieldName);
+        if (!prop.is_valid())
+        {
+            return rttr::variant();
+        }
+        return convertToLuaTypeOnStackByTypeId(prop.get_value(instance));
+    }
+
+    static rttr::variant getGlobalFieldToLuaStack(const std::string& fieldName)
+    {
+        rttr::property prop = rttr::type::get_global_property(fieldName);
+        if (!prop.is_valid())
+        {
+            return rttr::variant();
+        }
+        return convertToLuaTypeOnStackByTypeId(prop.get_value(rttr::instance()));
+    }
 
     // nullptr_t version
     static rttr::variant getVariableTemplatedCommon(const std::string& name, std::nullptr_t instancePtr)
     {
         return getVariableTemplatedCommon(name, static_cast<void*>(nullptr));
+    }
+
+    // get global variable to lua stack
+    // returns if operation was successful, in case of failure, lua stack is not modified
+    static bool getGlobalVariableToLuaStack(const std::string& variableName)
+    {
+        return convertToLuaTypeOnStackByTypeId(getVariableTemplatedCommon(variableName, nullptr));
+    }
+
+    // get property into lua stack
+    template<typename Class>
+    static bool getPropertyToLuaStackTemplated(Class* instance, const std::string& propertyName)
+    {
+        return convertToLuaTypeOnStackByTypeId(getVariableTemplatedCommon(propertyName, instance));
     }
 
     // generic function to set variable, either global or instance
@@ -686,14 +743,6 @@ public:
         return callWithLuaParamsCommon(name, nullptr, nArgs);
     }
 
-    // get global variable to lua stack
-    // returns if operation was successful, in case of failure, lua stack is not modified
-    static bool getGlobalVariableToLuaStack(const std::string& variableName)
-    {
-
-        return convertToLuaTypeOnStackByTypeId(getVariableTemplatedCommon(variableName, nullptr));
-    }
-
     // set global variable from lua stack
     // returns if operation was successful, in case of failure, lua stack is not modified
     static bool setGlobalVariableFromLuaStack(const std::string& variableName, int stackIndex = -1)
@@ -707,16 +756,9 @@ public:
         return callWithLuaParamsCommon(methodName, instance, nArgs);
     }
 
-    // get property into lua stack
-    template<typename Class>
-    static bool getPropertyToLuaStack(Class* instance, const std::string& propertyName)
-    {
-        return convertToLuaTypeOnStackByTypeId(getVariableTemplatedCommon(propertyName, instance));
-    }
-
     // set property from lua stack
     template<typename Class>
-    static bool setPropertyFromLuaStack(Class* instance, const std::string& propertyName, int stackIndex = -1)
+    static bool setPropertyFromLuaStackTemplated(Class* instance, const std::string& propertyName, int stackIndex = -1)
     {
         return setPropertyFromLuaStackCommon(propertyName, instance, stackIndex);
     }

@@ -315,6 +315,40 @@ std::vector<LuaTypeInCpp> LuaTable::getArrayPart() const
     return arrayPart;
 }
 
+LuaTable& LuaTable::getTableFieldOrCreate(const LuaTypeInCpp& type)
+{
+
+    if (values.contains(type))
+    {
+        if (LuaTable* t = std::get_if<LuaTable>(&values.at(type))) // already a table
+        {
+            return *t;
+        }
+        else // not a table, create one
+        {
+            values[type] = LuaTable{};
+            return std::get<LuaTable>(values.at(type));
+        }
+    }
+    else // doesn't have field, create one
+    {
+        values[type] = LuaTable{};
+        return std::get<LuaTable>(values.at(type));
+    }
+}
+
+void LuaTable::arrayInsert(const LuaTypeInCpp& value)
+{
+    for (int i = 1; ; ++i)
+    {
+        LuaTypeInCpp key = i;
+        if (!values.contains(key))
+        {
+            values.emplace(std::move(key), value);
+        }
+    }
+}
+
 bool operator==(const LuaTypeInCpp& a, const LuaTypeInCpp& b)
 {
     // cleanest way to have default operator for most types and custom behavior for some, without endless recursion, is this lambda way, I think

@@ -81,6 +81,10 @@ struct LuaTable // TODO: storing array part and hashed part separately - will im
 
     LuaTypeInCpp& operator[](const LuaTypeInCpp& type);
     void emplace(LuaTypeInCpp&& key, LuaTypeInCpp&& value);
+    void arrayInsert(const LuaTypeInCpp& value);
+    // gets table field or creates it if it doesn't exist
+    // WARNING: this will overwrite existing value if it's not a table
+    LuaTable& getTableFieldOrCreate(const LuaTypeInCpp& type);
     const LuaTypeInCpp& at(const LuaTypeInCpp& type) const;
     LuaTypeInCpp& at(const LuaTypeInCpp& type);
     bool contains(const LuaTypeInCpp& type) const;

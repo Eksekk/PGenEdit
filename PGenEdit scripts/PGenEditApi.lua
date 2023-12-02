@@ -47,6 +47,7 @@ local function isClassObject(obj)
 	return (type(obj) == "userdata" or type(obj) == "table") and getmetatable(obj) and getmetatable(obj).className
 end
 
+-- TODO: this actually doesn't take into account derived classes!
 local function isObjectOfClassOrDerived(obj, checkName)
 	if not isClassObject(obj) then
 		return false
@@ -374,12 +375,12 @@ end
 	local classMT = {}
 	classMT.name = className
 	local info = api.getClassInfo(className)
-	classMT.bases = info.bases -- classes, which this class inherits from
-	classMT.deriveds = info.deriveds -- classes, which inherit from this class
 	-- name, type, isConst, isReference, isPointer, isClass, isEnum, hasDefaultValue, defaultValue, isStatic, isField, isMethod, isCallable
 	-- isCallable (for example std::function, functions as fields)
 	-- returnType
-	local members = api.getClassFieldInfo(className) -- array of field properties
+	local members = info.members -- array of field properties
+	classMT.bases = info.bases -- classes, which this class inherits from
+	classMT.derived = info.derived -- classes, which inherit from this class
 	classMT.members = members -- important that it happens before createObjectMetatable, as it uses members
 	local function getMemberData(memberName)
 		return members[memberName]
@@ -391,12 +392,11 @@ end
 	local function new(...)
 		-- TODO: find constructor matching parameters (count, types and possible conversions between types) and default arguments, if no matching constructor found, throw an error
 		local obj = api.createObject(className, select("#", ...), ...)
-		setmetatable(obj, objMT)
+		setmetatable(obj, objMT) -- FIXME: you can't set a metatable of userdata without using debug library, so C++ needs to do it
 		return obj
 	end
 	classMT.__call = new
 	classMT.new = new
-	-- TODO: fields, methods in metatable - eliminate constant api calls?
 	-- static variables
 	function classMT.__index(t, str)
 		local data = getMemberData(str)

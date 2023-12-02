@@ -457,15 +457,27 @@ LuaTable getCallableParamsTable(const rttr::array_range<rttr::parameter_info>& p
 }
 
 // receives: class name
-int luaDebug::getClassFieldInfo(lua_State* L)
+int luaDebug::getClassInfo(lua_State* L)
 {
+    luaExpectStackSize(1);
+    std::string name = getLuaTypeOrError<std::string>(L, 1);
+    rttr::type t{ type::get_by_name(name) };
+    if (!t.is_valid())
+    {
+        luaError("Couldn't get class '{}'", name);
+        return 0;
+    }
+    else if (!t.is_class())
+    {
+        luaError("Couldn't get class '{}', it's not a class", name);
+        return 0;
+    }
     /*
     -- name, type, isConst, isReference, isPointer, isClass, isEnum, isStatic, isField, isMethod, isCallable
     -- isCallable (for example std::function, functions as fields)
     -- if isCallable, then also returnType, params [array of basic properties above + two extra fields: hasDefaultValue, defaultValue]
     */
     LuaTable info;
-    rttr::type t{ rttr::type::get_by_name(getLuaTypeOrError<std::string>(L, 1)) };
     for (auto& prop : t.get_properties())
     {
         LuaTable propInfo;
@@ -476,8 +488,9 @@ int luaDebug::getClassFieldInfo(lua_State* L)
         propInfo["isField"] = true;
         propInfo["isMethod"] = false;
         propInfo["isCallable"] = t.is_function_pointer() || t.is_member_function_pointer(); // FIXME: somehow handle std::function
+        // FIXME: no method-specific info is added for std::function
 
-        info[prop.get_name().to_string()] = propInfo;
+        info.getTableFieldOrCreate("fields")[prop.get_name().to_string()] = propInfo;
     }
 
     for (auto& method : t.get_methods())
@@ -494,61 +507,47 @@ int luaDebug::getClassFieldInfo(lua_State* L)
         propInfo["params"] = getCallableParamsTable(method.get_parameter_infos());
         propInfo["signature"] = method.get_signature().to_string();
 
-        info[method.get_name().to_string()] = propInfo;
+        info.getTableFieldOrCreate("methods")[method.get_name().to_string()] = propInfo;
     }
+
+    for (auto& ctor : t.get_constructors())
+    {
+        LuaTable propInfo;
+        //fillInBasicTypeData(propInfo, ctor.get_return_type());
+        propInfo["returnType"] = getBasicTypeDataTable(ctor.get_declaring_type()); // always same return value
+        propInfo["isField"] = false;
+        propInfo["isMethod"] = true;
+        propInfo["isCallable"] = true;
+
+        propInfo["params"] = getCallableParamsTable(ctor.get_parameter_infos());
+        propInfo["signature"] = ctor.get_signature().to_string();
+
+        info.getTableFieldOrCreate("constructors").arrayInsert(propInfo);
+    }
+
+    // bases, derived
+    LuaTable bases;
+    for (auto& base : t.get_base_classes())
+    {
+        bases.arrayInsert(base.get_name().to_string());
+    }
+    info["bases"] = bases;
+    LuaTable derived;
+    for (auto& derivedClass : t.get_derived_classes())
+    {
+        derived.arrayInsert(derivedClass.get_name().to_string());
+    }
+    info["derived"] = derived;
+
+    info.pushToLuaStack();
+    return 1;
 }
 
-int luaDebug::getClassInfo(lua_State* L)
+// receives: [class name, field name, object] or [field name] (global)
+int getFieldCommon(lua_State* L)
 {
     LuaWrapper w(L);
-    luaExpectStackSize(1);
-    auto name = getLuaTypeOrError<std::string>(L, 1);
-    rttr::type t = rttr::type::get_by_name(name);
-    if (!t.is_valid())
-    {
-        luaError("Couldn't get class '{}'", name);
-        return 0;
-    }
-    else if (!t.is_class())
-    {
-        luaError("Couldn't get class '{}', it's not a class", name);
-        return 0;
-    }
-    else
-    {
-        LuaTable info;
-        // bases, derived
-        LuaTable bases;
-        int i = 1;
-        for (auto& base : t.get_base_classes())
-        {
-            bases[i++] = base.get_name().to_string();
-        }
-        info["bases"] = bases;
-        LuaTable derived;
-        i = 1;
-        for (auto& derivedClass : t.get_derived_classes())
-        {
-            derived[i++] = derivedClass.get_name().to_string();
-        }
-        info["derived"] = derived;
-        // constructors
-        LuaTable constructors;
-        i = 1;
-        for (auto& ctor : t.get_constructors())
-        {
-            LuaTable ctorInfo;
-            ctorInfo["params"] = getCallableParamsTable(ctor.get_parameter_infos());
-            ctorInfo["signature"] = ctor.get_signature().to_string();
-            constructors[i++] = ctorInfo;
-        }
-    }
-}
-
-int luaDebug::getField(lua_State* L)
-{
-    LuaWrapper w(L);
-    if (w.isNil(1))
+    if (w.gettop() == 1) // get global
     {
         // get global
         std::string name = w.tostring(2);
@@ -569,34 +568,68 @@ int luaDebug::getField(lua_State* L)
             return 1;
         }
     }
-    else
+    else // get class field
     {
-        void* ptr;
-        if (luaWrapper.isUserdata(1))
+        rttr::type t = rttr::type::get_by_name(w.tostring(1));
+        if (!t.is_valid())
         {
-            ptr = luaWrapper.touserdata(1);
-            if (!ptr)
-            {
-                luaError("Couldn't get field '" + w.tostring(2) + "' - userdata is null");
-                return 0;
-            }
+            luaError("Couldn't get class '" + w.tostring(1) + "'");
+            return 0;
         }
-        else if (luaWrapper.isTable(1))
+        else if (!t.is_class())
         {
-            lua_getfield(L, 1, "?ptr");
-            if (!lua_isnumber(L, 3))
-            {
-                lua_pop(L, 1);
-                luaError("Couldn't get field '" + w.tostring(2) + "' - table doesn't have a pointer");
-                return 0;
-            }
+            luaError("Couldn't get class '" + w.tostring(1) + "' - it's not a class");
+            return 0;
         }
         else
         {
-            luaError("Couldn't get field '" + w.tostring(2) + "' - first argument is neither userdata nor table");
-            return 0;
+            rttr::variant var = convertToObjectPointer(luaGetObjectPtr(L, 3), w.tostring(1));
+            if (!var.is_valid())
+            {
+                luaError("Couldn't get class '" + w.tostring(1) + "' - couldn't convert to object pointer");
+                return 0;
+            }
+            else
+            {
+                rttr::property prop = t.get_property(w.tostring(2));
+                if (!prop.is_valid())
+                {
+                    luaError("Couldn't get property '" + w.tostring(2) + "' of class '" + w.tostring(1) + "'");
+                    return 0;
+                }
+                else
+                {
+                    Reflection::getPropertyToLuaStack(var, w.tostring(2));
+                }
+            }
         }
+        rttr::property p = .get_property(w.tostring(2));
     }
+}
+
+int luaDebug::getClassObjectField(lua_State* L)
+{
+    
+}
+
+int luaDebug::getGlobalField(lua_State* L)
+{
+    return 0;
+}
+
+int luaDebug::setGlobalField(lua_State* L)
+{
+    return 0;
+}
+
+int luaDebug::invokeClassMethod(lua_State* L)
+{
+    return 0;
+}
+
+int luaDebug::invokeFunctionOrCallableObject(lua_State* L)
+{
+    return 0;
 }
 
 int luaDebug::invokeCallable(lua_State* L)
@@ -604,7 +637,7 @@ int luaDebug::invokeCallable(lua_State* L)
     return 0;
 }
 
-int luaDebug::setField(lua_State* L)
+int luaDebug::setClassObjectField(lua_State* L)
 {
     return 0;
 }
