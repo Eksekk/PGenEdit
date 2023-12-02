@@ -483,15 +483,15 @@ std::vector<wxString> ReflectionTests::run()
 
     static const wxString callMethodIntCheckFormat = "[call methods with reflection; test #%d] incorrect result (expected: %d, actual: %d)";
     testIndex = 0;
-    auto result = Reflection::callInstanceMethodWithLuaParams(&rss, "get5", 0);
+    auto result = Reflection::callClassObjectMethodWithLuaParams(&rss, "get5", 0);
     myassertf(result == 5, callMethodIntCheckFormat, testIndex++, 5, result.get_value<int>());
     luaWrapper.pushnumber(10.0); // also test implicit conversion to int
-    result = Reflection::callInstanceMethodWithLuaParams(&rss, "setInt", 1);
+    result = Reflection::callClassObjectMethodWithLuaParams(&rss, "setInt", 1);
     myassertf(rss.i == 10, callMethodIntCheckFormat, testIndex++, 10, rss.i);
     luaWrapper.pushnumber(-2);
-    Reflection::callInstanceMethodWithLuaParams(&rss, "setInt", 1);
+    Reflection::callClassObjectMethodWithLuaParams(&rss, "setInt", 1);
     myassertf(rss.i == -2, callMethodIntCheckFormat, testIndex++, -2, rss.i);
-    //result = Reflection::callInstanceMethodWithLuaParams(&rss, 
+    //result = Reflection::callClassObjectMethodWithLuaParams(&rss, 
 
     // test constructors
     testIndex = 0;
@@ -573,7 +573,7 @@ std::vector<wxString> ReflectionTests::run()
         // extra parentheses to avoid commas inside initializer list, which break the macro
         myassertf((pValue->i == 55 && pValue->str == "ddde" && pValue->vec == VectorType{ 2, 3, 5 }), constructorCheckFormat, testIndex, "i = 55; str = ddde; vec = {2,3,5};", to_string(*pValue).c_str());
         Inner* inner = &pValue->inner2;
-        myassertf(Reflection::callInstanceMethodWithLuaParams(inner, "returnSizeof", 0).get_value<int>() == sizeof(Inner2), "[constructors; test #%d] virtual method call with reflection failed", testIndex);
+        myassertf(Reflection::callClassObjectMethodWithLuaParams(inner, "returnSizeof", 0).get_value<int>() == sizeof(Inner2), "[constructors; test #%d] virtual method call with reflection failed", testIndex);
     }
     ++testIndex;
 

@@ -40,7 +40,8 @@ namespace luaDebug
         static int setClassField(lua_State* L);
         static int setGlobalField(lua_State* L);
         static int invokeClassMethod(lua_State* L);
-        static int invokeFunctionOrCallableObject(lua_State* L);
+        static int invokeClassObjectMethod(lua_State* L);
+        static int invokeGlobalMethod(lua_State* L);
     }
 }
 
@@ -665,31 +666,39 @@ private:
         return true;
     }
 
-    template<typename T>
-    static rttr::variant callWithLuaParamsCommon(const std::string& name, T* instancePtr, int nArgs = -1)
+    static rttr::variant callWithLuaParamsCommon(const rttr::method& meth, rttr::instance inst, int nArgs)
     {
-        bool isMemberFunc = instancePtr != nullptr;
-        rttr::method meth = isMemberFunc ? rttr::type::get<T>().get_method(name) : rttr::type::get_global_method(name);
         if (!meth.is_valid())
         {
-            return false;
+            return rttr::variant();
         }
         auto paramsArray = meth.get_parameter_infos();
         std::vector<rttr::parameter_info> params(paramsArray.begin(), paramsArray.end());
+        if (!canConvertLuaParameters(params, nArgs))
+        {
+            return rttr::variant();
+        }
         std::vector<rttr::variant> variants = convertLuaParametersToCppForReflection(params, nArgs);
         std::vector<rttr::argument> args;
         for (rttr::variant& arg : variants)
         {
             args.push_back(arg);
         }
-        rttr::variant result = meth.invoke_variadic(isMemberFunc ? instancePtr : rttr::instance(), args);
-        return result;
+        rttr::variant result = meth.invoke_variadic(inst.is_valid() ? inst : rttr::instance(), args);
+    }
+
+    template<typename T>
+    static rttr::variant callWithLuaParamsCommonTemplated(const std::string& name, T* instancePtr, int nArgs = -1)
+    {
+        bool isMemberFunc = instancePtr != nullptr;
+        rttr::method meth = isMemberFunc ? rttr::type::get<T>().get_method(name) : rttr::type::get_global_method(name);
+        return callWithLuaParamsCommon(meth, isMemberFunc ? rttr::instance(instancePtr) : rttr::instance(), nArgs);
     }
 
     // to allow calling above function with nullptr (in reality it's not a pointer type, so can't bind to T*, we need to overload it)
-    static rttr::variant callWithLuaParamsCommon(const std::string& name, std::nullptr_t instancePtr, int nArgs = -1)
+    static rttr::variant callWithLuaParamsCommonTemplated(const std::string& name, std::nullptr_t instancePtr, int nArgs = -1)
     {
-        return callWithLuaParamsCommon(name, static_cast<void*>(nullptr), nArgs);
+        return callWithLuaParamsCommonTemplated(name, static_cast<void*>(nullptr), nArgs);
     }
 
     static int defaultArgumentCount(const std::vector<rttr::parameter_info>& paramInfo)
@@ -881,15 +890,39 @@ public:
 //         return setVariableFromLuaStackCommonTemplated(propertyName, nullptr, stackIndex);
 //     }
 
-    static rttr::variant callFreeFunctionWithLuaParams(const std::string& name, int nArgs = -1)
+    static rttr::variant callGlobalFunctionWithLuaParams(const std::string& name, int nArgs = -1)
     {
-        return callWithLuaParamsCommon(name, nullptr, nArgs);
+        rttr::method meth = rttr::type::get_global_method(name);
+
+        return callWithLuaParamsCommon(meth, rttr::instance(), nArgs);
     }
 
-    template<typename Class>
-    static rttr::variant callInstanceMethodWithLuaParams(Class* instance, const std::string& methodName, int nArgs = -1)
+    static rttr::variant callClassObjectMethodWithLuaParams(rttr::variant instance, const std::string& methodName, int nArgs = -1)
     {
-        return callWithLuaParamsCommon(methodName, instance, nArgs);
+        rttr::type t = instance.get_type().get_raw_type();
+        if (!t.is_class())
+        {
+            return rttr::variant();
+        }
+        else if (!instance.get_type().is_pointer())
+        {
+            return rttr::variant();
+        }
+        rttr::method meth = t.get_method(methodName);
+
+        return callWithLuaParamsCommon(meth, instance, nArgs);
+    }
+
+    static rttr::variant callClassMethodWithLuaParams(const std::string& className, const std::string& methodName, int nArgs = -1)
+    {
+        rttr::type t = rttr::type::get_by_name(className);
+        if (!t.is_class())
+        {
+            return rttr::variant();
+        }
+        rttr::method meth = t.get_method(methodName);
+
+        return callWithLuaParamsCommon(meth, rttr::instance(), nArgs);
     }
 
     // so, I need to be able to put object, variant containing object or something like that into userdata allocated by lua

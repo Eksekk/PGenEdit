@@ -631,9 +631,28 @@ int luaDebug::getClassObjectField(lua_State* L)
     return 1;
 }
 
+// receives class name, field name
 int luaDebug::getClassField(lua_State* L)
 {
-    return 0;
+    LuaWrapper w(L);
+    luaExpectStackSize(2);
+    std::string className = getLuaTypeOrError<std::string>(L, 1);
+    rttr::type t = rttr::type::get_by_name(className);
+    if (!t.is_valid())
+    {
+        luaError("Type '{}' is not registered", className);
+        return 0;
+    }
+    else if (!t.is_class())
+    {
+        luaError("Couldn't get class '{}', it's not a class", className);
+        return 0;
+    }
+    else
+    {
+        Reflection::getClassFieldToLuaStack(className, getLuaTypeOrError<std::string>(L, 2));
+        return 1;
+    }
 }
 
 // receives global name
@@ -671,14 +690,94 @@ int luaDebug::setGlobalField(lua_State* L)
     }
 }
 
+// receives class name, function name, number of arguments, and arguments
 int luaDebug::invokeClassMethod(lua_State* L)
 {
-    return 0;
+    LuaWrapper w(L);
+    std::string className = getLuaTypeOrError<std::string>(L, 1);
+    rttr::type t = rttr::type::get_by_name(className);
+    if (!t.is_valid())
+    {
+        luaError("Type '{}' is not registered", className);
+        return 0;
+    }
+    else if (!t.is_class())
+    {
+        luaError("Couldn't get class '{}' - it's not a class", className);
+        return 0;
+    }
+    else
+    {
+        auto result = Reflection::callClassMethodWithLuaParams(className, getLuaTypeOrError<std::string>(L, 2), getLuaTypeOrError<int>(L, 3));
+        if (!result)
+        {
+            luaError("Couldn't call method '{}' of class '{}'", getLuaTypeOrError<std::string>(L, 2), className);
+            return 0;
+        }
+        else
+        {
+            Reflection::convertToLuaTypeOnStackByTypeId(result);
+            return 1;
+        }
+    }
 }
 
-int luaDebug::invokeFunctionOrCallableObject(lua_State* L)
+// receives class name, class object, function name, number of arguments, and arguments
+int luaDebug::invokeClassObjectMethod(lua_State* L)
 {
-    return 0;
+    LuaWrapper w(L);
+    std::string className = getLuaTypeOrError<std::string>(L, 1);
+    rttr::type t = rttr::type::get_by_name(className);
+    if (!t.is_valid())
+    {
+        luaError("Type '{}' is not registered", className);
+        return 0;
+    }
+    else if (!t.is_class())
+    {
+        luaError("Couldn't get class '{}' - it's not a class", className);
+        return 0;
+    }
+    else
+    {
+        rttr::variant var = convertToObjectPointer(luaGetObjectPtr(L, 2), className);
+        if (!var.is_valid())
+        {
+            luaError("Couldn't convert class '{}' to object pointer", className);
+            return 0;
+        }
+        else
+        {
+            auto result = Reflection::callClassObjectMethodWithLuaParams(var, getLuaTypeOrError<std::string>(L, 3), getLuaTypeOrError<int>(L, 4));
+            if (!result)
+            {
+                luaError("Couldn't call method '{}' of class '{}'", getLuaTypeOrError<std::string>(L, 3), className);
+                return 0;
+            }
+            else
+            {
+                Reflection::convertToLuaTypeOnStackByTypeId(result);
+                return 1;
+            }
+        }
+    }
+}
+
+// receives function name, number of arguments, and arguments
+int luaDebug::invokeGlobalMethod(lua_State* L)
+{
+    LuaWrapper w(L);
+    auto result = Reflection::callGlobalFunctionWithLuaParams(getLuaTypeOrError<std::string>(L, 1), getLuaTypeOrError<int>(L, 2));
+    if (!result)
+    {
+        luaError("Couldn't call global function '{}'", getLuaTypeOrError<std::string>(L, 1));
+        return 0;
+    }
+    else
+    {
+        Reflection::convertToLuaTypeOnStackByTypeId(result);
+        return 1;
+    }
 }
 
 // receives object, property name, value
@@ -721,4 +820,22 @@ int luaDebug::setClassObjectField(lua_State* L)
 int luaDebug::setClassField(lua_State* L)
 {
     LuaWrapper w(L);
+    luaExpectStackSize(3);
+    std::string className = getLuaTypeOrError<std::string>(L, 1);
+    rttr::type t = rttr::type::get_by_name(className);
+    if (!t.is_valid())
+    {
+        luaError("Type '{}' is not registered", className);
+        return 0;
+    }
+    else if (!t.is_class())
+    {
+        luaError("Couldn't set field of type '{}' - it's not a class", className);
+        return 0;
+    }
+    else
+    {
+        Reflection::setClassFieldFromLuaStack(className, getLuaTypeOrError<std::string>(L, 2), 3);
+        return 1;
+    }
 }
