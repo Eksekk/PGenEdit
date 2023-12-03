@@ -58,7 +58,7 @@ void LuaTable::luaConvertTypeCommon(lua_State* L, LuaTypeInCpp& val, int stack)
 {
     LuaWrapper wrapper(L);
     stack = wrapper.makeAbsoluteStackIndex(stack);
-    switch (lua_type(Lua, stack))
+    switch (lua_type(L, stack))
     {
     case LUA_TNIL:
         val = Nil;
@@ -119,20 +119,20 @@ LuaTable LuaTable::fromLuaTable(lua_State* L, int index)
             break;
             // those below are unsupported
         case LUA_TFUNCTION:
-            argError("function", luaTypeToString(Lua, -2));
+            argError("function", luaTypeToString(L, -2));
             break;
         case LUA_TTHREAD:
-            argError("thread", luaTypeToString(Lua, -2));
+            argError("thread", luaTypeToString(L, -2));
             break;
         case LUA_TUSERDATA:
-            argError("userdata", luaTypeToString(Lua, -2));
+            argError("userdata", luaTypeToString(L, -2));
             break;
         case LUA_TLIGHTUSERDATA:
-            argError("light userdata", luaTypeToString(Lua, -2));
+            argError("light userdata", luaTypeToString(L, -2));
             break;
         }
 
-        switch (lua_type(Lua, -1)) // value
+        switch (lua_type(L, -1)) // value
         {
         case LUA_TNIL:
         case LUA_TTABLE:
@@ -143,22 +143,22 @@ LuaTable LuaTable::fromLuaTable(lua_State* L, int index)
             break;
             // those below are unsupported
         case LUA_TFUNCTION:
-            argError("function", luaTypeToString(Lua, -1));
+            argError("function", luaTypeToString(L, -1));
             break;
         case LUA_TTHREAD:
-            argError("thread", luaTypeToString(Lua, -1));
+            argError("thread", luaTypeToString(L, -1));
             break;
         case LUA_TUSERDATA:
-            argError("userdata", luaTypeToString(Lua, -1));
+            argError("userdata", luaTypeToString(L, -1));
             break;
         case LUA_TLIGHTUSERDATA:
-            argError("light userdata", luaTypeToString(Lua, -1));
+            argError("light userdata", luaTypeToString(L, -1));
             break;
         }
         t.emplace(std::move(key), std::move(value));
-        lua_pop(Lua, 1); // pop value, leave key
+        lua_pop(L, 1); // pop value, leave key
     }
-    lua_settop(Lua, prevStack);
+    lua_settop(L, prevStack);
     return t;
 }
 

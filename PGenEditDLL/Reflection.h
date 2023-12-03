@@ -939,17 +939,17 @@ private:
     }
 
     template<typename T>
-    static rttr::variant callWithLuaParamsCommonTemplated(const std::string& name, T* instancePtr, int nArgs = -1)
+    static rttr::variant callWithLuaParamsCommonTemplated(lua_State* L, const std::string& name, T* instancePtr, int nArgs = -1)
     {
         bool isMemberFunc = instancePtr != nullptr;
         rttr::method meth = isMemberFunc ? rttr::type::get<T>().get_method(name) : rttr::type::get_global_method(name);
-        return callWithLuaParamsCommon(meth, isMemberFunc ? rttr::instance(instancePtr) : rttr::instance(), nArgs);
+        return callWithLuaParamsCommon(L, meth, isMemberFunc ? rttr::instance(instancePtr) : rttr::instance(), nArgs);
     }
 
     // to allow calling above function with nullptr (in reality it's not a pointer type, so can't bind to T*, we need to overload it)
-    static rttr::variant callWithLuaParamsCommonTemplated(const std::string& name, std::nullptr_t instancePtr, int nArgs = -1)
+    static rttr::variant callWithLuaParamsCommonTemplated(lua_State* L, const std::string& name, std::nullptr_t instancePtr, int nArgs = -1)
     {
-        return callWithLuaParamsCommonTemplated(name, static_cast<void*>(nullptr), nArgs);
+        return callWithLuaParamsCommonTemplated(L, name, static_cast<void*>(nullptr), nArgs);
     }
 
     static int defaultArgumentCount(const std::vector<rttr::parameter_info>& paramInfo)
@@ -1253,7 +1253,7 @@ public:
     template<typename Class>
     static std::shared_ptr<Class> createInstanceByConstructorFromLuaStack(lua_State* L, int nArgs = -1)
     {
-        auto result = findAndInvokeConstructorWithLuaArgs(rttr::type::get<Class>(), nArgs);
+        auto result = findAndInvokeConstructorWithLuaArgs(L, rttr::type::get<Class>(), nArgs);
         // we need to do copy construction, because there are three options for constructor policies regarding object creation:
         // 1) create a new object with automatic storage duration
         // 2) create a new object and return std::shared_ptr<Class> (default)

@@ -156,7 +156,7 @@ std::string buildWantedLuaTypeString(lua_State* L, std::initializer_list<int> li
     static const std::string singleFormat = "%s", multipleFormat = "any of [%s]";
     std::string s;
 	std::vector<std::string> parts;
-	std::ranges::transform(list, std::back_inserter(parts), [](int arg) { return luaTypeToString(Lua, arg); });
+	std::ranges::transform(list, std::back_inserter(parts), [L](int arg) { return luaTypeToString(L, arg); });
 	return wxString::Format(wxString(list.size() <= 1 ? singleFormat : multipleFormat), (wxString)stringConcat(parts)).ToStdString();
 }
 

@@ -65,7 +65,7 @@ auto convertLuaTypeToCpp(ArgType& arg)
 
 // auto will work here, because there will be one template instantion per possible type
 template<typename ArgType>
-auto convertSingleLuaStackArg(int stackIndex)
+auto convertSingleLuaStackArg(lua_State* L, int stackIndex)
 {
     int type = lua_type(Lua, stackIndex);
     if (type == LUA_TNIL)
@@ -93,7 +93,7 @@ auto convertSingleLuaStackArg(int stackIndex)
             else
             {
                 // not sure how I want to handle this, using exceptions for now
-                throw std::logic_error(getLuaTypeMismatchString({ LUA_TNUMBER, LUA_TBOOLEAN }, type, stackIndex));
+                throw std::logic_error(getLuaTypeMismatchString(L, { LUA_TNUMBER, LUA_TBOOLEAN }, type, stackIndex));
             }
         }
         else if constexpr (SAME(ArgType, std::string))
@@ -106,12 +106,12 @@ auto convertSingleLuaStackArg(int stackIndex)
             }
             else
             {
-                throw std::logic_error(getLuaTypeMismatchString({ LUA_TSTRING }, type, stackIndex));
+                throw std::logic_error(getLuaTypeMismatchString(L, { LUA_TSTRING }, type, stackIndex));
             }
         }
         else if constexpr (std::is_pointer_v<ArgType>)
         {
-            return reinterpret_cast<ArgType>(convertSingleLuaStackArg<dword_t>(stackIndex));
+            return reinterpret_cast<ArgType>(convertSingleLuaStackArg<dword_t>(L, stackIndex));
         }
         else if constexpr (SAME(ArgType, LuaTable))
         {
@@ -204,6 +204,7 @@ struct CustomReturnCaller
 template<typename Ret, typename... Args>
 using ReturnFuncType = std::function<std::tuple<int, Ret>(Args...)>;
 
+// important: as of now, this always uses global lua_State* and has hardcoded events path
 // GRAYFACE'S EVENTS support returning only one value!
 template<typename... Args, typename... ReturnArgs> // "real" parameter pack (specified) must be first
 ReturnFuncType<std::tuple<ReturnArgs...>, Args...> getEventActivator(const std::string& eventName, const std::tuple<ReturnArgs...>&) // dummy tuple to allow second parameter pack
