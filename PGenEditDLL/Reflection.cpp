@@ -290,14 +290,29 @@ static void* luaGetObjectPtr(lua_State* L, int index)
 LuaTable getBasicTypeDataTable(const rttr::type& type)
 {
     LuaTable typeInfo;
+    if (type.is_sequential_container())
+    {
+        typeInfo["isSequentialContainer"] = true;
+        typeInfo["valueType"] = getBasicTypeDataTable(*type.get_template_arguments().begin());
+    }
+    else if (type.is_associative_container())
+    {
+        typeInfo["isAssociativeContainer"] = true;
+        auto args = type.get_template_arguments();
+        typeInfo["keyType"] = getBasicTypeDataTable(*args.begin());
+        typeInfo["valueType"] = getBasicTypeDataTable(*++args.begin());
+    }
+    else // containers aren't enums nor callable
+    {
+        typeInfo["isEnum"] = type.is_enumeration();
+        typeInfo["isCallable"] = type.is_function_pointer() || type.is_member_function_pointer(); // FIXME: somehow handle std::function
+    }
     const rttr::type::type_id typeId = type.get_id();
     typeInfo["name"] = type.get_name().to_string();
-    typeInfo["isConst"] = TypeIds::isTypeAnyConst(typeId);
-    typeInfo["isReference"] = TypeIds::isTypeAnyReference(typeId);
-    typeInfo["isPointer"] = TypeIds::isTypeAnyPointer(typeId);
+    //typeInfo["isConst"] = type.;
+    //typeInfo["isReference"] = type.is_;
+    typeInfo["isPointer"] = type.is_pointer();
     typeInfo["isClass"] = type.is_class();
-    typeInfo["isEnum"] = type.is_enumeration();
-    typeInfo["isCallable"] = type.is_function_pointer() || type.is_member_function_pointer(); // FIXME: somehow handle std::function
     rttr::type rawType = type.get_raw_type();
     if (typeId != rawType.get_id()) // avoid infinite recursion
     {
@@ -311,7 +326,10 @@ LuaTable getCallableParamInfo(const rttr::parameter_info& param)
     LuaTable paramInfo;
     paramInfo["type"] = getBasicTypeDataTable(param.get_type());
     paramInfo["hasDefaultValue"] = param.has_default_value();
-    paramInfo["defaultValue"] = param.get_default_value().to_string(); // FIXME: this is not a string, but a variant
+    if (param.has_default_value())
+    {
+        paramInfo["defaultValue"] = param.get_default_value().to_string(); // FIXME: this is not a string, but a variant
+    }
     return paramInfo;
 }
 
@@ -789,11 +807,13 @@ void insertPropertyAndMethodData(const rttr::array_range<rttr::property>& proper
         propInfo["name"] = prop.get_name().to_string();
         propInfo["type"] = getBasicTypeDataTable(prop.get_type());
         propInfo["isStatic"] = prop.is_static();
+        propInfo["isConst"] = prop.is_readonly();
         propInfo["isField"] = true;
         propInfo["isMethod"] = false;
         // FIXME: no method-specific info is added for std::function
 
-        info.getTableFieldOrCreate("fields")[prop.get_name().to_string()] = propInfo;
+        //info.getTableFieldOrCreate("fields")[prop.get_name().to_string()] = propInfo;
+        info.getTableFieldOrCreate("members")[prop.get_name().to_string()] = propInfo;
     }
 
     for (auto& method : methods)
@@ -810,7 +830,8 @@ void insertPropertyAndMethodData(const rttr::array_range<rttr::property>& proper
         propInfo["params"] = getCallableParamsTable(method.get_parameter_infos());
         propInfo["signature"] = method.get_signature().to_string();
 
-        info.getTableFieldOrCreate("methods")[method.get_name().to_string()] = propInfo;
+        //info.getTableFieldOrCreate("methods")[method.get_name().to_string()] = propInfo;
+        info.getTableFieldOrCreate("members")[method.get_name().to_string()] = propInfo;
     }
 }
 

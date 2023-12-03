@@ -89,8 +89,8 @@ bool TypeIds::isTypeAnyReference(rttr::type::type_id id)
     return typeIds.reference == id || typeIds.const_reference == id || typeIds.volatile_reference == id || typeIds.const_volatile_reference == id;
 }
 
-// initialize type ids with primitive types
-void g_initPrimitiveTypeIds()
+// initialize type ids with primitive/common types
+void g_initCommonTypeIds()
 {
     registerExtra<bool>();
     registerExtra<char>();
@@ -107,4 +107,8 @@ void g_initPrimitiveTypeIds()
     registerExtra<double>();
     registerExtra<long double>();
     registerExtra<void>();
+    registerExtra<std::string>();
+    registerExtra<std::string_view>();
+    registerExtra<std::nullptr_t>();
+    registerExtra<std::any>();
 }

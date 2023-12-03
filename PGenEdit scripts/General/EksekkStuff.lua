@@ -179,7 +179,7 @@ mmvAssert = function(ver)
 end
 
 function M.reloadApi()
-	dofile "E:\\Documents\\GitHub\\MMStuff\\pgenedit\\PGenEditApi.lua"
+	dofile "C:\\Users\\Eksekk\\Documents\\GitHub\\MMStuff\\pgenedit\\PGenEditApi.lua"
 end
 
 --[[

@@ -178,6 +178,6 @@ void registerExtra()
     registerPointerConversionFunc<T>();
 }
 
-void g_initPrimitiveTypeIds();
+void g_initCommonTypeIds();
 
 #endif // __MAIN_H__

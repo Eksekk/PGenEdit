@@ -6,44 +6,45 @@
 _Nil Nil;
 
 // converts value to lua value and pushes it on the stack
-void luaTypeInCppToStack(const LuaTypeInCpp& val)
+void luaTypeInCppToStack(const LuaTypeInCpp& val, LuaWrapper& wrapper)
 {
     if (const _Nil* nil = std::get_if<_Nil>(&val))
     {
-        luaWrapper.pushnil();
+        wrapper.pushnil();
     }
     else if (const sqword_t* num = std::get_if<sqword_t>(&val))
     {
-        luaWrapper.pushnumber(*num);
+        wrapper.pushnumber(*num);
     }
     else if (const lua_Number* num = std::get_if<lua_Number>(&val))
     {
-        luaWrapper.pushnumber(*num);
+        wrapper.pushnumber(*num);
     }
     else if (const std::string* str = std::get_if<std::string>(&val))
     {
-        luaWrapper.pushstring(*str);
+        wrapper.pushstring(*str);
     }
     else if (const bool* b = std::get_if<bool>(&val))
     {
-        luaWrapper.pushboolean(*b);
+        wrapper.pushboolean(*b);
     }
     else if (const LuaTable* tbl = std::get_if<LuaTable>(&val))
     {
-        tbl->pushToLuaStack();
+        tbl->pushToLuaStack(L);
     }
 }
 
-void LuaTable::pushToLuaStack() const
+void LuaTable::pushToLuaStack(lua_State* L) const
 {
-    luaWrapper.newtable();
+    LuaWrapper wrapper(L);
+    wrapper.newtable();
     for (const auto& [key, value] : values)
     {
         if (!std::holds_alternative<_Nil>(key) && !std::holds_alternative<_Nil>(value))
         {
-            luaTypeInCppToStack(key);
-            luaTypeInCppToStack(value);
-            luaWrapper.settable(-3);
+            luaTypeInCppToStack(key, wrapper);
+            luaTypeInCppToStack(value, wrapper);
+            wrapper.settable(-3);
         }
     }
 }
@@ -355,6 +356,7 @@ void LuaTable::arrayInsert(const LuaTypeInCpp& value)
         if (!values.contains(key))
         {
             values.emplace(std::move(key), value);
+            break;
         }
     }
 }

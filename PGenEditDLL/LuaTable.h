@@ -56,7 +56,12 @@ struct LuaTable // TODO: storing array part and hashed part separately - will im
     // values and table as unique_ptrs don't work with std::unordered_map
     // values and table as unique_ptrs work with std::map
     LuaTableValues values;
-    void pushToLuaStack() const; // converts this structure into lua table on top of the stack
+    // !!!!! IMPORTANT
+    // when C function registered in lua is called, it receives lua_State* as first argument, and it's apparently state with entirely different stack
+    // which means, pushes to global "Lua" state won't change the state that the function received, so it's as if nothing was pushed
+    // solution: always take state as argument
+    // not using default argument here with value of "Lua" global, because I would obviously forget to pass the correct state when using inside C functions registered in lua
+    void pushToLuaStack(lua_State* L) const; // converts this structure into lua table on top of the stack
     // TODO: a version updating lua table at specified index
     // converts table at specified stack index into this value
     static LuaTable fromLuaTable(int index = -1);
