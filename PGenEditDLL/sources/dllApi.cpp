@@ -140,6 +140,7 @@ extern "C"
                     IS_ELEMENTAL_MOD = true;
                 }
                 setMaxSkillLevel();
+                g_initPrimitiveTypeIds();
 
                 break;
             }

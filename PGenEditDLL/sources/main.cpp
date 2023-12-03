@@ -15,18 +15,22 @@ void MSGBOX(const char* text)
 	MessageBoxA(nullptr, text, nullptr, 0);
 }
 
+std::map<std::string, TypeIds>& g_getTypeIdsByTypeName()
+{
+    static std::map<std::string, TypeIds> typeIdsByTypeName;
+    return typeIdsByTypeName;
+}
+
 // link errors happen if these are not defined by me (shouldn't, there is RTTR's .cpp file which defines them)
 // TODO: investigate more
 const rttr::detail::public_access rttr::registration::public_access;
 const rttr::detail::protected_access rttr::registration::protected_access;
 const rttr::detail::private_access rttr::registration::private_access;
 
-std::map<std::string, TypeIds> g_typeIdsByTypeName;
-
 TypeIds TypeIds::findByType(rttr::type::type_id id)
 {
     // TODO: better way to do this? this will be horrendously slow
-    for (auto& [name, typeIds] : g_typeIdsByTypeName)
+    for (auto& [name, typeIds] : g_getTypeIdsByTypeName())
     {
         if (isTypeAnyOf(id, typeIds))
         {
@@ -83,4 +87,24 @@ bool TypeIds::isTypeAnyReference(rttr::type::type_id id)
 {
     const TypeIds& typeIds = findByType(id);
     return typeIds.reference == id || typeIds.const_reference == id || typeIds.volatile_reference == id || typeIds.const_volatile_reference == id;
+}
+
+// initialize type ids with primitive types
+void g_initPrimitiveTypeIds()
+{
+    registerExtra<bool>();
+    registerExtra<char>();
+    registerExtra<unsigned char>();
+    registerExtra<short>();
+    registerExtra<unsigned short>();
+    registerExtra<int>();
+    registerExtra<unsigned int>();
+    registerExtra<long>();
+    registerExtra<unsigned long>();
+    registerExtra<long long>();
+    registerExtra<unsigned long long>();
+    registerExtra<float>();
+    registerExtra<double>();
+    registerExtra<long double>();
+    registerExtra<void>();
 }

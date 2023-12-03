@@ -128,22 +128,25 @@ struct TypeIds
     static bool isTypeAnyReference(rttr::type::type_id id);
 };
 
-extern std::map<std::string, TypeIds> g_typeIdsByTypeName;
+// causes "static order initialization fiasco" problem, because reflection registration functions, which should also insert type ids, might run before this variable is initialized
+// extern std::map<std::string, TypeIds> g_typeIdsByTypeName;
+// wrap in function to avoid the problem
+std::map<std::string, TypeIds>& g_getTypeIdsByTypeName();
 
 template<typename T>
 TypeIds& getTypeIds()
 {
-    return g_typeIdsByTypeName.at(rttr::type::get<T>().get_name().to_string());
+    return g_getTypeIdsByTypeName().at(rttr::type::get<T>().get_name().to_string());
 }
 
 TypeIds& getTypeIds(const std::string& str)
 {
-    return g_typeIdsByTypeName.at(str);
+    return g_getTypeIdsByTypeName().at(str);
 }
 
 TypeIds& getTypeIds(const rttr::type& t)
 {
-    return g_typeIdsByTypeName.at(t.get_name().data());
+    return g_getTypeIdsByTypeName().at(t.get_name().data());
 }
 
 template<typename T>
@@ -151,11 +154,21 @@ void generateTypeIdData()
 {
     TypeIds typeIds;
     using rttr::type;
-    typeIds.base = type::get<T>().get_id(), typeIds.pointer = type::get<T*>().get_id(), typeIds.reference = type::get<T&>().get_id();
-typeIds.const_ = type::get<const T>().get_id(), typeIds.pointer_to_const = type::get<const T*>().get_id(), typeIds.const_pointer = type::get<T* const>().get_id(), typeIds.const_reference = type::get<const T&>().get_id();
-typeIds.volatile_ = type::get<volatile T>().get_id(), typeIds.pointer_to_volatile = type::get<volatile T*>().get_id(), typeIds.volatile_pointer = type::get<T* volatile>().get_id(), typeIds.volatile_reference = type::get<volatile T&>().get_id();
-typeIds.const_volatile = type::get<const volatile T>().get_id(), typeIds.pointer_to_const_volatile = type::get<const volatile T*>().get_id(), typeIds.const_volatile_pointer = type::get<T* const volatile>().get_id(), typeIds.const_volatile_reference = type::get<const volatile T&>().get_id();
-    g_typeIdsByTypeName[type::get<T>().get_name().to_string()] = typeIds;
+    if constexpr (!SAME(T, void)) // can't get reference to "void" type
+    {
+        typeIds.base = type::get<T>().get_id();
+        typeIds.const_ = type::get<const T>().get_id();
+        typeIds.volatile_ = type::get<volatile T>().get_id();
+        typeIds.const_volatile = type::get<const volatile T>().get_id();
+        typeIds.reference = type::get<T&>().get_id();
+        typeIds.volatile_reference = type::get<volatile T&>().get_id();
+        typeIds.const_volatile_reference = type::get<const volatile T&>().get_id();
+        typeIds.const_reference = type::get<const T&>().get_id();
+    }
+    typeIds.pointer = type::get<T*>().get_id(), typeIds.pointer_to_const = type::get<const T*>().get_id(), typeIds.const_pointer = type::get<T* const>().get_id();
+typeIds.pointer_to_volatile = type::get<volatile T*>().get_id(), typeIds.volatile_pointer = type::get<T* volatile>().get_id();
+typeIds.pointer_to_const_volatile = type::get<const volatile T*>().get_id(), typeIds.const_volatile_pointer = type::get<T* const volatile>().get_id();
+    g_getTypeIdsByTypeName()[type::get<T>().get_name().to_string()] = typeIds;
 }
 
 template<typename T>
@@ -164,5 +177,7 @@ void registerExtra()
     generateTypeIdData<T>();
     registerPointerConversionFunc<T>();
 }
+
+void g_initPrimitiveTypeIds();
 
 #endif // __MAIN_H__

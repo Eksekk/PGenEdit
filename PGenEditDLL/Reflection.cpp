@@ -750,8 +750,8 @@ int luaDebug::setClassObjectField(lua_State* L)
             if (!Reflection::setClassObjectFieldFromLuaStack(var, getLuaTypeOrError<std::string>(L, 2), 3))
             {
                 luaError("Couldn't set field '{}' of class '{}'", getLuaTypeOrError<std::string>(L, 2), className);
-                return 0;
             }
+            return 0;
         }
     }
 }

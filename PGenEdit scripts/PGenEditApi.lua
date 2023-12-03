@@ -22,7 +22,8 @@ local format = string.format
 
 -- minor style convention I adopted: functions in metatables should be qualified with __, for consistency with built-in metamethods, and also to disambiguate them from regular functions
 
-pgenedit.debug.attemptTypeConversion = true -- if true, will attempt to convert parameters to correct type, if false, will throw an error
+pgenedit = pgenedit or {}
+tget(pgenedit, "debug").attemptTypeConversion = true -- if true, will attempt to convert parameters to correct type, if false, will throw an error
 
 local cpp = tget(pgenedit, "cpp")
 
@@ -456,11 +457,6 @@ function mt.__newindex(t, key, value)
 	end
 	api.setGlobal(key, value)
 end
-
--- these calls are just to make code above not grayed out
-createObjectMetatable()
-makeClass()
-validateOrConvertParameter()
 
 -- tests
 function tests()

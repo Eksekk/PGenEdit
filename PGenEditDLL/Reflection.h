@@ -33,23 +33,24 @@ void callDestructors(Args&&... args)
 // lua debug api
 namespace luaDebug
 {
+    // TODO: I removed static from these functions, because I want to use them in LuaFunctions.cpp (to register them in lua), but I'm not sure if it's correct
     extern "C"
     {
-        static int classExists(lua_State* L);
-        static int copyObject(lua_State* L);
-        static int createObject(lua_State* L);
-        static int destroyObject(lua_State* L);
-        static int getClassObjectField(lua_State* L);
-        static int getClassField(lua_State* L);
-        static int getGlobalField(lua_State* L);
-        static int setClassObjectField(lua_State* L);
-        static int setClassField(lua_State* L);
-        static int setGlobalField(lua_State* L);
-        static int invokeClassMethod(lua_State* L);
-        static int invokeClassObjectMethod(lua_State* L);
-        static int invokeGlobalMethod(lua_State* L);
-        static int getClassInfo(lua_State* L);
-        static int getGlobalEnvironmentInfo(lua_State* L);
+        int classExists(lua_State* L);
+        int copyObject(lua_State* L);
+        int createObject(lua_State* L);
+        int destroyObject(lua_State* L);
+        int getClassObjectField(lua_State* L);
+        int getClassField(lua_State* L);
+        int getGlobalField(lua_State* L);
+        int setClassObjectField(lua_State* L);
+        int setClassField(lua_State* L);
+        int setGlobalField(lua_State* L);
+        int invokeClassMethod(lua_State* L);
+        int invokeClassObjectMethod(lua_State* L);
+        int invokeGlobalMethod(lua_State* L);
+        int getClassInfo(lua_State* L);
+        int getGlobalEnvironmentInfo(lua_State* L);
     }
 }
 // member methods, static methods, global methods, global callables, member callables, static callables
@@ -350,7 +351,7 @@ private:
                 LuaTable t = LuaTable::fromLuaTable(stackIndex);
                 for (auto&& [key, value] : t)
                 {
-                    assocView.insert(std::move(key), std::move(value));
+                    assocView.insert(key, value);
                 }
                 return var;
             }
@@ -438,6 +439,7 @@ private:
             {
                 t[i++] = convertVariantToLuaTypeInCpp(value);
             }
+            return t;
         }
         else if (var.is_associative_container())
         {
@@ -448,6 +450,7 @@ private:
             {
                 t[convertVariantToLuaTypeInCpp(key)] = convertVariantToLuaTypeInCpp(value);
             }
+            return t;
         }
         else if (typ == TYPE_ID_NIL)
         {
@@ -528,6 +531,7 @@ private:
         else
         {
             luaError("Unsupported type '%s' in convertVariantToLuaTypeInCpp", var.get_type().get_name().to_string());
+            return 0; // dummy return
         }
     }
 
