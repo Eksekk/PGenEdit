@@ -160,47 +160,47 @@ T getLuaTypeOrError(lua_State* L, int index)
     }
 }
 
-bool luaTableHasMetafield(int index, const std::string& name)
+bool luaTableHasMetafield(lua_State* L, int index, const std::string& name)
 {
-    lua_getmetatable(Lua, index);
-    if (lua_isnil(Lua, -1))
+    lua_getmetatable(L, index);
+    if (lua_isnil(L, -1))
     {
-        lua_pop(Lua, 1);
+        lua_pop(L, 1);
         return false;
     }
-    lua_getfield(Lua, -1, name.c_str());
-    if (lua_isnil(Lua, -1))
+    lua_getfield(L, -1, name.c_str());
+    if (lua_isnil(L, -1))
     {
-        lua_pop(Lua, 2);
+        lua_pop(L, 2);
         return false;
     }
-    lua_pop(Lua, 2);
+    lua_pop(L, 2);
     return true;
 }
 
 template<typename T>
-T getLuaTableMetafieldOrError(int index, const std::string& name)
+T getLuaTableMetafieldOrError(lua_State* L, int index, const std::string& name)
 {
-    lua_getmetatable(Lua, index);
-    if (lua_isnil(Lua, -1))
+    lua_getmetatable(L, index);
+    if (lua_isnil(L, -1))
     {
-        lua_pop(Lua, 1);
+        lua_pop(L, 1);
         luaError("Couldn't get metafield '{}' - table doesn't have a metatable", name);
     }
-    lua_getfield(Lua, -1, name.c_str());
-    if (lua_isnil(Lua, -1))
+    lua_getfield(L, -1, name.c_str());
+    if (lua_isnil(L, -1))
     {
-        lua_pop(Lua, 2);
+        lua_pop(L, 2);
         luaError("Couldn't get metafield '{}' - table doesn't have such metafield", name);
     }
-    T ret = getLuaTypeOrError<T>(Lua, -1);
-    lua_pop(Lua, 2);
+    T ret = getLuaTypeOrError<T>(L, -1);
+    lua_pop(L, 2);
     return ret;
 }
 
-void luaExpectStackSize(int expected)
+void luaExpectStackSize(lua_State* L, int expected)
 {
-    int stackSize = lua_gettop(Lua);
+    int stackSize = lua_gettop(L);
     if (stackSize != expected)
     {
         luaError("Expected {} arguments, got {}", expected, stackSize);
@@ -442,14 +442,14 @@ int luaDebug::copyObject(lua_State* L)
     try
     {
         LuaWrapper w(L);
-        luaExpectStackSize(1);
+        luaExpectStackSize(L, 1);
         void* ptr = luaGetObjectPtr(L, 1);
         if (!ptr)
         {
             luaError("Couldn't copy object - pointer is null");
             return 0;
         }
-        rttr::variant var = convertToObjectPointer(ptr, getLuaTableMetafieldOrError<std::string>(1, "className"));
+        rttr::variant var = convertToObjectPointer(ptr, getLuaTableMetafieldOrError<std::string>(L, 1, "className"));
         if (!var.is_valid())
         {
             luaError("Couldn't copy object - couldn't convert to object pointer");
@@ -554,7 +554,7 @@ int luaDebug::createObject(lua_State* L)
 int luaDebug::destroyObject(lua_State* L)
 {
     LuaWrapper w(L);
-    luaExpectStackSize(1);
+    luaExpectStackSize(L, 1);
     if (w.isTable(1))
     {
         luaError("Couldn't destroy object - first argument is a table (C++ owned object), not userdata");
@@ -566,7 +566,7 @@ int luaDebug::destroyObject(lua_State* L)
         luaError("Couldn't destroy object - pointer is null");
         return 0;
     }
-    rttr::variant var = convertToObjectPointer(ptr, getLuaTableMetafieldOrError<std::string>(1, "className"));
+    rttr::variant var = convertToObjectPointer(ptr, getLuaTableMetafieldOrError<std::string>(L, 1, "className"));
     if (!var.is_valid())
     {
         luaError("Couldn't destroy object - couldn't convert to object pointer");
@@ -593,7 +593,7 @@ int luaDebug::getClassObjectField(lua_State* L)
 int luaDebug::getClassField(lua_State* L)
 {
     LuaWrapper w(L);
-    luaExpectStackSize(2);
+    luaExpectStackSize(L, 2);
     std::string className = getLuaTypeOrError<std::string>(L, 1);
     rttr::type t = rttr::type::get_by_name(className);
     if (!t.is_valid())
@@ -628,7 +628,7 @@ int luaDebug::getGlobalField(lua_State* L)
 int luaDebug::setGlobalField(lua_State* L)
 {
     LuaWrapper w(L);
-    luaExpectStackSize(2);
+    luaExpectStackSize(L, 2);
     std::string name = getLuaTypeOrError<std::string>(L, 1);
     rttr::type t = rttr::type::get_by_name(name);
     if (!t.is_valid())
@@ -742,7 +742,7 @@ int luaDebug::invokeGlobalMethod(lua_State* L)
 int luaDebug::setClassObjectField(lua_State* L)
 {
     LuaWrapper w(L);
-    luaExpectStackSize(3);
+    luaExpectStackSize(L, 3);
     std::string className = getLuaTypeOrError<std::string>(L, 1);
     rttr::type t = rttr::type::get_by_name(className);
     if (!t.is_valid())
@@ -778,7 +778,7 @@ int luaDebug::setClassObjectField(lua_State* L)
 int luaDebug::setClassField(lua_State* L)
 {
     LuaWrapper w(L);
-    luaExpectStackSize(3);
+    luaExpectStackSize(L, 3);
     std::string className = getLuaTypeOrError<std::string>(L, 1);
     rttr::type t = rttr::type::get_by_name(className);
     if (!t.is_valid())
@@ -838,7 +838,7 @@ void insertPropertyAndMethodData(const rttr::array_range<rttr::property>& proper
 // receives: class name
 int luaDebug::getClassInfo(lua_State* L)
 {
-    luaExpectStackSize(1);
+    luaExpectStackSize(L, 1);
     std::string name = getLuaTypeOrError<std::string>(L, 1);
     rttr::type t{ type::get_by_name(name) };
     if (!t.is_valid())

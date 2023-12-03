@@ -199,17 +199,17 @@ private:
         LuaWrapper wrapper(L);
         type_id typeId = typ.get_id();
         stackIndex = wrapper.makeAbsoluteStackIndex(stackIndex);
-        switch (lua_type(Lua, stackIndex))
+        switch (lua_type(L, stackIndex))
         {
         case LUA_TNUMBER:
         {
-            lua_Number num = lua_tonumber(Lua, stackIndex);
+            lua_Number num = lua_tonumber(L, stackIndex);
             return tryConvertNumberToType(num, typeId, allowCrossTypeCategoryConversions);
         }
         case LUA_TSTRING:
         {
             size_t s;
-            const char* str = lua_tolstring(Lua, stackIndex, &s);
+            const char* str = lua_tolstring(L, stackIndex, &s);
             if (existsInVector(TYPE_IDS_STRINGS, typeId))
             {
                 if (typeId == TYPE_ID_STRING)
@@ -235,11 +235,11 @@ private:
         case LUA_TBOOLEAN:
             if (typeId == TYPE_ID_BOOL)
             {
-                return static_cast<bool>(lua_toboolean(Lua, stackIndex));
+                return static_cast<bool>(lua_toboolean(L, stackIndex));
             }
             else if (allowCrossTypeCategoryConversions && existsInVector(TYPE_IDS_INTEGERS, typeId))
             {
-                int b = lua_toboolean(Lua, stackIndex);
+                int b = lua_toboolean(L, stackIndex);
                 if (typeId == TYPE_ID_CHAR)
                 {
                     return static_cast<char>(b);
@@ -287,7 +287,7 @@ private:
             }
             else if (allowCrossTypeCategoryConversions && existsInVector(TYPE_IDS_FLOATS, typeId))
             {
-                int b = lua_toboolean(Lua, stackIndex);
+                int b = lua_toboolean(L, stackIndex);
                 if (typeId == TYPE_ID_FLOAT)
                 {
                     return static_cast<float>(b);
@@ -308,7 +308,7 @@ private:
             else if (allowCrossTypeCategoryConversions && existsInVector(TYPE_IDS_STRINGS, typeId))
             {
                 // TODO: decide how I would want bool to string conversion to work
-                int b = lua_toboolean(Lua, stackIndex);
+                int b = lua_toboolean(L, stackIndex);
                 if (typeId == TYPE_ID_STRING)
                 {
                     return std::string(b ? "true" : "false");
@@ -381,7 +381,7 @@ private:
             break;
         default:
             // TODO: return nil?
-            wxFAIL_MSG(wxString::Format("Unsupported lua type '%s'", lua_typename(Lua, stackIndex)));
+            wxFAIL_MSG(wxString::Format("Unsupported lua type '%s'", lua_typename(L, stackIndex)));
         }
         return rttr::variant();
     }
@@ -841,7 +841,7 @@ private:
                 }
                 if (!result[i].is_valid()) // got invalid (not supported) type
                 {
-                    errorParts.push_back(wxString::Format("Parameter %d (stack index %d, name '%s') of lua type '%s' to C++ type '%s'", i + 1, currentStackIndex, param.get_name().data(), lua_typename(Lua, currentStackIndex), param.get_type().get_name().data()));
+                    errorParts.push_back(wxString::Format("Parameter %d (stack index %d, name '%s') of lua type '%s' to C++ type '%s'", i + 1, currentStackIndex, param.get_name().data(), lua_typename(L, currentStackIndex), param.get_type().get_name().data()));
                 }
             }
             else // use default value

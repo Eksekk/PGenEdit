@@ -81,13 +81,13 @@ void LuaTable::luaConvertTypeCommon(lua_State* L, LuaTypeInCpp& val, int stack)
     }
     break;
     case LUA_TBOOLEAN:
-        val = (bool)lua_toboolean(Lua, stack);
+        val = (bool)lua_toboolean(L, stack);
         break;
     case LUA_TSTRING:
     {
         const char* p;
         size_t s;
-        p = lua_tolstring(Lua, stack, &s);
+        p = lua_tolstring(L, stack, &s);
         val = std::string(p, s);
     }
     break;
@@ -100,14 +100,15 @@ LuaTable LuaTable::fromLuaTable(lua_State* L, int index)
     wxASSERT_MSG(wrapper.isTable(index), wxString::Format("Value at index #%d is not a table", index));
     static sqword_t dword_max = std::numeric_limits<dword_t>::max(), sdword_min = std::numeric_limits<sdword_t>::min(), sdword_max = std::numeric_limits<sdword_t>::max();
     index = wrapper.makeAbsoluteStackIndex(index);
-    int prevStack = lua_gettop(Lua);
+    int prevStack = lua_gettop(L);
     LuaTable t;
-    lua_pushnil(Lua);
-    while (lua_next(Lua, index) != 0)
+    lua_pushnil(L); // first key
+    while (lua_next(L, index) != 0) // key is at -2, value is at -1
+    
     {
         LuaTypeInCpp key;
         LuaTypeInCpp value;
-        switch (lua_type(Lua, -2)) // key
+        switch (lua_type(L, -2)) // key
         {
         case LUA_TNIL:
         case LUA_TTABLE:

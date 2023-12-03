@@ -18,6 +18,6 @@ bool detectIfIsMerge();
 void fillGameStaticPointersAndSizes();
 // just found out there's lua_typename() function, oh well
 std::string luaTypeToString(lua_State* L, int idx);
-std::string buildWantedLuaTypeString(std::initializer_list<int> list);
-std::string getLuaTypeMismatchString(std::initializer_list<int> wanted, int provided, int stackIndex);
-std::string getLuaTypeMismatchString(int wanted, int provided, int stackIndex);
+std::string buildWantedLuaTypeString(lua_State* L, std::initializer_list<int> list);
+std::string getLuaTypeMismatchString(lua_State* L, std::initializer_list<int> wanted, int provided, int stackIndex);
+std::string getLuaTypeMismatchString(lua_State* L, int wanted, int provided, int stackIndex);
