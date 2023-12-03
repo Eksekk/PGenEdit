@@ -5,6 +5,7 @@
 #include "LuaWrapper.h"
 #include "Utility.h"
 #include "CallEvents.h"
+#include "Reflection.h"
 
 extern "C"
 {
@@ -50,6 +51,26 @@ extern "C"
 	const luaL_Reg lib[] =
 	{
 		{"runScript", runScript2},
+		{0, 0}
+	};
+
+	const luaL_Reg pgeneditDebugApiReg[] =
+	{
+		{"getClassField", luaDebug::getClassField},
+		{"getClassObjectField", luaDebug::getClassObjectField},
+		{"getGlobalField", luaDebug::getGlobalField},
+		{"setClassField", luaDebug::setClassField},
+		{"setClassObjectField", luaDebug::setClassObjectField},
+		{"setGlobalField", luaDebug::setGlobalField},
+		{"invokeClassMethod", luaDebug::invokeClassMethod},
+		{"invokeClassObjectMethod", luaDebug::invokeClassObjectMethod},
+		{"invokeGlobalMethod", luaDebug::invokeGlobalMethod},
+		{"classExists", luaDebug::classExists},
+		{"copyObject", luaDebug::copyObject},
+		{"createObject", luaDebug::createObject},
+		{"destroyObject", luaDebug::destroyObject},
+		{"getClassInfo", luaDebug::getClassInfo},
+		{"getGlobalEnvironmentInfo", luaDebug::getGlobalEnvironmentInfo},
 		{0, 0}
 	};
 
@@ -109,6 +130,7 @@ extern "C"
 		detectIfIsMerge();
 		setupGameSaveHandler();
 		fillGameStaticPointersAndSizes();
+		luaL_openlib(Lua, "pgeneditDebugApi", pgeneditDebugApiReg, 0);
 	}
 
 	bool checkIsInGame()

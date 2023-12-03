@@ -297,6 +297,7 @@ LuaTable getBasicTypeDataTable(const rttr::type& type)
     typeInfo["isPointer"] = TypeIds::isTypeAnyPointer(typeId);
     typeInfo["isClass"] = type.is_class();
     typeInfo["isEnum"] = type.is_enumeration();
+    typeInfo["isCallable"] = type.is_function_pointer() || type.is_member_function_pointer(); // FIXME: somehow handle std::function
     rttr::type rawType = type.get_raw_type();
     if (typeId != rawType.get_id()) // avoid infinite recursion
     {
@@ -558,93 +559,6 @@ int luaDebug::destroyObject(lua_State* L)
     return 0;
 }
 
-// receives: class name
-int luaDebug::getClassInfo(lua_State* L)
-{
-    luaExpectStackSize(1);
-    std::string name = getLuaTypeOrError<std::string>(L, 1);
-    rttr::type t{ type::get_by_name(name) };
-    if (!t.is_valid())
-    {
-        luaError("Couldn't get class '{}'", name);
-        return 0;
-    }
-    else if (!t.is_class())
-    {
-        luaError("Couldn't get class '{}', it's not a class", name);
-        return 0;
-    }
-    /*
-    -- name, type, isConst, isReference, isPointer, isClass, isEnum, isStatic, isField, isMethod, isCallable
-    -- isCallable (for example std::function, functions as fields)
-    -- if isCallable, then also returnType, params [array of basic properties above + two extra fields: hasDefaultValue, defaultValue]
-    */
-    LuaTable info;
-    for (auto& prop : t.get_properties())
-    {
-        LuaTable propInfo;
-        //fillInBasicTypeData(propInfo, prop.get_type());
-        propInfo["name"] = prop.get_name().to_string();
-        propInfo["type"] = getBasicTypeDataTable(prop.get_type());
-        propInfo["isStatic"] = prop.is_static();
-        propInfo["isField"] = true;
-        propInfo["isMethod"] = false;
-        propInfo["isCallable"] = t.is_function_pointer() || t.is_member_function_pointer(); // FIXME: somehow handle std::function
-        // FIXME: no method-specific info is added for std::function
-
-        info.getTableFieldOrCreate("fields")[prop.get_name().to_string()] = propInfo;
-    }
-
-    for (auto& method : t.get_methods())
-    {
-        LuaTable propInfo;
-        //fillInBasicTypeData(propInfo, method.get_return_type());
-        propInfo["name"] = method.get_name().to_string();
-        propInfo["returnType"] = getBasicTypeDataTable(method.get_return_type());
-        propInfo["isStatic"] = method.is_static();
-        propInfo["isField"] = false;
-        propInfo["isMethod"] = true;
-        propInfo["isCallable"] = true;
-
-        propInfo["params"] = getCallableParamsTable(method.get_parameter_infos());
-        propInfo["signature"] = method.get_signature().to_string();
-
-        info.getTableFieldOrCreate("methods")[method.get_name().to_string()] = propInfo;
-    }
-
-    for (auto& ctor : t.get_constructors())
-    {
-        LuaTable propInfo;
-        //fillInBasicTypeData(propInfo, ctor.get_return_type());
-        propInfo["returnType"] = getBasicTypeDataTable(ctor.get_declaring_type()); // always same return value
-        propInfo["isField"] = false;
-        propInfo["isMethod"] = true;
-        propInfo["isCallable"] = true;
-
-        propInfo["params"] = getCallableParamsTable(ctor.get_parameter_infos());
-        propInfo["signature"] = ctor.get_signature().to_string();
-
-        info.getTableFieldOrCreate("constructors").arrayInsert(propInfo);
-    }
-
-    // bases, derived
-    LuaTable bases;
-    for (auto& base : t.get_base_classes())
-    {
-        bases.arrayInsert(base.get_name().to_string());
-    }
-    info["bases"] = bases;
-    LuaTable derived;
-    for (auto& derivedClass : t.get_derived_classes())
-    {
-        derived.arrayInsert(derivedClass.get_name().to_string());
-    }
-    info["derived"] = derived;
-
-    info.pushToLuaStack();
-    return 1;
-}
-
 // receives: [class name, field name, object]
 int luaDebug::getClassObjectField(lua_State* L)
 {
@@ -864,4 +778,103 @@ int luaDebug::setClassField(lua_State* L)
         Reflection::setClassFieldFromLuaStack(className, getLuaTypeOrError<std::string>(L, 2), 3);
         return 1;
     }
+}
+
+void insertPropertyAndMethodData(const rttr::array_range<rttr::property>& properties, const rttr::array_range<rttr::method>& methods, LuaTable& info)
+{
+    for (auto& prop : properties)
+    {
+        LuaTable propInfo;
+        //fillInBasicTypeData(propInfo, prop.get_type());
+        propInfo["name"] = prop.get_name().to_string();
+        propInfo["type"] = getBasicTypeDataTable(prop.get_type());
+        propInfo["isStatic"] = prop.is_static();
+        propInfo["isField"] = true;
+        propInfo["isMethod"] = false;
+        // FIXME: no method-specific info is added for std::function
+
+        info.getTableFieldOrCreate("fields")[prop.get_name().to_string()] = propInfo;
+    }
+
+    for (auto& method : methods)
+    {
+        LuaTable propInfo;
+        //fillInBasicTypeData(propInfo, method.get_return_type());
+        propInfo["name"] = method.get_name().to_string();
+        propInfo["returnType"] = getBasicTypeDataTable(method.get_return_type());
+        propInfo["isStatic"] = method.is_static();
+        propInfo["isField"] = false;
+        propInfo["isMethod"] = true;
+        propInfo["isCallable"] = true;
+
+        propInfo["params"] = getCallableParamsTable(method.get_parameter_infos());
+        propInfo["signature"] = method.get_signature().to_string();
+
+        info.getTableFieldOrCreate("methods")[method.get_name().to_string()] = propInfo;
+    }
+}
+
+// receives: class name
+int luaDebug::getClassInfo(lua_State* L)
+{
+    luaExpectStackSize(1);
+    std::string name = getLuaTypeOrError<std::string>(L, 1);
+    rttr::type t{ type::get_by_name(name) };
+    if (!t.is_valid())
+    {
+        luaError("Couldn't get class '{}'", name);
+        return 0;
+    }
+    else if (!t.is_class())
+    {
+        luaError("Couldn't get class '{}', it's not a class", name);
+        return 0;
+    }
+    /*
+    -- name, type, isConst, isReference, isPointer, isClass, isEnum, isStatic, isField, isMethod, isCallable
+    -- isCallable (for example std::function, functions as fields)
+    -- if isCallable, then also returnType, params [array of basic properties above + two extra fields: hasDefaultValue, defaultValue]
+    */
+    LuaTable info;
+    insertPropertyAndMethodData(t.get_properties(), t.get_methods(), info);
+
+    for (auto& ctor : t.get_constructors())
+    {
+        LuaTable propInfo;
+        //fillInBasicTypeData(propInfo, ctor.get_return_type());
+        propInfo["returnType"] = getBasicTypeDataTable(ctor.get_declaring_type()); // always same return value
+        propInfo["isField"] = false;
+        propInfo["isMethod"] = true;
+        propInfo["isCallable"] = true;
+
+        propInfo["params"] = getCallableParamsTable(ctor.get_parameter_infos());
+        propInfo["signature"] = ctor.get_signature().to_string();
+
+        info.getTableFieldOrCreate("constructors").arrayInsert(propInfo);
+    }
+
+    // bases, derived
+    LuaTable bases;
+    for (auto& base : t.get_base_classes())
+    {
+        bases.arrayInsert(base.get_name().to_string());
+    }
+    info["bases"] = bases;
+    LuaTable derived;
+    for (auto& derivedClass : t.get_derived_classes())
+    {
+        derived.arrayInsert(derivedClass.get_name().to_string());
+    }
+    info["derived"] = derived;
+
+    info.pushToLuaStack();
+    return 1;
+}
+
+int luaDebug::getGlobalEnvironmentInfo(lua_State* L)
+{
+    LuaTable info;
+    insertPropertyAndMethodData(rttr::type::get_global_properties(), rttr::type::get_global_methods(), info);
+    info.pushToLuaStack();
+    return 1;
 }

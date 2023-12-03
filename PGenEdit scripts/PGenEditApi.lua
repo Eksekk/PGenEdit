@@ -1,4 +1,4 @@
-local api = require("luaDebugApi")
+local api = require("pgeneditDebugApi")
 local format = string.format
 
 -- remaining to do:
@@ -214,18 +214,8 @@ end
 local function funcWrapper(className, memberName, memberData)
 	local fullFuncName = className and format("%s::%s", className, memberName) or memberName
 	local params = memberData.params
-	-- single parameter table can have following fields:
-	-- name - as it appears in C++ code
-	-- type - if isClass is true, then this is class name, otherwise it's type name
-	-- hasDefaultValue - true if parameter has default value
-	-- defaultValue - default value, if hasDefaultValue is true
-	-- isClass
-	-- isConst
-	-- isReference
-	-- isPointer
+	assert(memberData.isCallable, format("'%s': Member %q is not callable", fullFuncName, memberData.name))
 
-	-- in the future:
-	-- isEnum
 	local argCount, defCount = #params, getDefParamCount(params)
 	assert(argCount >= defCount, format("'%s': Argument count (%d) is less than default argument count (%d)", fullFuncName, argCount, defCount))
 	assert(#params == argCount, format("'%s': Argument type count (%d) is not equal to argument count (%d)", fullFuncName, #params, argCount))
@@ -260,7 +250,13 @@ local function funcWrapper(className, memberName, memberData)
 		-- for i, arg in pairs(args) do
 		-- 	args[i] = type(arg) == "table" and arg["?ptr"] or arg
 		-- end
-		return api.invokeCallable(className, memberName, #args, unpack(args))
+		if not className then -- global
+			return api.invokeGlobalMethod(memberName, #args, unpack(args))
+		elseif memberData.isStatic then -- static class method
+			return api.invokeClassMethod(className, memberName, #args, unpack(args))
+		else
+			return api.invokeClassObjectMethod(args[1], className, memberName, #args, unpack(args))
+		end
 	end
 end
 
@@ -318,53 +314,7 @@ local function currentOrInheritedMemberSet(obj, key, value, className, treatAsCl
 end
 
 -- creates metatable, which will be used to give object ability to access its fields and methods
-local function createObjectMetatable(classMT)
-	local objMT = {}
-	local className = classMT.name
-	objMT.className = className
-	objMT.classMetatable = classMT
-
-	-- so, value can be either userdata or table
-	-- with userdata passing the objects to C++ is easy, with table it's not
-	-- probably best way is to have "?ptr" field which C++ will use
-
-	-- C++ side to receive object should:
-	-- put pointer to int (or anything else) inside variant, with value equal to table field "?ptr"
-	-- convert the pointer internally to pointer to object (might need writing custom converter)
-	-- somehow dereference the pointer
-
-	function objMT.__index(obj, key)
-		-- check for correct object type (inheritance won't change much, still original object is passed, just different metatable functions are called)
-		local val = currentOrInheritedMemberLookup(obj, key)
-		if val ~= nil then
-			return val
-		else
-			error(format("Attempt to access unknown field %q of class %q", key, className), 2)
-		end
-	end
-
-	function objMT.__newindex(obj, key, value)
-		if not currentOrInheritedMemberSet(obj, key, value) then
-			error(format("Attempt to set unknown field %q of class %q", key, className), 2)
-		end
-	end
-
-	function objMT.__gc(obj)
-		-- destroy only objects created by lua
-		if type(obj) == "userdata" then
-			api.destroyObject(obj)
-		end
-	end
-
-	function objMT.__copy(this)
-		local obj = api.copyObject(this)
-		setmetatable(obj, objMT)
-		return obj
-	end
-	-- TODO: dumpAllProperties (including functions shown clearly as such)
-	-- TODO: readonly properties
-	return objMT
-end
+local createObjectMetatable
 
 -- call stack: user code -> pgenedit.class index -> makeClass -> createObjectMetatable
 -- !!! if called from __index or __newindex of metatable, then stack is: user code -> our function (max 2 depth)
@@ -427,12 +377,60 @@ end
 	return setmetatable({}, classMT)
 end
 
+--[[local ]]function createObjectMetatable(classMT)
+	local objMT = {}
+	local className = classMT.name
+	objMT.className = className
+	objMT.classMetatable = classMT
+
+	-- so, value can be either userdata or table
+	-- with userdata passing the objects to C++ is easy, with table it's not
+	-- probably best way is to have "?ptr" field which C++ will use
+
+	-- C++ side to receive object should:
+	-- put pointer to int (or anything else) inside variant, with value equal to table field "?ptr"
+	-- convert the pointer internally to pointer to object (might need writing custom converter)
+	-- somehow dereference the pointer
+
+	function objMT.__index(obj, key)
+		-- check for correct object type (inheritance won't change much, still original object is passed, just different metatable functions are called)
+		local val = currentOrInheritedMemberLookup(obj, key)
+		if val ~= nil then
+			return val
+		else
+			error(format("Attempt to access unknown field %q of class %q", key, className), 2)
+		end
+	end
+
+	function objMT.__newindex(obj, key, value)
+		if not currentOrInheritedMemberSet(obj, key, value) then
+			error(format("Attempt to set unknown field %q of class %q", key, className), 2)
+		end
+	end
+
+	function objMT.__gc(obj)
+		-- destroy only objects created by lua
+		if type(obj) == "userdata" then
+			api.destroyObject(obj)
+		end
+	end
+
+	function objMT.__copy(this)
+		local obj = api.copyObject(this)
+		setmetatable(obj, objMT)
+		return obj
+	end
+	-- TODO: dumpAllProperties (including functions shown clearly as such)
+	-- TODO: readonly properties
+	return objMT
+end
+
 -- now global functions/variables
 local global = {}
 cpp.global = global
 local mt = {}
 setmetatable(global, mt)
-local members = api.getGlobalFields()
+local members = api.getGlobalEnvironmentInfo()
 mt.members = members
 function mt.__index(t, key)
 	local data = members[key]

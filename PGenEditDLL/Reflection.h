@@ -39,7 +39,6 @@ namespace luaDebug
         static int copyObject(lua_State* L);
         static int createObject(lua_State* L);
         static int destroyObject(lua_State* L);
-        static int getClassInfo(lua_State* L);
         static int getClassObjectField(lua_State* L);
         static int getClassField(lua_State* L);
         static int getGlobalField(lua_State* L);
@@ -49,8 +48,14 @@ namespace luaDebug
         static int invokeClassMethod(lua_State* L);
         static int invokeClassObjectMethod(lua_State* L);
         static int invokeGlobalMethod(lua_State* L);
+        static int getClassInfo(lua_State* L);
+        static int getGlobalEnvironmentInfo(lua_State* L);
     }
 }
+// member methods, static methods, global methods, global callables, member callables, static callables
+// those that are object properties: member methods, member callables
+// those that are class properties: static methods, static callables
+// those that are global properties: global methods, global callables
 
 // will contain utils for dealing with RTTR reflection system, like a template method for calling any method by name, converting lua types to required C++ types etc.
 class Reflection
@@ -690,46 +695,6 @@ private:
             t.pushToLuaStack();
         }
         else if (typ == TYPE_ID_NIL)
-        {
-            luaWrapper.pushnil();
-        }
-        else if (typ == TYPE_ID_LUA_TABLE)
-        {
-            val.get_value<LuaTable>().pushToLuaStack();
-        }
-        else if (typ == TYPE_ID_BOOL)
-        {
-            luaWrapper.pushboolean(val.get_value<bool>());
-        }
-        else if (typ == TYPE_ID_CHAR)
-        {
-            luaWrapper.pushnumber(static_cast<lua_Number>(val.get_value<char>()));
-        }
-        else if (typ == TYPE_ID_UNSIGNED_CHAR)
-        {
-            luaWrapper.pushnumber(static_cast<lua_Number>(val.get_value<unsigned char>()));
-        }
-        else if (typ == TYPE_ID_SHORT)
-        {
-            luaWrapper.pushnumber(static_cast<lua_Number>(val.get_value<short>()));
-        }
-        else if (typ == TYPE_ID_UNSIGNED_SHORT)
-        {
-            luaWrapper.pushnumber(static_cast<lua_Number>(val.get_value<unsigned short>()));
-        }
-        else if (typ == TYPE_ID_INT)
-        {
-            luaWrapper.pushnumber(static_cast<lua_Number>(val.get_value<int>()));
-        }
-        else if (typ == TYPE_ID_UNSIGNED_INT)
-        {
-            luaWrapper.pushnumber(static_cast<lua_Number>(val.get_value<unsigned int>()));
-        }
-        else if (typ == TYPE_ID_LONG)
-        {
-            luaWrapper.pushnumber(static_cast<lua)
-        }
-        if (typ == TYPE_ID_NIL)
         {
             luaWrapper.pushnil();
         }

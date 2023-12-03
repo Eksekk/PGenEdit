@@ -74,8 +74,6 @@ public:
 
     // gets the path (without last element) with getPath and then sets last element to value at provided stack index
     bool setPath(const std::string& path, int index);
-    
-
 
     lua_State* getLuaState() const { return L; }
     void setLuaState(lua_State* val) { L = val; }
