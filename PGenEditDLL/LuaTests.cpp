@@ -12,7 +12,7 @@ std::vector<wxString> LuaTests::run()
     auto luaTablePassthrough = [&](const LuaTable& orig, int index)
         {
             orig.pushToLuaStack(Lua);
-            LuaTable created = LuaTable::fromLuaTable();
+            LuaTable created = LuaTable::fromLuaTable(Lua);
             if (created != orig)
             {
                 myassertf(false, "[LuaTable] Test #%d failed", index);

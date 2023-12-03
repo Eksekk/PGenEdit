@@ -364,7 +364,7 @@ int getFieldCommon(lua_State* L)
         }
         else
         {
-            Reflection::getGlobalVariableToLuaStack(name);
+            Reflection::getGlobalVariableToLuaStack(L, name);
             return 1;
         }
     }
@@ -400,7 +400,7 @@ int getFieldCommon(lua_State* L)
                 }
                 else
                 {
-                    Reflection::getClassObjectFieldToLuaStack(className, prop.get_name().to_string(), var);
+                    Reflection::getClassObjectFieldToLuaStack(L, className, prop.get_name().to_string(), var);
                     return 1;
                 }
             }
@@ -521,7 +521,7 @@ int luaDebug::createObject(lua_State* L)
         }
         else
         {
-            rttr::variant obj = Reflection::findAndInvokeConstructorWithLuaArgs(t, nargs);
+            rttr::variant obj = Reflection::findAndInvokeConstructorWithLuaArgs(L, t, nargs);
             if (!obj.is_valid())
             {
                 luaError("Couldn't create object of type '{}'", name);
@@ -581,7 +581,7 @@ int luaDebug::destroyObject(lua_State* L)
 int luaDebug::getClassObjectField(lua_State* L)
 {
     auto className = getLuaTypeOrError<std::string>(L, 1);
-    if (!Reflection::getClassObjectFieldToLuaStack(className, getLuaTypeOrError<std::string>(L, 2), convertToObjectPointer(luaGetObjectPtr(L, 3), className)))
+    if (!Reflection::getClassObjectFieldToLuaStack(L, className, getLuaTypeOrError<std::string>(L, 2), convertToObjectPointer(luaGetObjectPtr(L, 3), className)))
     {
         luaError("Couldn't get field '{}' of class '{}'", getLuaTypeOrError<std::string>(L, 2), className);
         return 0;
@@ -608,7 +608,7 @@ int luaDebug::getClassField(lua_State* L)
     }
     else
     {
-        Reflection::getClassFieldToLuaStack(className, getLuaTypeOrError<std::string>(L, 2));
+        Reflection::getClassFieldToLuaStack(L, className, getLuaTypeOrError<std::string>(L, 2));
         return 1;
     }
 }
@@ -616,7 +616,7 @@ int luaDebug::getClassField(lua_State* L)
 // receives global name
 int luaDebug::getGlobalField(lua_State* L)
 {
-    if (!Reflection::getGlobalVariableToLuaStack(getLuaTypeOrError<std::string>(L, 1)))
+    if (!Reflection::getGlobalVariableToLuaStack(L, getLuaTypeOrError<std::string>(L, 1)))
     {
         luaError("Couldn't get global '{}'", getLuaTypeOrError<std::string>(L, 1));
         return 0;
@@ -643,7 +643,7 @@ int luaDebug::setGlobalField(lua_State* L)
     }
     else
     {
-        Reflection::setGlobalVariableFromLuaStack(name, 2);
+        Reflection::setGlobalVariableFromLuaStack(L, name, 2);
         return 0;
     }
 }
@@ -666,7 +666,7 @@ int luaDebug::invokeClassMethod(lua_State* L)
     }
     else
     {
-        auto result = Reflection::callClassMethodWithLuaParams(className, getLuaTypeOrError<std::string>(L, 2), getLuaTypeOrError<int>(L, 3));
+        auto result = Reflection::callClassMethodWithLuaParams(L, className, getLuaTypeOrError<std::string>(L, 2), getLuaTypeOrError<int>(L, 3));
         if (!result)
         {
             luaError("Couldn't call method '{}' of class '{}'", getLuaTypeOrError<std::string>(L, 2), className);
@@ -674,7 +674,7 @@ int luaDebug::invokeClassMethod(lua_State* L)
         }
         else
         {
-            Reflection::convertToLuaTypeOnStackByTypeId(result);
+            Reflection::convertToLuaTypeOnStackByTypeId(L, result);
             return 1;
         }
     }
@@ -706,7 +706,7 @@ int luaDebug::invokeClassObjectMethod(lua_State* L)
         }
         else
         {
-            auto result = Reflection::callClassObjectMethodWithLuaParams(var, getLuaTypeOrError<std::string>(L, 3), getLuaTypeOrError<int>(L, 4));
+            auto result = Reflection::callClassObjectMethodWithLuaParams(L, var, getLuaTypeOrError<std::string>(L, 3), getLuaTypeOrError<int>(L, 4));
             if (!result)
             {
                 luaError("Couldn't call method '{}' of class '{}'", getLuaTypeOrError<std::string>(L, 3), className);
@@ -714,7 +714,7 @@ int luaDebug::invokeClassObjectMethod(lua_State* L)
             }
             else
             {
-                Reflection::convertToLuaTypeOnStackByTypeId(result);
+                Reflection::convertToLuaTypeOnStackByTypeId(L, result);
                 return 1;
             }
         }
@@ -725,7 +725,7 @@ int luaDebug::invokeClassObjectMethod(lua_State* L)
 int luaDebug::invokeGlobalMethod(lua_State* L)
 {
     LuaWrapper w(L);
-    auto result = Reflection::callGlobalFunctionWithLuaParams(getLuaTypeOrError<std::string>(L, 1), getLuaTypeOrError<int>(L, 2));
+    auto result = Reflection::callGlobalFunctionWithLuaParams(L, getLuaTypeOrError<std::string>(L, 1), getLuaTypeOrError<int>(L, 2));
     if (!result)
     {
         luaError("Couldn't call global function '{}'", getLuaTypeOrError<std::string>(L, 1));
@@ -733,7 +733,7 @@ int luaDebug::invokeGlobalMethod(lua_State* L)
     }  
     else
     {
-        Reflection::convertToLuaTypeOnStackByTypeId(result);
+        Reflection::convertToLuaTypeOnStackByTypeId(L, result);
         return 1;
     }
 }
@@ -765,7 +765,7 @@ int luaDebug::setClassObjectField(lua_State* L)
         }
         else
         {
-            if (!Reflection::setClassObjectFieldFromLuaStack(var, getLuaTypeOrError<std::string>(L, 2), 3))
+            if (!Reflection::setClassObjectFieldFromLuaStack(L, var, getLuaTypeOrError<std::string>(L, 2), 3))
             {
                 luaError("Couldn't set field '{}' of class '{}'", getLuaTypeOrError<std::string>(L, 2), className);
             }
@@ -793,7 +793,7 @@ int luaDebug::setClassField(lua_State* L)
     }
     else
     {
-        Reflection::setClassFieldFromLuaStack(className, getLuaTypeOrError<std::string>(L, 2), 3);
+        Reflection::setClassFieldFromLuaStack(L, className, getLuaTypeOrError<std::string>(L, 2), 3);
         return 1;
     }
 }
@@ -888,7 +888,7 @@ int luaDebug::getClassInfo(lua_State* L)
     }
     info["derived"] = derived;
 
-    info.pushToLuaStack();
+    info.pushToLuaStack(L);
     return 1;
 }
 
@@ -896,6 +896,6 @@ int luaDebug::getGlobalEnvironmentInfo(lua_State* L)
 {
     LuaTable info;
     insertPropertyAndMethodData(rttr::type::get_global_properties(), rttr::type::get_global_methods(), info);
-    info.pushToLuaStack();
+    info.pushToLuaStack(L);
     return 1;
 }

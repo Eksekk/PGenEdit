@@ -483,15 +483,17 @@ std::vector<wxString> ReflectionTests::run()
 
     // test calling methods with reflection
 
+    // intentionally using global lua_State*
+
     static const wxString callMethodIntCheckFormat = "[call methods with reflection; test #%d] incorrect result (expected: %d, actual: %d)";
     testIndex = 0;
-    auto result = Reflection::callClassObjectMethodWithLuaParams(&rss, "get5", 0);
+    auto result = Reflection::callClassObjectMethodWithLuaParams(Lua, &rss, "get5", 0);
     myassertf(result == 5, callMethodIntCheckFormat, testIndex++, 5, result.get_value<int>());
     luaWrapper.pushnumber(10.0); // also test implicit conversion to int
-    result = Reflection::callClassObjectMethodWithLuaParams(&rss, "setInt", 1);
+    result = Reflection::callClassObjectMethodWithLuaParams(Lua, &rss, "setInt", 1);
     myassertf(rss.i == 10, callMethodIntCheckFormat, testIndex++, 10, rss.i);
     luaWrapper.pushnumber(-2);
-    Reflection::callClassObjectMethodWithLuaParams(&rss, "setInt", 1);
+    Reflection::callClassObjectMethodWithLuaParams(Lua, &rss, "setInt", 1);
     myassertf(rss.i == -2, callMethodIntCheckFormat, testIndex++, -2, rss.i);
     //result = Reflection::callClassObjectMethodWithLuaParams(&rss, 
 
@@ -511,28 +513,28 @@ std::vector<wxString> ReflectionTests::run()
         };
     // skip fully reflective object creation for now, because I don't know how to convert arbitrary rttr variant to string, and don't want to write a lot of code for this/accept that something I made is not working fully :)
     luaWrapper.pushnumber(5).pushstring("abc");
-    std::shared_ptr<ReflectionSampleStruct> pValue(Reflection::createInstanceByConstructorFromLuaStack<ReflectionSampleStruct>(2));
+    std::shared_ptr<ReflectionSampleStruct> pValue(Reflection::createInstanceByConstructorFromLuaStack<ReflectionSampleStruct>(Lua, 2));
     if (checkNonNull(pValue))
     {
         myassertf(pValue->i == 5 && pValue->str == "abc", constructorCheckFormat, testIndex, "i = 5; str = abc;", to_string(*pValue).c_str());
     }
     ++testIndex;
     luaWrapper.pushnumber(5).pushnumber(3);
-    pValue = Reflection::createInstanceByConstructorFromLuaStack<ReflectionSampleStruct>(2);
+    pValue = Reflection::createInstanceByConstructorFromLuaStack<ReflectionSampleStruct>(Lua, 2);
     if (checkNonNull(pValue))
     {
         myassertf(pValue->i == 5 + 3 + 20 + 5, constructorCheckFormat, testIndex, "i = 5 + 3 + 20 + 5", to_string(*pValue).c_str());
     }
     ++testIndex;
     luaWrapper.pushboolean(true);
-    pValue = Reflection::createInstanceByConstructorFromLuaStack<ReflectionSampleStruct>(1);
+    pValue = Reflection::createInstanceByConstructorFromLuaStack<ReflectionSampleStruct>(Lua, 1);
     if (checkNonNull(pValue))
     {
         myassertf(pValue->i == 21 && pValue->str == "a", constructorCheckFormat, testIndex, "i = 21; str = a;", to_string(*pValue).c_str());
     }
     ++testIndex;
     luaWrapper.pushboolean(true);
-    rttr::variant var = Reflection::createInstanceByConstructorFromLuaStack("ReflectionSampleStruct", 1);
+    rttr::variant var = Reflection::createInstanceByConstructorFromLuaStack(Lua, "ReflectionSampleStruct", 1);
     if (checkVariantValid(var))
     {
         pValue = var.get_value<std::shared_ptr<ReflectionSampleStruct>>();
@@ -568,14 +570,14 @@ std::vector<wxString> ReflectionTests::run()
     ++testIndex;
     // provide custom int, string, vector
     luaWrapper.pushnumber(55).pushstring("ddde");
-    LuaTable::constructFromValuesWithArray({ 2, 3, 5 }).pushToLuaStack();
-    pValue = Reflection::createInstanceByConstructorFromLuaStack<ReflectionSampleStruct>(3);
+    LuaTable::constructFromValuesWithArray({ 2, 3, 5 }).pushToLuaStack(Lua);
+    pValue = Reflection::createInstanceByConstructorFromLuaStack<ReflectionSampleStruct>(Lua, 3);
     if (checkNonNull(pValue))
     {
         // extra parentheses to avoid commas inside initializer list, which break the macro
         myassertf((pValue->i == 55 && pValue->str == "ddde" && pValue->vec == VectorType{ 2, 3, 5 }), constructorCheckFormat, testIndex, "i = 55; str = ddde; vec = {2,3,5};", to_string(*pValue).c_str());
         Inner* inner = &pValue->inner2;
-        myassertf(Reflection::callClassObjectMethodWithLuaParams(inner, "returnSizeof", 0).get_value<int>() == sizeof(Inner2), "[constructors; test #%d] virtual method call with reflection failed", testIndex);
+        myassertf(Reflection::callClassObjectMethodWithLuaParams(Lua, inner, "returnSizeof", 0).get_value<int>() == sizeof(Inner2), "[constructors; test #%d] virtual method call with reflection failed", testIndex);
     }
     ++testIndex;
 

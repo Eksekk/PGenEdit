@@ -64,7 +64,7 @@ struct LuaTable // TODO: storing array part and hashed part separately - will im
     void pushToLuaStack(lua_State* L) const; // converts this structure into lua table on top of the stack
     // TODO: a version updating lua table at specified index
     // converts table at specified stack index into this value
-    static LuaTable fromLuaTable(int index = -1);
+    static LuaTable fromLuaTable(lua_State* L, int index = -1);
 
     LuaTableValues::iterator begin();
     LuaTableValues::iterator end();
@@ -99,7 +99,7 @@ struct LuaTable // TODO: storing array part and hashed part separately - will im
     // stops on first missing index
     std::vector<LuaTypeInCpp> getArrayPart() const;
 private:
-    static void luaConvertTypeCommon(LuaTypeInCpp& val, int stack);
+    static void luaConvertTypeCommon(lua_State* L, LuaTypeInCpp& val, int stack);
     static void tryToIntegerRef(LuaTypeInCpp& type);
     static LuaTypeInCpp tryToIntegerRet(const LuaTypeInCpp& type);
     static bool canBeInteger(const LuaTypeInCpp& type);

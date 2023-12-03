@@ -30,7 +30,7 @@ void luaTypeInCppToStack(const LuaTypeInCpp& val, LuaWrapper& wrapper)
     }
     else if (const LuaTable* tbl = std::get_if<LuaTable>(&val))
     {
-        tbl->pushToLuaStack(L);
+        tbl->pushToLuaStack(wrapper.getLuaState());
     }
 }
 
@@ -54,20 +54,21 @@ void argError(const std::string& expected, const std::string& actual)
     wxLogError("Expected type '%s', got '%s'", expected, actual);
 }
 
-void LuaTable::luaConvertTypeCommon(LuaTypeInCpp& val, int stack)
+void LuaTable::luaConvertTypeCommon(lua_State* L, LuaTypeInCpp& val, int stack)
 {
-    stack = luaWrapper.makeAbsoluteStackIndex(stack);
+    LuaWrapper wrapper(L);
+    stack = wrapper.makeAbsoluteStackIndex(stack);
     switch (lua_type(Lua, stack))
     {
     case LUA_TNIL:
         val = Nil;
         break;
     case LUA_TTABLE:
-        val = LuaTable::fromLuaTable(stack);
+        val = LuaTable::fromLuaTable(L, stack);
         break;
     case LUA_TNUMBER:
     {
-        lua_Number num = lua_tonumber(Lua, stack);
+        lua_Number num = lua_tonumber(L, stack);
         lua_Number asInteger = (lua_Number)static_cast<sqword_t>(num);
         if (asInteger == num)
         {
@@ -93,11 +94,12 @@ void LuaTable::luaConvertTypeCommon(LuaTypeInCpp& val, int stack)
     }
 }
 
-LuaTable LuaTable::fromLuaTable(int index)
+LuaTable LuaTable::fromLuaTable(lua_State* L, int index)
 {
-    wxASSERT_MSG(luaWrapper.isTable(index), wxString::Format("Value at index #%d is not a table", index));
+    LuaWrapper wrapper(L);
+    wxASSERT_MSG(wrapper.isTable(index), wxString::Format("Value at index #%d is not a table", index));
     static sqword_t dword_max = std::numeric_limits<dword_t>::max(), sdword_min = std::numeric_limits<sdword_t>::min(), sdword_max = std::numeric_limits<sdword_t>::max();
-    index = luaWrapper.makeAbsoluteStackIndex(index);
+    index = wrapper.makeAbsoluteStackIndex(index);
     int prevStack = lua_gettop(Lua);
     LuaTable t;
     lua_pushnil(Lua);
@@ -112,7 +114,7 @@ LuaTable LuaTable::fromLuaTable(int index)
         case LUA_TNUMBER:
         case LUA_TBOOLEAN:
         case LUA_TSTRING:
-            LuaTable::luaConvertTypeCommon(key, -2);
+            LuaTable::luaConvertTypeCommon(L, key, -2);
             break;
             // those below are unsupported
         case LUA_TFUNCTION:
@@ -136,7 +138,7 @@ LuaTable LuaTable::fromLuaTable(int index)
         case LUA_TNUMBER:
         case LUA_TBOOLEAN:
         case LUA_TSTRING:
-            LuaTable::luaConvertTypeCommon(value, -1);
+            LuaTable::luaConvertTypeCommon(L, value, -1);
             break;
             // those below are unsupported
         case LUA_TFUNCTION:

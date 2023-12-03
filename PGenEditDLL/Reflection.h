@@ -194,10 +194,11 @@ private:
     public:
     // converts lua parameter from stack to given type (using RTTR type_id)
     // allowCrossTypeCategoryConversions allows to convert lua types to C++ types, which are not exactly matching, but are compatible (like number to boolean)
-    static rttr::variant convertStackIndexToType(int stackIndex, const rttr::type& typ, bool allowCrossTypeCategoryConversions = false)
+    static rttr::variant convertStackIndexToType(lua_State* L, int stackIndex, const rttr::type& typ, bool allowCrossTypeCategoryConversions = false)
     {
+        LuaWrapper wrapper(L);
         type_id typeId = typ.get_id();
-        stackIndex = luaWrapper.makeAbsoluteStackIndex(stackIndex);
+        stackIndex = wrapper.makeAbsoluteStackIndex(stackIndex);
         switch (lua_type(Lua, stackIndex))
         {
         case LUA_TNUMBER:
@@ -325,7 +326,7 @@ private:
         case LUA_TTABLE:
             if (typeId == TYPE_ID_LUA_TABLE)
             {
-                return LuaTable::fromLuaTable(stackIndex);
+                return LuaTable::fromLuaTable(L, stackIndex);
             }
             else if (typ.is_sequential_container())
             {
@@ -333,7 +334,7 @@ private:
                 rttr::type wrappedType = typ.get_wrapped_type();
                 rttr::variant var = typ.create();
                 rttr::variant_sequential_view seqView = var.create_sequential_view();
-                LuaTable t = LuaTable::fromLuaTable(stackIndex);
+                LuaTable t = LuaTable::fromLuaTable(L, stackIndex);
                 auto arr = t.getArrayPart();
                 seqView.set_size(arr.size());
                 for (int i = 0; const LuaTypeInCpp& val : arr)
@@ -348,7 +349,7 @@ private:
                 rttr::type wrappedType = typ.get_wrapped_type();
                 rttr::variant var = typ.create();
                 rttr::variant_associative_view assocView = var.create_associative_view();
-                LuaTable t = LuaTable::fromLuaTable(stackIndex);
+                LuaTable t = LuaTable::fromLuaTable(L, stackIndex);
                 for (auto&& [key, value] : t)
                 {
                     assocView.insert(key, value);
@@ -388,13 +389,14 @@ private:
     // will be used to allow reflected methods to return values in lua
     // takes constituent types of LuaTypeInCpp and converts them to lua types
     template<typename T>
-    static void convertToLuaTypeOnStack(const T& val)
+    static void convertToLuaTypeOnStack(lua_State* L, const T& val)
     {
+        LuaWrapper wrapper(L);
         using BaseType = std::remove_cvref_t<T>;
         rttr::type typ = rttr::type::get<BaseType>();
         if constexpr (SAME(BaseType, _Nil))
         {
-            luaWrapper.pushnil();
+            wrapper.pushnil();
         }
         else if constexpr (SAME(BaseType, LuaTable))
         {
@@ -402,23 +404,23 @@ private:
         }
         else if constexpr (SAME(BaseType, bool))
         {
-            luaWrapper.pushboolean(val);
+            wrapper.pushboolean(val);
         }
         else if constexpr (std::is_integral_v<BaseType> || std::is_floating_point_v<BaseType>) // number
         {
-            luaWrapper.pushnumber(static_cast<lua_Number>(val));
+            wrapper.pushnumber(static_cast<lua_Number>(val));
         }
         else if constexpr (SAME(BaseType, std::string) || SAME(BaseType, std::string_view))
         {
-            luaWrapper.pushstring(val.c_str());
+            wrapper.pushstring(val.c_str());
         }
         else if constexpr (SAME(BaseType, char*))
         {
-            luaWrapper.pushstring(val);
+            wrapper.pushstring(val);
         }
         else if constexpr (SAME(BaseType, void*))
         {
-            luaWrapper.pushlightuserdata(val);
+            wrapper.pushlightuserdata(val);
         }
         else
         {
@@ -667,8 +669,9 @@ private:
     }
 
     // now similar function to above, but using runtime type_id of rttr::variant perform the conversions
-    static bool convertToLuaTypeOnStackByTypeId(const rttr::variant& val)
+    static bool convertToLuaTypeOnStackByTypeId(lua_State* L, const rttr::variant& val)
     {
+        LuaWrapper wrapper(L);
         type_id typ = val.get_type().get_id();
         if (val.is_sequential_container())
         {
@@ -684,7 +687,7 @@ private:
                 }
                 t[i++] = convertVariantToLuaTypeInCpp(value);
             }
-            t.pushToLuaStack();
+            t.pushToLuaStack(L);
         }
         else if (val.is_associative_container())
         {
@@ -696,83 +699,83 @@ private:
             {
                 t[convertVariantToLuaTypeInCpp(key)] = convertVariantToLuaTypeInCpp(value);
             }
-            t.pushToLuaStack();
+            t.pushToLuaStack(L);
         }
         else if (typ == TYPE_ID_NIL)
         {
-            luaWrapper.pushnil();
+            wrapper.pushnil();
         }
         else if (typ == TYPE_ID_LUA_TABLE)
         {
-            val.get_value<LuaTable>().pushToLuaStack();
+            val.get_value<LuaTable>().pushToLuaStack(L);
         }
         else if (typ == TYPE_ID_BOOL)
         {
-            luaWrapper.pushboolean(val.get_value<bool>());
+            wrapper.pushboolean(val.get_value<bool>());
         }
         else if (typ == TYPE_ID_CHAR)
         {
-            luaWrapper.pushnumber(static_cast<lua_Number>(val.get_value<char>()));
+            wrapper.pushnumber(static_cast<lua_Number>(val.get_value<char>()));
         }
         else if (typ == TYPE_ID_UNSIGNED_CHAR)
         {
-            luaWrapper.pushnumber(static_cast<lua_Number>(val.get_value<unsigned char>()));
+            wrapper.pushnumber(static_cast<lua_Number>(val.get_value<unsigned char>()));
         }
         else if (typ == TYPE_ID_SHORT)
         {
-            luaWrapper.pushnumber(static_cast<lua_Number>(val.get_value<short>()));
+            wrapper.pushnumber(static_cast<lua_Number>(val.get_value<short>()));
         }
         else if (typ == TYPE_ID_UNSIGNED_SHORT)
         {
-            luaWrapper.pushnumber(static_cast<lua_Number>(val.get_value<unsigned short>()));
+            wrapper.pushnumber(static_cast<lua_Number>(val.get_value<unsigned short>()));
         }
         else if (typ == TYPE_ID_INT)
         {
-            luaWrapper.pushnumber(static_cast<lua_Number>(val.get_value<int>()));
+            wrapper.pushnumber(static_cast<lua_Number>(val.get_value<int>()));
         }
         else if (typ == TYPE_ID_UNSIGNED_INT)
         {
-            luaWrapper.pushnumber(static_cast<lua_Number>(val.get_value<unsigned int>()));
+            wrapper.pushnumber(static_cast<lua_Number>(val.get_value<unsigned int>()));
         }
         else if (typ == TYPE_ID_LONG)
         {
-            luaWrapper.pushnumber(static_cast<lua_Number>(val.get_value<long>()));
+            wrapper.pushnumber(static_cast<lua_Number>(val.get_value<long>()));
         }
         else if (typ == TYPE_ID_UNSIGNED_LONG)
         {
-            luaWrapper.pushnumber(static_cast<lua_Number>(val.get_value<unsigned long>()));
+            wrapper.pushnumber(static_cast<lua_Number>(val.get_value<unsigned long>()));
         }
         else if (typ == TYPE_ID_LONG_LONG)
         {
-            luaWrapper.pushnumber(static_cast<lua_Number>(val.get_value<long long>()));
+            wrapper.pushnumber(static_cast<lua_Number>(val.get_value<long long>()));
         }
         else if (typ == TYPE_ID_UNSIGNED_LONG_LONG)
         {
-            luaWrapper.pushnumber(static_cast<lua_Number>(val.get_value<unsigned long long>()));
+            wrapper.pushnumber(static_cast<lua_Number>(val.get_value<unsigned long long>()));
         }
         else if (typ == TYPE_ID_FLOAT)
         {
-            luaWrapper.pushnumber(static_cast<lua_Number>(val.get_value<float>()));
+            wrapper.pushnumber(static_cast<lua_Number>(val.get_value<float>()));
         }
         else if (typ == TYPE_ID_DOUBLE)
         {
-            luaWrapper.pushnumber(static_cast<lua_Number>(val.get_value<double>()));
+            wrapper.pushnumber(static_cast<lua_Number>(val.get_value<double>()));
         }
         else if (typ == TYPE_ID_LONG_DOUBLE)
         {
-            luaWrapper.pushnumber(static_cast<lua_Number>(val.get_value<long double>()));
+            wrapper.pushnumber(static_cast<lua_Number>(val.get_value<long double>()));
         }
         else if (typ == TYPE_ID_STRING)
         {
-            luaWrapper.pushstring(val.get_value<std::string>());
+            wrapper.pushstring(val.get_value<std::string>());
         }
         else if (typ == TYPE_ID_STRING_VIEW)
         {
-            luaWrapper.pushstring(std::string(val.get_value<std::string_view>()));
+            wrapper.pushstring(std::string(val.get_value<std::string_view>()));
         }
         else if (typ == TYPE_ID_VOID_PTR)
         {
-            luaWrapper.pushlightuserdata(val.get_value<void*>());
+            wrapper.pushlightuserdata(val.get_value<void*>());
         }
         else
         {
@@ -786,8 +789,9 @@ private:
     // throws exception with additional info if conversion of any parameter fails
     // by default pops converted parameters from lua stack, but can be disabled
     // nArgs is intended to be set by lua side to show how many arguments were passed to the function (to allow to use default values)
-    static std::vector<rttr::variant> convertLuaParametersToCppForReflection(const std::vector<rttr::parameter_info>& requiredParameters, int nArgs, bool pop = true)
+    static std::vector<rttr::variant> convertLuaParametersToCppForReflection(lua_State* L, const std::vector<rttr::parameter_info>& requiredParameters, int nArgs, bool pop = true)
     {
+        LuaWrapper wrapper(L);
         std::vector<wxString> errorParts;
         if (nArgs == -1)
         {
@@ -814,9 +818,9 @@ private:
             }
         }
         int defaultCount = requiredParameters.size() - nArgs;
-        wxASSERT_MSG(luaWrapper.gettop() >= nArgs, "Not enough parameters on lua stack to convert to C++ types");
+        wxASSERT_MSG(wrapper.gettop() >= nArgs, "Not enough parameters on lua stack to convert to C++ types");
         std::vector<rttr::variant> result(requiredParameters.size());
-        int stackTop = luaWrapper.gettop();
+        int stackTop = wrapper.gettop();
         int firstStackIndex = stackTop - nArgs + 1; // have to go to the top of the stack for proper argument order
         for (int i = 0; i < (int)requiredParameters.size(); ++i)
         {
@@ -824,14 +828,14 @@ private:
             {
                 int currentStackIndex = firstStackIndex + i;
                 auto&& param = requiredParameters[i];
-                result[i] = convertStackIndexToType(currentStackIndex, param.get_type(), true);
+                result[i] = convertStackIndexToType(L, currentStackIndex, param.get_type(), true);
                 // failsafe to check that lua stack top has not changed (shouldn't happen, but just in case)
-                if (luaWrapper.gettop() != stackTop)
+                if (wrapper.gettop() != stackTop)
                 {
-                    int top = luaWrapper.gettop();
+                    int top = wrapper.gettop();
                     if (pop) // restore stack to original state
                     {
-                        luaWrapper.settop(stackTop - nArgs);
+                        wrapper.settop(stackTop - nArgs);
                     }
                     throw std::runtime_error(wxString::Format("Lua stack top changed during conversion of lua parameters to C++ types (from %d to %d)", stackTop, top));
                 }
@@ -847,7 +851,7 @@ private:
         }
         if (pop)
         {
-            luaWrapper.settop(stackTop - nArgs);
+            wrapper.settop(stackTop - nArgs);
         }
         if (!errorParts.empty())
         {
@@ -861,20 +865,22 @@ private:
 
     // not using convertLuaParametersToCppForReflection here, because it throws exception on failure, and we want to return false instead
 
-    static bool canConvertLuaParameter(int stackIndex, const rttr::parameter_info& required)
+    static bool canConvertLuaParameter(lua_State* L, int stackIndex, const rttr::parameter_info& required)
     {
+        LuaWrapper wrapper(L);
         // check validity of stack index
-        if (stackIndex < 1 || stackIndex > luaWrapper.gettop())
+        if (stackIndex < 1 || stackIndex > wrapper.gettop())
         {
-            wxFAIL_MSG(wxString::Format("Invalid stack index %d (current size is %d)", stackIndex, luaWrapper.gettop()));
+            wxFAIL_MSG(wxString::Format("Invalid stack index %d (current size is %d)", stackIndex, wrapper.gettop()));
             return false;
         }
-        rttr::variant val = convertStackIndexToType(stackIndex, required.get_type());
+        rttr::variant val = convertStackIndexToType(L, stackIndex, required.get_type());
         return val.is_valid();
     }
 
-    static bool canConvertLuaParameters(const std::vector<rttr::parameter_info>& required, int nArgs = -1)
+    static bool canConvertLuaParameters(lua_State* L, const std::vector<rttr::parameter_info>& required, int nArgs = -1)
     {
+        LuaWrapper wrapper(L);
         if (nArgs == -1)
         {
             nArgs = required.size();
@@ -901,8 +907,8 @@ private:
         }
         for (int i = 0; i < nArgs; ++i)
         {
-            int stackIndex = luaWrapper.makeAbsoluteStackIndex(luaWrapper.gettop() - nArgs + i + 1);
-            if (!canConvertLuaParameter(stackIndex, required[i]))
+            int stackIndex = wrapper.makeAbsoluteStackIndex(wrapper.gettop() - nArgs + i + 1);
+            if (!canConvertLuaParameter(L, stackIndex, required[i]))
             {
                 return false;
             }
@@ -910,7 +916,7 @@ private:
         return true;
     }
 
-    static rttr::variant callWithLuaParamsCommon(const rttr::method& meth, rttr::instance inst, int nArgs)
+    static rttr::variant callWithLuaParamsCommon(lua_State* L, const rttr::method& meth, rttr::instance inst, int nArgs)
     {
         if (!meth.is_valid())
         {
@@ -918,11 +924,11 @@ private:
         }
         auto paramsArray = meth.get_parameter_infos();
         std::vector<rttr::parameter_info> params(paramsArray.begin(), paramsArray.end());
-        if (!canConvertLuaParameters(params, nArgs))
+        if (!canConvertLuaParameters(L, params, nArgs))
         {
             return rttr::variant();
         }
-        std::vector<rttr::variant> variants = convertLuaParametersToCppForReflection(params, nArgs);
+        std::vector<rttr::variant> variants = convertLuaParametersToCppForReflection(L, params, nArgs);
         std::vector<rttr::argument> args;
         for (rttr::variant& arg : variants)
         {
@@ -991,7 +997,7 @@ public:
 //     }
 
     // gets static field of class to lua stack
-    static bool getClassFieldToLuaStack(const std::string& className, const std::string& fieldName)
+    static bool getClassFieldToLuaStack(lua_State* L, const std::string& className, const std::string& fieldName)
     {
         rttr::type type = rttr::type::get_by_name(className);
         if (!type.is_valid())
@@ -1003,11 +1009,11 @@ public:
         {
             return false;
         }
-        return convertToLuaTypeOnStackByTypeId(prop.get_value(rttr::instance()));
+        return convertToLuaTypeOnStackByTypeId(L, prop.get_value(rttr::instance()));
     }
 
     // variant must contain pointer to real object type, not void*
-    static bool getClassObjectFieldToLuaStack(const std::string& className, const std::string& fieldName, const rttr::variant& instance)
+    static bool getClassObjectFieldToLuaStack(lua_State* L, const std::string& className, const std::string& fieldName, const rttr::variant& instance)
     {
         rttr::type type = rttr::type::get_by_name(className);
         if (!type.is_valid())
@@ -1019,30 +1025,30 @@ public:
         {
             return false;
         }
-        return convertToLuaTypeOnStackByTypeId(prop.get_value(instance));
+        return convertToLuaTypeOnStackByTypeId(L, prop.get_value(instance));
     }
 
-    static bool getGlobalVariableToLuaStack(const std::string& fieldName)
+    static bool getGlobalVariableToLuaStack(lua_State* L, const std::string& fieldName)
     {
         rttr::property prop = rttr::type::get_global_property(fieldName);
         if (!prop.is_valid())
         {
             return false;
         }
-        return convertToLuaTypeOnStackByTypeId(prop.get_value(rttr::instance()));
+        return convertToLuaTypeOnStackByTypeId(L, prop.get_value(rttr::instance()));
     }
 
     /// property setters
 
     // uses variants
-    static bool setClassObjectFieldFromLuaStack(const rttr::variant& instance, const std::string& propertyName, int stackIndex = -1)
+    static bool setClassObjectFieldFromLuaStack(lua_State* L, const rttr::variant& instance, const std::string& propertyName, int stackIndex = -1)
     {
         rttr::property prop = instance.get_type().get_raw_type().get_property(propertyName);
         if (!prop.is_valid())
         {
             return false;
         }
-        rttr::variant value = convertStackIndexToType(stackIndex, prop.get_type());
+        rttr::variant value = convertStackIndexToType(L, stackIndex, prop.get_type());
         if (!value.is_valid())
         {
             return false;
@@ -1050,7 +1056,7 @@ public:
         return prop.set_value(instance, value);
     }
 
-    static bool setClassFieldFromLuaStack(const std::string& className, const std::string& propertyName, int stackIndex = -1)
+    static bool setClassFieldFromLuaStack(lua_State* L, const std::string& className, const std::string& propertyName, int stackIndex = -1)
     {
         rttr::type type = rttr::type::get_by_name(className);
         if (!type.is_valid())
@@ -1066,7 +1072,7 @@ public:
         {
             return false;
         }
-        rttr::variant value = convertStackIndexToType(stackIndex, prop.get_type());
+        rttr::variant value = convertStackIndexToType(L, stackIndex, prop.get_type());
         if (!value.is_valid())
         {
             return false;
@@ -1074,14 +1080,14 @@ public:
         return prop.set_value(rttr::instance(), value);
     }
 
-    static bool setGlobalVariableFromLuaStack(const std::string& variableName, int stackIndex = -1)
+    static bool setGlobalVariableFromLuaStack(lua_State* L, const std::string& variableName, int stackIndex = -1)
     {
         rttr::property prop = rttr::type::get_global_property(variableName);
         if (!prop.is_valid())
         {
             return false;
         }
-        rttr::variant value = convertStackIndexToType(stackIndex, prop.get_type());
+        rttr::variant value = convertStackIndexToType(L, stackIndex, prop.get_type());
         if (!value.is_valid())
         {
             return false;
@@ -1091,9 +1097,10 @@ public:
 
     // generic function to set variable, either global or instance, templated
 //     template<typename Class>
-//     static bool setVariableFromLuaStackCommonTemplated(const std::string& name, Class* instancePtr, int stackIndex = -1)
+//     static bool setVariableFromLuaStackCommonTemplated(lua_State* L, const std::string& name, Class* instancePtr, int stackIndex = -1)
 //     {
-//         stackIndex = luaWrapper.makeAbsoluteStackIndex(stackIndex);
+//         LuaWrapper wrapper(L);
+//         stackIndex = wrapper.makeAbsoluteStackIndex(stackIndex);
 //         bool isMemberFunc = instancePtr != nullptr;
 //         rttr::property prop = isMemberFunc ? rttr::type::get<Class>().get_property(name) : rttr::type::get_global_property(name);
 //         if (!prop.is_valid())
@@ -1109,40 +1116,40 @@ public:
 //     }
 // 
 //     // nullptr_t version
-//     static bool setVariableFromLuaStackCommonTemplated(const std::string& name, std::nullptr_t instancePtr, int stackIndex = -1)
+//     static bool setVariableFromLuaStackCommonTemplated(lua_State* L, const std::string& name, std::nullptr_t instancePtr, int stackIndex = -1)
 //     {
-//         return setVariableFromLuaStackCommonTemplated(name, static_cast<void*>(nullptr), stackIndex);
+//         return setVariableFromLuaStackCommonTemplated(L, name, static_cast<void*>(nullptr), stackIndex);
 //     }
 
     // set global variable from lua stack
     // returns if operation was successful, in case of failure, lua stack is not modified
-//     static bool setGlobalVariableFromLuaStack(const std::string& variableName, int stackIndex = -1)
+//     static bool setGlobalVariableFromLuaStack(lua_State* L, const std::string& variableName, int stackIndex = -1)
 //     {
-//         return setVariableFromLuaStackCommonTemplated(variableName, nullptr, stackIndex);
+//         return setVariableFromLuaStackCommonTemplated(L, variableName, nullptr, stackIndex);
 //     }
 // 
 //     // set property from lua stack
 //     template<typename Class>
-//     static bool setClassObjectFieldFromLuaStackTemplated(Class* instance, const std::string& propertyName, int stackIndex = -1)
+//     static bool setClassObjectFieldFromLuaStackTemplated(lua_State* L, Class* instance, const std::string& propertyName, int stackIndex = -1)
 //     {
-//         return setVariableFromLuaStackCommonTemplated(propertyName, instance, stackIndex);
+//         return setVariableFromLuaStackCommonTemplated(L, propertyName, instance, stackIndex);
 //     }
 // 
 //     // set class property from lua stack
 //     template<typename Class>
-//     static bool setClassFieldFromLuaStackTemplated(const std::string& className, const std::string& propertyName, int stackIndex = -1)
+//     static bool setClassFieldFromLuaStackTemplated(lua_State* L, const std::string& className, const std::string& propertyName, int stackIndex = -1)
 //     {
-//         return setVariableFromLuaStackCommonTemplated(propertyName, nullptr, stackIndex);
+//         return setVariableFromLuaStackCommonTemplated(L, propertyName, nullptr, stackIndex);
 //     }
 
-    static rttr::variant callGlobalFunctionWithLuaParams(const std::string& name, int nArgs = -1)
+    static rttr::variant callGlobalFunctionWithLuaParams(lua_State* L, const std::string& name, int nArgs = -1)
     {
         rttr::method meth = rttr::type::get_global_method(name);
 
-        return callWithLuaParamsCommon(meth, rttr::instance(), nArgs);
+        return callWithLuaParamsCommon(L, meth, rttr::instance(), nArgs);
     }
 
-    static rttr::variant callClassObjectMethodWithLuaParams(rttr::variant instance, const std::string& methodName, int nArgs = -1)
+    static rttr::variant callClassObjectMethodWithLuaParams(lua_State* L, rttr::variant instance, const std::string& methodName, int nArgs = -1)
     {
         rttr::type t = instance.get_type().get_raw_type();
         if (!t.is_class())
@@ -1155,10 +1162,10 @@ public:
         }
         rttr::method meth = t.get_method(methodName);
 
-        return callWithLuaParamsCommon(meth, instance, nArgs);
+        return callWithLuaParamsCommon(L, meth, instance, nArgs);
     }
 
-    static rttr::variant callClassMethodWithLuaParams(const std::string& className, const std::string& methodName, int nArgs = -1)
+    static rttr::variant callClassMethodWithLuaParams(lua_State* L, const std::string& className, const std::string& methodName, int nArgs = -1)
     {
         rttr::type t = rttr::type::get_by_name(className);
         if (!t.is_class())
@@ -1167,7 +1174,7 @@ public:
         }
         rttr::method meth = t.get_method(methodName);
 
-        return callWithLuaParamsCommon(meth, rttr::instance(), nArgs);
+        return callWithLuaParamsCommon(L, meth, rttr::instance(), nArgs);
     }
 
     // so, I need to be able to put object, variant containing object or something like that into userdata allocated by lua
@@ -1180,16 +1187,16 @@ public:
 
     // also takes a nArgs parameter, which specifies, how many arguments from lua stack should be passed to constructor (if -1, then any number of arguments is allowed). It needs to be greater or equal to the number of non-default parameters
     // returns variant containing pointer to created object, or invalid variant if no matching constructor was found
-    static rttr::variant findAndInvokeConstructorWithLuaArgs(const rttr::type& type, int nArgs = -1)
+    static rttr::variant findAndInvokeConstructorWithLuaArgs(lua_State* L, const rttr::type& type, int nArgs = -1)
     {
         for (rttr::constructor ctor : type.get_constructors())
         {
             auto info = ctor.get_parameter_infos();
 
             std::vector<rttr::parameter_info> vec(info.begin(), info.end());
-            if (canConvertLuaParameters(vec, nArgs))
+            if (canConvertLuaParameters(L, vec, nArgs))
             {
-                std::vector<rttr::variant> variants = convertLuaParametersToCppForReflection(vec, nArgs);
+                std::vector<rttr::variant> variants = convertLuaParametersToCppForReflection(L, vec, nArgs);
                 std::vector<rttr::argument> params;
                 for (rttr::variant& arg : variants)
                 {
@@ -1244,7 +1251,7 @@ public:
     // returns shared_ptr to created instance, or nullptr if no matching constructor was found
     // this one returns shared_ptr, because it's provided with a class type, so it can have nicer form of usage
     template<typename Class>
-    static std::shared_ptr<Class> createInstanceByConstructorFromLuaStack(int nArgs = -1)
+    static std::shared_ptr<Class> createInstanceByConstructorFromLuaStack(lua_State* L, int nArgs = -1)
     {
         auto result = findAndInvokeConstructorWithLuaArgs(rttr::type::get<Class>(), nArgs);
         // we need to do copy construction, because there are three options for constructor policies regarding object creation:
@@ -1261,14 +1268,14 @@ public:
     // creates instance of given class by calling constructor with matching parameters
     // returns a variant with std::shared_ptr to dynamically-allocated variant containing instance. Variant is invalid if no matching constructor was found
     // returns variant containing pointer to created object, or invalid variant if no matching constructor was found
-    static rttr::variant createInstanceByConstructorFromLuaStack(const std::string& className, int nArgs = -1)
+    static rttr::variant createInstanceByConstructorFromLuaStack(lua_State* L, const std::string& className, int nArgs = -1)
     {
         rttr::type type = rttr::type::get_by_name(className);
         if (!type.is_valid())
         {
             return nullptr;
         }
-        auto result = findAndInvokeConstructorWithLuaArgs(type, nArgs);
+        auto result = findAndInvokeConstructorWithLuaArgs(L, type, nArgs);
         // now hopefully has shared_ptr inside, pointing to new instance of class
         // can methods be invoked reflectively on raw pointers to class?
         return result;
