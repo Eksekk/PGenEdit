@@ -13,11 +13,19 @@ concept IsCvUnqualifiedTopLevel = !(std::is_const_v<std::remove_reference_t<T>> 
 class LuaErrorException : public std::runtime_error
 {
     // TODO: have more fields (like what type of error it is, and what are error parameters, so for type mismatch we can show expected type and actual type) to facilitate unit testing
-    public:
-        LuaErrorException(const std::string& msg) : std::runtime_error(msg) {}
+public:
+    LuaErrorException(const std::string& msg) : std::runtime_error(msg) {}
+
+    ~LuaErrorException()
+    {
+        wxMessageBox(wxString::Format("Lua error: %s", what()), "Lua error", wxICON_ERROR | wxOK);
+    }
 };
 
 // creates "safe" lua error, that is not skipping C++ destructors
+// still need to write try-catch block **in first function on call stack called by lua** which calls luaL_error
+// note: exception object is automatically destroyed, even though lua might skip C++ code by using longjmp to signal error
+// [[noreturn]] doesn't need to be here BTW, exception object is still destroyed
 template<typename... Args>
 [[noreturn]] void luaError(const std::string& msg, Args&&... args)
 {
@@ -1018,6 +1026,7 @@ public:
         rttr::type type = rttr::type::get_by_name(className);
         if (!type.is_valid())
         {
+            // TODO: throw lua exceptions instead of returning false
             return false;
         }
         rttr::property prop = type.get_property(fieldName);
@@ -1186,7 +1195,7 @@ public:
     // for now I will use variant passed by copy, which contains a pointer to object (userdata will contain variant class)
 
     // also takes a nArgs parameter, which specifies, how many arguments from lua stack should be passed to constructor (if -1, then any number of arguments is allowed). It needs to be greater or equal to the number of non-default parameters
-    // returns variant containing pointer to created object, or invalid variant if no matching constructor was found
+    // returns variant containing shared_ptr to created object, or invalid variant if no matching constructor was found
     static rttr::variant findAndInvokeConstructorWithLuaArgs(lua_State* L, const rttr::type& type, int nArgs = -1)
     {
         for (rttr::constructor ctor : type.get_constructors())
@@ -1204,15 +1213,16 @@ public:
                 }
                 rttr::variant result = ctor.invoke_variadic(params);
                 // object is std::shared_ptr<Class>, so we need to extract it
-                result.get_type().get_method("release").invoke(result); // release ownership of object
-                return result.extract_wrapped_value();
+                // PROBLEM: 1) shared_ptr has no release() method, 2) shared_ptr methods are not known to RTTR, so we can't invoke them reflectively
+                //result.get_type().get_method("release").invoke(result); // release ownership of object
+                return result;//.extract_wrapped_value();
             }
         }
         return rttr::variant();
     }
 
 public:
-    // returns variant containing pointer to created object, or invalid variant if no matching constructor was found
+    // returns variant containing shared_ptr to created object, or invalid variant if no matching constructor was found
     static rttr::variant findAndInvokeConstructorWithCppArgs(const rttr::type& type, const std::vector<rttr::variant>& args)
     {
         for (rttr::constructor ctor : type.get_constructors())
@@ -1239,8 +1249,8 @@ public:
                     auto r = args | std::views::transform([](const rttr::variant& var) { return static_cast<rttr::argument>(var); });
                     std::vector<rttr::argument> params(r.begin(), r.end());
                     rttr::variant result = ctor.invoke_variadic(params);
-                    result.get_type().get_method("release").invoke(result); // release ownership of object
-                    return result.extract_wrapped_value();
+                    //result.get_type().get_method("release").invoke(result); // release ownership of object
+                    return result;// .extract_wrapped_value();
                 }
             }
         }
@@ -1267,7 +1277,7 @@ public:
 
     // creates instance of given class by calling constructor with matching parameters
     // returns a variant with std::shared_ptr to dynamically-allocated variant containing instance. Variant is invalid if no matching constructor was found
-    // returns variant containing pointer to created object, or invalid variant if no matching constructor was found
+    // returns variant containing shared_ptr to created object, or invalid variant if no matching constructor was found
     static rttr::variant createInstanceByConstructorFromLuaStack(lua_State* L, const std::string& className, int nArgs = -1)
     {
         rttr::type type = rttr::type::get_by_name(className);

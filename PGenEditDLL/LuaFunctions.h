@@ -3,11 +3,6 @@
 
 extern "C"
 {
-//#include <lj_obj.h>
-}
-
-extern "C"
-{
 	extern lua_State* Lua;
 
 	int runScript(const char* str);

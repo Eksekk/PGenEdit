@@ -31,6 +31,8 @@ const std::vector<type_id> Reflection::TYPE_IDS_NUMBERS{ compileTimeMergeVectors
 // this one doesn't use "pointer" vector to merge, because strings already contain char pointers
 const std::vector<type_id> Reflection::TYPE_IDS_ALL_TYPES{ compileTimeMergeVectors({TYPE_IDS_NUMBERS, TYPE_IDS_STRINGS, {TYPE_ID_BOOL, TYPE_ID_VOID_PTR, TYPE_ID_NIL} }) };
 
+static std::string currentExceptionStr;
+
 // a function like below, but returning boolean if value is of given type and doesn't throw
 template<typename T>
 bool isLuaType(lua_State* L, int index)
@@ -81,7 +83,7 @@ T getLuaTypeOrError(lua_State* L, int index)
     {
         if (!lua_isboolean(L, index))
         {
-            luaError("Expected boolean at index {}, got {}", index, lua_typename(L, index));
+            luaError("Bad argument #{}: expected boolean, got {}", index, lua_typename(L, index));
         }
         return lua_toboolean(L, index);
     }
@@ -89,18 +91,18 @@ T getLuaTypeOrError(lua_State* L, int index)
     {
         if (!lua_isnumber(L, index))
         {
-            luaError("Expected number at index {}, got {}", index, lua_typename(L, index));
+            luaError("Bad argument #{}: expected number, got {}", index, lua_typename(L, index));
         }
         else
         {
             lua_Number num = lua_tonumber(L, index);
             if (num > std::numeric_limits<int>::max() || num < std::numeric_limits<int>::min())
             {
-                luaError("Expected number at index {}, got {}, but it's out of range of int", index, lua_typename(L, index));
+                luaError("Bad argument #{}: number is out of range of int", index, lua_typename(L, index));
             }
             else if (!essentiallyEqualFloats(num, (lua_Number)(sqword_t)num))
             {
-                luaError("Expected number at index {}, got {}, but it's not an integer", index, lua_typename(L, index));
+                luaError("Bad argument #{}: number is not integer", index, lua_typename(L, index));
             }
         }
         return lua_tointeger(L, index);
@@ -109,7 +111,7 @@ T getLuaTypeOrError(lua_State* L, int index)
     {
         if (!lua_isnumber(L, index))
         {
-            luaError("Expected number at index {}, got {}", index, lua_typename(L, index));
+            luaError("Bad argument #{}: expected number, got {}", index, lua_typename(L, index));
         }
         return lua_tonumber(L, index);
     }
@@ -117,7 +119,7 @@ T getLuaTypeOrError(lua_State* L, int index)
     {
         if (!lua_isstring(L, index))
         {
-            luaError("Expected string at index {}, got {}", index, lua_typename(L, index));
+            luaError("Bad argument #{}: expected string, got {}", index, lua_typename(L, index));
         }
         return lua_tostring(L, index);
     }
@@ -125,7 +127,7 @@ T getLuaTypeOrError(lua_State* L, int index)
     {
         if (!lua_isstring(L, index))
         {
-            luaError("Expected string at index {}, got {}", index, lua_typename(L, index));
+            luaError("Bad argument #{}: expected string, got {}", index, lua_typename(L, index));
         }
         return std::string(lua_tostring(L, index));
     }
@@ -133,7 +135,7 @@ T getLuaTypeOrError(lua_State* L, int index)
     {
         if (!lua_istable(L, index))
         {
-            luaError("Expected table at index {}, got {}", index, lua_typename(L, index));
+            luaError("Bad argument #{}: expected table, got {}", index, lua_typename(L, index));
         }
         return LuaTable(L, index);
     }
@@ -141,7 +143,7 @@ T getLuaTypeOrError(lua_State* L, int index)
     {
         if (!lua_isuserdata(L, index))
         {
-            luaError("Expected userdata (object) at index {}, got {}", index, lua_typename(L, index));
+            luaError("Bad argument #{}: expected object (userdata), got {}", index, lua_typename(L, index));
         }
         return lua_touserdata(L, index);
     }
@@ -149,7 +151,7 @@ T getLuaTypeOrError(lua_State* L, int index)
     {
         if (!lua_isnil(L, index))
         {
-            luaError("Expected nil at index {}, got {}", index, lua_typename(L, index));
+            luaError("Bad argument #{}: expected nil, got {}", index, lua_typename(L, index));
         }
         return _Nil();
     }
@@ -252,7 +254,13 @@ static rttr::variant convertToObjectPointer(void* ptr, const std::string& typeNa
     }
 }
 
+// so, it seems the only way to handle creating new objects and destroying them correctly, is using std::shared_ptr<>, or using everywhere policy of raw ptr in constructor
+// for userdata, we can probably reinterpret_cast the userdata into the variant (which will contain shared_ptr) and extract raw pointer from it EVERY TIME we want to use it
+// for tables, we would need to store raw pointer, because creating shared_ptr to existing object is possible, but would destroy the original object when variant is destroyed
+
 // handles both userdata and table
+// userdata contains variant, which itself contains shared_ptr to object
+// table contains raw pointer to object
 static void* luaGetObjectPtr(lua_State* L, int index)
 {
     void* ptr = nullptr;
@@ -263,7 +271,14 @@ static void* luaGetObjectPtr(lua_State* L, int index)
         {
             luaError("Couldn't get object - userdata is null");
         }
-        return ptr;
+        rttr::variant* sharedPtrVar = reinterpret_cast<rttr::variant*>(ptr); // contains shared_ptr
+        rttr::variant rawPtrVar = sharedPtrVar->extract_wrapped_value(); // contains raw pointer
+        if (!rawPtrVar.convert(rttr::type::get<void*>()) || !rawPtrVar.is_type<void*>())
+        {
+            luaError("Couldn't get object - variant obtained from userdata can't be converted to pointer");
+            return nullptr;
+        }
+        return rawPtrVar.get_value<void*>();
         //className = getLuaTableMetafieldOrError<std::string>(index, "className");
     }
     else if (lua_istable(L, index))
@@ -529,16 +544,15 @@ int luaDebug::createObject(lua_State* L)
             }
             else
             {
-                if (!obj.convert(rttr::type::get<void*>()))
+                if (!obj.get_type().is_wrapper())
                 {
-                    luaError("Couldn't create object of type '{}' - couldn't convert to void pointer", name);
+                    luaError("Couldn't create object of type '{}' - variant is not a wrapper, which means it's not a shared_ptr", name);
                     return 0;
                 }
                 else
                 {
-                    void* objPtr = obj.get_value<void*>();
                     void* ud = lua_newuserdata(L, sizeof(rttr::variant)); // automatically pushed to stack
-                    new(ud) rttr::variant(objPtr);
+                    new(ud) rttr::variant(obj); // hopefully copies shared_ptr
                     return 1;
                 }
             }
@@ -553,37 +567,65 @@ int luaDebug::createObject(lua_State* L)
 
 int luaDebug::destroyObject(lua_State* L)
 {
-    LuaWrapper w(L);
-    luaExpectStackSize(L, 1);
-    if (w.isTable(1))
+    try
     {
-        luaError("Couldn't destroy object - first argument is a table (C++ owned object), not userdata");
+        LuaWrapper w(L);
+        luaExpectStackSize(L, 1);
+        if (w.isTable(1))
+        {
+            luaError("Couldn't destroy object - first argument is a table (C++ owned object), not userdata");
+            return 0;
+        }
+        void* ptr = luaGetObjectPtr(L, 1);
+        if (!ptr)
+        {
+            luaError("Couldn't destroy object - pointer is null");
+            return 0;
+        }
+        rttr::variant* var = reinterpret_cast<rttr::variant*>(lua_touserdata(L, 1));
+        // sanity check
+        if (!var->get_type().is_wrapper())
+        {
+            luaError("Couldn't destroy object - variant is not a wrapper, which means it's not a shared_ptr");
+            return 0;
+        }
+        var->get_type().destroy(*var);
+//         rttr::variant var = convertToObjectPointer(ptr, getLuaTableMetafieldOrError<std::string>(L, 1, "className"));
+//         if (!var.is_valid())
+//         {
+//             luaError("Couldn't destroy object - couldn't convert to object pointer");
+//             return 0;
+//         }
+//         var.get_type().destroy(var);
+        // FIXME: will this work with pointers too, and delete pointed-to object, not 4-byte pointer primitive?
         return 0;
     }
-    void* ptr = luaGetObjectPtr(L, 1);
-    if (!ptr)
+    catch (const LuaErrorException& e)
     {
-        luaError("Couldn't destroy object - pointer is null");
+        luaL_error(L, e.what());
         return 0;
     }
-    rttr::variant var = convertToObjectPointer(ptr, getLuaTableMetafieldOrError<std::string>(L, 1, "className"));
-    if (!var.is_valid())
-    {
-        luaError("Couldn't destroy object - couldn't convert to object pointer");
-        return 0;
-    }
-    var.get_type().destroy(var);
-    // FIXME: will this work with pointers too, and delete pointed-to object, not 4-byte pointer primitive?
-    return 0;
 }
 
-// receives: [class name, field name, object]
+// receives: [object, class name, field name]
 int luaDebug::getClassObjectField(lua_State* L)
 {
-    auto className = getLuaTypeOrError<std::string>(L, 1);
-    if (!Reflection::getClassObjectFieldToLuaStack(L, className, getLuaTypeOrError<std::string>(L, 2), convertToObjectPointer(luaGetObjectPtr(L, 3), className)))
+    try
     {
-        luaError("Couldn't get field '{}' of class '{}'", getLuaTypeOrError<std::string>(L, 2), className);
+        auto className = getLuaTypeOrError<std::string>(L, 2);
+        if (!Reflection::getClassObjectFieldToLuaStack(L, className, getLuaTypeOrError<std::string>(L, 3), convertToObjectPointer(luaGetObjectPtr(L, 1), className)))
+        {
+            luaError("Couldn't get field '{}' of class '{}'", getLuaTypeOrError<std::string>(L, 3), className);
+            return 0;
+        }
+    }
+    catch (const LuaErrorException& e)
+    {
+        //currentExceptionStr = e.what();
+        //e.~LuaErrorException();
+        // FIXME: exception object might not be destroyed (applies to all exception handlers like this one)
+        //luaL_error(L, currentExceptionStr.data());
+        luaL_error(L, e.what());
         return 0;
     }
     return 1;
@@ -592,33 +634,49 @@ int luaDebug::getClassObjectField(lua_State* L)
 // receives class name, field name
 int luaDebug::getClassField(lua_State* L)
 {
-    LuaWrapper w(L);
-    luaExpectStackSize(L, 2);
-    std::string className = getLuaTypeOrError<std::string>(L, 1);
-    rttr::type t = rttr::type::get_by_name(className);
-    if (!t.is_valid())
+    try
     {
-        luaError("Type '{}' is not registered", className);
-        return 0;
+        LuaWrapper w(L);
+        luaExpectStackSize(L, 2);
+        std::string className = getLuaTypeOrError<std::string>(L, 1);
+        rttr::type t = rttr::type::get_by_name(className);
+        if (!t.is_valid())
+        {
+            luaError("Type '{}' is not registered", className);
+            return 0;
+        }
+        else if (!t.is_class())
+        {
+            luaError("Couldn't get class '{}', it's not a class", className);
+            return 0;
+        }
+        else
+        {
+            Reflection::getClassFieldToLuaStack(L, className, getLuaTypeOrError<std::string>(L, 2));
+            return 1;
+        }
     }
-    else if (!t.is_class())
+    catch (const LuaErrorException& e)
     {
-        luaError("Couldn't get class '{}', it's not a class", className);
+        luaL_error(L, e.what());
         return 0;
-    }
-    else
-    {
-        Reflection::getClassFieldToLuaStack(L, className, getLuaTypeOrError<std::string>(L, 2));
-        return 1;
     }
 }
 
 // receives global name
 int luaDebug::getGlobalField(lua_State* L)
 {
-    if (!Reflection::getGlobalVariableToLuaStack(L, getLuaTypeOrError<std::string>(L, 1)))
+    try 
     {
-        luaError("Couldn't get global '{}'", getLuaTypeOrError<std::string>(L, 1));
+        if (!Reflection::getGlobalVariableToLuaStack(L, getLuaTypeOrError<std::string>(L, 1)))
+        {
+            luaError("Couldn't get global '{}'", getLuaTypeOrError<std::string>(L, 1));
+            return 0;
+        }
+    }
+    catch (const LuaErrorException& ex)
+    {
+    	luaL_error(L, ex.what());
         return 0;
     }
     return 1;
@@ -627,23 +685,31 @@ int luaDebug::getGlobalField(lua_State* L)
 // receives global name and value
 int luaDebug::setGlobalField(lua_State* L)
 {
-    LuaWrapper w(L);
-    luaExpectStackSize(L, 2);
-    std::string name = getLuaTypeOrError<std::string>(L, 1);
-    rttr::type t = rttr::type::get_by_name(name);
-    if (!t.is_valid())
+    try
     {
-        luaError("Global '{}' doesn't exist", name);
-        return 0;
+        LuaWrapper w(L);
+        luaExpectStackSize(L, 2);
+        std::string name = getLuaTypeOrError<std::string>(L, 1);
+        rttr::type t = rttr::type::get_by_name(name);
+        if (!t.is_valid())
+        {
+            luaError("Global '{}' doesn't exist", name);
+            return 0;
+        }
+        else if (t.is_class())
+        {
+            luaError("Couldn't set global '{}' - it's a class", name);
+            return 0;
+        }
+        else
+        {
+            Reflection::setGlobalVariableFromLuaStack(L, name, 2);
+            return 0;
+        }
     }
-    else if (t.is_class())
+    catch (const LuaErrorException& e)
     {
-        luaError("Couldn't set global '{}' - it's a class", name);
-        return 0;
-    }
-    else
-    {
-        Reflection::setGlobalVariableFromLuaStack(L, name, 2);
+        luaL_error(L, e.what());
         return 0;
     }
 }
@@ -651,65 +717,27 @@ int luaDebug::setGlobalField(lua_State* L)
 // receives class name, function name, number of arguments, and arguments
 int luaDebug::invokeClassMethod(lua_State* L)
 {
-    LuaWrapper w(L);
-    std::string className = getLuaTypeOrError<std::string>(L, 1);
-    rttr::type t = rttr::type::get_by_name(className);
-    if (!t.is_valid())
+    try 
     {
-        luaError("Type '{}' is not registered", className);
-        return 0;
-    }
-    else if (!t.is_class())
-    {
-        luaError("Couldn't get class '{}' - it's not a class", className);
-        return 0;
-    }
-    else
-    {
-        auto result = Reflection::callClassMethodWithLuaParams(L, className, getLuaTypeOrError<std::string>(L, 2), getLuaTypeOrError<int>(L, 3));
-        if (!result)
+        LuaWrapper w(L);
+        std::string className = getLuaTypeOrError<std::string>(L, 1);
+        rttr::type t = rttr::type::get_by_name(className);
+        if (!t.is_valid())
         {
-            luaError("Couldn't call method '{}' of class '{}'", getLuaTypeOrError<std::string>(L, 2), className);
+            luaError("Type '{}' is not registered", className);
+            return 0;
+        }
+        else if (!t.is_class())
+        {
+            luaError("Couldn't get class '{}' - it's not a class", className);
             return 0;
         }
         else
         {
-            Reflection::convertToLuaTypeOnStackByTypeId(L, result);
-            return 1;
-        }
-    }
-}
-
-// receives class name, class object, function name, number of arguments, and arguments
-int luaDebug::invokeClassObjectMethod(lua_State* L)
-{
-    LuaWrapper w(L);
-    std::string className = getLuaTypeOrError<std::string>(L, 1);
-    rttr::type t = rttr::type::get_by_name(className);
-    if (!t.is_valid())
-    {
-        luaError("Type '{}' is not registered", className);
-        return 0;
-    }
-    else if (!t.is_class())
-    {
-        luaError("Couldn't get class '{}' - it's not a class", className);
-        return 0;
-    }
-    else
-    {
-        rttr::variant var = convertToObjectPointer(luaGetObjectPtr(L, 2), className);
-        if (!var.is_valid())
-        {
-            luaError("Couldn't convert class '{}' to object pointer", className);
-            return 0;
-        }
-        else
-        {
-            auto result = Reflection::callClassObjectMethodWithLuaParams(L, var, getLuaTypeOrError<std::string>(L, 3), getLuaTypeOrError<int>(L, 4));
+            auto result = Reflection::callClassMethodWithLuaParams(L, className, getLuaTypeOrError<std::string>(L, 2), getLuaTypeOrError<int>(L, 3));
             if (!result)
             {
-                luaError("Couldn't call method '{}' of class '{}'", getLuaTypeOrError<std::string>(L, 3), className);
+                luaError("Couldn't call method '{}' of class '{}'", getLuaTypeOrError<std::string>(L, 2), className);
                 return 0;
             }
             else
@@ -719,82 +747,162 @@ int luaDebug::invokeClassObjectMethod(lua_State* L)
             }
         }
     }
+    catch (const LuaErrorException& e)
+    {
+        luaL_error(L, e.what());
+        return 0;
+    }
+}
+
+// receives class name, class object, function name, number of arguments, and arguments
+int luaDebug::invokeClassObjectMethod(lua_State* L)
+{
+    try
+    {
+        LuaWrapper w(L);
+        std::string className = getLuaTypeOrError<std::string>(L, 1);
+        rttr::type t = rttr::type::get_by_name(className);
+        if (!t.is_valid())
+        {
+            luaError("Type '{}' is not registered", className);
+            return 0;
+        }
+        else if (!t.is_class())
+        {
+            luaError("Couldn't get class '{}' - it's not a class", className);
+            return 0;
+        }
+        else
+        {
+            rttr::variant var = convertToObjectPointer(luaGetObjectPtr(L, 2), className);
+            if (!var.is_valid())
+            {
+                luaError("Couldn't convert class '{}' to object pointer", className);
+                return 0;
+            }
+            else
+            {
+                auto result = Reflection::callClassObjectMethodWithLuaParams(L, var, getLuaTypeOrError<std::string>(L, 3), getLuaTypeOrError<int>(L, 4));
+                if (!result)
+                {
+                    luaError("Couldn't call method '{}' of class '{}'", getLuaTypeOrError<std::string>(L, 3), className);
+                    return 0;
+                }
+                else
+                {
+                    Reflection::convertToLuaTypeOnStackByTypeId(L, result);
+                    return 1;
+                }
+            }
+        }
+    }
+    catch (const LuaErrorException& e)
+    {
+        luaL_error(L, e.what());
+        return 0;
+    }
+    
 }
 
 // receives function name, number of arguments, and arguments
 int luaDebug::invokeGlobalMethod(lua_State* L)
 {
-    LuaWrapper w(L);
-    auto result = Reflection::callGlobalFunctionWithLuaParams(L, getLuaTypeOrError<std::string>(L, 1), getLuaTypeOrError<int>(L, 2));
-    if (!result)
+
+    try 
     {
-        luaError("Couldn't call global function '{}'", getLuaTypeOrError<std::string>(L, 1));
+        LuaWrapper w(L);
+        auto result = Reflection::callGlobalFunctionWithLuaParams(L, getLuaTypeOrError<std::string>(L, 1), getLuaTypeOrError<int>(L, 2));
+        if (!result)
+        {
+            luaError("Couldn't call global function '{}'", getLuaTypeOrError<std::string>(L, 1));
+            return 0;
+        }
+        else
+        {
+            Reflection::convertToLuaTypeOnStackByTypeId(L, result);
+            return 1;
+        }
+    }
+    catch (const LuaErrorException& ex)
+    {
+        luaL_error(L, ex.what());
         return 0;
-    }  
-    else
-    {
-        Reflection::convertToLuaTypeOnStackByTypeId(L, result);
-        return 1;
     }
 }
 
 // receives object, property name, value
 int luaDebug::setClassObjectField(lua_State* L)
 {
-    LuaWrapper w(L);
-    luaExpectStackSize(L, 3);
-    std::string className = getLuaTypeOrError<std::string>(L, 1);
-    rttr::type t = rttr::type::get_by_name(className);
-    if (!t.is_valid())
+    try 
     {
-        luaError("Type '{}' is not registered", className);
-        return 0;
-    }
-    else if (!t.is_class())
-    {
-        luaError("Couldn't get class '{}', it's not a class", className);
-        return 0;
-    }
-    else
-    {
-        rttr::variant var = convertToObjectPointer(luaGetObjectPtr(L, 1), className);
-        if (!var.is_valid())
+        LuaWrapper w(L);
+        luaExpectStackSize(L, 3);
+        std::string className = getLuaTypeOrError<std::string>(L, 1);
+        rttr::type t = rttr::type::get_by_name(className);
+        if (!t.is_valid())
         {
-            luaError("Couldn't get class '{}', couldn't convert to object pointer", className);
+            luaError("Type '{}' is not registered", className);
+            return 0;
+        }
+        else if (!t.is_class())
+        {
+            luaError("Couldn't get class '{}', it's not a class", className);
             return 0;
         }
         else
         {
-            if (!Reflection::setClassObjectFieldFromLuaStack(L, var, getLuaTypeOrError<std::string>(L, 2), 3))
+            rttr::variant var = convertToObjectPointer(luaGetObjectPtr(L, 1), className);
+            if (!var.is_valid())
             {
-                luaError("Couldn't set field '{}' of class '{}'", getLuaTypeOrError<std::string>(L, 2), className);
+                luaError("Couldn't get class '{}', couldn't convert to object pointer", className);
+                return 0;
             }
-            return 0;
+            else
+            {
+                if (!Reflection::setClassObjectFieldFromLuaStack(L, var, getLuaTypeOrError<std::string>(L, 2), 3))
+                {
+                    luaError("Couldn't set field '{}' of class '{}'", getLuaTypeOrError<std::string>(L, 2), className);
+                }
+                return 0;
+            }
         }
+    }
+    catch (const LuaErrorException& ex)
+    {
+        luaL_error(L, ex.what());
+        return 0;
     }
 }
 
 // receives class name, property name, value
 int luaDebug::setClassField(lua_State* L)
 {
-    LuaWrapper w(L);
-    luaExpectStackSize(L, 3);
-    std::string className = getLuaTypeOrError<std::string>(L, 1);
-    rttr::type t = rttr::type::get_by_name(className);
-    if (!t.is_valid())
+    try 
     {
-        luaError("Type '{}' is not registered", className);
-        return 0;
+        LuaWrapper w(L);
+        luaExpectStackSize(L, 3);
+        std::string className = getLuaTypeOrError<std::string>(L, 1);
+        rttr::type t = rttr::type::get_by_name(className);
+        if (!t.is_valid())
+        {
+            luaError("Type '{}' is not registered", className);
+            return 0;
+        }
+        else if (!t.is_class())
+        {
+            luaError("Couldn't set field of type '{}' - it's not a class", className);
+            return 0;
+        }
+        else
+        {
+            Reflection::setClassFieldFromLuaStack(L, className, getLuaTypeOrError<std::string>(L, 2), 3);
+            return 1;
+        }
     }
-    else if (!t.is_class())
+    catch (const LuaErrorException& ex)
     {
-        luaError("Couldn't set field of type '{}' - it's not a class", className);
+        luaL_error(L, ex.what());
         return 0;
-    }
-    else
-    {
-        Reflection::setClassFieldFromLuaStack(L, className, getLuaTypeOrError<std::string>(L, 2), 3);
-        return 1;
     }
 }
 
@@ -838,64 +946,80 @@ void insertPropertyAndMethodData(const rttr::array_range<rttr::property>& proper
 // receives: class name
 int luaDebug::getClassInfo(lua_State* L)
 {
-    luaExpectStackSize(L, 1);
-    std::string name = getLuaTypeOrError<std::string>(L, 1);
-    rttr::type t{ type::get_by_name(name) };
-    if (!t.is_valid())
+    try 
     {
-        luaError("Couldn't get class '{}'", name);
+	    luaExpectStackSize(L, 1);
+	    std::string name = getLuaTypeOrError<std::string>(L, 1);
+	    rttr::type t{ type::get_by_name(name) };
+	    if (!t.is_valid())
+	    {
+	        luaError("Couldn't get class '{}'", name);
+	        return 0;
+	    }
+	    else if (!t.is_class())
+	    {
+	        luaError("Couldn't get class '{}', it's not a class", name);
+	        return 0;
+	    }
+	    /*
+	    -- name, type, isConst, isReference, isPointer, isClass, isEnum, isStatic, isField, isMethod, isCallable
+	    -- isCallable (for example std::function, functions as fields)
+	    -- if isCallable, then also returnType, params [array of basic properties above + two extra fields: hasDefaultValue, defaultValue]
+	    */
+	    LuaTable info;
+	    insertPropertyAndMethodData(t.get_properties(), t.get_methods(), info);
+	
+	    for (auto& ctor : t.get_constructors())
+	    {
+	        LuaTable propInfo;
+	        //fillInBasicTypeData(propInfo, ctor.get_return_type());
+	        propInfo["returnType"] = getBasicTypeDataTable(ctor.get_declaring_type()); // always same return value
+	        propInfo["isField"] = false;
+	        propInfo["isMethod"] = true;
+	        propInfo["isCallable"] = true;
+	
+	        propInfo["params"] = getCallableParamsTable(ctor.get_parameter_infos());
+	        propInfo["signature"] = ctor.get_signature().to_string();
+	
+	        info.getTableFieldOrCreate("constructors").arrayInsert(propInfo);
+	    }
+	
+	    // bases, derived
+	    LuaTable bases;
+	    for (auto& base : t.get_base_classes())
+	    {
+	        bases.arrayInsert(base.get_name().to_string());
+	    }
+	    info["bases"] = bases;
+	    LuaTable derived;
+	    for (auto& derivedClass : t.get_derived_classes())
+	    {
+	        derived.arrayInsert(derivedClass.get_name().to_string());
+	    }
+	    info["derived"] = derived;
+	
+	    info.pushToLuaStack(L);
+	    return 1;
+    }
+    catch (const LuaErrorException& ex)
+    {
+	    luaL_error(L, ex.what());
         return 0;
     }
-    else if (!t.is_class())
-    {
-        luaError("Couldn't get class '{}', it's not a class", name);
-        return 0;
-    }
-    /*
-    -- name, type, isConst, isReference, isPointer, isClass, isEnum, isStatic, isField, isMethod, isCallable
-    -- isCallable (for example std::function, functions as fields)
-    -- if isCallable, then also returnType, params [array of basic properties above + two extra fields: hasDefaultValue, defaultValue]
-    */
-    LuaTable info;
-    insertPropertyAndMethodData(t.get_properties(), t.get_methods(), info);
-
-    for (auto& ctor : t.get_constructors())
-    {
-        LuaTable propInfo;
-        //fillInBasicTypeData(propInfo, ctor.get_return_type());
-        propInfo["returnType"] = getBasicTypeDataTable(ctor.get_declaring_type()); // always same return value
-        propInfo["isField"] = false;
-        propInfo["isMethod"] = true;
-        propInfo["isCallable"] = true;
-
-        propInfo["params"] = getCallableParamsTable(ctor.get_parameter_infos());
-        propInfo["signature"] = ctor.get_signature().to_string();
-
-        info.getTableFieldOrCreate("constructors").arrayInsert(propInfo);
-    }
-
-    // bases, derived
-    LuaTable bases;
-    for (auto& base : t.get_base_classes())
-    {
-        bases.arrayInsert(base.get_name().to_string());
-    }
-    info["bases"] = bases;
-    LuaTable derived;
-    for (auto& derivedClass : t.get_derived_classes())
-    {
-        derived.arrayInsert(derivedClass.get_name().to_string());
-    }
-    info["derived"] = derived;
-
-    info.pushToLuaStack(L);
-    return 1;
 }
 
 int luaDebug::getGlobalEnvironmentInfo(lua_State* L)
 {
-    LuaTable info;
-    insertPropertyAndMethodData(rttr::type::get_global_properties(), rttr::type::get_global_methods(), info);
-    info.pushToLuaStack(L);
-    return 1;
+    try 
+    {
+        LuaTable info;
+        insertPropertyAndMethodData(rttr::type::get_global_properties(), rttr::type::get_global_methods(), info);
+        info.pushToLuaStack(L);
+        return 1;
+    }
+    catch (const LuaErrorException& ex)
+    {
+    	luaL_error(L, ex.what());
+        return 0;
+    }
 }

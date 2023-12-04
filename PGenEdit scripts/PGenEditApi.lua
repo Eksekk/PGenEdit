@@ -56,7 +56,11 @@ local function isObjectOfClassOrDerived(obj, checkName)
 	end
 	local objMT = getmetatable(obj)
 	-- support both class name and class table
-	checkName = type(checkName == "table") and getmetatable(checkName).name or checkName
+	if checkName == nil then
+		checkName = getmetatable(obj).className
+	else
+		checkName = type(checkName) == "table" and getmetatable(checkName).name or checkName
+	end
 	if objMT.className == checkName then -- same class
 		return true
 	elseif table.find(objMT.classMetatable.bases, checkName) then -- first-level base class
@@ -265,21 +269,21 @@ end
 -- contrary to its name, for methods it uses rawset in addition to returning function, to cache the functions, because their creation might be expensive
 -- as single table is used for all polymorphic objects, I can't use __index and __newindex metamethods to check for field existence, because I would have to call them manually from metatable (ugly)
 
-local function currentOrInheritedMemberLookup(obj, key, className, treatAsClass, shouldBeStatic)
+local function currentOrInheritedMemberLookup(obj, key, className, treatAsClassName, shouldBeStatic)
 	-- since treatAsClass is passed only for first function call, we don't need to check the object hierarchy validity in subsequent calls, as it's already checked
-	if not treatAsClass and getmetatable(obj).className ~= className and not isObjectOfClassOrDerived(obj, className) then
+	if not treatAsClassName and getmetatable(obj).className ~= className and not isObjectOfClassOrDerived(obj, className) then
 		error(format("Received object of type %q, expected %q", getmetatable(obj).className, className), 3)
 	end
-	local data = getmetatable(obj).getMemberData(key)
-	if data.isField and data.isStatic == shouldBeStatic then -- current class has matching field
+	local data = getmetatable(obj).classMetatable.getMemberData(key)
+	if data.isField and (shouldBeStatic == nil or data.isStatic == shouldBeStatic) then -- current class has matching field, or shouldBeStatic is not provided
 		return api.getClassObjectField(obj, className, key)
 	elseif data.isCallable and data.isStatic == shouldBeStatic then -- current class has matching method
 		local f = funcWrapper(className, key, data)
-		rawset(obj, key, f) -- cache future accesses to methods
+		-- rawset(obj, key, f) -- cache future accesses to methods
 		return f
 	else
 		 -- recursively check base classes
-		local bases = getmetatable(treatAsClass and cpp.class[treatAsClass] or obj).bases
+		local bases = treatAsClassName and getmetatable(cpp.class[treatAsClassName]) or getmetatable(obj).classMetatable.bases
 		for i, cls in ipairs(bases) do
 			local val = currentOrInheritedMemberLookup(obj, key, className, cls, shouldBeStatic)
 			if val ~= nil then -- if found, return the value
@@ -292,11 +296,11 @@ end
 
 -- now same as above, but for setting (__newindex), using behavior from below __newindex
 -- returns if value was set somewhere in the hierarchy
-local function currentOrInheritedMemberSet(obj, key, value, className, treatAsClass, shouldBeStatic)
-	if not treatAsClass and getmetatable(obj).className ~= className and not isObjectOfClassOrDerived(obj, className) then
+local function currentOrInheritedMemberSet(obj, key, value, className, treatAsClassName, shouldBeStatic)
+	if not treatAsClassName and getmetatable(obj).className ~= className and not isObjectOfClassOrDerived(obj, className) then
 		error(format("Received object of type %q, expected %q", getmetatable(obj).className, className), 3)
 	end
-	local data = getmetatable(obj).getMemberData(key)
+	local data = getmetatable(obj).classMetatable.getMemberData(key)
 	if data.isField and data.isStatic == shouldBeStatic then -- base class has field
 		api.setClassObjectField(obj, className, key, value)
 		return true
@@ -304,7 +308,7 @@ local function currentOrInheritedMemberSet(obj, key, value, className, treatAsCl
 		error(format("Attempt to set method %q of class %q", key, className), 3)
 	else
 		-- recursively check base classes
-		local bases = getmetatable(treatAsClass and cpp.class[treatAsClass] or obj).bases
+		local bases = treatAsClassName and getmetatable(cpp.class[treatAsClassName]) or getmetatable(obj).classMetatable.bases
 		for i, cls in ipairs(bases) do
 			if currentOrInheritedMemberSet(obj, key, value, className, cls, shouldBeStatic) then
 				return true
@@ -347,16 +351,23 @@ local createObjectMetatable
 	local function new(...)
 		-- TODO: find constructor matching parameters (count, types and possible conversions between types) and default arguments, if no matching constructor found, throw an error
 		local obj = api.createObject(className, select("#", ...), ...)
-		setmetatable(obj, objMT) -- FIXME: you can't set a metatable of userdata without using debug library, so C++ needs to do it
+		debug.setmetatable(obj, objMT) -- FIXME: you can't set a metatable of userdata without using debug library, so C++ needs to do it
 		return obj
 	end
 	classMT.__call = new
 	classMT.new = new
 	-- static variables
 	function classMT.__index(t, str)
+		-- handling this here, because I don't want to make overwriting the field possible
+		if str == "new" then
+			return new
+		end
 		local data = getMemberData(str)
+		if not data then
+			error(format("Attempt to access unknown static field %q of class %q", str, className), 2)
+		end
 		if data.isCallable and data.isStatic then
-			local f = funcWrapper(className, str)
+			local f = funcWrapper(className, str, data)
 			--rawset(t, str, f)
 			return f
 		elseif not data.isCallable and data.isStatic then
@@ -367,6 +378,9 @@ local createObjectMetatable
 	end
 	function classMT.__newindex(t, key, value)
 		local data = getMemberData(key)
+		if not data then
+			error(format("Attempt to set unknown static field %q of class %q", key, className), 2)
+		end
 		-- changing callable members that aren't methods is not allowed, because they are not expecting possible lua errors/type differences from writing lua callback to be called from C++ via field
 		assert(not data.isCallable, format("Attempt to set callable member %q of class %q", key, className), 2)
 		if data.isStatic then
@@ -395,7 +409,7 @@ end
 
 	function objMT.__index(obj, key)
 		-- check for correct object type (inheritance won't change much, still original object is passed, just different metatable functions are called)
-		local val = currentOrInheritedMemberLookup(obj, key)
+		local val = currentOrInheritedMemberLookup(obj, key, className)
 		if val ~= nil then
 			return val
 		else
@@ -404,7 +418,7 @@ end
 	end
 
 	function objMT.__newindex(obj, key, value)
-		if not currentOrInheritedMemberSet(obj, key, value) then
+		if not currentOrInheritedMemberSet(obj, key, value, className) then
 			error(format("Attempt to set unknown field %q of class %q", key, className), 2)
 		end
 	end
@@ -439,7 +453,7 @@ function mt.__index(t, key)
 		error(format("Attempt to access unknown global function/variable %q", key), 2)
 	end
 	if data.isCallable then
-		local f = funcWrapper(nil, key)
+		local f = funcWrapper(nil, key, data)
 		--rawset(t, key, f) -- commented out, because std::function fields might theoretically change their value
 		return f
 	elseif data.isField then
@@ -479,7 +493,7 @@ function tests()
 		local val = stru[name]
 		cmpFunc = cmpFunc or defCmp
 		if not cmpFunc(val, value) then
-			addError("stru.%s == %q, expected %q", name, val, value)
+			addError(2, "stru.%s == %q, expected %q", name, val, value)
 		end
 	end
 	local function testSetProp(name, value, cmpFunc)
@@ -487,7 +501,7 @@ function tests()
 		cmpFunc = cmpFunc or defCmp
 		local val = stru[name]
 		if not cmpFunc(val, value) then
-			addError("stru.%s == %q, expected %q", name, val, value)
+			addError(2, "stru.%s == %q, expected %q", name, val, value)
 		end
 	end
 
@@ -539,7 +553,7 @@ function tests()
 
 	-- test different instance
 	local struOld = stru
-	stru = cpp.class.ReflectionSampleStruct()
+	stru = cpp.class.ReflectionSampleStruct() -- use call syntax for object creation
 	testGetProp("i", 0)
 	testGetProp("str", "default")
 	testGetProp("vec", {1, 2, 3}, cmpArrayVector)

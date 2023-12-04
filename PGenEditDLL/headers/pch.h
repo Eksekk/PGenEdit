@@ -56,6 +56,9 @@ extern "C"
 {
 #include <lua.h>
 #include <lauxlib.h>
+
+// make stuff like lua_State* work with RTTR (be defined, not only declared)
+#include <lj_obj.h>
 }
 
 // game structs
