@@ -830,14 +830,14 @@ int luaDebug::invokeGlobalMethod(lua_State* L)
     }
 }
 
-// receives object, property name, value
+// receives object, class name, property name, value
 int luaDebug::setClassObjectField(lua_State* L)
 {
     try 
     {
         LuaWrapper w(L);
-        luaExpectStackSize(L, 3);
-        std::string className = getLuaTypeOrError<std::string>(L, 1);
+        luaExpectStackSize(L, 4);
+        std::string className = getLuaTypeOrError<std::string>(L, 2);
         rttr::type t = rttr::type::get_by_name(className);
         if (!t.is_valid())
         {
@@ -859,9 +859,9 @@ int luaDebug::setClassObjectField(lua_State* L)
             }
             else
             {
-                if (!Reflection::setClassObjectFieldFromLuaStack(L, var, getLuaTypeOrError<std::string>(L, 2), 3))
+                if (!Reflection::setClassObjectFieldFromLuaStack(L, var, getLuaTypeOrError<std::string>(L, 3), 4))
                 {
-                    luaError("Couldn't set field '{}' of class '{}'", getLuaTypeOrError<std::string>(L, 2), className);
+                    luaError("Couldn't set field '{}' of class '{}'", getLuaTypeOrError<std::string>(L, 3), className);
                 }
                 return 0;
             }

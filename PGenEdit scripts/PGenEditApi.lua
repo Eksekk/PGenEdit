@@ -301,7 +301,7 @@ local function currentOrInheritedMemberSet(obj, key, value, className, treatAsCl
 		error(format("Received object of type %q, expected %q", getmetatable(obj).className, className), 3)
 	end
 	local data = getmetatable(obj).classMetatable.getMemberData(key)
-	if data.isField and data.isStatic == shouldBeStatic then -- base class has field
+	if data.isField and (shouldBeStatic == nil or data.isStatic == shouldBeStatic) then -- base class has field
 		api.setClassObjectField(obj, className, key, value)
 		return true
 	elseif data.isMethod and data.isStatic == shouldBeStatic then -- base class has method

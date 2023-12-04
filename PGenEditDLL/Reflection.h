@@ -18,7 +18,7 @@ public:
 
     ~LuaErrorException()
     {
-        wxMessageBox(wxString::Format("Lua error: %s", what()), "Lua error", wxICON_ERROR | wxOK);
+        //wxMessageBox(wxString::Format("Lua error: %s", what()), "Lua error", wxICON_ERROR | wxOK);
     }
 };
 
@@ -540,7 +540,7 @@ private:
         }
         else
         {
-            luaError("Unsupported type '%s' in convertVariantToLuaTypeInCpp", var.get_type().get_name().to_string());
+            luaError("Unsupported type '{}' in convertVariantToLuaTypeInCpp", var.get_type().get_name().to_string());
             return 0; // dummy return
         }
     }
@@ -684,16 +684,18 @@ private:
         if (val.is_sequential_container())
         {
             // create table from sequential container
-            rttr::type wrappedType = val.get_type().get_wrapped_type();
             rttr::variant_sequential_view seqView = val.create_sequential_view();
+            // IMPORTANT: values are stored inside reference_wrapper, so we have to get wrapped type
+            rttr::type wrappedType = seqView.get_value_type().get_wrapped_type();
             LuaTable t;
             for (int i = 0; auto& value : seqView)
             {
-                if (value.get_type().get_id() != wrappedType.get_id())
-                {
-                    throw std::runtime_error("Can't convert sequential container to lua table, because it contains elements of different types");
-                }
-                t[i++] = convertVariantToLuaTypeInCpp(value);
+//                 if (value.get_type().get_id() != wrappedType.get_id())
+//                 {
+//                     throw std::runtime_error("Can't convert sequential container to lua table, because it contains elements of different types");
+//                 }
+                // TODO: a way to avoid copy here?
+                t[i++] = convertVariantToLuaTypeInCpp(value.extract_wrapped_value());
             }
             t.pushToLuaStack(L);
         }
@@ -702,10 +704,20 @@ private:
             // create table from associative container
             rttr::type wrappedType = val.get_type().get_wrapped_type();
             rttr::variant_associative_view assocView = val.create_associative_view();
+            rttr::type wrappedKeyType = assocView.get_key_type();
+            rttr::type wrappedValueType = assocView.get_value_type();
             LuaTable t;
             for (auto&& [key, value] : assocView)
             {
-                t[convertVariantToLuaTypeInCpp(key)] = convertVariantToLuaTypeInCpp(value);
+//                 if (key.get_type().get_id() != wrappedKeyType.get_id())
+//                 {
+//                     throw std::runtime_error("Can't convert associative container to lua table, because it contains keys of different types");
+//                 }
+//                 if (value.get_type().get_id() != wrappedValueType.get_id())
+//                 {
+//                     throw std::runtime_error("Can't convert associative container to lua table, because it contains values of different types");
+//                 }
+                t[convertVariantToLuaTypeInCpp(key.extract_wrapped_value())] = convertVariantToLuaTypeInCpp(value.extract_wrapped_value());
             }
             t.pushToLuaStack(L);
         }
@@ -715,6 +727,10 @@ private:
         }
         else if (typ == TYPE_ID_LUA_TABLE)
         {
+            if (!val.is_type<LuaTable>())
+            {
+                throw std::runtime_error("Can't convert lua table to lua table, because it's not of type LuaTable");
+            }   
             val.get_value<LuaTable>().pushToLuaStack(L);
         }
         else if (typ == TYPE_ID_BOOL)
