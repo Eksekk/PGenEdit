@@ -340,18 +340,20 @@ private:
             {
                 // have to extract information from lua table into rttr::variant containing desired container
                 // VECTOR IS NOT REGISTERED
-                rttr::variant var = CONVERT_TO_VECTOR{}; // shared_ptr
-                assert(var.convert(typ)); // hopefully convert element to vector
+                //rttr::variant var = toContainer::vector{}; // shared_ptr
+                //assert(var.convert(typ)); // hopefully convert element to vector
+                rttr::variant var = typ.create();
                 assert(var.is_sequential_container());
 
                 rttr::variant_sequential_view seqView = var.create_sequential_view();
                 //rttr::variant_sequential_view seqView = var.extract_wrapped_value().create_sequential_view();
-                rttr::type valType = seqView.get_value_type();
-                if (!valType.is_wrapper())
-                {
-                    throw std::runtime_error("Can't convert lua table to sequential container, because it contains elements of non-wrapped type");
-                }
-                rttr::type wrappedType = valType.get_wrapped_type();
+//                 rttr::type valType = seqView.get_value_type();
+//                 if (!valType.is_wrapper())
+//                 {
+//                     throw std::runtime_error("Can't convert lua table to sequential container, because it contains elements of non-wrapped type");
+//                 }
+//                 rttr::type wrappedType = valType.get_wrapped_type();
+                rttr::type wrappedType = seqView.get_value_type();
                 LuaTable t = LuaTable::fromLuaTable(L, stackIndex);
                 auto arr = t.getArrayPart();
                 seqView.set_size(arr.size());
@@ -745,7 +747,7 @@ private:
             // create table from sequential container
             rttr::variant_sequential_view seqView = val.create_sequential_view();
             // IMPORTANT: values are stored inside reference_wrapper, so we have to get wrapped type
-            rttr::type wrappedType = seqView.get_value_type().get_wrapped_type();
+            rttr::type wrappedType = seqView.get_value_type();
             LuaTable t;
             for (int i = 0; auto& value : seqView)
             {

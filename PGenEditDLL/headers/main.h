@@ -178,18 +178,46 @@ concept canConvertToContainer = requires // can't register conversion functions 
     T(static_cast<const T&>(std::declval<T>()));
 };
 
-// this struct's only purpose is to be passed to conversion function to indicate that it should return empty vector (make it somewhat type-safe)
-struct CONVERT_TO_VECTOR {};
+namespace toContainer
+{
+    // this struct's only purpose is to be passed to conversion function to indicate that it should return empty vector (make it somewhat type-safe)
+    struct vector {};
+    struct array {};
+}
+
+template<typename ValType, size_t s>
+void registerArrayConversionFunctions()
+{
+    using namespace toContainer;
+    auto f = [](const array& val, bool& ok)->std::array<ValType, s>
+    {
+        ok = true;
+        return std::array<ValType, s>{ };
+    };
+    rttr::type::register_converter_func(f);
+    if constexpr (s < 50)
+    {
+        registerArrayConversionFunctions<ValType, s + 1>();
+    }
+}
 
 template<typename T>
 void registerContainerConversionFunctions()
 {
-    auto f = [](const CONVERT_TO_VECTOR& val, bool& ok) -> std::vector<T>
-        {
-            ok = true;
-            return std::vector<T>{ };
-        };
-    rttr::type::register_converter_func(f);
+    using namespace toContainer;
+//     auto f = [](const T& val, bool& ok) -> std::vector<T>
+//         {
+//             ok = true;
+//             return std::vector<T>{ };
+//         };
+//     rttr::type::register_converter_func(f);
+//     rttr::type::register_converter_func([](const auto& val, bool& ok) -> std::vector<std::decay_t<decltype(val)>>
+//         {
+//             ok = true;
+//             return std::vector{ val };
+//         });
+    //registerArrayConversionFunctions<T, 0>();
+    rttr::registration::class_<std::vector<T>>().constructor<>();
 }
 
 template<typename T>
