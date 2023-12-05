@@ -243,19 +243,19 @@ private:
                 using FuncVector = std::vector<CreateContainerFunc>;
                 if (const rttr::property* prop = std::get_if<rttr::property>(&var))
                 {
-                    rttr::variant m = prop->get_metadata("creationFunctions");
+                    rttr::variant m = prop->get_metadata(g_CONTAINER_CREATION_FUNC_METADATA_NAME);
                     assert(m.is_type<FuncVector>());
                     return m.get_value<FuncVector>()[0];
                 }
                 else if (const std::pair<rttr::constructor, size_t>* constr = std::get_if<std::pair<rttr::constructor, size_t>>(&var))
                 {
-                    rttr::variant m = constr->first.get_metadata("creationFunction");
+                    rttr::variant m = constr->first.get_metadata(g_CONTAINER_CREATION_FUNC_METADATA_NAME);
                     assert(m.is_type<FuncVector>());
                     return m.get_value<FuncVector>()[constr->second];
                 }
                 else if (const std::pair<rttr::method, size_t>* method = std::get_if<std::pair<rttr::method, size_t>>(&var))
                 {
-                    rttr::variant m = method->first.get_metadata("creationFunction");
+                    rttr::variant m = method->first.get_metadata(g_CONTAINER_CREATION_FUNC_METADATA_NAME);
                     assert(m.is_type<FuncVector>());
                     return m.get_value<FuncVector>()[method->second];
                 }
@@ -406,7 +406,7 @@ private:
                 //assert(var.convert(classPropertyVariant)); // hopefully convert element to vector
                 //assert(classPropertyVariant.get_metadata("createFunc").is_type<CreateContainerFunc>()); // getting metadata from PROPERTY might allow it to work
                 //rttr::variant var = classPropertyVariant.get_metadata("createFunc").get_value<CreateContainerFunc>()();
-                rttr::variant f = getCreationFunction(classPropertyVariant);
+                 rttr::variant f = getCreationFunction(classPropertyVariant);
                 assert(f.is_type<CreateContainerFunc>());
                 rttr::variant var = f.get_value<CreateContainerFunc>()();
                 //CreateObjectVisitor visitor(var);
@@ -935,6 +935,7 @@ private:
         }
         else
         {
+            luaError("Unsupported type '{}' in convertToLuaTypeOnStackByTypeId", val.get_type().get_name().to_string());
             return false;
             //wxFAIL_MSG(wxString::Format("Can't convert type '%s' to matching lua type", val.get_type().get_name().data()));
         }
@@ -1047,7 +1048,7 @@ private:
         // check validity of stack index
         if (stackIndex < 1 || stackIndex > wrapper.gettop())
         {
-            wxFAIL_MSG(wxString::Format("Invalid stack index %d (current size is %d)", stackIndex, wrapper.gettop()));
+            luaError("Invalid stack index {} (current size is {})", stackIndex, wrapper.gettop());
             return false;
         }
         if (const rttr::method* meth = std::get_if<rttr::method>(&callableIndexPair.first))
@@ -1060,7 +1061,7 @@ private:
         }
         else
         {
-            wxFAIL_MSG("Unknown type of std::variant");
+            luaError("Unknown type of std::variant");
             return false;
         }
     }
@@ -1082,6 +1083,7 @@ private:
         }
         else if (nArgs > (int)required.size())
         {
+            luaError("Too many parameters passed by lua function (expected {}, got {})", required.size(), nArgs);
             return false;
         }
         else if (nArgs < (int)required.size())
@@ -1097,6 +1099,7 @@ private:
             }
             if (!haveDefault)
             {
+                luaError("Not enough parameters passed by lua function (expected {}, got {}), can't recover using default values", required.size(), nArgs);
                 return false;
             }
         }
@@ -1105,6 +1108,7 @@ private:
             int stackIndex = wrapper.makeAbsoluteStackIndex(wrapper.gettop() - nArgs + i + 1);
             if (!canConvertLuaParameter(L, stackIndex, std::make_pair(callable, i)))
             {
+luaError("Can't convert parameter {} (stack index {}, name '{}') of lua type '{}' to C++ type '{}'", i + 1, stackIndex, required[i].get_name().data(), lua_typename(L, stackIndex), required[i].get_type().get_name().data());
                 return false;
             }
         }
@@ -1192,16 +1196,99 @@ public:
 //     }
 
     // gets static field of class to lua stack
+    static void classDoesNotExistLuaError(const std::string& className)
+    {
+        luaError("Class {} doesn't exist (invalid type)", className);
+    }
+    static void propertyDoesNotExistLuaError(const std::string& className, const std::string& propertyName)
+    {
+        luaError("Property {} doesn't exist in class {}", propertyName, className);
+    }
+
+    static void propertyNotStaticLuaError(const std::string& className, const std::string& propertyName)
+    {
+        luaError("Property {} in class {} is not static", propertyName, className);
+    }
+
+    static void propertyStaticLuaError(const std::string& className, const std::string& propertyName)
+    {
+        luaError("Property {} in class {} is static", propertyName, className);
+    }
+
+    static void objectDoesNotHavePropertyLuaError(const std::string& className, const std::string& propertyName)
+    {
+        luaError("Object of type {} doesn't have property {}", className, propertyName);
+    }
+
+    static void globalVariableDoesNotExistLuaError(const std::string& variableName)
+    {
+        luaError("Global variable {} doesn't exist", variableName);
+    }
+
+    static void cannotSetObjectPropertyLuaError(const std::string& className, const std::string& propertyName, int stackIndex, const rttr::property& prop)
+    {
+        luaError("Can't set property {} of object of type {} - can't convert lua stack index {} to type {}", propertyName, className, stackIndex, prop.get_type().get_name());
+    }
+
+    static void cannotGetGlobalVariableLuaError(const std::string& variableName, int stackIndex, const rttr::property& prop)
+    {
+        luaError("Can't set global variable {} - can't convert lua stack index {} to type {}", variableName, stackIndex, prop.get_type().get_name());
+    }
+
+    static rttr::type getAndCheckClassType(const std::string& className)
+    {
+        rttr::type type = rttr::type::get_by_name(className);
+        if (!type.is_valid())
+        {
+            classDoesNotExistLuaError(className);
+        }
+        return type;
+    }
+
+    static rttr::property getAndCheckClassProperty(const std::string& className, const std::string& propertyName)
+    {
+        rttr::type type = getAndCheckClassType(className);
+        rttr::property prop = type.get_property(propertyName);
+        if (!prop.is_valid())
+        {
+            propertyDoesNotExistLuaError(className, propertyName);
+        }
+        return prop;
+    }
+
+    static void checkPropertyIsStatic(const std::string& className, const std::string& propertyName, const rttr::property& prop)
+    {
+        if (!prop.is_static()) // object field, expected class field
+        {
+            propertyNotStaticLuaError(className, propertyName);
+        }
+    }
+
+    static void checkPropertyIsNotStatic(const std::string& className, const std::string& propertyName, const rttr::property& prop)
+    {
+        if (prop.is_static()) // class field, expected object field
+        {
+            propertyStaticLuaError(className, propertyName);
+        }
+    }
+
     static bool getClassFieldToLuaStack(lua_State* L, const std::string& className, const std::string& fieldName)
     {
         rttr::type type = rttr::type::get_by_name(className);
         if (!type.is_valid())
         {
+            luaError("Class {} doesn't exist (invalid type)", className);
             return false;
         }
         rttr::property prop = type.get_property(fieldName);
         if (!prop.is_valid())
         {
+            luaError("Property {} doesn't exist in class {}", fieldName, className);
+            return false;
+        }
+        else if (!prop.is_static()) // not class field
+        {
+            luaError("Property {} in class {} is not static", fieldName, className);
             return false;
         }
         return convertToLuaTypeOnStackByTypeId(L, prop.get_value(rttr::instance()));
@@ -1213,12 +1300,13 @@ public:
         rttr::type type = rttr::type::get_by_name(className);
         if (!type.is_valid())
         {
-            // TODO: throw lua exceptions instead of returning false
+            luaError("Class {} doesn't exist (invalid type)", className);
             return false;
         }
         rttr::property prop = type.get_property(fieldName);
         if (!prop.is_valid())
         {
+            luaError("Property {} doesn't exist in class {}", fieldName, className);
             return false;
         }
         return convertToLuaTypeOnStackByTypeId(L, prop.get_value(instance));
@@ -1229,6 +1317,7 @@ public:
         rttr::property prop = rttr::type::get_global_property(fieldName);
         if (!prop.is_valid())
         {
+            luaError("Global variable {} doesn't exist", fieldName);
             return false;
         }
         return convertToLuaTypeOnStackByTypeId(L, prop.get_value(rttr::instance()));
@@ -1242,11 +1331,13 @@ public:
         rttr::property prop = instance.get_type().get_raw_type().get_property(propertyName);
         if (!prop.is_valid())
         {
+            luaError("Object of type {} doesn't have property {}", instance.get_type().get_raw_type().get_name(), propertyName);
             return false;
         }
         rttr::variant value = convertStackIndexToType(L, stackIndex, prop);
         if (!value.is_valid())
         {
+            luaError("Can't set property {} of object of type {} - can't convert lua stack index {} to type {}", propertyName, instance.get_type().get_raw_type().get_name(), stackIndex, prop.get_type().get_name());
             return false;
         }
         return prop.set_value(instance, value);
@@ -1257,20 +1348,24 @@ public:
         rttr::type type = rttr::type::get_by_name(className);
         if (!type.is_valid())
         {
+            luaError("Class {} doesn't exist (invalid type)", className);
             return false;
         }
         rttr::property prop = type.get_property(propertyName);
         if (!prop.is_valid())
         {
+            luaError("Property {} doesn't exist in class {}", propertyName, className);
             return false;
         }
         else if (!prop.is_static()) // not class field
         {
+            luaError("Property {} in class {} is not static", propertyName, className);
             return false;
         }
         rttr::variant value = convertStackIndexToType(L, stackIndex, prop);
         if (!value.is_valid())
         {
+            luaError("Can't set property {} of class {} - can't convert lua stack index {} to type {}", propertyName, className, stackIndex, prop.get_type().get_name());
             return false;
         }
         return prop.set_value(rttr::instance(), value);
@@ -1281,11 +1376,13 @@ public:
         rttr::property prop = rttr::type::get_global_property(variableName);
         if (!prop.is_valid())
         {
+            luaError("Global variable {} doesn't exist", variableName);
             return false;
         }
         rttr::variant value = convertStackIndexToType(L, stackIndex, prop);
         if (!value.is_valid())
         {
+            luaError("Can't set global variable {} - can't convert lua stack index {} to type {}", variableName, stackIndex, prop.get_type().get_name());
             return false;
         }
         return prop.set_value(rttr::instance(), value);
