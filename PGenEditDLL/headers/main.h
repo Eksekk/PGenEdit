@@ -242,6 +242,13 @@ rttr::variant getEmptyVector()
     return std::vector<T>{ };
 }
 
+template<typename... Types>
+auto getParameterMetadata()
+{
+    std::vector<CreateContainerFunc> funcs{ []() { return Types(); }... };
+    return rttr::metadata("createFunctions", funcs);
+}
+
 void g_initCommonTypeIds();
 
 #endif // __MAIN_H__

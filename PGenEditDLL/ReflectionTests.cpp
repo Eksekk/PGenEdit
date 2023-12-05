@@ -350,7 +350,7 @@ registerExtra<Inner>();
         .method("operator+", static_cast<ReflectionSampleStruct(ReflectionSampleStruct::*)(int) const>(&ReflectionSampleStruct::operator+))
         .method("operator==", &ReflectionSampleStruct::operator==)
         .method("setArrayWithDefaultArgs", &ReflectionSampleStruct::setArrayWithDefaultArgs)
-        .constructor<int, std::string, std::vector<int>, std::array<int, 5>, std::unordered_map<std::string, int>, ReflectionSampleStruct::UnionSample>()(default_arguments(0, std::string("default"), std::vector<int>{ 1, 2, 3 }, std::array<int, 5>{ 1, 2, 3, 4, 5 }, std::unordered_map<std::string, int>{ {"a", 1}, {"b", 2}, {"c", 3} }, ReflectionSampleStruct::UnionSample{ 0 }))
+        .constructor<int, std::string, std::vector<int>, std::array<int, 5>, std::unordered_map<std::string, int>, ReflectionSampleStruct::UnionSample>()(default_arguments(0, std::string("default"), std::vector<int>{ 1, 2, 3 }, std::array<int, 5>{ 1, 2, 3, 4, 5 }, std::unordered_map<std::string, int>{ {"a", 1}, {"b", 2}, {"c", 3} }, ReflectionSampleStruct::UnionSample{ 0 }))(getParameterMetadata<int, std::string, std::vector<int>, std::array<int, 5>, std::unordered_map<std::string, int>, ReflectionSampleStruct::UnionSample>())
         .constructor<bool, int, char>()(default_arguments(20, 'a'))
         .constructor<int, int, int, int>()(default_arguments(5, 20))
         ;

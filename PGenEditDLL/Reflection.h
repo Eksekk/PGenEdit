@@ -344,7 +344,7 @@ private:
                 //assert(var.convert(typ)); // hopefully convert element to vector
                 //assert(typ.get_metadata("createFunc").is_type<CreateContainerFunc>()); // getting metadata from PROPERTY might allow it to work
                 //rttr::variant var = typ.get_metadata("createFunc").get_value<CreateContainerFunc>()();
-                rttr::variant var;
+                rttr::variant 
                 //CreateObjectVisitor visitor(var);
                 //visitor.visit(typ);
                 assert(var.is_valid());
