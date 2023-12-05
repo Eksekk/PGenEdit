@@ -339,28 +339,54 @@ private:
             else if (typ.is_sequential_container())
             {
                 // have to extract information from lua table into rttr::variant containing desired container
-                rttr::type wrappedType = typ.get_wrapped_type();
-                rttr::variant var = typ.create();
+                // VECTOR IS NOT REGISTERED
+                rttr::variant var = CONVERT_TO_VECTOR{}; // shared_ptr
+                assert(var.convert(typ)); // hopefully convert element to vector
+                assert(var.is_sequential_container());
+
                 rttr::variant_sequential_view seqView = var.create_sequential_view();
+                //rttr::variant_sequential_view seqView = var.extract_wrapped_value().create_sequential_view();
+                rttr::type valType = seqView.get_value_type();
+                if (!valType.is_wrapper())
+                {
+                    throw std::runtime_error("Can't convert lua table to sequential container, because it contains elements of non-wrapped type");
+                }
+                rttr::type wrappedType = valType.get_wrapped_type();
                 LuaTable t = LuaTable::fromLuaTable(L, stackIndex);
                 auto arr = t.getArrayPart();
                 seqView.set_size(arr.size());
                 for (int i = 0; const LuaTypeInCpp& val : arr)
                 {
-                    seqView.set_value(i++, val);
+                    rttr::variant var = convertLuaTypeInCppToVariantByTypeId(val, wrappedType);
+                    seqView.set_value(i++, var);
                 }
                 return var;
             }
             else if (typ.is_associative_container())
             {
                 // have to extract information from lua table into rttr::variant containing desired container
-                rttr::type wrappedType = typ.get_wrapped_type();
-                rttr::variant var = typ.create();
-                rttr::variant_associative_view assocView = var.create_associative_view();
+                rttr::type wrappedType = typ.get_wrapped_type();/// FIX
+                rttr::variant var = typ.create(); // shared_ptr
+                rttr::variant_associative_view assocView = var.extract_wrapped_value().create_associative_view();
+                rttr::type keyType = assocView.get_key_type();
+                rttr::type valueType = assocView.get_value_type();
+                if (!keyType.is_wrapper())
+                {
+                    throw std::runtime_error("Can't convert lua table to associative container, because it contains keys of non-wrapped type");
+                }
+                if (!valueType.is_wrapper())
+                {
+                    throw std::runtime_error("Can't convert lua table to associative container, because it contains values of non-wrapped type");
+                }
+                rttr::type wrappedKeyType = keyType.get_wrapped_type();
+                rttr::type wrappedValueType = valueType.get_wrapped_type();
+
                 LuaTable t = LuaTable::fromLuaTable(L, stackIndex);
                 for (auto&& [key, value] : t)
                 {
-                    assocView.insert(key, value);
+                    rttr::variant keyVar = convertLuaTypeInCppToVariantByTypeId(key, wrappedKeyType);
+                    rttr::variant valueVar = convertLuaTypeInCppToVariantByTypeId(value, wrappedValueType);
+                    assocView.insert(keyVar, valueVar);
                 }
                 return var;
             }
@@ -545,8 +571,9 @@ private:
         }
     }
 
-    static rttr::variant convertLuaTypeInCppToVariantByTypeId(const LuaTypeInCpp& var, const type_id& typeId, bool allowCrossTypeConversions = false)
+    static rttr::variant convertLuaTypeInCppToVariantByTypeId(const LuaTypeInCpp& var, const rttr::type& typ, bool allowCrossTypeConversions = false)
     {
+        type_id typeId = typ.get_id();
         // let's assume integers can be converted to floats and vice versa, even if allowCrossTypeConversions is false
         if (const sqword_t* val = std::get_if<sqword_t>(&var))
         {
@@ -668,6 +695,38 @@ private:
             {
                 return *val;
             }
+            else if (typ.is_sequential_container())
+            {
+                // have to extract information from lua table into rttr::variant containing desired container
+                rttr::variant var = typ.create();
+                rttr::variant_sequential_view seqView = var.create_sequential_view();
+                rttr::type valType = seqView.get_value_type();
+                if (!valType.is_wrapper())
+                {
+                    throw std::runtime_error("Can't convert lua table to sequential container, because it contains elements of non-wrapped type");
+                }
+                rttr::type wrappedType = valType.get_wrapped_type();
+                auto arr = val->getArrayPart();
+                seqView.set_size(arr.size());
+                for (int i = 0; const LuaTypeInCpp & val : arr)
+                {
+                    rttr::variant var = convertLuaTypeInCppToVariantByTypeId(val, wrappedType);
+                    seqView.set_value(i++, var);
+                }
+                return var;
+            }
+            else if (typ.is_associative_container())
+            {
+                // have to extract information from lua table into rttr::variant containing desired container
+                rttr::type wrappedType = typ.get_wrapped_type();/// FIX
+                rttr::variant var = typ.create();
+                rttr::variant_associative_view assocView = var.create_associative_view();
+                for (auto&& [key, value] : *val)
+                {
+                    assocView.insert(key, value);
+                }
+                return var;
+            }
             else if (allowCrossTypeConversions && typeId == TYPE_ID_BOOL)
             {
                 return true;
@@ -709,11 +768,11 @@ private:
             LuaTable t;
             for (auto&& [key, value] : assocView)
             {
-//                 if (key.get_type().get_id() != wrappedKeyType.get_id())
+//                 if (key.get_type().get_id() != keyType.get_id())
 //                 {
 //                     throw std::runtime_error("Can't convert associative container to lua table, because it contains keys of different types");
 //                 }
-//                 if (value.get_type().get_id() != wrappedValueType.get_id())
+//                 if (value.get_type().get_id() != valueType.get_id())
 //                 {
 //                     throw std::runtime_error("Can't convert associative container to lua table, because it contains values of different types");
 //                 }

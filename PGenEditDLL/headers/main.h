@@ -172,10 +172,35 @@ typeIds.pointer_to_const_volatile = type::get<const volatile T*>().get_id(), typ
 }
 
 template<typename T>
+concept canConvertToContainer = requires // can't register conversion functions for abstract classes / those that invoke deleted function in constructor etc.
+{
+    T();
+    T(static_cast<const T&>(std::declval<T>()));
+};
+
+// this struct's only purpose is to be passed to conversion function to indicate that it should return empty vector (make it somewhat type-safe)
+struct CONVERT_TO_VECTOR {};
+
+template<typename T>
+void registerContainerConversionFunctions()
+{
+    auto f = [](const CONVERT_TO_VECTOR& val, bool& ok) -> std::vector<T>
+        {
+            ok = true;
+            return std::vector<T>{ };
+        };
+    rttr::type::register_converter_func(f);
+}
+
+template<typename T>
 void registerExtra()
 {
     generateTypeIdData<T>();
     registerPointerConversionFunc<T>();
+    if constexpr (canConvertToContainer<T>)
+    {
+        registerContainerConversionFunctions<T>();
+    }
 }
 
 void g_initCommonTypeIds();
