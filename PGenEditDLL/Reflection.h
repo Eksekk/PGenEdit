@@ -22,6 +22,26 @@ public:
     }
 };
 
+namespace std
+{
+    // note: you need to implement both functions, otherwise it won't work
+    template<>
+    struct formatter<rttr::string_view>
+    {
+        template<typename ParseContext>
+        constexpr auto parse(ParseContext& ctx)
+        {
+            return ctx.begin();
+        }
+
+        template<typename FormatContext>
+        auto format(const rttr::string_view& p, FormatContext& ctx) const
+        {
+            return format_to(ctx.out(), "{}", p.to_string());
+        }
+    };
+}
+
 // creates "safe" lua error, that is not skipping C++ destructors
 // still need to write try-catch block **in first function on call stack called by lua** which calls luaL_error
 // note: exception object is automatically destroyed, even though lua might skip C++ code by using longjmp to signal error
@@ -406,7 +426,7 @@ private:
                 //assert(var.convert(classPropertyVariant)); // hopefully convert element to vector
                 //assert(classPropertyVariant.get_metadata("createFunc").is_type<CreateContainerFunc>()); // getting metadata from PROPERTY might allow it to work
                 //rttr::variant var = classPropertyVariant.get_metadata("createFunc").get_value<CreateContainerFunc>()();
-                 rttr::variant f = getCreationFunction(classPropertyVariant);
+                rttr::variant f = getCreationFunction(classPropertyVariant);
                 assert(f.is_type<CreateContainerFunc>());
                 rttr::variant var = f.get_value<CreateContainerFunc>()();
                 //CreateObjectVisitor visitor(var);
@@ -443,16 +463,18 @@ private:
                 rttr::variant_associative_view assocView = var.create_associative_view();
                 rttr::type keyType = assocView.get_key_type();
                 rttr::type valueType = assocView.get_value_type();
-                if (!keyType.is_wrapper())
-                {
-                    throw std::runtime_error("Can't convert lua table to associative container, because it contains keys of non-wrapped type");
-                }
-                if (!valueType.is_wrapper())
-                {
-                    throw std::runtime_error("Can't convert lua table to associative container, because it contains values of non-wrapped type");
-                }
-                rttr::type wrappedKeyType = keyType.get_wrapped_type();
-                rttr::type wrappedValueType = valueType.get_wrapped_type();
+//                 if (!keyType.is_wrapper())
+//                 {
+//                     throw std::runtime_error("Can't convert lua table to associative container, because it contains keys of non-wrapped type");
+//                 }
+//                 if (!valueType.is_wrapper())
+//                 {
+//                     throw std::runtime_error("Can't convert lua table to associative container, because it contains values of non-wrapped type");
+//                 }
+//                 rttr::type wrappedKeyType = keyType.get_wrapped_type();
+//                 rttr::type wrappedValueType = valueType.get_wrapped_type();
+                rttr::type wrappedKeyType = keyType;
+                rttr::type wrappedValueType = valueType;
 
                 LuaTable t = LuaTable::fromLuaTable(L, stackIndex);
                 for (auto&& [key, value] : t)
@@ -1108,7 +1130,9 @@ private:
             int stackIndex = wrapper.makeAbsoluteStackIndex(wrapper.gettop() - nArgs + i + 1);
             if (!canConvertLuaParameter(L, stackIndex, std::make_pair(callable, i)))
             {
-luaError("Can't convert parameter {} (stack index {}, name '{}') of lua type '{}' to C++ type '{}'", i + 1, stackIndex, required[i].get_name().data(), lua_typename(L, stackIndex), required[i].get_type().get_name().data());
+                // FIXME: unfortunately, function parameter names need to be provided by user, so we can't show them here
+                // that was to be expected though
+luaError("Can't convert parameter {} (stack index {}, name '{}') of lua type '{}' to C++ type '{}'", i + 1, stackIndex, /*required[i].get_name().data()*/"", lua_typename(L, stackIndex), required[i].get_type().get_name().data());
                 return false;
             }
         }
@@ -1166,36 +1190,6 @@ luaError("Can't convert parameter {} (stack index {}, name '{}') of lua type '{}
         return paramInfo.size();
     }
 
-public:
-    /// property getters
-
-    // generic templated function to get variable, either global or instance
-//     template<typename Class>
-//     static rttr::variant getVariableTemplatedCommon(const std::string& name, Class* instancePtr)
-//     {
-//         bool isMemberFunc = instancePtr != nullptr;
-//         rttr::property prop = isMemberFunc ? rttr::type::get<Class>().get_property(name) : rttr::type::get_global_property(name);
-//         if (!prop.is_valid())
-//         {
-//             return false;
-//         }
-//         return prop.get_value(isMemberFunc ? instancePtr : rttr::instance());
-//     }
-//     
-//     // nullptr_t version
-//     static rttr::variant getVariableTemplatedCommon(const std::string& name, std::nullptr_t instancePtr)
-//     {
-//         return getVariableTemplatedCommon(name, static_cast<void*>(nullptr));
-//     }
-
-    // get property into lua stack, templated
-//     template<typename Class>
-//     static bool getClassObjectFieldToLuaStackTemplated(Class* instance, const std::string& propertyName)
-//     {
-//         return convertToLuaTypeOnStackByTypeId(getVariableTemplatedCommon(propertyName, instance));
-//     }
-
-    // gets static field of class to lua stack
     static void classDoesNotExistLuaError(const std::string& className)
     {
         luaError("Class {} doesn't exist (invalid type)", className);
@@ -1245,6 +1239,7 @@ public:
         return type;
     }
 
+    // ensures class exists and property exists, returns the property. Doesn't check if property is static or not
     static rttr::property getAndCheckClassProperty(const std::string& className, const std::string& propertyName)
     {
         rttr::type type = getAndCheckClassType(className);
@@ -1252,6 +1247,16 @@ public:
         if (!prop.is_valid())
         {
             propertyDoesNotExistLuaError(className, propertyName);
+        }
+        return prop;
+    }
+
+    static rttr::property getAndCheckClassObjectPtrProperty(const rttr::variant& instance, const std::string& propertyName)
+    {
+        rttr::property prop = instance.get_type().get_raw_type().get_property(propertyName);
+        if (!prop.is_valid())
+        {
+            luaError("Object of type {} doesn't have property {}", instance.get_type().get_raw_type().get_name(), propertyName);
         }
         return prop;
     }
@@ -1272,68 +1277,56 @@ public:
         }
     }
 
+    static rttr::property getAndCheckGlobalVariable(const std::string& varName)
+    {
+        rttr::property prop = rttr::type::get_global_property(varName);
+        if (!prop.is_valid()) // global variable doesn't exist
+        {
+            globalVariableDoesNotExistLuaError(varName);
+        }
+        return prop;
+    }
+
+
+
+    static void checkGlobalVariableExists(const std::string& variableName, const rttr::property& prop)
+    {
+        if (!prop.is_valid()) // global variable doesn't exist
+        {
+            globalVariableDoesNotExistLuaError(variableName);
+        }
+    }
+
+public: // property getters
+
     static bool getClassFieldToLuaStack(lua_State* L, const std::string& className, const std::string& fieldName)
     {
-        rttr::type type = rttr::type::get_by_name(className);
-        if (!type.is_valid())
-        {
-            luaError("Class {} doesn't exist (invalid type)", className);
-            return false;
-        }
-        rttr::property prop = type.get_property(fieldName);
-        if (!prop.is_valid())
-        {
-            luaError("Property {} doesn't exist in class {}", fieldName, className);
-            return false;
-        }
-        else if (!prop.is_static()) // not class field
-        {
-            luaError("Property {} in class {} is not static", fieldName, className);
-            return false;
-        }
+        rttr::property prop = getAndCheckClassProperty(className, fieldName);
+        checkPropertyIsStatic(className, fieldName, prop);
         return convertToLuaTypeOnStackByTypeId(L, prop.get_value(rttr::instance()));
     }
 
     // variant must contain pointer to real object type, not void*
     static bool getClassObjectFieldToLuaStack(lua_State* L, const std::string& className, const std::string& fieldName, const rttr::variant& instance)
     {
-        rttr::type type = rttr::type::get_by_name(className);
-        if (!type.is_valid())
-        {
-            luaError("Class {} doesn't exist (invalid type)", className);
-            return false;
-        }
-        rttr::property prop = type.get_property(fieldName);
-        if (!prop.is_valid())
-        {
-            luaError("Property {} doesn't exist in class {}", fieldName, className);
-            return false;
-        }
+        rttr::property prop = getAndCheckClassProperty(className, fieldName);
+        checkPropertyIsNotStatic(className, fieldName, prop);
         return convertToLuaTypeOnStackByTypeId(L, prop.get_value(instance));
     }
 
     static bool getGlobalVariableToLuaStack(lua_State* L, const std::string& fieldName)
     {
-        rttr::property prop = rttr::type::get_global_property(fieldName);
-        if (!prop.is_valid())
-        {
-            luaError("Global variable {} doesn't exist", fieldName);
-            return false;
-        }
+        rttr::property prop = getAndCheckGlobalVariable(fieldName);
         return convertToLuaTypeOnStackByTypeId(L, prop.get_value(rttr::instance()));
     }
 
-    /// property setters
+public: // property setters
 
     // uses variants
     static bool setClassObjectFieldFromLuaStack(lua_State* L, const rttr::variant& instance, const std::string& propertyName, int stackIndex = -1)
     {
-        rttr::property prop = instance.get_type().get_raw_type().get_property(propertyName);
-        if (!prop.is_valid())
-        {
-            luaError("Object of type {} doesn't have property {}", instance.get_type().get_raw_type().get_name(), propertyName);
-            return false;
-        }
+        rttr::property prop = getAndCheckClassObjectPtrProperty(instance, propertyName);
+        //static
         rttr::variant value = convertStackIndexToType(L, stackIndex, prop);
         if (!value.is_valid())
         {
@@ -1345,23 +1338,8 @@ public:
 
     static bool setClassFieldFromLuaStack(lua_State* L, const std::string& className, const std::string& propertyName, int stackIndex = -1)
     {
-        rttr::type type = rttr::type::get_by_name(className);
-        if (!type.is_valid())
-        {
-            luaError("Class {} doesn't exist (invalid type)", className);
-            return false;
-        }
-        rttr::property prop = type.get_property(propertyName);
-        if (!prop.is_valid())
-        {
-            luaError("Property {} doesn't exist in class {}", propertyName, className);
-            return false;
-        }
-        else if (!prop.is_static()) // not class field
-        {
-            luaError("Property {} in class {} is not static", propertyName, className);
-            return false;
-        }
+        rttr::property prop = getAndCheckClassProperty(className, propertyName);
+        checkPropertyIsStatic(className, propertyName, prop);
         rttr::variant value = convertStackIndexToType(L, stackIndex, prop);
         if (!value.is_valid())
         {
@@ -1373,12 +1351,7 @@ public:
 
     static bool setGlobalVariableFromLuaStack(lua_State* L, const std::string& variableName, int stackIndex = -1)
     {
-        rttr::property prop = rttr::type::get_global_property(variableName);
-        if (!prop.is_valid())
-        {
-            luaError("Global variable {} doesn't exist", variableName);
-            return false;
-        }
+        rttr::property prop = getAndCheckGlobalVariable(variableName);
         rttr::variant value = convertStackIndexToType(L, stackIndex, prop);
         if (!value.is_valid())
         {
@@ -1388,52 +1361,7 @@ public:
         return prop.set_value(rttr::instance(), value);
     }
 
-    // generic function to set variable, either global or instance, templated
-//     template<typename Class>
-//     static bool setVariableFromLuaStackCommonTemplated(lua_State* L, const std::string& name, Class* instancePtr, int stackIndex = -1)
-//     {
-//         LuaWrapper wrapper(L);
-//         stackIndex = wrapper.makeAbsoluteStackIndex(stackIndex);
-//         bool isMemberFunc = instancePtr != nullptr;
-//         rttr::property prop = isMemberFunc ? rttr::type::get<Class>().get_property(name) : rttr::type::get_global_property(name);
-//         if (!prop.is_valid())
-//         {
-//             return false;
-//         }
-//         rttr::variant value = convertStackIndexToType(stackIndex, prop.get_type());
-//         if (!value.is_valid())
-//         {
-//             return false;
-//         }
-//         prop.set_value(isMemberFunc ? instancePtr : rttr::instance(), value);
-//     }
-// 
-//     // nullptr_t version
-//     static bool setVariableFromLuaStackCommonTemplated(lua_State* L, const std::string& name, std::nullptr_t instancePtr, int stackIndex = -1)
-//     {
-//         return setVariableFromLuaStackCommonTemplated(L, name, static_cast<void*>(nullptr), stackIndex);
-//     }
-
-    // set global variable from lua stack
-    // returns if operation was successful, in case of failure, lua stack is not modified
-//     static bool setGlobalVariableFromLuaStack(lua_State* L, const std::string& variableName, int stackIndex = -1)
-//     {
-//         return setVariableFromLuaStackCommonTemplated(L, variableName, nullptr, stackIndex);
-//     }
-// 
-//     // set property from lua stack
-//     template<typename Class>
-//     static bool setClassObjectFieldFromLuaStackTemplated(lua_State* L, Class* instance, const std::string& propertyName, int stackIndex = -1)
-//     {
-//         return setVariableFromLuaStackCommonTemplated(L, propertyName, instance, stackIndex);
-//     }
-// 
-//     // set class property from lua stack
-//     template<typename Class>
-//     static bool setClassFieldFromLuaStackTemplated(lua_State* L, const std::string& className, const std::string& propertyName, int stackIndex = -1)
-//     {
-//         return setVariableFromLuaStackCommonTemplated(L, propertyName, nullptr, stackIndex);
-//     }
+public: // function calls
 
     static rttr::variant callGlobalFunctionWithLuaParams(lua_State* L, const std::string& name, int nArgs = -1)
     {
@@ -1470,6 +1398,8 @@ public:
         return callWithLuaParamsCommon(L, meth, rttr::instance(), nArgs);
     }
 
+public: // constructor call helpers
+
     // so, I need to be able to put object, variant containing object or something like that into userdata allocated by lua
     // idk if rttr variants are moveable (if there is a way to avoid copying), but I will assume they are not
     // possible options:
@@ -1505,7 +1435,6 @@ public:
         return rttr::variant();
     }
 
-public:
     // returns variant containing shared_ptr to created object, or invalid variant if no matching constructor was found
     static rttr::variant findAndInvokeConstructorWithCppArgs(const rttr::type& type, const std::vector<rttr::variant>& args)
     {
@@ -1541,6 +1470,8 @@ public:
         return rttr::variant();
     }
 
+public: // constructor calls
+
     // creates instance of given class by calling constructor with matching parameters
     // returns shared_ptr to created instance, or nullptr if no matching constructor was found
     // this one returns shared_ptr, because it's provided with a class type, so it can have nicer form of usage
@@ -1564,11 +1495,7 @@ public:
     // returns variant containing shared_ptr to created object, or invalid variant if no matching constructor was found
     static rttr::variant createInstanceByConstructorFromLuaStack(lua_State* L, const std::string& className, int nArgs = -1)
     {
-        rttr::type type = rttr::type::get_by_name(className);
-        if (!type.is_valid())
-        {
-            return nullptr;
-        }
+        rttr::type type = getAndCheckClassType(className);
         auto result = findAndInvokeConstructorWithLuaArgs(L, type, nArgs);
         // now hopefully has shared_ptr inside, pointing to new instance of class
         // can methods be invoked reflectively on raw pointers to class?

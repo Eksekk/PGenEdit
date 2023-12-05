@@ -23,7 +23,7 @@ local format = string.format
 -- minor style convention I adopted: functions in metatables should be qualified with __, for consistency with built-in metamethods, and also to disambiguate them from regular functions
 
 pgenedit = pgenedit or {}
-tget(pgenedit, "debug").attemptTypeConversion = true -- if true, will attempt to convert parameters to correct type, if false, will throw an error
+--tget(pgenedit, "debug").attemptTypeConversion = true -- if true, will attempt to convert parameters to correct type, if false, will throw an error
 
 local cpp = tget(pgenedit, "cpp")
 
@@ -354,7 +354,9 @@ local createObjectMetatable
 		debug.setmetatable(obj, objMT) -- FIXME: you can't set a metatable of userdata without using debug library, so C++ needs to do it
 		return obj
 	end
-	classMT.__call = new
+	classMT.__call = function(t, ...)
+		return new(...)
+	end
 	classMT.new = new
 	-- static variables
 	function classMT.__index(t, str)
