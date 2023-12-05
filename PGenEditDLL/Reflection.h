@@ -202,10 +202,45 @@ private:
     public:
     // converts lua parameter from stack to given type (using RTTR type_id)
     // allowCrossTypeCategoryConversions allows to convert lua types to C++ types, which are not exactly matching, but are compatible (like number to boolean)
-    static rttr::variant convertStackIndexToType(lua_State* L, int stackIndex, const rttr::type& typ, bool allowCrossTypeCategoryConversions = false)
+    using RttrClassMemberVariant = std::variant<rttr::property, std::pair<rttr::constructor, size_t>, std::pair<rttr::method, size_t>>;
+    static rttr::variant convertStackIndexToType(lua_State* L, int stackIndex, const RttrClassMemberVariant& classPropertyVariant, bool allowCrossTypeCategoryConversions = false)
     {
+        // property, method, constructor can have metadata, which will allow to create new, empty container of desired type
+        // type metadata won't work, because would need to register a ton of types, and I don't want to do that
+        // method and constructor require index in addition to type, so I can use metadata
         LuaWrapper wrapper(L);
-        type_id typeId = typ.get_id();
+        type_id typeId;
+        auto getNthArrayRangeElement = [](const auto& range, size_t n) -> rttr::variant
+        {
+            auto it = range.begin();
+            std::advance(it, n);
+            return *it;
+        };
+
+        auto getType = [getNthArrayRangeElement](const RttrClassMemberVariant& var) -> rttr::type
+            {
+                if (const rttr::property* prop = std::get_if<rttr::property>(&var))
+                {
+                    return prop->get_type();
+                }
+                else if (const std::pair<rttr::constructor, size_t>* constr = std::get_if<std::pair<rttr::constructor, size_t>>(&var))
+                {
+                    return getNthArrayRangeElement(constr->first.get_parameter_infos(), constr->second).get_type();
+                }
+                else if (const std::pair<rttr::method, size_t>* method = std::get_if<std::pair<rttr::method, size_t>>(&var))
+                {
+                    return getNthArrayRangeElement(method->first.get_parameter_infos(), method->second).get_type();
+                }
+                else
+                {
+                    wxFAIL_MSG("Unknown type of std::variant");
+                    return rttr::type::get<void*>(); // dummy return
+                }
+
+            };
+
+        rttr::type typ = getType(classPropertyVariant);
+        rttr::type::type_id typeId = typ.get_id();
         stackIndex = wrapper.makeAbsoluteStackIndex(stackIndex);
         switch (lua_type(L, stackIndex))
         {
@@ -341,12 +376,12 @@ private:
                 // have to extract information from lua table into rttr::variant containing desired container
                 // VECTOR IS NOT REGISTERED
                 //rttr::variant var = toContainer::vector{}; // shared_ptr
-                //assert(var.convert(typ)); // hopefully convert element to vector
-                //assert(typ.get_metadata("createFunc").is_type<CreateContainerFunc>()); // getting metadata from PROPERTY might allow it to work
-                //rttr::variant var = typ.get_metadata("createFunc").get_value<CreateContainerFunc>()();
+                //assert(var.convert(classPropertyVariant)); // hopefully convert element to vector
+                //assert(classPropertyVariant.get_metadata("createFunc").is_type<CreateContainerFunc>()); // getting metadata from PROPERTY might allow it to work
+                //rttr::variant var = classPropertyVariant.get_metadata("createFunc").get_value<CreateContainerFunc>()();
                 rttr::variant 
                 //CreateObjectVisitor visitor(var);
-                //visitor.visit(typ);
+                //visitor.visit(classPropertyVariant);
                 assert(var.is_valid());
                 assert(var.is_sequential_container());
 
@@ -372,8 +407,8 @@ private:
             else if (typ.is_associative_container())
             {
                 // have to extract information from lua table into rttr::variant containing desired container
-                rttr::type wrappedType = typ.get_wrapped_type();/// FIX
-                rttr::variant var = typ.create(); // shared_ptr
+                rttr::type wrappedType = classPropertyVariant.get_wrapped_type();/// FIX
+                rttr::variant var = classPropertyVariant.create(); // shared_ptr
                 rttr::variant_associative_view assocView = var.extract_wrapped_value().create_associative_view();
                 rttr::type keyType = assocView.get_key_type();
                 rttr::type valueType = assocView.get_value_type();
