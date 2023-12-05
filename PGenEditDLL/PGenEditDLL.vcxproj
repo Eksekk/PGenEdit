@@ -30,6 +30,7 @@
     <ClInclude Include="Command.h" />
     <ClInclude Include="ControlPanel.h" />
     <ClInclude Include="CreateItemDialog.h" />
+    <ClInclude Include="CreateObjectVisitor.h" />
     <ClInclude Include="DebugConsole.h" />
     <ClInclude Include="DefaultPlayerPanel.h" />
     <ClInclude Include="dllApi.h" />
@@ -134,6 +135,7 @@
     <ClCompile Include="Command.cpp" />
     <ClCompile Include="ControlPanel.cpp" />
     <ClCompile Include="CreateItemDialog.cpp" />
+    <ClCompile Include="CreateObjectVisitor.cpp" />
     <ClCompile Include="DebugConsole.cpp" />
     <ClCompile Include="DefaultPlayerPanel.cpp" />
     <ClCompile Include="EditItemDialog.cpp" />

@@ -78,6 +78,9 @@ using SimpleCallback = std::function<void()>;
 
 //using std::visit;
 
+#include "CreateObjectVisitor.h"
+#include <rttr/registration.h>
+
 // undo system "instant edit + undo/redo" and "edit only on confirm + undo/redo" are equivalent -
 // to implement second just rollback all edits in first if user didn't confirm
 
@@ -217,7 +220,7 @@ void registerContainerConversionFunctions()
 //             return std::vector{ val };
 //         });
     //registerArrayConversionFunctions<T, 0>();
-    rttr::registration::class_<std::vector<T>>().constructor<>();
+    //rttr::registration::class_<std::vector<T>>().constructor<>();
 }
 
 template<typename T>
@@ -229,6 +232,14 @@ void registerExtra()
     {
         registerContainerConversionFunctions<T>();
     }
+}
+
+using CreateContainerFunc = rttr::variant(*)();
+
+template<typename T>
+rttr::variant getEmptyVector()
+{
+    return std::vector<T>{ };
 }
 
 void g_initCommonTypeIds();

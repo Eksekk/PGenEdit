@@ -336,7 +336,7 @@ registerExtra<Inner>();
     registration::class_<ReflectionSampleStruct>("ReflectionSampleStruct")
         .property("i", &ReflectionSampleStruct::i)
         .property("str", &ReflectionSampleStruct::str)
-        .property("vec", &ReflectionSampleStruct::vec)
+        .property("vec", &ReflectionSampleStruct::vec)(metadata("createFunc", getEmptyVector<ReflectionSampleStruct>))
         .property("arr", &ReflectionSampleStruct::arr)
         .property("map", &ReflectionSampleStruct::map)
         .property("u", &ReflectionSampleStruct::u)

@@ -49,6 +49,7 @@
 #include <boost/pfr.hpp>
 namespace pfr = boost::pfr;
 #include <boost/preprocessor.hpp>
+#include "CreateObjectVisitor.h"
 #include <rttr/registration>
 #include <rttr/registration_friend.h>
 

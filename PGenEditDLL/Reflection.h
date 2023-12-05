@@ -342,7 +342,12 @@ private:
                 // VECTOR IS NOT REGISTERED
                 //rttr::variant var = toContainer::vector{}; // shared_ptr
                 //assert(var.convert(typ)); // hopefully convert element to vector
-                rttr::variant var = typ.create();
+                //assert(typ.get_metadata("createFunc").is_type<CreateContainerFunc>()); // getting metadata from PROPERTY might allow it to work
+                //rttr::variant var = typ.get_metadata("createFunc").get_value<CreateContainerFunc>()();
+                rttr::variant var;
+                //CreateObjectVisitor visitor(var);
+                //visitor.visit(typ);
+                assert(var.is_valid());
                 assert(var.is_sequential_container());
 
                 rttr::variant_sequential_view seqView = var.create_sequential_view();
