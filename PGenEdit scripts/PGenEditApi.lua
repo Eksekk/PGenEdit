@@ -23,7 +23,7 @@ local format = string.format
 -- minor style convention I adopted: functions in metatables should be qualified with __, for consistency with built-in metamethods, and also to disambiguate them from regular functions
 
 pgenedit = pgenedit or {}
---tget(pgenedit, "debug").attemptTypeConversion = true -- if true, will attempt to convert parameters to correct type, if false, will throw an error
+tget(pgenedit, "debug").attemptTypeConversion = false -- if true, will attempt to convert parameters to correct type, if false, will throw an error
 
 local cpp = tget(pgenedit, "cpp")
 
@@ -95,13 +95,11 @@ local integerTypeRanges =
 --error(format(sCantConvertToNumber, funcNameForMessage, paramIndex, value), 3)
 local sIntOutOfRange = "'%s': Parameter #%d is out of range for type %q (value is %d)"
 local genericParamFormatStr = "'%s': Parameter #%d (%q) of type %q and value %q can't be converted to C++ type %q"
-local sNotAnObject = "Argument #%d (%q) is not an object [userdata]"
+local sNotAnObject = "'%s': Argument #%d (%q) is not an object [userdata]"
 local function validateOrConvertParameter(value, cppType, paramIndex, funcNameForMessage)
 	local expectedParamData = cppType
-	local expectedCppTypeStr = expectedParamData.type
-	if expectedParamData.isClass then
-		expectedCppTypeStr = expectedParamData.type
-	end
+	-- gets type table, not parameter one (which contains parameter name and type subtable)
+	local expectedCppTypeStr = expectedParamData.name
 	if expectedParamData.isPointer then
 		expectedCppTypeStr = expectedCppTypeStr .. "*"
 	elseif expectedParamData.isReference then
@@ -168,7 +166,8 @@ local function validateOrConvertParameter(value, cppType, paramIndex, funcNameFo
 			end
 		end
 		error(format(genericParamFormatStr, funcNameForMessage, paramIndex, expectedParamData.name, type(value), value, expectedCppTypeStr), 3)
-	elseif cppTypeName == "string" then -- for std::string, const char* and std::string_view
+	elseif table.find({"std::string", "std::string_view"}, cppTypeName) then -- for std::string, const char* and std::string_view
+		-- not adding const char* right now, because it's hard to get exact type name right (spaces and all), maybe use field properties to detect it instead?
 		if type(value) == "string" then
 			return value
 		elseif conv then
@@ -181,7 +180,7 @@ local function validateOrConvertParameter(value, cppType, paramIndex, funcNameFo
 			end
 		end
 		error(format(genericParamFormatStr, funcNameForMessage, paramIndex, expectedParamData.name, type(value), value, expectedCppTypeStr), 3)
-	elseif cppTypeName == "table" then
+	elseif cppTypeName == "LuaTable" or expectedParamData.isSequentialContainer or expectedParamData.isAssociativeContainer then
 		if type(value) == "table" then
 			return value
 		elseif conv then
@@ -192,7 +191,7 @@ local function validateOrConvertParameter(value, cppType, paramIndex, funcNameFo
 		error(format(genericParamFormatStr, funcNameForMessage, paramIndex, expectedParamData.name, type(value), value, expectedCppTypeStr), 3)
 	elseif cppTypeName == "nil" then -- shouldn't ever happen
 		error(format("'%s': Parameter #%d (%q) of type %q and value %q: requested C++ type is 'nil'", funcNameForMessage, paramIndex, expectedParamData.name, type(value), value), 3)
-	elseif expectedParamData.isClass then
+	elseif expectedParamData.isClass and not (expectedParamData.isSequentialContainer or expectedParamData.isAssociativeContainer) then
 		if type(value) ~= "userdata" or not getmetatable(value) or not getmetatable(value).className then
 			error(format(sNotAnObject, funcNameForMessage, paramIndex, value), 3)
 		elseif getmetatable(cppTypeName).className ~= getmetatable(value).className and not isObjectOfClassOrDerived(value, cppTypeName) then
@@ -200,6 +199,8 @@ local function validateOrConvertParameter(value, cppType, paramIndex, funcNameFo
 		else
 			return value
 		end
+	else
+		error(format("'%s': Parameter #%d (%q) of type %q and value %q: requested C++ type is %q, which is not supported", funcNameForMessage, paramIndex, expectedParamData.name, type(value), value, expectedCppTypeStr), 3)
 	end
 end
 
@@ -221,9 +222,11 @@ local function funcWrapper(className, memberName, memberData)
 	local params = memberData.params
 	assert(memberData.isCallable, format("'%s': Member %q is not callable", fullFuncName, memberData.name))
 
-	local argCount, defCount = #params, getDefParamCount(params)
+	local isMemberMethod = className and memberData.isMethod
+	local argCount, defCount = #params + (isMemberMethod and 1 or 0), getDefParamCount(params)
 	assert(argCount >= defCount, format("'%s': Argument count (%d) is less than default argument count (%d)", fullFuncName, argCount, defCount))
-	assert(#params == argCount, format("'%s': Argument type count (%d) is not equal to argument count (%d)", fullFuncName, #params, argCount))
+	--assert(#params == argCount, format("'%s': Argument type count (%d) is not equal to argument count (%d)", fullFuncName, #params, argCount))
+	-- RTTR get_parameter_infos() doesn't include object to invoke method on, so we need to add it manually
 	return function(...)
 		local args = {...}
 		if #args < argCount - defCount then
@@ -232,12 +235,14 @@ local function funcWrapper(className, memberName, memberData)
 			error(format("'%s': Too many arguments (expected at most %d, got %d)", fullFuncName, argCount, #args), 2)
 		end
 		if not memberData.isConstructor then
-			for i = className and 2 or 1, #params do -- if class method, skip first argument, it's processed later
+			for i = 1, #params do -- check explicitly provided parameters
+				-- args contains object pointer, params doesn't...
+				local argIndex = i + (isMemberMethod and 1 or 0)
 				local typ = params[i].type
-				args[i] = validateOrConvertParameter(args[i], typ, i, fullFuncName)
+				args[argIndex] = validateOrConvertParameter(args[argIndex], typ, i, fullFuncName)
 			end
 			-- if member is static or a field (std::function for example), then we don't need to process it
-			if className and not memberData.isStatic and not memberData.isField then
+			if isMemberMethod then
 				local this = args[1]
 				if not api.classExists(className) then
 					error(format("Class %q does not exist", className), 2)
@@ -260,7 +265,7 @@ local function funcWrapper(className, memberName, memberData)
 		elseif memberData.isStatic then -- static class method
 			return api.invokeClassMethod(className, memberName, #args, unpack(args))
 		else
-			return api.invokeClassObjectMethod(args[1], className, memberName, #args, unpack(args))
+			return api.invokeClassObjectMethod(args[1], className, memberName, #args, unpack(args, 2))
 		end
 	end
 end
@@ -275,9 +280,10 @@ local function currentOrInheritedMemberLookup(obj, key, className, treatAsClassN
 		error(format("Received object of type %q, expected %q", getmetatable(obj).className, className), 3)
 	end
 	local data = getmetatable(obj).classMetatable.getMemberData(key)
-	if data.isField and (shouldBeStatic == nil or data.isStatic == shouldBeStatic) then -- current class has matching field, or shouldBeStatic is not provided
+	local staticMatches = shouldBeStatic == nil or data.isStatic == shouldBeStatic
+	if data.isField and staticMatches then -- current class has matching field
 		return api.getClassObjectField(obj, className, key)
-	elseif data.isCallable and data.isStatic == shouldBeStatic then -- current class has matching method
+	elseif data.isCallable and staticMatches then -- current class has matching method
 		local f = funcWrapper(className, key, data)
 		-- rawset(obj, key, f) -- cache future accesses to methods
 		return f
@@ -301,10 +307,11 @@ local function currentOrInheritedMemberSet(obj, key, value, className, treatAsCl
 		error(format("Received object of type %q, expected %q", getmetatable(obj).className, className), 3)
 	end
 	local data = getmetatable(obj).classMetatable.getMemberData(key)
-	if data.isField and (shouldBeStatic == nil or data.isStatic == shouldBeStatic) then -- base class has field
+	local staticMatches = shouldBeStatic == nil or data.isStatic == shouldBeStatic
+	if data.isField and staticMatches then -- base class has field
 		api.setClassObjectField(obj, className, key, value)
 		return true
-	elseif data.isMethod and data.isStatic == shouldBeStatic then -- base class has method
+	elseif data.isMethod and staticMatches then -- base class has method
 		error(format("Attempt to set method %q of class %q", key, className), 3)
 	else
 		-- recursively check base classes
@@ -535,6 +542,7 @@ function tests()
 		_G.assert(v ~= nil)
 		return v
 	end
+	-- TODO: test field properties
 
 	-- get/set property tests
 	testGetProp("i", 0)
@@ -565,18 +573,18 @@ function tests()
 
 	-- function call tests
 
-	stru.modifyMultiple(3, "cddd", {5, 6})
+	stru:modifyMultiple(3, "cddd", {5, 6})
 	testGetProp("i", 3)
 	testGetProp("str", "cddd")
 	testGetProp("vec", {5, 6})
 	-- adds or inserts
-	stru.modifyMultipleByOperation(88, "ap", {1})
+	stru:modifyMultipleByOperation(88, "ap", {1})
 	testGetProp("i", 91)
 	testGetProp("str", "cdddap")
 	testGetProp("vec", {5, 6, 1})
 
-	assert(stru.get5() == 5, "[1st] stru.get5() == %d, expected 5", stru.get5())
-	assert(stru.get5() == 5, "[2nd] stru.get5() == %d, expected 5", stru.get5())
+	assert(stru:get5() == 5, "[1st] stru:get5() == %d, expected 5", stru:get5())
+	assert(stru:get5() == 5, "[2nd] stru:get5() == %d, expected 5", stru:get5())
 
 	-- globals
 	local global = cpp.global
@@ -700,18 +708,18 @@ function tests()
 	stru = innerStruct
 	testGetProp("b", false)
 	testGetProp("bb", false)
-	stru.allTrue()
+	stru:allTrue()
 	testGetProp("b", true)
 	testGetProp("bb", true)
 	testGetProp("bbb", true)
 	testSetProp("b", false)
-	stru.allFalse()
+	stru:allFalse()
 	testGetProp("b", false)
 	testGetProp("bb", false)
 	testGetProp("str", "default")
 	testSetProp("str", "test")
 	testGetProp("str", "test")
-	assert(stru.addAllArguments(1, 2, 3, 4) == 10, "stru.addAllArguments(1, 2, 3, 4) == %d, expected 10", stru.addAllArguments(1, 2, 3, 4))
+	assert(stru:addAllArguments(1, 2, 3, 4) == 10, "stru:addAllArguments(1, 2, 3, 4) == %d, expected 10", stru:addAllArguments(1, 2, 3, 4))
 
 	--[[
 		// few constructors with default arguments
@@ -757,19 +765,19 @@ ReflectionSampleStruct(int a, int b, int c = 5, int d = 20) : ReflectionSampleSt
 	stru = struOld
 
 	-- void setArrayWithDefaultArgs(int a, int b, int c = 12, int d = 33, int e = -5)
-	stru.setArrayWithDefaultArgs(1, 2)
+	stru:setArrayWithDefaultArgs(1, 2)
 	testGetProp("arr", {1, 2, 12, 33, -5}, cmpArrayVector)
-	stru.setArrayWithDefaultArgs(1, 2, 3)
+	stru:setArrayWithDefaultArgs(1, 2, 3)
 	testGetProp("arr", {1, 2, 3, 33, -5}, cmpArrayVector)
 
 	local inner = cpp.class.InnerStruct.new()
 	local inner2 = cpp.class.InnerStruct2.new()
 
 	-- basic virtual function test, TODO: more complex tests
-	assert(inner.returnSizeof() ~= inner2.returnSizeof(), "inner.returnSizeof() == %d, inner2.returnSizeof() == %d, expected different values", inner.returnSizeof(), inner2.returnSizeof())
+	assert(inner:returnSizeof() ~= inner2:returnSizeof(), "inner:returnSizeof() == %d, inner2:returnSizeof() == %d, expected different values", inner:returnSizeof(), inner2:returnSizeof())
 	-- derived class "addAllArguments" should return double the value
-	assert(inner.addAllArguments(1, 2, 3, 4) == 10, "inner.addAllArguments(1, 2, 3, 4) == %d, expected 10", inner.addAllArguments(1, 2, 3, 4))
-	assert(inner2.addAllArguments(1, 2, 3, 4) == 20, "inner2.addAllArguments(1, 2, 3, 4) == %d, expected 20", inner2.addAllArguments(1, 2, 3, 4))
+	assert(inner:addAllArguments(1, 2, 3, 4) == 10, "inner:addAllArguments(1, 2, 3, 4) == %d, expected 10", inner:addAllArguments(1, 2, 3, 4))
+	assert(inner2:addAllArguments(1, 2, 3, 4) == 20, "inner2:addAllArguments(1, 2, 3, 4) == %d, expected 20", inner2:addAllArguments(1, 2, 3, 4))
 
 	-- basic inheritance test
 	-- inner2 should have members and methods of inner
@@ -777,7 +785,7 @@ ReflectionSampleStruct(int a, int b, int c = 5, int d = 20) : ReflectionSampleSt
 	stru = inner2
 	testGetProp("b", false)
 	testGetProp("bb", false)
-	stru.allTrue()
+	stru:allTrue()
 	testGetProp("b", true)
 	testGetProp("bb", true)
 	testGetProp("bbb", true)
