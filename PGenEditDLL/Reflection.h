@@ -66,7 +66,7 @@ namespace luaDebug
 // those that are class properties: static methods, static callables
 // those that are global properties: global methods, global callables
 
-// will contain utils for dealing with RTTR reflection system, like a template method for calling any method by name, converting lua types to required C++ types etc.
+// will contain utils for dealing with RTTR reflection system, like a template method for calling any method by name, converting lua types to callableIndexPair C++ types etc.
 class Reflection
 {
     // so, I need to be able to call any method by name, and I need to be able to convert lua types to C++ types
@@ -110,7 +110,7 @@ public:
     // FIXME: make a method checking compatibility of two types, so that we can check if we can convert lua type to C++ type, which is parameter of the method
     // if any parameter doesn't match (remember about cv!), we can't call the method with this overload
     // remember about special handling for types in lua, which natively are not in C++ (like nil, table, function, userdata, thread)
-    // and remember about integer/float distinction required in lua -> cpp conversion
+    // and remember about integer/float distinction callableIndexPair in lua -> cpp conversion
 
     // lua can be converted to cpp like this [these brackets mean the conversion needs to be explicitly requested]:
     // number -> char, short, int, long, long long, float, double, long double, unsigned char, unsigned short, unsigned int, unsigned long, unsigned long long, [bool]
@@ -209,7 +209,6 @@ private:
         // type metadata won't work, because would need to register a ton of types, and I don't want to do that
         // method and constructor require index in addition to type, so I can use metadata
         LuaWrapper wrapper(L);
-        type_id typeId;
         auto getNthArrayRangeElement = [](const auto& range, size_t n) -> rttr::variant
         {
             auto it = range.begin();
@@ -237,6 +236,34 @@ private:
                     return rttr::type::get<void*>(); // dummy return
                 }
 
+            };
+
+        auto getCreationFunction = [getNthArrayRangeElement](const RttrClassMemberVariant& var) -> rttr::variant
+            {
+                using FuncVector = std::vector<CreateContainerFunc>;
+                if (const rttr::property* prop = std::get_if<rttr::property>(&var))
+                {
+                    rttr::variant m = prop->get_metadata("creationFunctions");
+                    assert(m.is_type<FuncVector>());
+                    return m.get_value<FuncVector>()[0];
+                }
+                else if (const std::pair<rttr::constructor, size_t>* constr = std::get_if<std::pair<rttr::constructor, size_t>>(&var))
+                {
+                    rttr::variant m = constr->first.get_metadata("creationFunction");
+                    assert(m.is_type<FuncVector>());
+                    return m.get_value<FuncVector>()[constr->second];
+                }
+                else if (const std::pair<rttr::method, size_t>* method = std::get_if<std::pair<rttr::method, size_t>>(&var))
+                {
+                    rttr::variant m = method->first.get_metadata("creationFunction");
+                    assert(m.is_type<FuncVector>());
+                    return m.get_value<FuncVector>()[method->second];
+                }
+                else
+                {
+                    wxFAIL_MSG("Unknown type of std::variant");
+                    return rttr::variant(); // dummy return
+                }
             };
 
         rttr::type typ = getType(classPropertyVariant);
@@ -379,7 +406,9 @@ private:
                 //assert(var.convert(classPropertyVariant)); // hopefully convert element to vector
                 //assert(classPropertyVariant.get_metadata("createFunc").is_type<CreateContainerFunc>()); // getting metadata from PROPERTY might allow it to work
                 //rttr::variant var = classPropertyVariant.get_metadata("createFunc").get_value<CreateContainerFunc>()();
-                rttr::variant 
+                rttr::variant f = getCreationFunction(classPropertyVariant);
+                assert(f.is_type<CreateContainerFunc>());
+                rttr::variant var = f.get_value<CreateContainerFunc>()();
                 //CreateObjectVisitor visitor(var);
                 //visitor.visit(classPropertyVariant);
                 assert(var.is_valid());
@@ -407,9 +436,11 @@ private:
             else if (typ.is_associative_container())
             {
                 // have to extract information from lua table into rttr::variant containing desired container
-                rttr::type wrappedType = classPropertyVariant.get_wrapped_type();/// FIX
-                rttr::variant var = classPropertyVariant.create(); // shared_ptr
-                rttr::variant_associative_view assocView = var.extract_wrapped_value().create_associative_view();
+                auto f = getCreationFunction(classPropertyVariant);
+                assert(f.is_type<CreateContainerFunc>());
+                rttr::variant var = f.get_value<CreateContainerFunc>()();
+                assert(var.is_valid());
+                rttr::variant_associative_view assocView = var.create_associative_view();
                 rttr::type keyType = assocView.get_key_type();
                 rttr::type valueType = assocView.get_value_type();
                 if (!keyType.is_wrapper())
@@ -910,14 +941,22 @@ private:
         return true;
     }
 
-    // receives a vector of required types, and converts lua parameters to C++ types, which are required by the method
+    // receives a vector of callableIndexPair types, and converts lua parameters to C++ types, which are callableIndexPair by the method
     // throws exception with additional info if conversion of any parameter fails
     // by default pops converted parameters from lua stack, but can be disabled
     // nArgs is intended to be set by lua side to show how many arguments were passed to the function (to allow to use default values)
-    static std::vector<rttr::variant> convertLuaParametersToCppForReflection(lua_State* L, const std::vector<rttr::parameter_info>& requiredParameters, int nArgs, bool pop = true)
+    using CallableVariant = std::variant<rttr::method, rttr::constructor>;
+    static std::vector<rttr::variant> convertLuaParametersToCppForReflection(lua_State* L, const CallableVariant& callable, int nArgs, bool pop = true)
     {
         LuaWrapper wrapper(L);
         std::vector<wxString> errorParts;
+        std::vector<rttr::parameter_info> requiredParameters;
+        std::visit([&](auto& val)
+            {
+                auto infos = val.get_parameter_infos();
+                requiredParameters.reserve(infos.size());
+                std::ranges::copy(infos, std::back_inserter(requiredParameters));
+            }, callable);
         if (nArgs == -1)
         {
             nArgs = requiredParameters.size();
@@ -953,7 +992,18 @@ private:
             {
                 int currentStackIndex = firstStackIndex + i;
                 auto&& param = requiredParameters[i];
-                result[i] = convertStackIndexToType(L, currentStackIndex, param.get_type(), true);
+                if (const rttr::method* meth = std::get_if<rttr::method>(&callable))
+                {
+                    result[i] = convertStackIndexToType(L, currentStackIndex, std::make_pair(*meth, i), true);
+                }
+                else if (const rttr::constructor* constr = std::get_if<rttr::constructor>(&callable))
+                {
+                    result[i] = convertStackIndexToType(L, currentStackIndex, std::make_pair(*constr, i), true);
+                }
+                else
+                {
+                    wxFAIL_MSG("Unknown type of std::variant");
+                }
                 // failsafe to check that lua stack top has not changed (shouldn't happen, but just in case)
                 if (wrapper.gettop() != stackTop)
                 {
@@ -990,7 +1040,8 @@ private:
 
     // not using convertLuaParametersToCppForReflection here, because it throws exception on failure, and we want to return false instead
 
-    static bool canConvertLuaParameter(lua_State* L, int stackIndex, const rttr::parameter_info& required)
+    using CallableIndexPair = std::pair<CallableVariant, size_t>;
+    static bool canConvertLuaParameter(lua_State* L, int stackIndex, const CallableIndexPair& callableIndexPair)
     {
         LuaWrapper wrapper(L);
         // check validity of stack index
@@ -999,12 +1050,31 @@ private:
             wxFAIL_MSG(wxString::Format("Invalid stack index %d (current size is %d)", stackIndex, wrapper.gettop()));
             return false;
         }
-        rttr::variant val = convertStackIndexToType(L, stackIndex, required.get_type());
-        return val.is_valid();
+        if (const rttr::method* meth = std::get_if<rttr::method>(&callableIndexPair.first))
+        {
+            return convertStackIndexToType(L, stackIndex, std::make_pair(*meth, callableIndexPair.second)).is_valid();
+        }
+        else if (const rttr::constructor* constr = std::get_if<rttr::constructor>(&callableIndexPair.first))
+        {
+            return convertStackIndexToType(L, stackIndex, std::make_pair(*constr, callableIndexPair.second)).is_valid();
+        }
+        else
+        {
+            wxFAIL_MSG("Unknown type of std::variant");
+            return false;
+        }
     }
 
-    static bool canConvertLuaParameters(lua_State* L, const std::vector<rttr::parameter_info>& required, int nArgs = -1)
+    static bool canConvertLuaParameters(lua_State* L, const CallableVariant& callable, int nArgs = -1)
     {
+        std::vector<rttr::parameter_info> required;
+        std::visit([&](auto& val)
+            {
+                auto infos = val.get_parameter_infos();
+                required.reserve(infos.size());
+                std::ranges::copy(infos, std::back_inserter(required));
+            }, callable);
+
         LuaWrapper wrapper(L);
         if (nArgs == -1)
         {
@@ -1033,7 +1103,7 @@ private:
         for (int i = 0; i < nArgs; ++i)
         {
             int stackIndex = wrapper.makeAbsoluteStackIndex(wrapper.gettop() - nArgs + i + 1);
-            if (!canConvertLuaParameter(L, stackIndex, required[i]))
+            if (!canConvertLuaParameter(L, stackIndex, std::make_pair(callable, i)))
             {
                 return false;
             }
@@ -1049,11 +1119,11 @@ private:
         }
         auto paramsArray = meth.get_parameter_infos();
         std::vector<rttr::parameter_info> params(paramsArray.begin(), paramsArray.end());
-        if (!canConvertLuaParameters(L, params, nArgs))
+        if (!canConvertLuaParameters(L, meth, nArgs))
         {
             return rttr::variant();
         }
-        std::vector<rttr::variant> variants = convertLuaParametersToCppForReflection(L, params, nArgs);
+        std::vector<rttr::variant> variants = convertLuaParametersToCppForReflection(L, meth, nArgs);
         std::vector<rttr::argument> args;
         for (rttr::variant& arg : variants)
         {
@@ -1174,7 +1244,7 @@ public:
         {
             return false;
         }
-        rttr::variant value = convertStackIndexToType(L, stackIndex, prop.get_type());
+        rttr::variant value = convertStackIndexToType(L, stackIndex, prop);
         if (!value.is_valid())
         {
             return false;
@@ -1198,7 +1268,7 @@ public:
         {
             return false;
         }
-        rttr::variant value = convertStackIndexToType(L, stackIndex, prop.get_type());
+        rttr::variant value = convertStackIndexToType(L, stackIndex, prop);
         if (!value.is_valid())
         {
             return false;
@@ -1213,7 +1283,7 @@ public:
         {
             return false;
         }
-        rttr::variant value = convertStackIndexToType(L, stackIndex, prop.get_type());
+        rttr::variant value = convertStackIndexToType(L, stackIndex, prop);
         if (!value.is_valid())
         {
             return false;
@@ -1320,9 +1390,9 @@ public:
             auto info = ctor.get_parameter_infos();
 
             std::vector<rttr::parameter_info> vec(info.begin(), info.end());
-            if (canConvertLuaParameters(L, vec, nArgs))
+            if (canConvertLuaParameters(L, ctor, nArgs))
             {
-                std::vector<rttr::variant> variants = convertLuaParametersToCppForReflection(L, vec, nArgs);
+                std::vector<rttr::variant> variants = convertLuaParametersToCppForReflection(L, ctor, nArgs);
                 std::vector<rttr::argument> params;
                 for (rttr::variant& arg : variants)
                 {
