@@ -115,6 +115,7 @@ public:
     static const type_id TYPE_ID_BOOL;
     static const type_id TYPE_ID_STRING;
     static const type_id TYPE_ID_STRING_VIEW;
+    static const type_id TYPE_ID_VOID;
     static const type_id TYPE_ID_VOID_PTR;
     static const type_id TYPE_ID_LUA_TABLE;
     static const type_id TYPE_ID_NIL;
@@ -229,14 +230,14 @@ private:
         // type metadata won't work, because would need to register a ton of types, and I don't want to do that
         // method and constructor require index in addition to type, so I can use metadata
         LuaWrapper wrapper(L);
-        auto getNthArrayRangeElement = [](const auto& range, size_t n) -> rttr::variant
+        auto getNthParameterInfo = [](const rttr::array_range<rttr::parameter_info>& range, size_t n) -> rttr::parameter_info
         {
             auto it = range.begin();
             std::advance(it, n);
             return *it;
         };
 
-        auto getType = [getNthArrayRangeElement](const RttrClassMemberVariant& var) -> rttr::type
+        auto getType = [getNthParameterInfo](const RttrClassMemberVariant& var) -> rttr::type
             {
                 if (const rttr::property* prop = std::get_if<rttr::property>(&var))
                 {
@@ -244,11 +245,11 @@ private:
                 }
                 else if (const std::pair<rttr::constructor, size_t>* constr = std::get_if<std::pair<rttr::constructor, size_t>>(&var))
                 {
-                    return getNthArrayRangeElement(constr->first.get_parameter_infos(), constr->second).get_type();
+                    return getNthParameterInfo(constr->first.get_parameter_infos(), constr->second).get_type();
                 }
                 else if (const std::pair<rttr::method, size_t>* method = std::get_if<std::pair<rttr::method, size_t>>(&var))
                 {
-                    return getNthArrayRangeElement(method->first.get_parameter_infos(), method->second).get_type();
+                    return getNthParameterInfo(method->first.get_parameter_infos(), method->second).get_type();
                 }
                 else
                 {
@@ -258,25 +259,25 @@ private:
 
             };
 
-        auto getCreationFunction = [getNthArrayRangeElement](const RttrClassMemberVariant& var) -> rttr::variant
+        auto getCreationFunction = [getNthParameterInfo](const RttrClassMemberVariant& var) -> rttr::variant
             {
                 using FuncVector = std::vector<CreateContainerFunc>;
                 if (const rttr::property* prop = std::get_if<rttr::property>(&var))
                 {
                     rttr::variant m = prop->get_metadata(g_CONTAINER_CREATION_FUNC_METADATA_NAME);
-                    assert(m.is_type<FuncVector>());
+                    wxASSERT_MSG(m.is_type<FuncVector>(), wxString::Format("Property '%s' of type '%s' doesn't have metadata with creation function", prop->get_name().data(), prop->get_type().get_name().data()));
                     return m.get_value<FuncVector>()[0];
                 }
                 else if (const std::pair<rttr::constructor, size_t>* constr = std::get_if<std::pair<rttr::constructor, size_t>>(&var))
                 {
                     rttr::variant m = constr->first.get_metadata(g_CONTAINER_CREATION_FUNC_METADATA_NAME);
-                    assert(m.is_type<FuncVector>());
+                    wxASSERT_MSG(m.is_type<FuncVector>(), wxString::Format("Constructor '%s' of type '%s' doesn't have metadata with creation function", constr->first.get_signature().data(), constr->first.get_declaring_type().get_name().data()));
                     return m.get_value<FuncVector>()[constr->second];
                 }
                 else if (const std::pair<rttr::method, size_t>* method = std::get_if<std::pair<rttr::method, size_t>>(&var))
                 {
                     rttr::variant m = method->first.get_metadata(g_CONTAINER_CREATION_FUNC_METADATA_NAME);
-                    assert(m.is_type<FuncVector>());
+                    wxASSERT_MSG(m.is_type<FuncVector>(), wxString::Format("Method '%s' of type '%s' doesn't have metadata with creation function", method->first.get_signature().data(), method->first.get_declaring_type().get_name().data()));
                     return m.get_value<FuncVector>()[method->second];
                 }
                 else
@@ -950,6 +951,10 @@ private:
         else if (typ == TYPE_ID_STRING_VIEW)
         {
             wrapper.pushstring(std::string(val.get_value<std::string_view>()));
+        }
+        else if (typ == TYPE_ID_VOID)
+        {
+            // explicit lack of return value, ignore
         }
         else if (typ == TYPE_ID_VOID_PTR)
         {

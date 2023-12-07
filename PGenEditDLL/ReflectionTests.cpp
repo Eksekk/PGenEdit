@@ -21,6 +21,11 @@ struct ReflectionSampleStruct
     std::array<int, 5> arr;
     std::unordered_map<std::string, int> map;
 
+    // some static properties
+static int staticInt;
+    static void* staticPtr;
+    static const char* const staticReadonlyPchar;
+
     void setArrayWithDefaultArgs(int a, int b, int c = 12, int d = 33, int e = -5)
     {
         arr[0] = a;
@@ -60,6 +65,9 @@ struct ReflectionSampleStruct
             return i == other.i && fArray[0] == other.fArray[0] && fArray[1] == other.fArray[1] && d == other.d && firstByteBool == other.firstByteBool && firstByte == other.firstByte;
         }
     } u;
+
+    static UnionSample staticUnionsArr[3];
+    static std::array<UnionSample, 3> staticUnionsArrStd;
 protected:
     int protectedInt;
     void* protectedPtr;
@@ -242,7 +250,10 @@ public:
     }
 
     friend std::string to_string(const ReflectionSampleStruct& u);
+
+    RTTR_REGISTRATION_FRIEND
 };
+const char* const ReflectionSampleStruct::staticReadonlyPchar = "staticReadonlyPcharText";
 
 // returns 0 for success, 1 and above for failure (specific error codes)
 static int __declspec(naked) __fastcall fastcallGlobalFunctionTest(int argEcx, int argEdx, int argEsp)
@@ -315,6 +326,7 @@ using UnionSample = ReflectionSampleStruct::UnionSample;
     registration::class_<Inner2>("InnerStruct2")
         .property("ch", &Inner2::ch)
         .property("i", &Inner2::i)
+
         .method("returnSizeof", &Inner2::returnSizeof)
         .method("addAllArguments", &Inner2::addAllArguments)
         
@@ -340,21 +352,29 @@ registerExtra<Inner>();
         .property("arr", &ReflectionSampleStruct::arr)(getParameterMetadata<std::array<int, 5>>())
         .property("map", &ReflectionSampleStruct::map)(getParameterMetadata<std::unordered_map<std::string, int>>())
         .property("u", &ReflectionSampleStruct::u)
+.property("protectedInt", &ReflectionSampleStruct::protectedInt)
+        .property("protectedPtr", &ReflectionSampleStruct::protectedPtr)
+.property("privateInt", &ReflectionSampleStruct::privateInt)
+        .property("privatePtr", &ReflectionSampleStruct::privatePtr)
+        
         .property("inner", &ReflectionSampleStruct::inner)
         .property("inner2", &ReflectionSampleStruct::inner2)
         .method("get5", &ReflectionSampleStruct::get5)
-        .method("setInt", &ReflectionSampleStruct::setInt)
-        .method("modifyMultiple", &ReflectionSampleStruct::modifyMultiple)
-        .method("modifyMultipleByOperation", &ReflectionSampleStruct::modifyMultipleByOperation)
+        .method("setInt", &ReflectionSampleStruct::setInt)(parameter_names("val"))
+        .method("modifyMultiple", &ReflectionSampleStruct::modifyMultiple)(getParameterMetadata<int, std::string, std::vector<int>>())
+        .method("modifyMultipleByOperation", &ReflectionSampleStruct::modifyMultipleByOperation)(getParameterMetadata<int, std::string, std::vector<int>>(), parameter_names("val", "str", "vec"))
         .method("operator+=", static_cast<ReflectionSampleStruct& (ReflectionSampleStruct::*)(int)>(&ReflectionSampleStruct::operator+=))
         .method("operator+", static_cast<ReflectionSampleStruct(ReflectionSampleStruct::*)(int) const>(&ReflectionSampleStruct::operator+))
-        .method("operator==", &ReflectionSampleStruct::operator==)
-        .method("setArrayWithDefaultArgs", &ReflectionSampleStruct::setArrayWithDefaultArgs)
+        .method("operator==", &ReflectionSampleStruct::operator==)(parameter_names("other"))
+        .method("setArrayWithDefaultArgs", &ReflectionSampleStruct::setArrayWithDefaultArgs)(default_arguments(12, 33, -5))(parameter_names("a", "b", "c", "d", "e"))
         .constructor<int, std::string, std::vector<int>, std::array<int, 5>, std::unordered_map<std::string, int>, ReflectionSampleStruct::UnionSample>()(default_arguments(0, std::string("default"), std::vector<int>{ 1, 2, 3 }, std::array<int, 5>{ 1, 2, 3, 4, 5 }, std::unordered_map<std::string, int>{ {"a", 1}, {"b", 2}, {"c", 3} }, ReflectionSampleStruct::UnionSample{ 0 }))(getParameterMetadata<int, std::string, std::vector<int>, std::array<int, 5>, std::unordered_map<std::string, int>, ReflectionSampleStruct::UnionSample>())
         .constructor<bool, int, char>()(default_arguments(20, 'a'))
         .constructor<int, int, int, int>()(default_arguments(5, 20))
+
         ;
 registerExtra<ReflectionSampleStruct>();
+
+registration::method("fastcallGlobalFunctionTest", &fastcallGlobalFunctionTest)(parameter_names("argEcx", "argEdx", "argEsp"));
 }
 
 template<typename Type>

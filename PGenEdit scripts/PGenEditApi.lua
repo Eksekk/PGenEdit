@@ -5,14 +5,12 @@ local format = string.format
 -- 1. add support for enums
 -- 2. add support for const methods
 -- 3. add support for overloaded methods
--- 4. handle inheritance by performing lookup for fields in base classes
--- 5. provide a method to check if object is of a given class (or any of its derived classes)
--- 6. rich error messages for function wrapper (including parameter names and types)
--- 7. currently only userdata represents C++ objects. Since they are garbage-collected by Lua, it's possible to have objects with invalid state in C++ after some debug calls and gc execution. Need to add a way to create a "weak" object, which will not be garbage-collected by Lua, but will be destroyed only when object is destroyed from C++ side, and will be just as functional as a regular object (except for __gc metamethod, which will not be called).
+-- 4. currently only userdata represents C++ objects. Since they are garbage-collected by Lua, it's possible to have objects with invalid state in C++ after some debug calls and gc execution. Need to add a way to create a "weak" object, which will not be garbage-collected by Lua, but will be destroyed only when object is destroyed from C++ side, and will be just as functional as a regular object (except for __gc metamethod, which will not be called).
 -- Obviously need to use tables to represent such objects, since they too support metatables, and aren't garbage collected.
 -- Such objects will be used, if user wants to keep a reference to an object, which is owned by C++ (global variable for example).
 -- TODO: notify lua about object destruction from C++ side?
--- 8. BIG ONE: implement struct operators as metamethods if appropriate (for example, __add for operator+), and also implement __eq for all classes (for operator==)
+-- 5. BIG ONE: implement struct operators as metamethods if appropriate (for example, __add for operator+), and also implement __eq for all classes (for operator==)
+-- 6. support for C++ containers as class/struct members (std::vector, std::map, etc.). To be determined - is it better to return a special "reference" to container on __index, which would automatically modify the container every time it is changed, or return plain table and allow only __newindex to modify the container?
 
 -- for functions need to handle:
 -- 1. type checking for arguments and return types (including small value types range compatibility), C++ will also check this, but it's better to check it here too
@@ -73,10 +71,6 @@ local function isObjectOfClassOrDerived(obj, checkName)
 		end
 	end
 	return false
-end
-
-local function isCppObjectType(val)
-	return (type(val) == "table" or type(val) == "userdata") and getmetatable(val) and getmetatable(val).className
 end
 
 local integerTypeRanges = 
@@ -265,11 +259,57 @@ local function funcWrapper(className, memberName, memberData)
 		elseif memberData.isStatic then -- static class method
 			return api.invokeClassMethod(className, memberName, #args, unpack(args))
 		else
-			return api.invokeClassObjectMethod(args[1], className, memberName, #args, unpack(args, 2))
+			return api.invokeClassObjectMethod(className, args[1], memberName, #args - 1, unpack(args, 2)) -- skips first argument, which is object pointer
 		end
 	end
 end
 
+-- support vectors, lists, sets, maps etc.
+-- obj == nil means that it's a static or global container
+-- std::vector<std::vector<int>> vec ->
+-- vec gets vector
+-- vec[1] gets subvector
+-- vec[1][2] gets int
+-- value type can be class object:
+-- std::vector<std::vector<ReflectionSampleStruct>> vec
+
+-- std::map<std::string, std::vector<std::vector<ReflectionSampleStruct>>> map ->
+-- map gets map
+-- map["key"] gets vector
+-- map["key"][1] gets subvector
+-- map["key"][1][2] gets ReflectionSampleStruct
+
+-- std::set<std::string> set ->
+-- set gets set
+-- set["key"] gets string
+-- set.insert("key") inserts string, returns whether insertion took place (false if element already existed)
+
+-- TODO: add support for const containers
+local function getContainerReference(classObject, fieldName)
+	local mt = {}
+	local data = classObject["?getMetadata"]()
+	assert(data, format("'%s': Can't get metadata of field %q", getmetatable(classObject).className, fieldName))
+	function mt.__index(_, key)
+		if data.isSequentialContainer and type(key) ~= "number" then
+			error(format("'%s': Attempt to access sequential container %q with non-numeric key %q", getmetatable(classObject).className, fieldName, key), 2)
+		end
+		return api.getContainerElement(classObject, fieldName, key)
+	end
+
+	function mt.__newindex(containerObject, key, value)
+		if data.isSequentialContainer and type(key) ~= "number" then
+			error(format("'%s': Attempt to set sequential container %q with non-numeric key %q", getmetatable(containerObject).className, fieldName, key), 2)
+		end
+		api.setContainerElement(containerObject, fieldName, key, value)
+	end
+
+	function mt.__len(obj)
+		return api.getContainerSize(obj, fieldName)
+	end
+
+	return setmetatable({}, mt)
+end
+getContainerReference()
 -- TODO: Boost.PP for easy & nice definition of accessor getters/setters (and other macros)
 -- contrary to its name, for methods it uses rawset in addition to returning function, to cache the functions, because their creation might be expensive
 -- as single table is used for all polymorphic objects, I can't use __index and __newindex metamethods to check for field existence, because I would have to call them manually from metatable (ugly)
@@ -282,7 +322,11 @@ local function currentOrInheritedMemberLookup(obj, key, className, treatAsClassN
 	local data = getmetatable(obj).classMetatable.getMemberData(key)
 	local staticMatches = shouldBeStatic == nil or data.isStatic == shouldBeStatic
 	if data.isField and staticMatches then -- current class has matching field
-		return api.getClassObjectField(obj, className, key)
+		if data.isContainer then
+			return getContainerReference(obj, key)
+		else
+			return api.getClassObjectField(obj, className, key)
+		end
 	elseif data.isCallable and staticMatches then -- current class has matching method
 		local f = funcWrapper(className, key, data)
 		-- rawset(obj, key, f) -- cache future accesses to methods
@@ -361,15 +405,20 @@ local createObjectMetatable
 		debug.setmetatable(obj, objMT) -- FIXME: you can't set a metatable of userdata without using debug library, so C++ needs to do it
 		return obj
 	end
-	classMT.__call = function(t, ...)
+	classMT.__call = function(cls, ...)
 		return new(...)
 	end
 	classMT.new = new
+	local customIndexes =
+	{
+		new = new, -- this is without question mark, because it's restricted keyword in C++ anyways, probably should change this for consistency
+		["?getMemberData"] = getMemberData,
+	}
 	-- static variables
 	function classMT.__index(t, str)
 		-- handling this here, because I don't want to make overwriting the field possible
-		if str == "new" then
-			return new
+		if customIndexes[str] then
+			return customIndexes[str]
 		end
 		local data = getMemberData(str)
 		if not data then
@@ -380,6 +429,9 @@ local createObjectMetatable
 			--rawset(t, str, f)
 			return f
 		elseif not data.isCallable and data.isStatic then
+			if data.isContainer then
+				return getContainerReference(nil, str)
+			end
 			return api.getClassField(className, str)
 		else
 			error(format("Attempt to access unknown static field %q of class %q", str, className), 2)
@@ -416,7 +468,27 @@ end
 	-- convert the pointer internally to pointer to object (might need writing custom converter)
 	-- somehow dereference the pointer
 
+	local customIndexes =
+	{
+		["?copy"] = function(obj)
+			return obj.__copy()
+		end,
+		["?getMetadata"] = function(memberName)
+			return classMT.getMemberData(memberName)
+		end,
+		["?isOfClassOrDerived"] = function(obj, className)
+			return isObjectOfClassOrDerived(obj, className)
+		end,
+	}
+	-- allows syntax such as obj["?copy"]() (without explicit argument)
+	local function ooWrapper(obj)
+
+	end
 	function objMT.__index(obj, key)
+		-- handling this here, because I don't want to make overwriting the field possible
+		if customIndexes[key] then
+			return customIndexes[key]
+		end
 		-- check for correct object type (inheritance won't change much, still original object is passed, just different metatable functions are called)
 		local val = currentOrInheritedMemberLookup(obj, key, className)
 		if val ~= nil then
@@ -790,4 +862,26 @@ ReflectionSampleStruct(int a, int b, int c = 5, int d = 20) : ReflectionSampleSt
 	testGetProp("bb", true)
 	testGetProp("bbb", true)
 	stru = struOld
+
+	-- static property tests
+	--[[
+		static int staticInt;
+		static void* staticPtr;
+		static const char* const staticReadonlyPchar; // "staticReadonlyPcharText"
+		static UnionSample staticUnionsArr[3];
+		static std::array<UnionSample, 3> staticUnionsArrStd;
+	]]
+	local cls = cpp.class.ReflectionSampleStruct
+	local pcharData = cls["?getMemberData"]("staticReadonlyPchar")
+	assert(pcharData.isField, "pcharData.isField == %s, expected true", tostring(pcharData.isField))
+	assert(pcharData.isStatic, "pcharData.isStatic == %s, expected true", tostring(pcharData.isStatic))
+	assert(not pcharData.isCallable, "pcharData.isCallable == %s, expected false", tostring(pcharData.isCallable))
+	assert(pcharData.isConst, "pcharData.isConst == %s, expected true", tostring(pcharData.isConst))
+	assert(pcharData.isPointer, "pcharData.isPointer == %s, expected true", tostring(pcharData.isPointer))
+	assert(cls.staticReadonlyPchar == "staticReadonlyPcharText", "cls.staticReadonlyPchar == %q, expected %q", cls.staticReadonlyPchar, "staticReadonlyPcharText")
+	cls.staticReadonlyPchar = "test34325"
+	assert(cls.staticReadonlyPchar == "test34325", "cls.staticReadonlyPchar == %q, expected %q", cls.staticReadonlyPchar, "test34325")
+	staticPtr = 0x50647480
+	assert(cls.staticPtr == 0x50647480, "cls.staticPtr == %d, expected %d", cls.staticPtr, 0x50647480)
+	assert(cls.isPointer, "cls.isPointer == %s, expected true", tostring(cls.isPointer))
 end
