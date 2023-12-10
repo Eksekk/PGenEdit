@@ -48,10 +48,12 @@ setmetatable(class, classContainerMT)
 local function isClassObject(obj)
 	return obj and (type(obj) == "userdata" or type(obj) == "table") and getmetatable(obj) and getmetatable(obj).className
 end
+pgenedit.cpp.isClassObject = isClassObject
 
 local function isClass(entity)
 	return entity and getmetatable(entity) and getmetatable(entity).className and getmetatable(entity).objectMetatable
 end
+pgenedit.cpp.isClass = isClass
 
 -- TODO: this actually doesn't take into account derived classes!
 local function isObjectOfClassOrDerived(obj, checkName)
@@ -272,31 +274,24 @@ local function funcWrapper(className, memberName, memberData)
 	end
 end
 
-local function getNestedData(memberData, level)
-	local nestedData = memberData
-	for i = 1, level do
-		nestedData = nestedData.nested
-	end
-	return nestedData
-end
-
--- if entity is nil, then it's treated as a global/static field
+-- entity can be class, class object, or global (nil)
 local function getElementByPath(entity, fieldName, accessPath)
+	local accessPath = table.copy(accessPath)
 	table.insert(accessPath, 1, fieldName)
 	local first = 1
-	if entity == nil then -- static or global
-		first = 2
-		if isClass(entity) then -- static
-			entity = cpp.class[entity.className]
-		else -- global
-			entity = cpp.global[accessPath[1]]
-		end
+	if entity == nil then -- global
+		entity = cpp.global[accessPath[1]]
+	elseif isClass(entity) then -- class
+		-- do nothing
+	else -- instance of class
+		-- do nothing
 	end
 	for i = first, #accessPath do
-		if entity[accessPath[i]] == nil then
+		local val = entity[accessPath[i]]
+		if val == nil then
 			error(format("'%s': Attempt to access unknown field %q", getmetatable(entity).className, accessPath[i]), 4)
 		end
-		entity = entity[accessPath[i]]
+		entity = val
 	end
 	return entity
 end
@@ -346,11 +341,11 @@ local function assignTableToField(classObject, fieldName, accessPath, val)
 				error(format("'%s': Attempt to assign table to associative container %q with invalid value %q", getmetatable(classObject).className, fieldName, v), 3)
 			end
 		end
-		pgenedit.debug.attemptTypeConversion = debugOld
 		obj:clear()
 		for k, v in pairs(val) do
 			obj[k] = v
 		end
+		pgenedit.debug.attemptTypeConversion = debugOld
 	elseif nestedMetadata.isWrapper then -- unique_ptr etc.
 		error("TODO")
 	end
@@ -385,6 +380,20 @@ end
 -- "accessPath" contains all indexes accessed in sequence, needed to get from object to parent container
 -- for example, for t[2].a[true][3] it would be {2, "a", true}, and 3 would be field name (t is an object)
 -- for x[555][333] it would be {555}, and 333 would be field name (x is an object)
+
+local function isAnyContainerOrWrapper(metadata)
+	return metadata.isSequentialContainer or metadata.isAssociativeContainer or metadata.isWrapper
+end
+
+-- returns a copy of table with val inserted at the end
+local function insertIntoTableCopy(t, val)
+	local copy = table.copy(t)
+	table.insert(copy, val)
+	return copy
+end
+
+-- wraps a container field of class, class object, or global, so that it can be accessed as a table
+-- FIELD NAME is always first-level name, not the last one which returns actual value!
 local function getContainerReference(classObject, fieldName, accessPath)
 	-- for now let's assume that there are no class types in containers, only primitive types
 	accessPath = accessPath or {}
@@ -397,65 +406,115 @@ local function getContainerReference(classObject, fieldName, accessPath)
 	else
 		path = format("[global] %s", fieldName)
 	end
-	local memberData = classObject["?getMetadata"]()
+	local memberData = getElementByPath(classObject, fieldName, accessPath)["?getMetadata"]()
 	-- assume data.nested contains nested type (for example std::vector<std::vector<int>> or std::reference_wrapper<std::vector<int>>)
 	assert(memberData, format("'%s': Can't get metadata", path))
-	function mt.__index(_, key)
-		local nestedData = getNestedData(classObject, #accessPath + 1)
-		if nestedData and nestedData.isSequentialContainer and type(key) ~= "number" then
-			error(format("'%s': Attempt to access sequential container with non-numeric key %q", path, key), 2)
-		end
+	function mt.__index(containerRef, key)
+		-- associative containers can contain two nested types! FIXME
+		-- return only type of value?
+		local accessPath = insertIntoTableCopy(accessPath, key)
+		local nestedData = getElementByPath(classObject, fieldName, accessPath)["?getMetadata"]()
 		if nestedData then
-			if nestedData.isSequentialContainer or nestedData.isAssociativeContainer or nestedData.isWrapper then
-				local nestedPath = table.copy(accessPath)
-				table.insert(nestedPath, fieldName)
-				return getContainerReference(classObject, key, nestedPath)
+			if isAnyContainerOrWrapper(nestedData) then
+				local nestedPath = insertIntoTableCopy(accessPath, key)
+				return getContainerReference(classObject, fieldName, nestedPath)
 			else
 				-- TODO: get non-container field or class type
 				error("TODO")
 			end
 		else -- not container and not wrapper - get actual value
-			return api.getContainerElement(classObject, key, accessPath)
+			if memberData and memberData.isSequentialContainer and type(key) ~= "number" then
+				error(format("'%s': Attempt to access sequential container with non-numeric key %q", path, key), 2)
+			end
+			local keys = containerRef:getKeys()
+			if table.find(keys, key) then
+				return api.getContainerElement(classObject, fieldName, accessPath)
+			else
+				error(format("'%s': Attempt to access container with invalid key %q", path, key), 2)
+			end
+			return api.getContainerElement(classObject, fieldName, accessPath)
 		end
 	end
 
-	function mt.__newindex(containerObject, key, value)
-		local nestedData = getNestedData(classObject, #accessPath + 1)
-		if nestedData then -- if nestedData is not nil, then it's a container, not a field
-			if memberData.isSequentialContainer and type(key) ~= "number" then
-				error(format("'%s': Attempt to set sequential container with non-numeric key %q", path, key), 2)
-			end
+	-- it would be more convenient to have this function be a closure inside __newindex, but then it would be recreated every time __newindex is called, which is not good
+	local function trySetNoConvert(nestedPath, nestedData, value)
+		local old = pgenedit.debug.attemptTypeConversion
+		pgenedit.debug.attemptTypeConversion = false
+		local converted = validateOrConvertParameter(value, nestedData, 1, path, true)
+		pgenedit.debug.attemptTypeConversion = old
+		if converted == nil then
+			error(format("'%s': Attempt to set container with invalid value %q of type %q", path, value, type(value)), 3)
+		else
+			api.setContainerElement(classObject, fieldName, nestedPath, converted)
+		end
+	end
 
+	function mt.__newindex(containerRef, key, value)
+		local nestedPath = insertIntoTableCopy(accessPath, key)
+		local nestedData = getElementByPath(classObject, fieldName, nestedPath)["?getMetadata"]()
+		if isAnyContainerOrWrapper(memberData) then
 			if nestedData.isSequentialContainer or nestedData.isAssociativeContainer then
 				if type(value) == "table" then -- accept only tables as values, because they are the only ones that can be sensibly converted to containers
-					local nestedPath = table.copy(accessPath)
-					table.insert(nestedPath, fieldName)
-					return assignTableToField(containerObject, key, nestedPath, value)
+					local nestedPath = insertIntoTableCopy(nestedPath, key)
+					return assignTableToField(classObject, fieldName, nestedPath, value)
 				else
 					error(format("'%s': Attempt to set container with non-table value %q", path, value), 2)
 				end
-
 			elseif nestedData.isWrapper then
 				error("TODO")
+			elseif isClass(nestedData) then
+				-- can't write to member class type
+				error(format("'%s': Attempt to set class type %q", path, nestedData.name), 2)
 			else
-				-- TODO: set non-container field or class type
-				error("TODO")
+				trySetNoConvert(nestedPath, nestedData, value)
 			end
-			
 		end
-		api.setContainerElement(classObject, key, accessPath, value)
+		if memberData.isSequentialContainer and type(key) ~= "number" then
+			error(format("'%s': Attempt to set sequential container with non-numeric key %q", path, key), 2)
+		end
+		local keys = containerRef:getKeys()
+		if table.find(keys, key) then
+			trySetNoConvert(nestedPath, nestedData, value)
+		else
+			error(format("'%s': Attempt to set container with invalid key %q", path, key), 2)
+		end
 	end
 
-	function mt.__len(obj)
-		return api.getContainerSize(obj, fieldName)
+	function mt.__len(ref)
+		return api.getContainerSize(classObject, fieldName, accessPath)
 	end
 
 	local t = {}
 	function t:clear()
-		api.clearContainer(classObject, fieldName, accessPath)
+		return api.clearContainer(classObject, fieldName, accessPath)
 	end
 	function t:size()
 		return api.getContainerSize(classObject, fieldName, accessPath)
+	end
+	function t:getKeys()
+		return api.getContainerKeys(classObject, fieldName, accessPath)
+	end
+	function t:getValues()
+		return api.getContainerValues(classObject, fieldName, accessPath)
+	end
+	function t:enum()
+		local keys = self:getKeys()
+		return function(_, key)
+			local keyIndex, key = next(keys, key)
+			if key then
+				return key, self[key]
+			end
+		end
+	end
+	function t:enumSorted()
+		local keys = self:getKeys()
+		table.sort(keys)
+		return function(_, key)
+			local keyIndex, key = next(keys, key)
+			if key then
+				return key, self[key]
+			end
+		end
 	end
 
 	return setmetatable(t, mt)

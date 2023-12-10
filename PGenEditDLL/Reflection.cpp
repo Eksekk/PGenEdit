@@ -1024,3 +1024,45 @@ int luaDebug::getGlobalEnvironmentInfo(lua_State* L)
         return 0;
     }
 }
+
+// CONTAINERS
+// since containers can be nested, for example std::vector<std::vectors<std::vector<int>>>, and they don't have names nor are reflected in RTTR, we need to pass "access path" to the indexed container, as well as field name, to get specific one
+// so for example above and assignment index[0][2][5] = 88, we would pass {0, 2} as access path, 5 as index, and 88 as value
+
+// value at "entityIndex" can actually be global variable or function, class static field or method, or class object field or method
+rttr::variant getContainerByPath(lua_State* L, int accessPathIndex, int entityIndex)
+{
+    LuaWrapper w(L);
+    if (w.isTable(accessPathIndex))
+    {
+        LuaTable accessPath = LuaTable::fromLuaTable(L, accessPathIndex);
+        rttr::variant ret;
+        for (L)
+    }
+    else
+    {
+        luaError("Couldn't get container - access path is not a table");
+        return rttr::variant();
+    }
+}   
+
+// receives fieldName and accessPath
+int luaDebug::getContainerSize(lua_State* L)
+{
+    
+}
+
+int luaDebug::getContainerElement(lua_State* L)
+{
+    return 0;
+}
+
+int luaDebug::setContainerElement(lua_State* L)
+{
+    return 0;
+}
+
+int luaDebug::clearContainer(lua_State* L)
+{
+    return 0;
+}

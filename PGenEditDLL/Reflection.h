@@ -61,7 +61,6 @@ void callDestructors(Args&&... args)
 // lua debug api
 namespace luaDebug
 {
-    // TODO: I removed static from these functions, because I want to use them in LuaFunctions.cpp (to register them in lua), but I'm not sure if it's correct
     extern "C"
     {
         int classExists(lua_State* L);
@@ -79,6 +78,11 @@ namespace luaDebug
         int invokeGlobalMethod(lua_State* L);
         int getClassInfo(lua_State* L);
         int getGlobalEnvironmentInfo(lua_State* L);
+        // containers
+        int getContainerSize(lua_State* L);
+        int getContainerElement(lua_State* L);
+        int setContainerElement(lua_State* L);
+        int clearContainer(lua_State* L);
     }
 }
 // member methods, static methods, global methods, global callables, member callables, static callables
