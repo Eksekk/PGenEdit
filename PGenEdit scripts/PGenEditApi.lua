@@ -11,6 +11,8 @@ local format = string.format
 -- TODO: notify lua about object destruction from C++ side?
 -- 5. BIG ONE: implement struct operators as metamethods if appropriate (for example, __add for operator+), and also implement __eq for all classes (for operator==)
 -- 6. support for C++ containers as class/struct members (std::vector, std::map, etc.). To be determined - is it better to return a special "reference" to container on __index, which would automatically modify the container every time it is changed, or return plain table and allow only __newindex to modify the container?
+-- 7. implement caching for subobjects (as fields or inside containers), so that they are not recreated every time they are accessed
+-- 8. for easy integration of member types (for example inner structs) and data members, store in metadata declaring type?
 
 -- for functions need to handle:
 -- 1. type checking for arguments and return types (including small value types range compatibility), C++ will also check this, but it's better to check it here too
@@ -44,7 +46,11 @@ setmetatable(class, classContainerMT)
 
 -- userdata are objects created by lua, tables are objects created by C++ (so no automatic garbage collection happens)
 local function isClassObject(obj)
-	return (type(obj) == "userdata" or type(obj) == "table") and getmetatable(obj) and getmetatable(obj).className
+	return obj and (type(obj) == "userdata" or type(obj) == "table") and getmetatable(obj) and getmetatable(obj).className
+end
+
+local function isClass(entity)
+	return entity and getmetatable(entity) and getmetatable(entity).className and getmetatable(entity).objectMetatable
 end
 
 -- TODO: this actually doesn't take into account derived classes!
@@ -90,7 +96,7 @@ local integerTypeRanges =
 local sIntOutOfRange = "'%s': Parameter #%d is out of range for type %q (value is %d)"
 local genericParamFormatStr = "'%s': Parameter #%d (%q) of type %q and value %q can't be converted to C++ type %q"
 local sNotAnObject = "'%s': Argument #%d (%q) is not an object [userdata]"
-local function validateOrConvertParameter(value, cppType, paramIndex, funcNameForMessage)
+local function validateOrConvertParameter(value, cppType, paramIndex, funcNameForMessage, noError)
 	local expectedParamData = cppType
 	-- gets type table, not parameter one (which contains parameter name and type subtable)
 	local expectedCppTypeStr = expectedParamData.name
@@ -193,6 +199,8 @@ local function validateOrConvertParameter(value, cppType, paramIndex, funcNameFo
 		else
 			return value
 		end
+	elseif noError then
+		return
 	else
 		error(format("'%s': Parameter #%d (%q) of type %q and value %q: requested C++ type is %q, which is not supported", funcNameForMessage, paramIndex, expectedParamData.name, type(value), value, expectedCppTypeStr), 3)
 	end
@@ -264,6 +272,90 @@ local function funcWrapper(className, memberName, memberData)
 	end
 end
 
+local function getNestedData(memberData, level)
+	local nestedData = memberData
+	for i = 1, level do
+		nestedData = nestedData.nested
+	end
+	return nestedData
+end
+
+-- if entity is nil, then it's treated as a global/static field
+local function getElementByPath(entity, fieldName, accessPath)
+	table.insert(accessPath, 1, fieldName)
+	local first = 1
+	if entity == nil then -- static or global
+		first = 2
+		if isClass(entity) then -- static
+			entity = cpp.class[entity.className]
+		else -- global
+			entity = cpp.global[accessPath[1]]
+		end
+	end
+	for i = first, #accessPath do
+		if entity[accessPath[i]] == nil then
+			error(format("'%s': Attempt to access unknown field %q", getmetatable(entity).className, accessPath[i]), 4)
+		end
+		entity = entity[accessPath[i]]
+	end
+	return entity
+end
+
+-- need to know: whether field being assigned to is a container, if so, container type and its data type
+-- TODO: handle LuaTable cpp class
+local function assignTableToField(classObject, fieldName, accessPath, val)
+	local obj = getElementByPath(classObject, fieldName, accessPath)
+	local nestedMetadata = getNestedData(obj["?getMetadata"](), #accessPath + 1)
+	local nestedIsContainer = nestedMetadata.isSequentialContainer or nestedMetadata.isAssociativeContainer
+	if nestedMetadata.isSequentialContainer then -- assign table to container
+		-- TODO: sets (they are considered 'sequential container' in RTTR, but can have non-integer or sparse keys, so they are not really sequential)
+		-- need to check that:
+		-- there are no gaps in indexes
+		-- data type is correct
+		-- there are no non-integer keys
+		local maxIndex = 0
+		for k, v in pairs(val) do
+			if type(k) ~= "number" then -- index type is not integer
+				error(format("'%s': Attempt to assign table to sequential container %q with non-numeric key %q", getmetatable(classObject).className, fieldName, k), 3)
+			elseif validateOrConvertParameter(v, nestedMetadata.nested, 1, getmetatable(classObject).className, true) == nil then -- value type is not correct
+				error(format("'%s': Attempt to assign table to sequential container %q with invalid value %q", getmetatable(classObject).className, fieldName, v), 3)
+			else
+				maxIndex = math.max(maxIndex, k)
+			end
+		end
+		for i = 1, maxIndex do
+			if val[i] == nil then -- gap in indexes
+				error(format("'%s': Attempt to assign table to sequential container %q with gaps in indexes", getmetatable(classObject).className, fieldName), 3)
+			end
+		end
+		-- TODO: this will be slow, because it will call __newindex for each element, make additional API functions?
+		obj:clear()
+		for i = 1, maxIndex do
+			obj[i] = val[i]
+		end
+	elseif nestedMetadata.isAssociativeContainer then
+		-- need to check that:
+		-- key and value types are correct (for all keys and values)
+
+		local debugOld = pgenedit.debug.attemptTypeConversion
+		pgenedit.debug.attemptTypeConversion = false -- for consistency with assignment loop below
+		for k, v in pairs(val) do
+			if validateOrConvertParameter(k, nestedMetadata.nested.key, 1, getmetatable(classObject).className, true) == nil then -- key type is not correct
+				error(format("'%s': Attempt to assign table to associative container %q with invalid key %q", getmetatable(classObject).className, fieldName, k), 3)
+			elseif validateOrConvertParameter(v, nestedMetadata.nested.value, 1, getmetatable(classObject).className, true) == nil then -- value type is not correct
+				error(format("'%s': Attempt to assign table to associative container %q with invalid value %q", getmetatable(classObject).className, fieldName, v), 3)
+			end
+		end
+		pgenedit.debug.attemptTypeConversion = debugOld
+		obj:clear()
+		for k, v in pairs(val) do
+			obj[k] = v
+		end
+	elseif nestedMetadata.isWrapper then -- unique_ptr etc.
+		error("TODO")
+	end
+end
+
 -- support vectors, lists, sets, maps etc.
 -- obj == nil means that it's a static or global container
 -- std::vector<std::vector<int>> vec ->
@@ -283,33 +375,92 @@ end
 -- set gets set
 -- set["key"] gets string
 -- set.insert("key") inserts string, returns whether insertion took place (false if element already existed)
+-- set["key"] = nil or false removes string, anything else inserts the element
+
+-- store "container access path" in each one? like for map example above it would be {"key", 1, 2}
+-- would need a way to get metadata of each returned element, so we can know if it's a container too and return reference to it
+-- first level has to have C++ object as parent, next could have parent reference?
 
 -- TODO: add support for const containers
-local function getContainerReference(classObject, fieldName)
+-- "accessPath" contains all indexes accessed in sequence, needed to get from object to parent container
+-- for example, for t[2].a[true][3] it would be {2, "a", true}, and 3 would be field name (t is an object)
+-- for x[555][333] it would be {555}, and 333 would be field name (x is an object)
+local function getContainerReference(classObject, fieldName, accessPath)
+	-- for now let's assume that there are no class types in containers, only primitive types
+	accessPath = accessPath or {}
 	local mt = {}
-	local data = classObject["?getMetadata"]()
-	assert(data, format("'%s': Can't get metadata of field %q", getmetatable(classObject).className, fieldName))
+	local path
+	if isClass(classObject) then
+		path = format("[class field] %s::%s", getmetatable(classObject).name, fieldName)
+	elseif isClassObject(classObject) then
+		path = format("[class object field] %s::%s", getmetatable(classObject).className, fieldName)
+	else
+		path = format("[global] %s", fieldName)
+	end
+	local memberData = classObject["?getMetadata"]()
+	-- assume data.nested contains nested type (for example std::vector<std::vector<int>> or std::reference_wrapper<std::vector<int>>)
+	assert(memberData, format("'%s': Can't get metadata", path))
 	function mt.__index(_, key)
-		if data.isSequentialContainer and type(key) ~= "number" then
-			error(format("'%s': Attempt to access sequential container %q with non-numeric key %q", getmetatable(classObject).className, fieldName, key), 2)
+		local nestedData = getNestedData(classObject, #accessPath + 1)
+		if nestedData and nestedData.isSequentialContainer and type(key) ~= "number" then
+			error(format("'%s': Attempt to access sequential container with non-numeric key %q", path, key), 2)
 		end
-		return api.getContainerElement(classObject, fieldName, key)
+		if nestedData then
+			if nestedData.isSequentialContainer or nestedData.isAssociativeContainer or nestedData.isWrapper then
+				local nestedPath = table.copy(accessPath)
+				table.insert(nestedPath, fieldName)
+				return getContainerReference(classObject, key, nestedPath)
+			else
+				-- TODO: get non-container field or class type
+				error("TODO")
+			end
+		else -- not container and not wrapper - get actual value
+			return api.getContainerElement(classObject, key, accessPath)
+		end
 	end
 
 	function mt.__newindex(containerObject, key, value)
-		if data.isSequentialContainer and type(key) ~= "number" then
-			error(format("'%s': Attempt to set sequential container %q with non-numeric key %q", getmetatable(containerObject).className, fieldName, key), 2)
+		local nestedData = getNestedData(classObject, #accessPath + 1)
+		if nestedData then -- if nestedData is not nil, then it's a container, not a field
+			if memberData.isSequentialContainer and type(key) ~= "number" then
+				error(format("'%s': Attempt to set sequential container with non-numeric key %q", path, key), 2)
+			end
+
+			if nestedData.isSequentialContainer or nestedData.isAssociativeContainer then
+				if type(value) == "table" then -- accept only tables as values, because they are the only ones that can be sensibly converted to containers
+					local nestedPath = table.copy(accessPath)
+					table.insert(nestedPath, fieldName)
+					return assignTableToField(containerObject, key, nestedPath, value)
+				else
+					error(format("'%s': Attempt to set container with non-table value %q", path, value), 2)
+				end
+
+			elseif nestedData.isWrapper then
+				error("TODO")
+			else
+				-- TODO: set non-container field or class type
+				error("TODO")
+			end
+			
 		end
-		api.setContainerElement(containerObject, fieldName, key, value)
+		api.setContainerElement(classObject, key, accessPath, value)
 	end
 
 	function mt.__len(obj)
 		return api.getContainerSize(obj, fieldName)
 	end
 
-	return setmetatable({}, mt)
+	local t = {}
+	function t:clear()
+		api.clearContainer(classObject, fieldName, accessPath)
+	end
+	function t:size()
+		return api.getContainerSize(classObject, fieldName, accessPath)
+	end
+
+	return setmetatable(t, mt)
 end
-getContainerReference()
+
 -- TODO: Boost.PP for easy & nice definition of accessor getters/setters (and other macros)
 -- contrary to its name, for methods it uses rawset in addition to returning function, to cache the functions, because their creation might be expensive
 -- as single table is used for all polymorphic objects, I can't use __index and __newindex metamethods to check for field existence, because I would have to call them manually from metatable (ugly)
