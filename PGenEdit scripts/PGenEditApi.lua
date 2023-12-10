@@ -296,6 +296,29 @@ local function getElementByPath(entity, fieldName, accessPath)
 	return entity
 end
 
+local function getEntityMetadataByPath(entity, fieldName, accessPath)
+	local accessPath = table.copy(accessPath)
+	table.insert(accessPath, 1, fieldName)
+	local first = 1
+	local metadata
+	if entity == nil then -- global
+		metadata = cpp.global["?getMemberData"](accessPath[1])
+	elseif isClass(entity) then -- class
+		-- do nothing
+	else -- instance of class
+		-- do nothing
+	end
+	for i = first, #accessPath do
+		local val = entity[accessPath[i]]
+		if val == nil then
+			error(format("'%s': Attempt to access unknown field %q", getmetatable(entity).className, accessPath[i]), 4)
+		end
+		entity = val
+	end
+	return entity["?getMetadata"]()
+end
+getEntityMetadataByPath()
+
 -- need to know: whether field being assigned to is a container, if so, container type and its data type
 -- TODO: handle LuaTable cpp class
 local function assignTableToField(classObject, fieldName, accessPath, val)
@@ -432,7 +455,6 @@ local function getContainerReference(classObject, fieldName, accessPath)
 			else
 				error(format("'%s': Attempt to access container with invalid key %q", path, key), 2)
 			end
-			return api.getContainerElement(classObject, fieldName, accessPath)
 		end
 	end
 
@@ -516,6 +538,7 @@ local function getContainerReference(classObject, fieldName, accessPath)
 			end
 		end
 	end
+	mt.__call = t.enum
 
 	return setmetatable(t, mt)
 end
@@ -619,13 +642,16 @@ local createObjectMetatable
 		return new(...)
 	end
 	classMT.new = new
+
 	local customIndexes =
 	{
 		new = new, -- this is without question mark, because it's restricted keyword in C++ anyways, probably should change this for consistency
 		["?getMemberData"] = getMemberData,
+		["?getMetadata"] = function() return info end
 	}
+
 	-- static variables
-	function classMT.__index(t, str)
+	function classMT.__index(cls, str)
 		-- handling this here, because I don't want to make overwriting the field possible
 		if customIndexes[str] then
 			return customIndexes[str]
@@ -639,8 +665,8 @@ local createObjectMetatable
 			--rawset(t, str, f)
 			return f
 		elseif not data.isCallable and data.isStatic then
-			if data.isContainer then
-				return getContainerReference(nil, str)
+			if isAnyContainerOrWrapper(data) then
+				return getContainerReference(cls, str)
 			end
 			return api.getClassField(className, str)
 		else
@@ -731,36 +757,56 @@ end
 	return objMT
 end
 
--- now global functions/variables
-local global = {}
-cpp.global = global
-local mt = {}
-setmetatable(global, mt)
-local members = api.getGlobalEnvironmentInfo()
-mt.members = members
-function mt.__index(t, key)
-	local data = members[key]
-	if not data then
-		error(format("Attempt to access unknown global function/variable %q", key), 2)
+do
+	-- now global functions/variables
+	local global = {}
+	cpp.global = global
+	local mt = {}
+	setmetatable(global, mt)
+	local members = api.getGlobalEnvironmentInfo()
+	mt.members = members
+	local customIndexes = {
+		["?getMemberData"] = function(memberName)
+			return members[memberName]
+		end,
+	}
+	function mt.__index(t, key)
+		if customIndexes[key] then
+			return customIndexes[key]
+		end
+		local data = members[key]
+		if not data then
+			error(format("Attempt to access unknown global function/variable %q", key), 2)
+		end
+		if isAnyContainerOrWrapper(data) then
+			return getContainerReference(nil, key)
+		elseif data.isCallable then
+			local f = funcWrapper(nil, key, data)
+			--rawset(t, key, f) -- commented out, because std::function fields might theoretically change their value
+			return f
+		else
+			return api.getGlobal(key)
+		end
 	end
-	if data.isCallable then
-		local f = funcWrapper(nil, key, data)
-		--rawset(t, key, f) -- commented out, because std::function fields might theoretically change their value
-		return f
-	elseif data.isField then
-		return api.getGlobal(key)
-	end
-end
 
-function mt.__newindex(t, key, value)
-	local data = members[key]
-	if not data then
-		error(format("Attempt to set unknown global function/variable %q", key))
+	function mt.__newindex(t, key, value)
+		local data = members[key]
+		if not data then
+			error(format("Attempt to set unknown global function/variable %q", key))
+		end
+		if data.isCallable then
+			error(format("Attempt to set global callable %q", key), 2)
+		end
+		if isAnyContainerOrWrapper(data) then
+			if type(value) == "table" then
+				return assignTableToField(nil, key, {}, value)
+			else
+				error(format("Attempt to set global container %q with non-table value %q", key, value), 2)
+			end
+		else
+			api.setGlobal(key, value)
+		end
 	end
-	if data.isCallable then
-		error(format("Attempt to set global callable %q", key), 2)
-	end
-	api.setGlobal(key, value)
 end
 
 -- tests
