@@ -297,34 +297,34 @@ local function getElementByPath(entity, fieldName, accessPath)
 end
 
 local function getEntityMetadataByPath(entity, fieldName, accessPath)
-	local accessPath = table.copy(accessPath)
-	table.insert(accessPath, 1, fieldName)
 	local first = 1
 	local metadata
 	if entity == nil then -- global
-		metadata = cpp.global["?getMemberData"](accessPath[1])
+		metadata = cpp.global["?getMemberData"](fieldName)
 	elseif isClass(entity) then -- class
-		-- do nothing
+		metadata = entity["?getMemberData"](fieldName)
 	else -- instance of class
-		-- do nothing
+		metadata = entity["?getMetadata"](fieldName)
 	end
 	for i = first, #accessPath do
-		local val = entity[accessPath[i]]
-		if val == nil then
-			error(format("'%s': Attempt to access unknown field %q", getmetatable(entity).className, accessPath[i]), 4)
+		local newMetadata
+		if metadata.isAssociativeContainer then
+			newMetadata = metadata.valueType -- always choose value type
+		elseif metadata.isSequentialContainer or metadata.isWrapper then
+			newMetadata = metadata.valueType
+		else
+			error(format("'%s': Attempt to access field %q of non-container type %q", getmetatable(entity).className, accessPath[i], metadata.name), 4)
 		end
-		entity = val
+		metadata = newMetadata
 	end
-	return entity["?getMetadata"]()
+	return metadata
 end
-getEntityMetadataByPath()
 
 -- need to know: whether field being assigned to is a container, if so, container type and its data type
 -- TODO: handle LuaTable cpp class
 local function assignTableToField(classObject, fieldName, accessPath, val)
 	local obj = getElementByPath(classObject, fieldName, accessPath)
-	local nestedMetadata = getNestedData(obj["?getMetadata"](), #accessPath + 1)
-	local nestedIsContainer = nestedMetadata.isSequentialContainer or nestedMetadata.isAssociativeContainer
+	local nestedMetadata = getEntityMetadataByPath(classObject, fieldName, accessPath)
 	if nestedMetadata.isSequentialContainer then -- assign table to container
 		-- TODO: sets (they are considered 'sequential container' in RTTR, but can have non-integer or sparse keys, so they are not really sequential)
 		-- need to check that:
@@ -335,7 +335,7 @@ local function assignTableToField(classObject, fieldName, accessPath, val)
 		for k, v in pairs(val) do
 			if type(k) ~= "number" then -- index type is not integer
 				error(format("'%s': Attempt to assign table to sequential container %q with non-numeric key %q", getmetatable(classObject).className, fieldName, k), 3)
-			elseif validateOrConvertParameter(v, nestedMetadata.nested, 1, getmetatable(classObject).className, true) == nil then -- value type is not correct
+			elseif validateOrConvertParameter(v, nestedMetadata.valueType, 1, getmetatable(classObject).className, true) == nil then -- value type is not correct
 				error(format("'%s': Attempt to assign table to sequential container %q with invalid value %q", getmetatable(classObject).className, fieldName, v), 3)
 			else
 				maxIndex = math.max(maxIndex, k)
@@ -358,9 +358,9 @@ local function assignTableToField(classObject, fieldName, accessPath, val)
 		local debugOld = pgenedit.debug.attemptTypeConversion
 		pgenedit.debug.attemptTypeConversion = false -- for consistency with assignment loop below
 		for k, v in pairs(val) do
-			if validateOrConvertParameter(k, nestedMetadata.nested.key, 1, getmetatable(classObject).className, true) == nil then -- key type is not correct
+			if validateOrConvertParameter(k, nestedMetadata.keyType, 1, getmetatable(classObject).className, true) == nil then -- key type is not correct
 				error(format("'%s': Attempt to assign table to associative container %q with invalid key %q", getmetatable(classObject).className, fieldName, k), 3)
-			elseif validateOrConvertParameter(v, nestedMetadata.nested.value, 1, getmetatable(classObject).className, true) == nil then -- value type is not correct
+			elseif validateOrConvertParameter(v, nestedMetadata.valueType, 1, getmetatable(classObject).className, true) == nil then -- value type is not correct
 				error(format("'%s': Attempt to assign table to associative container %q with invalid value %q", getmetatable(classObject).className, fieldName, v), 3)
 			end
 		end
@@ -429,14 +429,14 @@ local function getContainerReference(classObject, fieldName, accessPath)
 	else
 		path = format("[global] %s", fieldName)
 	end
-	local memberData = getElementByPath(classObject, fieldName, accessPath)["?getMetadata"]()
-	-- assume data.nested contains nested type (for example std::vector<std::vector<int>> or std::reference_wrapper<std::vector<int>>)
+	local memberData = getEntityMetadataByPath(classObject, fieldName, accessPath)
+	-- assume data.valueType contains nested type (for example std::vector<std::vector<int>> or std::reference_wrapper<std::vector<int>>)
 	assert(memberData, format("'%s': Can't get metadata", path))
 	function mt.__index(containerRef, key)
 		-- associative containers can contain two nested types! FIXME
 		-- return only type of value?
 		local accessPath = insertIntoTableCopy(accessPath, key)
-		local nestedData = getElementByPath(classObject, fieldName, accessPath)["?getMetadata"]()
+		local nestedData = getEntityMetadataByPath(classObject, fieldName, accessPath)
 		if nestedData then
 			if isAnyContainerOrWrapper(nestedData) then
 				local nestedPath = insertIntoTableCopy(accessPath, key)
@@ -473,7 +473,7 @@ local function getContainerReference(classObject, fieldName, accessPath)
 
 	function mt.__newindex(containerRef, key, value)
 		local nestedPath = insertIntoTableCopy(accessPath, key)
-		local nestedData = getElementByPath(classObject, fieldName, nestedPath)["?getMetadata"]()
+		local nestedData = getEntityMetadataByPath(classObject, fieldName, nestedPath)
 		if isAnyContainerOrWrapper(memberData) then
 			if nestedData.isSequentialContainer or nestedData.isAssociativeContainer then
 				if type(value) == "table" then -- accept only tables as values, because they are the only ones that can be sensibly converted to containers
@@ -557,6 +557,8 @@ local function currentOrInheritedMemberLookup(obj, key, className, treatAsClassN
 	if data.isField and staticMatches then -- current class has matching field
 		if data.isContainer then
 			return getContainerReference(obj, key)
+		elseif data.isClass then -- class type other than container or wrapper
+			return getmetatable(obj).classMetatable["?existingObjectAt"](api.getClassObjectFieldPtr(obj, className, key))
 		else
 			return api.getClassObjectField(obj, className, key)
 		end
@@ -585,10 +587,16 @@ local function currentOrInheritedMemberSet(obj, key, value, className, treatAsCl
 	end
 	local data = getmetatable(obj).classMetatable.getMemberData(key)
 	local staticMatches = shouldBeStatic == nil or data.isStatic == shouldBeStatic
-	if data.isField and staticMatches then -- base class has field
-		api.setClassObjectField(obj, className, key, value)
+	if data.isField and staticMatches then -- class has field
+		if isAnyContainerOrWrapper(data) then
+			assignTableToField(obj, key, {}, value)
+		elseif data.isClass then
+			error(format("Attempt to set class-object field %q of class type %q", key, className), 3)
+		else
+			api.setClassObjectField(obj, className, key, value)
+		end
 		return true
-	elseif data.isMethod and staticMatches then -- base class has method
+	elseif data.isMethod and staticMatches then -- class has method
 		error(format("Attempt to set method %q of class %q", key, className), 3)
 	else
 		-- recursively check base classes
@@ -642,12 +650,16 @@ local createObjectMetatable
 		return new(...)
 	end
 	classMT.new = new
+	local function newExisting(ptr)
+		return setmetatable({["?ptr"] = ptr}, objMT)
+	end
 
 	local customIndexes =
 	{
 		new = new, -- this is without question mark, because it's restricted keyword in C++ anyways, probably should change this for consistency
 		["?getMemberData"] = getMemberData,
-		["?getMetadata"] = function() return info end
+		["?getMetadata"] = function() return info end,
+		["?existingObjectAt"] = newExisting
 	}
 
 	-- static variables
@@ -667,8 +679,11 @@ local createObjectMetatable
 		elseif not data.isCallable and data.isStatic then
 			if isAnyContainerOrWrapper(data) then
 				return getContainerReference(cls, str)
+			elseif data.isClass then -- non-container-wrapper class
+				return cpp.class[str]["?existingObjectAt"](api.getClassFieldPtr(className, str))
+			else
+				return api.getClassField(className, str)
 			end
-			return api.getClassField(className, str)
 		else
 			error(format("Attempt to access unknown static field %q of class %q", str, className), 2)
 		end
@@ -780,6 +795,8 @@ do
 		end
 		if isAnyContainerOrWrapper(data) then
 			return getContainerReference(nil, key)
+		elseif data.isClass then -- non-container-wrapper class
+			return cpp.class[key]["?existingObjectAt"](api.getGlobalPtr(key))
 		elseif data.isCallable then
 			local f = funcWrapper(nil, key, data)
 			--rawset(t, key, f) -- commented out, because std::function fields might theoretically change their value
@@ -803,6 +820,9 @@ do
 			else
 				error(format("Attempt to set global container %q with non-table value %q", key, value), 2)
 			end
+		elseif data.isClass then
+			-- for now don't support assigning to class objects, because it would open a big can of worms regarding copy construction, copy assignment, etc.
+			error(format("Attempt to set global class object %q", key), 2)
 		else
 			api.setGlobal(key, value)
 		end
@@ -1137,7 +1157,8 @@ ReflectionSampleStruct(int a, int b, int c = 5, int d = 20) : ReflectionSampleSt
 	assert(cls.staticReadonlyPchar == "staticReadonlyPcharText", "cls.staticReadonlyPchar == %q, expected %q", cls.staticReadonlyPchar, "staticReadonlyPcharText")
 	cls.staticReadonlyPchar = "test34325"
 	assert(cls.staticReadonlyPchar == "test34325", "cls.staticReadonlyPchar == %q, expected %q", cls.staticReadonlyPchar, "test34325")
-	staticPtr = 0x50647480
+	assert(cls["?getMemberData"]("staticPtr").name == "staticPtr", "cls[\"?getMemberData\"](\"staticPtr\").name == %q, expected %q", cls["?getMemberData"]("staticPtr").name, "staticPtr")
+	cls.staticPtr = 0x50647480
 	assert(cls.staticPtr == 0x50647480, "cls.staticPtr == %d, expected %d", cls.staticPtr, 0x50647480)
 	assert(cls.isPointer, "cls.isPointer == %s, expected true", tostring(cls.isPointer))
 end
