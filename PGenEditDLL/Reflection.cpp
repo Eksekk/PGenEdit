@@ -683,6 +683,21 @@ int luaDebug::getGlobalField(lua_State* L)
     return 1;
 }
 
+int luaDebug::getClassObjectFieldPtr(lua_State* L)
+{
+    return 0;
+}
+
+int luaDebug::getClassFieldPtr(lua_State* L)
+{
+    return 0;
+}
+
+int luaDebug::getGlobalFieldPtr(lua_State* L)
+{
+    return 0;
+}
+
 // receives global name and value
 int luaDebug::setGlobalField(lua_State* L)
 {
@@ -1026,13 +1041,105 @@ int luaDebug::getGlobalEnvironmentInfo(lua_State* L)
 }
 
 // CONTAINERS
-// since containers can be nested, for example std::vector<std::vectors<std::vector<int>>>, and they don't have names nor are reflected in RTTR, we need to pass "access path" to the indexed container, as well as field name, to get specific one
+// since containers can be nested, for example std::vector<std::vectors<std::vector<int>>>, and they don'cls have names nor are reflected in RTTR, we need to pass "access path" to the indexed container, as well as field name, to get specific one
 // so for example above and assignment index[0][2][5] = 88, we would pass {0, 2} as access path, 5 as index, and 88 as value
 
+rttr::variant getContainerFieldSequence(lua_State* L, const std::vector<LuaTypeInCpp>& parts, rttr::variant& entity)
+{
+    for (int i = 0; i < parts.size(); ++i)
+    {
+
+    }
+}
+
 // value at "entityIndex" can actually be global variable or function, class static field or method, or class object field or method
-rttr::variant getContainerByPath(lua_State* L, int accessPathIndex, int entityIndex)
+rttr::variant getContainerByPath(lua_State* L, int accessPathIndex, int entityIndex, int fieldNameIndex)
 {
     LuaWrapper w(L);
+    accessPathIndex = w.makeAbsoluteStackIndex(accessPathIndex);
+    entityIndex = w.makeAbsoluteStackIndex(entityIndex);
+    fieldNameIndex = w.makeAbsoluteStackIndex(fieldNameIndex);
+
+    auto getField = [&](rttr::variant& entity, const std::string& errorMsgInvalidProp, const std::string& errorMsgCannotGetValue) -> rttr::variant
+        {
+            std::string name = getLuaTypeOrError<std::string>(L, fieldNameIndex);
+            rttr::type type = entity.get_type();
+            rttr::property prop = type.get_property(name);
+            if (!prop.is_valid())
+            {
+                luaError(errorMsgInvalidProp, name);
+                return rttr::variant();
+            }
+            else
+            {
+                auto var = prop.get_value(entity);
+                if (!var.is_valid())
+                {
+                    luaError(errorMsgCannotGetValue, name);
+                    return rttr::variant();
+                }
+                else
+                {
+                    return var;
+                }
+            }
+        };
+    // test what it actually is
+    w.getPath("pgenedit.cpp.isClass");
+    w.pushvalue(entityIndex);
+    if (lua_pcall(L, 1, 1, 0) != LUA_OK)
+    {
+        luaError("Couldn't get container - error while calling isClass: '%s'", w.tostring(-1));
+        return rttr::variant();
+    }
+    else
+    {
+        if (static_cast<bool>(w.toboolean(-1))) // is class
+        {
+            std::string className = getLuaTableMetafieldOrError<std::string>(L, entityIndex, "name");
+            rttr::type cls = rttr::type::get_by_name(className);
+            if (!cls.is_valid())
+            {
+                luaError("Couldn't get container - class '{}' is not registered", className);
+            }
+            else if (!cls.is_class())
+            {
+                luaError("Couldn't get container - '{}' is not a class", className);
+            }
+            else
+            {
+                if (!Reflection::getClassFieldToLuaStack(L, className, getLuaTypeOrError<std::string>(L, fieldNameIndex)))
+                {
+                    luaError("Couldn't get container - couldn't get field '{}' of class '{}'", getLuaTypeOrError<std::string>(L, fieldNameIndex), className);
+                    return rttr::variant();
+                }
+            }
+        }
+        else // object or global
+        {
+            w.getPath("pgenedit.cpp.isClassObject");
+            w.pushvalue(entityIndex);
+            if (lua_pcall(L, 1, 1, 0) != LUA_OK)
+            {
+                luaError("Couldn't get container - error while calling isClassObject: '%s'", w.tostring(-1));
+                return rttr::variant();
+            }
+            else if (static_cast<bool>(w.toboolean(-1))) // object
+            {
+                std::string className = getLuaTableMetafieldOrError<std::string>(L, entityIndex, "className");
+                rttr::type cls = rttr::type::get_by_name(className);
+                if (!cls.is_valid())
+                {
+                    luaError("Couldn't get container - class '{}' is not registered", className);
+                }
+
+            }
+            else // global
+            {
+
+            }
+        }
+    }
     if (w.isTable(accessPathIndex))
     {
         LuaTable accessPath = LuaTable::fromLuaTable(L, accessPathIndex);
@@ -1044,15 +1151,21 @@ rttr::variant getContainerByPath(lua_State* L, int accessPathIndex, int entityIn
         luaError("Couldn't get container - access path is not a table");
         return rttr::variant();
     }
+    return rttr::variant();
 }   
 
-// receives fieldName and accessPath
+// receives classObject, fieldName and accessPath
 int luaDebug::getContainerSize(lua_State* L)
 {
     
 }
 
 int luaDebug::getContainerElement(lua_State* L)
+{
+    return 0;
+}
+
+int luaDebug::getContainerElementPtr(lua_State* L)
 {
     return 0;
 }

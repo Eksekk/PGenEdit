@@ -70,6 +70,9 @@ namespace luaDebug
         int getClassObjectField(lua_State* L);
         int getClassField(lua_State* L);
         int getGlobalField(lua_State* L);
+        int getClassObjectFieldPtr(lua_State* L);
+        int getClassFieldPtr(lua_State* L);
+        int getGlobalFieldPtr(lua_State* L);
         int setClassObjectField(lua_State* L);
         int setClassField(lua_State* L);
         int setGlobalField(lua_State* L);
@@ -81,6 +84,7 @@ namespace luaDebug
         // containers
         int getContainerSize(lua_State* L);
         int getContainerElement(lua_State* L);
+        int getContainerElementPtr(lua_State* L);
         int setContainerElement(lua_State* L);
         int clearContainer(lua_State* L);
     }
@@ -1248,28 +1252,6 @@ luaError("Can't convert parameter {} (stack index {}, name '{}') of lua type '{}
         return type;
     }
 
-    // ensures class exists and property exists, returns the property. Doesn't check if property is static or not
-    static rttr::property getAndCheckClassProperty(const std::string& className, const std::string& propertyName)
-    {
-        rttr::type type = getAndCheckClassType(className);
-        rttr::property prop = type.get_property(propertyName);
-        if (!prop.is_valid())
-        {
-            propertyDoesNotExistLuaError(className, propertyName);
-        }
-        return prop;
-    }
-
-    static rttr::property getAndCheckClassObjectPtrProperty(const rttr::variant& instance, const std::string& propertyName)
-    {
-        rttr::property prop = instance.get_type().get_raw_type().get_property(propertyName);
-        if (!prop.is_valid())
-        {
-            luaError("Object of type {} doesn't have property {}", instance.get_type().get_raw_type().get_name(), propertyName);
-        }
-        return prop;
-    }
-
     static void checkPropertyIsStatic(const std::string& className, const std::string& propertyName, const rttr::property& prop)
     {
         if (!prop.is_static()) // object field, expected class field
@@ -1286,7 +1268,20 @@ luaError("Can't convert parameter {} (stack index {}, name '{}') of lua type '{}
         }
     }
 
-    static rttr::property getAndCheckGlobalVariable(const std::string& varName)
+public: // property getters
+
+    // takes not an instance, but raw pointer to instance
+    static rttr::property getClassObjectPtrField(const rttr::variant& instance, const std::string& propertyName)
+    {
+        rttr::property prop = instance.get_type().get_raw_type().get_property(propertyName);
+        if (!prop.is_valid())
+        {
+            luaError("Object of type {} doesn't have property {}", instance.get_type().get_raw_type().get_name(), propertyName);
+        }
+        return prop;
+    }
+
+    static rttr::property getGlobalFieldCpp(const std::string& varName)
     {
         rttr::property prop = rttr::type::get_global_property(varName);
         if (!prop.is_valid()) // global variable doesn't exist
@@ -1296,37 +1291,37 @@ luaError("Can't convert parameter {} (stack index {}, name '{}') of lua type '{}
         return prop;
     }
 
-
-
-    static void checkGlobalVariableExists(const std::string& variableName, const rttr::property& prop)
+    // ensures class exists and property exists, returns the property. Doesn't check if property is static or not
+    static rttr::property getClassFieldCpp(const std::string& className, const std::string& propertyName)
     {
-        if (!prop.is_valid()) // global variable doesn't exist
+        rttr::type type = getAndCheckClassType(className);
+        rttr::property prop = type.get_property(propertyName);
+        if (!prop.is_valid())
         {
-            globalVariableDoesNotExistLuaError(variableName);
+            propertyDoesNotExistLuaError(className, propertyName);
         }
+        return prop;
     }
-
-public: // property getters
 
     static bool getClassFieldToLuaStack(lua_State* L, const std::string& className, const std::string& fieldName)
     {
-        rttr::property prop = getAndCheckClassProperty(className, fieldName);
+        rttr::property prop = getClassFieldCpp(className, fieldName);
         checkPropertyIsStatic(className, fieldName, prop);
         return convertToLuaTypeOnStackByTypeId(L, prop.get_value(rttr::instance()));
     }
 
-    // variant must contain pointer to real object type, not void*
-    static bool getClassObjectFieldToLuaStack(lua_State* L, const std::string& className, const std::string& fieldName, const rttr::variant& instance)
-    {
-        rttr::property prop = getAndCheckClassProperty(className, fieldName);
-        checkPropertyIsNotStatic(className, fieldName, prop);
-        return convertToLuaTypeOnStackByTypeId(L, prop.get_value(instance));
-    }
-
     static bool getGlobalVariableToLuaStack(lua_State* L, const std::string& fieldName)
     {
-        rttr::property prop = getAndCheckGlobalVariable(fieldName);
+        rttr::property prop = getGlobalFieldCpp(fieldName);
         return convertToLuaTypeOnStackByTypeId(L, prop.get_value(rttr::instance()));
+    }
+
+    // variant must contain pointer to real object type, not void* or instance
+    static bool getClassObjectFieldToLuaStack(lua_State* L, const std::string& className, const std::string& fieldName, const rttr::variant& instance)
+    {
+        rttr::property prop = getClassFieldCpp(className, fieldName);
+        checkPropertyIsNotStatic(className, fieldName, prop);
+        return convertToLuaTypeOnStackByTypeId(L, prop.get_value(instance));
     }
 
 public: // property setters
@@ -1334,7 +1329,7 @@ public: // property setters
     // uses variants
     static bool setClassObjectFieldFromLuaStack(lua_State* L, const rttr::variant& instance, const std::string& propertyName, int stackIndex = -1)
     {
-        rttr::property prop = getAndCheckClassObjectPtrProperty(instance, propertyName);
+        rttr::property prop = getClassObjectPtrField(instance, propertyName);
         //static
         rttr::variant value = convertStackIndexToType(L, stackIndex, prop);
         if (!value.is_valid())
@@ -1347,7 +1342,7 @@ public: // property setters
 
     static bool setClassFieldFromLuaStack(lua_State* L, const std::string& className, const std::string& propertyName, int stackIndex = -1)
     {
-        rttr::property prop = getAndCheckClassProperty(className, propertyName);
+        rttr::property prop = getClassFieldCpp(className, propertyName);
         checkPropertyIsStatic(className, propertyName, prop);
         rttr::variant value = convertStackIndexToType(L, stackIndex, prop);
         if (!value.is_valid())
@@ -1360,7 +1355,7 @@ public: // property setters
 
     static bool setGlobalVariableFromLuaStack(lua_State* L, const std::string& variableName, int stackIndex = -1)
     {
-        rttr::property prop = getAndCheckGlobalVariable(variableName);
+        rttr::property prop = getGlobalFieldCpp(variableName);
         rttr::variant value = convertStackIndexToType(L, stackIndex, prop);
         if (!value.is_valid())
         {

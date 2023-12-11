@@ -557,7 +557,7 @@ local function currentOrInheritedMemberLookup(obj, key, className, treatAsClassN
 	if data.isField and staticMatches then -- current class has matching field
 		if data.isContainer then
 			return getContainerReference(obj, key)
-		elseif data.isClass then -- class type other than container or wrapper
+		elseif data.type.isClass then -- class type other than container or wrapper
 			return getmetatable(obj).classMetatable["?existingObjectAt"](api.getClassObjectFieldPtr(obj, className, key))
 		else
 			return api.getClassObjectField(obj, className, key)
@@ -590,7 +590,7 @@ local function currentOrInheritedMemberSet(obj, key, value, className, treatAsCl
 	if data.isField and staticMatches then -- class has field
 		if isAnyContainerOrWrapper(data) then
 			assignTableToField(obj, key, {}, value)
-		elseif data.isClass then
+		elseif data.type.isClass then
 			error(format("Attempt to set class-object field %q of class type %q", key, className), 3)
 		else
 			api.setClassObjectField(obj, className, key, value)
@@ -679,7 +679,7 @@ local createObjectMetatable
 		elseif not data.isCallable and data.isStatic then
 			if isAnyContainerOrWrapper(data) then
 				return getContainerReference(cls, str)
-			elseif data.isClass then -- non-container-wrapper class
+			elseif data.type.isClass then -- non-container-wrapper class
 				return cpp.class[str]["?existingObjectAt"](api.getClassFieldPtr(className, str))
 			else
 				return api.getClassField(className, str)
@@ -795,7 +795,7 @@ do
 		end
 		if isAnyContainerOrWrapper(data) then
 			return getContainerReference(nil, key)
-		elseif data.isClass then -- non-container-wrapper class
+		elseif data.type.isClass then -- non-container-wrapper class
 			return cpp.class[key]["?existingObjectAt"](api.getGlobalPtr(key))
 		elseif data.isCallable then
 			local f = funcWrapper(nil, key, data)
@@ -820,7 +820,7 @@ do
 			else
 				error(format("Attempt to set global container %q with non-table value %q", key, value), 2)
 			end
-		elseif data.isClass then
+		elseif data.type.isClass then
 			-- for now don't support assigning to class objects, because it would open a big can of worms regarding copy construction, copy assignment, etc.
 			error(format("Attempt to set global class object %q", key), 2)
 		else
