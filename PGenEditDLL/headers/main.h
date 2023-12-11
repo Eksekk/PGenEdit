@@ -252,4 +252,92 @@ auto getParameterMetadata()
 
 void g_initCommonTypeIds();
 
+// allow using global functions with different calling convention than project default
+// (RTTR defines only those without explicit calling convention, which then use project default)
+namespace rttr::detail
+{
+    /*
+
+    template<typename R, typename... Args>
+    struct function_traits<R (*)(Args...)> : function_traits<R (Args...)> { };
+
+    template<typename R, typename... Args>
+    struct function_traits<R (&)(Args...)> : function_traits<R (Args...)> { };
+
+    template<typename R, typename C, typename... Args>
+    struct function_traits<R (C::*)(Args...)> : function_traits<R (Args...)> { using class_type = C; };
+
+    template<typename R, typename C, typename... Args>
+    struct function_traits<R (C::*)(Args...) const> : function_traits<R (Args...)> { using class_type = C; };
+
+    template<typename R, typename C, typename... Args>
+    struct function_traits<R (C::*)(Args...) volatile> : function_traits<R (Args...)> { using class_type = C; };
+
+    template<typename R, typename C, typename... Args>
+    struct function_traits<R (C::*)(Args...) const volatile> : function_traits<R (Args...)> {using class_type = C; };
+
+#ifndef RTTR_NO_CXX17_NOEXCEPT_FUNC_TYPE
+    template<typename R, typename... Args>
+    struct function_traits<R (*)(Args...) noexcept> : function_traits<R (Args...)> { };
+
+    template<typename R, typename... Args>
+    struct function_traits<R (&)(Args...) noexcept> : function_traits<R (Args...)> { };
+
+    template<typename R, typename C, typename... Args>
+    struct function_traits<R (C::*)(Args...) noexcept> : function_traits<R (Args...)> { using class_type = C; };
+
+    template<typename R, typename C, typename... Args>
+    struct function_traits<R (C::*)(Args...) const noexcept> : function_traits<R (Args...)> { using class_type = C; };
+
+    template<typename R, typename C, typename... Args>
+    struct function_traits<R (C::*)(Args...) volatile noexcept> : function_traits<R (Args...)> { using class_type = C; };
+
+    template<typename R, typename C, typename... Args>
+    struct function_traits<R (C::*)(Args...) const volatile noexcept> : function_traits<R (Args...)> {using class_type = C; };
+#endif*/
+#define DEFINE_CALLING_CONV_NOEXCEPT(conv) \
+    template<typename R, typename... Args> \
+    struct is_functor<R(conv*)(Args...) noexcept> : std::true_type {}; \
+\
+    template<typename R, typename... Args>\
+    struct is_functor<R(conv&)(Args...) noexcept> : std::true_type {}; \
+\
+    template<typename R, typename... Args>\
+    struct function_traits<R(conv*)(Args...) noexcept> : function_traits<R(Args...)> {};\
+\
+    template<typename R, typename... Args>\
+    struct function_traits<R(conv&)(Args...) noexcept> : function_traits<R(Args...)> {}
+
+#define DEFINE_CALLING_CONV(conv) \
+    template<typename R, typename... Args> \
+    struct is_functor<R(conv*)(Args...)> : std::true_type {}; \
+\
+    template<typename R, typename... Args> \
+    struct is_functor<R(conv&)(Args...)> : std::true_type {}; \
+\
+    template<typename R, typename... Args>\
+    struct function_traits<R(conv*)(Args...)> : function_traits<R(Args...)> {};\
+\
+    template<typename R, typename... Args>\
+    struct function_traits<R(conv&)(Args...)> : function_traits<R(Args...)> {}
+
+    // TODO: these give "class template has already been defined" error if used with project default calling convention
+    // proper solution will have to wait, for now just commenting it out
+
+    //DEFINE_CALLING_CONV(__cdecl);
+    DEFINE_CALLING_CONV(__stdcall);
+    DEFINE_CALLING_CONV(__thiscall);
+    DEFINE_CALLING_CONV(__fastcall);
+
+#ifndef RTTR_NO_CXX17_NOEXCEPT_FUNC_TYPE
+    //DEFINE_CALLING_CONV_NOEXCEPT(__cdecl);
+    DEFINE_CALLING_CONV_NOEXCEPT(__stdcall);
+    DEFINE_CALLING_CONV_NOEXCEPT(__thiscall);
+    DEFINE_CALLING_CONV_NOEXCEPT(__fastcall);
+#endif
+
+#undef DEFINE_CALLING_CONV_NOEXCEPT
+#undef DEFINE_CALLING_CONV
+}
+
 #endif // __MAIN_H__

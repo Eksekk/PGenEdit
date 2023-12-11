@@ -1252,6 +1252,45 @@ luaError("Can't convert parameter {} (stack index {}, name '{}') of lua type '{}
         return type;
     }
 
+    static rttr::property getAndCheckClassProperty(const std::string& className, const std::string& propertyName)
+    {
+        rttr::type type = getAndCheckClassType(className);
+        rttr::property prop = type.get_property(propertyName);
+        if (!prop.is_valid())
+        {
+            propertyDoesNotExistLuaError(className, propertyName);
+        }
+        return prop;
+    }
+
+    struct
+    {
+       // using ::Reflection::getAndCheckClassProperty;
+    } static get;
+
+    struct
+    {
+        //using ::Reflection::callClassMethodWithLuaParams;
+    } static call;
+
+    struct
+    {
+        //using ::Reflection::getClassObjectPtrField;
+    } static ptr;
+
+    // set, nonptr, etc.
+
+    static rttr::property getAndCheckClassObjectProperty(const rttr::variant& instance, const std::string& propertyName)
+    {
+        rttr::property prop = instance.get_type().get_raw_type().get_property(propertyName);
+        if (!prop.is_valid())
+        {
+            objectDoesNotHavePropertyLuaError(instance.get_type().get_raw_type().get_name().to_string(), propertyName);
+            return prop; // dummy return
+        }
+        return prop;
+    }
+
     static void checkPropertyIsStatic(const std::string& className, const std::string& propertyName, const rttr::property& prop)
     {
         if (!prop.is_static()) // object field, expected class field
@@ -1273,10 +1312,16 @@ public: // property getters
     // takes not an instance, but raw pointer to instance
     static rttr::property getClassObjectPtrField(const rttr::variant& instance, const std::string& propertyName)
     {
-        rttr::property prop = instance.get_type().get_raw_type().get_property(propertyName);
+        auto type = instance.get_type();
+        if (!type.is_pointer())
+        {
+            luaError("Can't get class object field '{}' - type {} is not a raw pointer to object", propertyName, type.get_raw_type().get_name());
+        }
+        rttr::property prop = type.get_raw_type().get_property(propertyName);
+        
         if (!prop.is_valid())
         {
-            luaError("Object of type {} doesn't have property {}", instance.get_type().get_raw_type().get_name(), propertyName);
+            propertyDoesNotExistLuaError(type.get_raw_type().get_name().to_string(), propertyName);
         }
         return prop;
     }

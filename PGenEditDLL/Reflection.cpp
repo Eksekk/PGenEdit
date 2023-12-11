@@ -1046,10 +1046,11 @@ int luaDebug::getGlobalEnvironmentInfo(lua_State* L)
 
 rttr::variant getContainerFieldSequence(lua_State* L, const std::vector<LuaTypeInCpp>& parts, rttr::variant& entity)
 {
-    for (int i = 0; i < parts.size(); ++i)
+    for (int i = 0; i < (int)parts.size(); ++i)
     {
 
     }
+    return rttr::variant();
 }
 
 // value at "entityIndex" can actually be global variable or function, class static field or method, or class object field or method
@@ -1144,7 +1145,7 @@ rttr::variant getContainerByPath(lua_State* L, int accessPathIndex, int entityIn
     {
         LuaTable accessPath = LuaTable::fromLuaTable(L, accessPathIndex);
         rttr::variant ret;
-        for (L)
+        //for (L)
     }
     else
     {
@@ -1157,7 +1158,7 @@ rttr::variant getContainerByPath(lua_State* L, int accessPathIndex, int entityIn
 // receives classObject, fieldName and accessPath
 int luaDebug::getContainerSize(lua_State* L)
 {
-    
+    return 0;
 }
 
 int luaDebug::getContainerElement(lua_State* L)

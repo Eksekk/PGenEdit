@@ -256,6 +256,7 @@ public:
 const char* const ReflectionSampleStruct::staticReadonlyPchar = "staticReadonlyPcharText";
 
 // returns 0 for success, 1 and above for failure (specific error codes)
+// RTTR problem: free functions with calling convention other than project default apparently can't be registered
 static int __declspec(naked) __fastcall fastcallGlobalFunctionTest(int argEcx, int argEdx, int argEsp)
 {
     __asm
