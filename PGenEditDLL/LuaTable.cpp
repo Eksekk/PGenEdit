@@ -5,6 +5,48 @@
 
 _Nil Nil;
 
+std::string convertLuaTypeInCppTypeToString(const LuaTypeInCpp& type)
+{
+    if (const std::string* str = std::get_if<std::string>(&type))
+    {
+        return "string";
+    }
+    else if (const sqword_t* num = std::get_if<sqword_t>(&type))
+    {
+        return "number";
+    }
+    else if (const lua_Number* num = std::get_if<lua_Number>(&type))
+    {
+        return "number";
+    }
+    else if (const bool* b = std::get_if<bool>(&type))
+    {
+        return "boolean";
+    }
+    else if (const LuaTable* tbl = std::get_if<LuaTable>(&type))
+    {
+        return "table";
+    }
+    else if (const _Nil* nil = std::get_if<_Nil>(&type))
+    {
+        return "nil";
+    }
+    else
+    {
+        wxFAIL_MSG("Invalid LuaTypeInCpp type");
+        return "unknown";
+    }
+}
+
+std::string convertLuaTypeInCppToString(const LuaTypeInCpp& type)
+{
+    using std::to_string;
+    return std::visit([](const auto& arg) -> std::string
+        {
+            return std::format("{}", arg);
+        }, type);
+}
+
 // converts value to lua value and pushes it on the stack
 void luaTypeInCppToStack(const LuaTypeInCpp& val, LuaWrapper& wrapper)
 {

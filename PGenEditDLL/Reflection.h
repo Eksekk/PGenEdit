@@ -7,51 +7,6 @@
 template<typename T>
 concept IsCvUnqualifiedTopLevel = !(std::is_const_v<std::remove_reference_t<T>> || std::is_volatile_v<std::remove_reference_t<T>>);
 
-// custom exception, which will be thrown as part one of generating lua error from C++
-// using this, because it properly invokes destructors of objects
-// this exception should be caught by C++ function directly called by lua, and it should execute its own stack objects' destructors and generate lua error
-class LuaErrorException : public std::runtime_error
-{
-    // TODO: have more fields (like what type of error it is, and what are error parameters, so for type mismatch we can show expected type and actual type) to facilitate unit testing
-public:
-    LuaErrorException(const std::string& msg) : std::runtime_error(msg) {}
-
-    ~LuaErrorException()
-    {
-        //wxMessageBox(wxString::Format("Lua error: %s", what()), "Lua error", wxICON_ERROR | wxOK);
-    }
-};
-
-namespace std
-{
-    // note: you need to implement both functions, otherwise it won't work
-    template<>
-    struct formatter<rttr::string_view>
-    {
-        template<typename ParseContext>
-        constexpr auto parse(ParseContext& ctx)
-        {
-            return ctx.begin();
-        }
-
-        template<typename FormatContext>
-        auto format(const rttr::string_view& p, FormatContext& ctx) const
-        {
-            return format_to(ctx.out(), "{}", p.to_string());
-        }
-    };
-}
-
-// creates "safe" lua error, that is not skipping C++ destructors
-// still need to write try-catch block **in first function on call stack called by lua** which calls luaL_error
-// note: exception object is automatically destroyed, even though lua might skip C++ code by using longjmp to signal error
-// [[noreturn]] doesn't need to be here BTW, exception object is still destroyed
-template<typename... Args>
-[[noreturn]] void luaError(const std::string& msg, Args&&... args)
-{
-    throw LuaErrorException(std::vformat(msg, std::make_format_args(std::forward<Args>(args)...)));
-}
-
 template<typename... Args>
 void callDestructors(Args&&... args)
 {
@@ -89,6 +44,18 @@ namespace luaDebug
         int clearContainer(lua_State* L);
     }
 }
+
+// aliases for lua utility functions
+namespace // anonymous namespace makes it so that these aliases are only visible in this file
+{
+    using ::lua::utils::getLuaTableMetafieldOrError;
+    using ::lua::utils::getLuaTypeOrError;
+    using ::lua::utils::isLuaType;
+    using ::lua::utils::luaError;
+    using ::lua::utils::luaExpectStackSize;
+    using ::lua::utils::luaTableHasMetafield;
+}
+
 // member methods, static methods, global methods, global callables, member callables, static callables
 // those that are object properties: member methods, member callables
 // those that are class properties: static methods, static callables
@@ -1263,23 +1230,6 @@ luaError("Can't convert parameter {} (stack index {}, name '{}') of lua type '{}
         return prop;
     }
 
-    struct
-    {
-       // using ::Reflection::getAndCheckClassProperty;
-    } static get;
-
-    struct
-    {
-        //using ::Reflection::callClassMethodWithLuaParams;
-    } static call;
-
-    struct
-    {
-        //using ::Reflection::getClassObjectPtrField;
-    } static ptr;
-
-    // set, nonptr, etc.
-
     static rttr::property getAndCheckClassObjectProperty(const rttr::variant& instance, const std::string& propertyName)
     {
         rttr::property prop = instance.get_type().get_raw_type().get_property(propertyName);
@@ -1561,4 +1511,304 @@ public: // constructor calls
 //     }
 
     // store reflectively created class instances as userdata/light userdata inside lua? (so that we can get them back later)
+
+    struct get
+    {
+        static constexpr auto globalFieldLua = &getGlobalVariableToLuaStack;
+        static constexpr auto classFieldLua = &getClassFieldToLuaStack;
+        static constexpr auto classObjectFieldLua = &getClassObjectFieldToLuaStack;
+
+        static constexpr auto globalField = &getGlobalFieldCpp;
+        static constexpr auto classField = &getClassFieldCpp;
+        static constexpr auto classObjectField = &getClassObjectPtrField;
+    };
+
+    struct call
+    {
+        //using ::Reflection::callClassMethodWithLuaParams;
+    };
+
+    struct ptr
+    {
+        //using ::Reflection::getClassObjectPtrField;
+    };
+
+    // set, nonptr, etc.
+
+    // CONTAINERS
+    // since containers can be nested, for example std::vector<std::vectors<std::vector<int>>>, and they don'cls have names nor are reflected in RTTR, we need to pass "access path" to the indexed container, as well as field name, to get specific one
+    // so for example above and assignment index[0][2][5] = 88, we would pass {0, 2} as access path, 5 as index, and 88 as value
+
+private:
+
+    rttr::variant getContainerFieldSequence(lua_State* L, const std::vector<LuaTypeInCpp>& parts, rttr::variant& entity)
+    {
+        for (int i = 0; i < (int)parts.size(); ++i)
+        {
+
+        }
+        return rttr::variant();
+    }
+
+    // value at "entityIndex" can actually be global variable or function, class static field or method, or class object field or method
+    rttr::variant getContainerByPath(lua_State* L, int accessPathIndex, int entityIndex, int fieldNameIndex)
+    {
+        LuaWrapper w(L);
+        accessPathIndex = w.makeAbsoluteStackIndex(accessPathIndex);
+        entityIndex = w.makeAbsoluteStackIndex(entityIndex);
+        fieldNameIndex = w.makeAbsoluteStackIndex(fieldNameIndex);
+
+        auto getField = [&](rttr::variant& entity, const std::string& errorMsgInvalidProp, const std::string& errorMsgCannotGetValue) -> rttr::variant
+            {
+                std::string name = getLuaTypeOrError<std::string>(L, fieldNameIndex);
+                rttr::type type = entity.get_type();
+                rttr::property prop = type.get_property(name);
+                if (!prop.is_valid())
+                {
+                    luaError(errorMsgInvalidProp, name);
+                    return rttr::variant();
+                }
+                else
+                {
+                    auto var = prop.get_value(entity);
+                    if (!var.is_valid())
+                    {
+                        luaError(errorMsgCannotGetValue, name);
+                        return rttr::variant();
+                    }
+                    else
+                    {
+                        return var;
+                    }
+                }
+            };
+        // test what it actually is
+        w.getPath("pgenedit.cpp.isClass");
+        w.pushvalue(entityIndex);
+        if (lua_pcall(L, 1, 1, 0) != LUA_OK)
+        {
+            luaError("Couldn't get container - error while calling isClass: '%s'", w.tostring(-1));
+            return rttr::variant();
+        }
+        else
+        {
+            if (static_cast<bool>(w.toboolean(-1))) // is class
+            {
+                std::string className = getLuaTableMetafieldOrError<std::string>(L, entityIndex, "name");
+                rttr::type cls = rttr::type::get_by_name(className);
+                if (!cls.is_valid())
+                {
+                    luaError("Couldn't get container - class '{}' is not registered", className);
+                }
+                else if (!cls.is_class())
+                {
+                    luaError("Couldn't get container - '{}' is not a class", className);
+                }
+                else
+                {
+                    if (!Reflection::getClassFieldToLuaStack(L, className, getLuaTypeOrError<std::string>(L, fieldNameIndex)))
+                    {
+                        luaError("Couldn't get container - couldn't get field '{}' of class '{}'", getLuaTypeOrError<std::string>(L, fieldNameIndex), className);
+                        return rttr::variant();
+                    }
+                }
+            }
+            else // object or global
+            {
+                w.getPath("pgenedit.cpp.isClassObject");
+                w.pushvalue(entityIndex);
+                if (lua_pcall(L, 1, 1, 0) != LUA_OK)
+                {
+                    luaError("Couldn't get container - error while calling isClassObject: '%s'", w.tostring(-1));
+                    return rttr::variant();
+                }
+                else if (static_cast<bool>(w.toboolean(-1))) // object
+                {
+                    std::string className = getLuaTableMetafieldOrError<std::string>(L, entityIndex, "className");
+                    rttr::type cls = rttr::type::get_by_name(className);
+                    if (!cls.is_valid())
+                    {
+                        luaError("Couldn't get container - class '{}' is not registered", className);
+                    }
+
+                }
+                else // global
+                {
+
+                }
+            }
+        }
+        if (w.isTable(accessPathIndex))
+        {
+            LuaTable accessPath = LuaTable::fromLuaTable(L, accessPathIndex);
+            rttr::variant ret;
+            //for (L)
+        }
+        else
+        {
+            luaError("Couldn't get container - access path is not a table");
+            return rttr::variant();
+        }
+        return rttr::variant();
+    }
+
+public:
+    struct container
+    {
+        container() = delete;
+        static rttr::variant getContainerField(rttr::variant& container, const std::vector<LuaTypeInCpp>& indexes)
+        {
+            // FIXME: idk how to cause RTTR to not make copies of data at each level (if there is even a way to do so)
+            rttr::variant current = container;
+            // function is needed, because multiple types may index associative and sequential containers
+            
+            auto indexAssociative = [&current](const LuaTypeInCpp& arg, int paramIndex)
+                {
+                    rttr::variant_associative_view view = current.create_associative_view();
+                    // need to convert lua type to rttr::variant
+                    rttr::type keyType = view.get_key_type();
+                    rttr::variant index = convertLuaTypeInCppToVariantByTypeId(arg, keyType);
+                    auto iter = view.find(index);
+                    if (iter == view.end())
+                    {
+                        luaError("Can't index associative container by {} (parameter #{}) - key not found", convertLuaTypeInCppTypeToString(arg), paramIndex);
+                    }
+                    else
+                    {
+                        rttr::variant val = iter.get_value().extract_wrapped_value();
+                        if (!val.is_valid())
+                        {
+                            luaError("Can't index associative container by {} (parameter #{}) - value is invalid", convertLuaTypeInCppTypeToString(arg), paramIndex);
+                        }
+                        else
+                        {
+                            current = val;
+                        }
+                    }
+                };
+            auto indexSequential = [&current](const LuaTypeInCpp& arg, int paramIndex)
+                {
+                    rttr::variant_sequential_view view = current.create_sequential_view();
+                    // need to convert lua type to rttr::variant
+                    size_t index;
+                    if (const sqword_t* num = std::get_if<sqword_t>(&arg))
+                    {
+                        index = *num;
+                    }
+                    else if (const lua_Number* num = std::get_if<lua_Number>(&arg))
+                    {
+                        // check that number is integer
+                        if (std::floor(*num) != *num)
+                        {
+                            luaError("Can't index sequential container by {} (parameter #{}) - number {} is not an integer", arg, paramIndex, *num);
+                            return;
+                        }
+                        else
+                        {
+                            index = *num;
+                        }
+                    }
+                    else
+                    {
+                        luaError("Can't index sequential container by {} (parameter #{}) - can't convert to integer", arg, paramIndex);
+                        return;
+                    }
+                    size_t s = view.get_size();
+                    if (index >= s)
+                    {
+                        luaError("Can't index sequential container by parameter #{} - index {} is out of bounds (size is {})", paramIndex, index, s);
+                    }
+                    else
+                    {
+                        rttr::variant val = view.get_value(index).extract_wrapped_value();
+                        if (!val.is_valid())
+                        {
+                            luaError("Can't index sequential container by {} (parameter #{}) - value is invalid", arg, paramIndex);
+                        }
+                        else
+                        {
+                            current = val;
+                        }
+                    }
+                };
+
+
+
+            for (int i = 0; auto& index : indexes)
+            {
+                
+                if (const LuaTable* t = std::get_if<LuaTable>(&index))
+                {
+                    luaError("Indexing by table (parameter #{}) is not supported right now - would need to keep track of the exact table, since even those with exact contents and metatable are not treated as equal, unless they refer to same object in memory", i + 1);
+                }
+                else if (const std::string* str = std::get_if<std::string>(&index))
+                {
+                    if (current.is_sequential_container())
+                    {
+                        luaError("Indexing sequential container by string (parameter #{}) is not supported", i + 1);
+                    }
+                    else if (current.is_associative_container())
+                    {
+                        indexAssociative(*str, i + 1);
+                    }
+                    else
+                    {
+                        luaError("Can't index container by string (parameter #{}) - container is neither sequential nor associative", i + 1);
+                    }
+                }
+                else if (const lua_Number* num = std::get_if<lua_Number>(&index))
+                {
+                    if (current.is_sequential_container())
+                    {
+                        indexSequential(index, i + 1);
+                    }
+                    else if (current.is_associative_container())
+                    {
+                        indexAssociative(index, i + 1);
+                    }
+                    else
+                    {
+                        luaError("Can't index container by number (parameter #{}) - container is neither sequential nor associative", i + 1);
+                    }
+                }
+                else if (const bool* b = std::get_if<bool>(&index))
+                {
+                    if (current.is_sequential_container())
+                    {
+                        luaError("Indexing sequential container by bool (parameter #{}) is not supported", i + 1);
+                    }
+                    else if (current.is_associative_container())
+                    {
+                        indexAssociative(index, i + 1);
+                    }
+                    else
+                    {
+                        luaError("Can't index container by bool (parameter #{}) - container is neither sequential nor associative", i + 1);
+                    }
+                }
+                else if (const sqword_t* arg = std::get_if<sqword_t>(&index))
+                {
+                    if (current.is_sequential_container())
+                    {
+                        indexSequential(index, i + 1);
+                    }
+                    else if (current.is_associative_container())
+                    {
+                        indexAssociative(index, i + 1);
+                    }
+                    else
+                    {
+                        luaError("Can't index container by {} (parameter #{}) - container is neither sequential nor associative", *arg, i + 1);
+                    }
+                }
+                else
+                {
+                    luaError("Can't index container by unknown type (parameter #{})", i + 1);
+                }
+
+                ++i;
+            }
+            return current;
+        }
+    };
 };

@@ -30,6 +30,12 @@ using LuaTypeInCpp = std::variant<
     LuaTable
 >;
 
+// it's like functions that return name of lua type, only that it takes LuaTypeInCpp instead of lua_State* and index
+// returns name of type, not value
+std::string convertLuaTypeInCppTypeToString(const LuaTypeInCpp& type);
+// this one returns value converted to string
+std::string convertLuaTypeInCppToString(const LuaTypeInCpp& type);
+
 // from stack overflow
 template<typename Float>
 bool essentiallyEqualFloats(Float a, Float b)
@@ -108,6 +114,39 @@ private:
 
     RTTR_REGISTRATION_FRIEND
 };
+
+namespace std
+{
+    // text formatters for nil and table
+    template<>
+    struct formatter<_Nil> : formatter<string_view>
+    {
+        template<typename FormatContext>
+        auto format(const _Nil& nil, FormatContext& ctx) const
+        {
+            return formatter<string_view>::format("nil", ctx);
+        }
+    };
+    template<>
+    struct formatter<LuaTable> : formatter<string_view>
+    {
+        template<typename FormatContext>
+        auto format(const LuaTable& table, FormatContext& ctx) const
+        {
+            return formatter<string_view>::format("<table>", ctx);
+        }
+    };
+    template<>
+    struct formatter<LuaTypeInCpp> : formatter<string_view>
+    {
+        template<typename FormatContext>
+        auto format(const LuaTypeInCpp& type, FormatContext& ctx) const
+        {
+            std::string typ = convertLuaTypeInCppTypeToString(type), val = convertLuaTypeInCppToString(type);
+            return format_to(ctx.out(), "{} ({})", val, typ);
+        }
+    };
+}
 
 inline bool operator==(const LuaValuePair& lhs, const LuaValuePair& rhs)
 {

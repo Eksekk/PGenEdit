@@ -256,45 +256,6 @@ void g_initCommonTypeIds();
 // (RTTR defines only those without explicit calling convention, which then use project default)
 namespace rttr::detail
 {
-    /*
-
-    template<typename R, typename... Args>
-    struct function_traits<R (*)(Args...)> : function_traits<R (Args...)> { };
-
-    template<typename R, typename... Args>
-    struct function_traits<R (&)(Args...)> : function_traits<R (Args...)> { };
-
-    template<typename R, typename C, typename... Args>
-    struct function_traits<R (C::*)(Args...)> : function_traits<R (Args...)> { using class_type = C; };
-
-    template<typename R, typename C, typename... Args>
-    struct function_traits<R (C::*)(Args...) const> : function_traits<R (Args...)> { using class_type = C; };
-
-    template<typename R, typename C, typename... Args>
-    struct function_traits<R (C::*)(Args...) volatile> : function_traits<R (Args...)> { using class_type = C; };
-
-    template<typename R, typename C, typename... Args>
-    struct function_traits<R (C::*)(Args...) const volatile> : function_traits<R (Args...)> {using class_type = C; };
-
-#ifndef RTTR_NO_CXX17_NOEXCEPT_FUNC_TYPE
-    template<typename R, typename... Args>
-    struct function_traits<R (*)(Args...) noexcept> : function_traits<R (Args...)> { };
-
-    template<typename R, typename... Args>
-    struct function_traits<R (&)(Args...) noexcept> : function_traits<R (Args...)> { };
-
-    template<typename R, typename C, typename... Args>
-    struct function_traits<R (C::*)(Args...) noexcept> : function_traits<R (Args...)> { using class_type = C; };
-
-    template<typename R, typename C, typename... Args>
-    struct function_traits<R (C::*)(Args...) const noexcept> : function_traits<R (Args...)> { using class_type = C; };
-
-    template<typename R, typename C, typename... Args>
-    struct function_traits<R (C::*)(Args...) volatile noexcept> : function_traits<R (Args...)> { using class_type = C; };
-
-    template<typename R, typename C, typename... Args>
-    struct function_traits<R (C::*)(Args...) const volatile noexcept> : function_traits<R (Args...)> {using class_type = C; };
-#endif*/
 #define DEFINE_CALLING_CONV_NOEXCEPT(conv) \
     template<typename R, typename... Args> \
     struct is_functor<R(conv*)(Args...) noexcept> : std::true_type {}; \
@@ -307,7 +268,7 @@ namespace rttr::detail
 \
     template<typename R, typename... Args>\
     struct function_traits<R(conv&)(Args...) noexcept> : function_traits<R(Args...)> {}
-
+    
 #define DEFINE_CALLING_CONV(conv) \
     template<typename R, typename... Args> \
     struct is_functor<R(conv*)(Args...)> : std::true_type {}; \
@@ -338,6 +299,27 @@ namespace rttr::detail
 
 #undef DEFINE_CALLING_CONV_NOEXCEPT
 #undef DEFINE_CALLING_CONV
+}
+
+// formatter specializations for rttr types
+namespace std
+{
+    // note: you need to implement both functions, otherwise it won't work
+    template<>
+    struct formatter<rttr::string_view>
+    {
+        template<typename ParseContext>
+        constexpr auto parse(ParseContext& ctx)
+        {
+            return ctx.begin();
+        }
+
+        template<typename FormatContext>
+        auto format(const rttr::string_view& p, FormatContext& ctx) const
+        {
+            return format_to(ctx.out(), "{}", p.to_string());
+        }
+    };
 }
 
 #endif // __MAIN_H__

@@ -7,6 +7,9 @@
 #include "CallEvents.h"
 #include "Reflection.h"
 
+// TODOOOO
+// put global functions related to lua in "lua" namespace
+
 extern "C"
 {
 	lua_State* Lua = nullptr;
@@ -455,6 +458,33 @@ std::string getLuaTypeMismatchString(lua_State* L, std::initializer_list<int> wa
 std::string getLuaTypeMismatchString(lua_State* L, int wanted, int provided, int stackIndex)
 {
     return getLuaTypeMismatchString(L, { wanted }, provided, stackIndex);
+}
+
+void lua::utils::luaExpectStackSize(lua_State* L, int expected)
+{
+    int stackSize = lua_gettop(L);
+    if (stackSize != expected)
+    {
+        luaError("Expected {} arguments, got {}", expected, stackSize);
+    }
+}
+
+bool lua::utils::luaTableHasMetafield(lua_State* L, int index, const std::string& name)
+{
+    lua_getmetatable(L, index);
+    if (lua_isnil(L, -1))
+    {
+        lua_pop(L, 1);
+        return false;
+    }
+    lua_getfield(L, -1, name.c_str());
+    if (lua_isnil(L, -1))
+    {
+        lua_pop(L, 2);
+        return false;
+    }
+    lua_pop(L, 2);
+    return true;
 }
 
 extern "C" static int saveGameHandler(lua_State* L)
