@@ -14,7 +14,7 @@ void callDestructors(Args&&... args)
 }
 
 // lua debug api
-namespace luaDebug
+namespace lua::debugApi
 {
     extern "C"
     {
@@ -1656,159 +1656,221 @@ public:
     struct container
     {
         container() = delete;
-        static rttr::variant getContainerField(rttr::variant& container, const std::vector<LuaTypeInCpp>& indexes)
+    private:
+        // function is needed, because multiple types may index associative and sequential containers
+        static rttr::variant indexAssociative (rttr::variant& container, const LuaTypeInCpp& arg, int paramIndex)
         {
-            // FIXME: idk how to cause RTTR to not make copies of data at each level (if there is even a way to do so)
-            rttr::variant current = container;
-            // function is needed, because multiple types may index associative and sequential containers
-            
-            auto indexAssociative = [&current](const LuaTypeInCpp& arg, int paramIndex)
-                {
-                    rttr::variant_associative_view view = current.create_associative_view();
-                    // need to convert lua type to rttr::variant
-                    rttr::type keyType = view.get_key_type();
-                    rttr::variant index = convertLuaTypeInCppToVariantByTypeId(arg, keyType);
-                    auto iter = view.find(index);
-                    if (iter == view.end())
-                    {
-                        luaError("Can't index associative container by {} (parameter #{}) - key not found", convertLuaTypeInCppTypeToString(arg), paramIndex);
-                    }
-                    else
-                    {
-                        rttr::variant val = iter.get_value().extract_wrapped_value();
-                        if (!val.is_valid())
-                        {
-                            luaError("Can't index associative container by {} (parameter #{}) - value is invalid", convertLuaTypeInCppTypeToString(arg), paramIndex);
-                        }
-                        else
-                        {
-                            current = val;
-                        }
-                    }
-                };
-            auto indexSequential = [&current](const LuaTypeInCpp& arg, int paramIndex)
-                {
-                    rttr::variant_sequential_view view = current.create_sequential_view();
-                    // need to convert lua type to rttr::variant
-                    size_t index;
-                    if (const sqword_t* num = std::get_if<sqword_t>(&arg))
-                    {
-                        index = *num;
-                    }
-                    else if (const lua_Number* num = std::get_if<lua_Number>(&arg))
-                    {
-                        // check that number is integer
-                        if (std::floor(*num) != *num)
-                        {
-                            luaError("Can't index sequential container by {} (parameter #{}) - number {} is not an integer", arg, paramIndex, *num);
-                            return;
-                        }
-                        else
-                        {
-                            index = *num;
-                        }
-                    }
-                    else
-                    {
-                        luaError("Can't index sequential container by {} (parameter #{}) - can't convert to integer", arg, paramIndex);
-                        return;
-                    }
-                    size_t s = view.get_size();
-                    if (index >= s)
-                    {
-                        luaError("Can't index sequential container by parameter #{} - index {} is out of bounds (size is {})", paramIndex, index, s);
-                    }
-                    else
-                    {
-                        rttr::variant val = view.get_value(index).extract_wrapped_value();
-                        if (!val.is_valid())
-                        {
-                            luaError("Can't index sequential container by {} (parameter #{}) - value is invalid", arg, paramIndex);
-                        }
-                        else
-                        {
-                            current = val;
-                        }
-                    }
-                };
-
-
-
-            for (int i = 0; auto& index : indexes)
+            if (!container.is_valid())
             {
-                
-                if (const LuaTable* t = std::get_if<LuaTable>(&index))
+                luaError("Can't index associative container by {} (parameter #{}) - container is invalid", lua::utils::convertLuaTypeInCppTypeToString(arg), paramIndex);
+                return rttr::variant();
+            }
+            rttr::variant_associative_view view = container.create_associative_view();
+            // need to convert lua type to rttr::variant
+            rttr::type keyType = view.get_key_type();
+            rttr::variant index = convertLuaTypeInCppToVariantByTypeId(arg, keyType);
+            auto iter = view.find(index);
+            if (iter == view.end())
+            {
+                luaError("Can't index associative container by {} (parameter #{}) - key not found", lua::utils::convertLuaTypeInCppTypeToString(arg), paramIndex);
+                return rttr::variant();
+            }
+            else
+            {
+                rttr::variant val = iter.get_value().extract_wrapped_value();
+                if (!val.is_valid())
                 {
-                    luaError("Indexing by table (parameter #{}) is not supported right now - would need to keep track of the exact table, since even those with exact contents and metatable are not treated as equal, unless they refer to same object in memory", i + 1);
-                }
-                else if (const std::string* str = std::get_if<std::string>(&index))
-                {
-                    if (current.is_sequential_container())
-                    {
-                        luaError("Indexing sequential container by string (parameter #{}) is not supported", i + 1);
-                    }
-                    else if (current.is_associative_container())
-                    {
-                        indexAssociative(*str, i + 1);
-                    }
-                    else
-                    {
-                        luaError("Can't index container by string (parameter #{}) - container is neither sequential nor associative", i + 1);
-                    }
-                }
-                else if (const lua_Number* num = std::get_if<lua_Number>(&index))
-                {
-                    if (current.is_sequential_container())
-                    {
-                        indexSequential(index, i + 1);
-                    }
-                    else if (current.is_associative_container())
-                    {
-                        indexAssociative(index, i + 1);
-                    }
-                    else
-                    {
-                        luaError("Can't index container by number (parameter #{}) - container is neither sequential nor associative", i + 1);
-                    }
-                }
-                else if (const bool* b = std::get_if<bool>(&index))
-                {
-                    if (current.is_sequential_container())
-                    {
-                        luaError("Indexing sequential container by bool (parameter #{}) is not supported", i + 1);
-                    }
-                    else if (current.is_associative_container())
-                    {
-                        indexAssociative(index, i + 1);
-                    }
-                    else
-                    {
-                        luaError("Can't index container by bool (parameter #{}) - container is neither sequential nor associative", i + 1);
-                    }
-                }
-                else if (const sqword_t* arg = std::get_if<sqword_t>(&index))
-                {
-                    if (current.is_sequential_container())
-                    {
-                        indexSequential(index, i + 1);
-                    }
-                    else if (current.is_associative_container())
-                    {
-                        indexAssociative(index, i + 1);
-                    }
-                    else
-                    {
-                        luaError("Can't index container by {} (parameter #{}) - container is neither sequential nor associative", *arg, i + 1);
-                    }
+                    luaError("Can't index associative container by {} (parameter #{}) - value is invalid", lua::utils::convertLuaTypeInCppTypeToString(arg), paramIndex);
                 }
                 else
                 {
-                    luaError("Can't index container by unknown type (parameter #{})", i + 1);
+                    return val;
                 }
+            }
+            return rttr::variant();
+        };
 
-                ++i;
+        static rttr::variant indexSequential(rttr::variant& container, const LuaTypeInCpp& arg, int paramIndex)
+        {
+            rttr::variant_sequential_view view = container.create_sequential_view();
+            // need to convert lua type to rttr::variant
+            size_t index;
+            if (const sqword_t* num = std::get_if<sqword_t>(&arg))
+            {
+                index = *num;
+            }
+            else if (const lua_Number* num = std::get_if<lua_Number>(&arg))
+            {
+                // check that number is integer
+                if (std::floor(*num) != *num)
+                {
+                    luaError("Can't index sequential container by {} (parameter #{}) - number {} is not an integer", arg, paramIndex, *num);
+                    return rttr::variant();
+                }
+                else
+                {
+                    index = *num;
+                }
+            }
+            else
+            {
+                luaError("Can't index sequential container by {} (parameter #{}) - can't convert to integer", arg, paramIndex);
+                return rttr::variant();
+            }
+            size_t s = view.get_size();
+            if (index >= s)
+            {
+                luaError("Can't index sequential container by parameter #{} - index {} is out of bounds (size is {})", paramIndex, index, s);
+            }
+            else
+            {
+                rttr::variant val = view.get_value(index).extract_wrapped_value();
+                if (!val.is_valid())
+                {
+                    luaError("Can't index sequential container by {} (parameter #{}) - value is invalid", arg, paramIndex);
+                }
+                else
+                {
+                    return val;
+                }
+            }
+            return rttr::variant();
+        };
+    public:
+        static rttr::variant getContainerField(rttr::variant& container, const LuaTypeInCpp& index, int paramIndex)
+        {
+            if (const LuaTable* t = std::get_if<LuaTable>(&index))
+            {
+                luaError("Indexing by table (parameter #{}) is not supported right now - would need to keep track of the exact table, since even those with exact contents and metatable are not treated as equal, unless they refer to same object in memory", paramIndex + 1);
+            }
+            else if (const std::string* str = std::get_if<std::string>(&index))
+            {
+                if (container.is_sequential_container())
+                {
+                    luaError("Indexing sequential container by string (parameter #{}) is not supported", paramIndex + 1);
+                }
+                else if (container.is_associative_container())
+                {
+                    return indexAssociative(container, *str, paramIndex + 1);
+                }
+                else
+                {
+                    luaError("Can't index container by string (parameter #{}) - container is neither sequential nor associative", paramIndex + 1);
+                }
+            }
+            else if (const lua_Number* num = std::get_if<lua_Number>(&index))
+            {
+                if (container.is_sequential_container())
+                {
+                    return indexSequential(container, index, paramIndex + 1);
+                }
+                else if (container.is_associative_container())
+                {
+                    return indexAssociative(container, index, paramIndex + 1);
+                }
+                else
+                {
+                    luaError("Can't index container by number (parameter #{}) - container is neither sequential nor associative", paramIndex + 1);
+                }
+            }
+            else if (const bool* b = std::get_if<bool>(&index))
+            {
+                if (container.is_sequential_container())
+                {
+                    luaError("Indexing sequential container by bool (parameter #{}) is not supported", paramIndex + 1);
+                }
+                else if (container.is_associative_container())
+                {
+                    return indexAssociative(container, index, paramIndex + 1);
+                }
+                else
+                {
+                    luaError("Can't index container by bool (parameter #{}) - container is neither sequential nor associative", paramIndex + 1);
+                }
+            }
+            else if (const sqword_t* arg = std::get_if<sqword_t>(&index))
+            {
+                if (container.is_sequential_container())
+                {
+                    return indexSequential(container, index, paramIndex + 1);
+                }
+                else if (container.is_associative_container())
+                {
+                    return indexAssociative(container, index, paramIndex + 1);
+                }
+                else
+                {
+                    luaError("Can't index container by {} (parameter #{}) - container is neither sequential nor associative", *arg, paramIndex + 1);
+                }
+            }
+            else
+            {
+                luaError("Can't index container by unknown type (parameter #{})", paramIndex + 1);
+            }
+            return rttr::variant();
+        }
+
+        static rttr::variant getContainerFieldSequence(rttr::variant& container, const std::vector<LuaTypeInCpp>& indexes)
+        {
+            // FIXME: idk how to cause RTTR to not make copies of data at each level (if there is even a way to do so)
+            rttr::variant current = container;
+            
+            for (int i = 0; const auto& index : indexes)
+            {
+                current = getContainerField(current, index, i++);
             }
             return current;
+        }
+
+        static void setContainerField(rttr::variant& container, const LuaTypeInCpp& key, const LuaTypeInCpp& value, int paramIndex)
+        {
+            if (!container.is_valid())
+            {
+                luaError("Can't set container field - container is invalid");
+                return;
+            }
+            if (container.is_sequential_container())
+            {
+                rttr::variant cont = indexSequential(container, key, paramIndex);
+                rttr::variant_sequential_view view = cont.create_sequential_view();
+                rttr::type keyType = rttr::type::get<size_t>();
+                rttr::type valueType = view.get_value_type();
+            }
+            else if (container.is_associative_container())
+            {
+                rttr::variant cont = indexAssociative(container, key, paramIndex);
+                rttr::variant_associative_view view = cont.create_associative_view();
+                if (view.is_key_only_type()) // std::set and the like
+                {
+                    rttr::type keyType = view.get_key_type();
+                    rttr::variant keyVar = convertLuaTypeInCppToVariantByTypeId(key, keyType);
+                    auto [elem, inserted] = view.insert(keyVar);
+                    if (!inserted)
+					{
+						luaError("Can't insert element '{}' into key-only associative container", keyVar);
+						return;
+					}
+                }
+                else
+                {
+                    rttr::type keyType = view.get_key_type();
+                    rttr::type valueType = view.get_value_type();
+
+                    rttr::variant keyVar = convertLuaTypeInCppToVariantByTypeId(key, keyType);
+                    rttr::variant valueVar = convertLuaTypeInCppToVariantByTypeId(value, valueType);
+					auto [elem, inserted] = view.insert(keyVar, valueVar);
+					if (!inserted)
+					{
+						luaError("Can't set container field - couldn't insert key '{}' with value '{}'", keyVar, valueVar);
+						return;
+					}
+                }
+            }
+            else
+            {
+                luaError("Can't set container field - container is neither sequential nor associative");
+                return;
+            }
         }
     };
 };

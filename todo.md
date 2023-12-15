@@ -71,10 +71,7 @@
 - document all classes and methods (using doxygen)
 - find a way to make all classes in the project have the same interface for serialization and deserialization
 - generate RTTR data for all classes
+- put most stuff into namespaces (project is getting very big)
 
 # Big ones
 - extract code not depending much on generator/editor/game data itself (for example structs, utility functions, asserter, profiler etc.) to separate project, which would allow it to be easily used in other projects (like GUI EVT code editor)
-
-# Current
-* change functions in Reflection class to use parameter_info instead of raw types - can use default values for parameters etc., also pass nArgs to every function
-* change functions in Reflection class to return specific error codes, to allow better error messages in lua-called functions

@@ -18,11 +18,6 @@ extern "C"
 
 bool detectIfIsMerge();
 void fillGameStaticPointersAndSizes();
-// just found out there's lua_typename() function, oh well
-std::string luaTypeToString(lua_State* L, int idx);
-std::string buildWantedLuaTypeString(lua_State* L, std::initializer_list<int> list);
-std::string getLuaTypeMismatchString(lua_State* L, std::initializer_list<int> wanted, int provided, int stackIndex);
-std::string getLuaTypeMismatchString(lua_State* L, int wanted, int provided, int stackIndex);
 
 // custom exception, which will be thrown as part one of generating lua error from C++
 // using this, because it properly invokes destructors of objects
@@ -50,6 +45,12 @@ namespace lua::utils
     {
         throw LuaErrorException(std::vformat(msg, std::make_format_args(std::forward<Args>(args)...)));
     }
+
+    // just found out there's lua_typename() function, oh well
+    std::string luaTypeToString(lua_State* L, int idx);
+    std::string buildWantedLuaTypeString(lua_State* L, std::initializer_list<int> list);
+    std::string getLuaTypeMismatchString(lua_State* L, std::initializer_list<int> wanted, int provided, int stackIndex);
+    std::string getLuaTypeMismatchString(lua_State* L, int wanted, int provided, int stackIndex);
 
 	// a function like below, but returning boolean if value is of given type and doesn't throw
 	template<typename T>

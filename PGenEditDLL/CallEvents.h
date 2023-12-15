@@ -93,7 +93,7 @@ auto convertSingleLuaStackArg(lua_State* L, int stackIndex)
             else
             {
                 // not sure how I want to handle this, using exceptions for now
-                throw std::logic_error(getLuaTypeMismatchString(L, { LUA_TNUMBER, LUA_TBOOLEAN }, type, stackIndex));
+                throw std::logic_error(lua::utils::getLuaTypeMismatchString(L, { LUA_TNUMBER, LUA_TBOOLEAN }, type, stackIndex));
             }
         }
         else if constexpr (SAME(ArgType, std::string))
@@ -106,7 +106,7 @@ auto convertSingleLuaStackArg(lua_State* L, int stackIndex)
             }
             else
             {
-                throw std::logic_error(getLuaTypeMismatchString(L, { LUA_TSTRING }, type, stackIndex));
+                throw std::logic_error(lua::utils::getLuaTypeMismatchString(L, { LUA_TSTRING }, type, stackIndex));
             }
         }
         else if constexpr (std::is_pointer_v<ArgType>)

@@ -261,7 +261,7 @@ int getFieldCommon(lua_State* L)
 }
 
 // receives class name as string
-int luaDebug::classExists(lua_State* L)
+int lua::debugApi::classExists(lua_State* L)
 {
     try
     {
@@ -284,7 +284,7 @@ int luaDebug::classExists(lua_State* L)
 }
 
 // receives object pointer (userdata) of address equal to pointer to object
-int luaDebug::copyObject(lua_State* L)
+int lua::debugApi::copyObject(lua_State* L)
 {
     try
     {
@@ -334,7 +334,7 @@ int luaDebug::copyObject(lua_State* L)
 }
 
 // receives class name as string, number of arguments and optionally, arguments
-int luaDebug::createObject(lua_State* L)
+int lua::debugApi::createObject(lua_State* L)
 {
     try
     {
@@ -397,7 +397,7 @@ int luaDebug::createObject(lua_State* L)
     }
 }
 
-int luaDebug::destroyObject(lua_State* L)
+int lua::debugApi::destroyObject(lua_State* L)
 {
     try
     {
@@ -440,7 +440,7 @@ int luaDebug::destroyObject(lua_State* L)
 }
 
 // receives: [object, class name, field name]
-int luaDebug::getClassObjectField(lua_State* L)
+int lua::debugApi::getClassObjectField(lua_State* L)
 {
     try
     {
@@ -464,7 +464,7 @@ int luaDebug::getClassObjectField(lua_State* L)
 }
 
 // receives class name, field name
-int luaDebug::getClassField(lua_State* L)
+int lua::debugApi::getClassField(lua_State* L)
 {
     try
     {
@@ -496,7 +496,7 @@ int luaDebug::getClassField(lua_State* L)
 }
 
 // receives global name
-int luaDebug::getGlobalField(lua_State* L)
+int lua::debugApi::getGlobalField(lua_State* L)
 {
     try 
     {
@@ -514,23 +514,23 @@ int luaDebug::getGlobalField(lua_State* L)
     return 1;
 }
 
-int luaDebug::getClassObjectFieldPtr(lua_State* L)
+int lua::debugApi::getClassObjectFieldPtr(lua_State* L)
 {
     return 0;
 }
 
-int luaDebug::getClassFieldPtr(lua_State* L)
+int lua::debugApi::getClassFieldPtr(lua_State* L)
 {
     return 0;
 }
 
-int luaDebug::getGlobalFieldPtr(lua_State* L)
+int lua::debugApi::getGlobalFieldPtr(lua_State* L)
 {
     return 0;
 }
 
 // receives global name and value
-int luaDebug::setGlobalField(lua_State* L)
+int lua::debugApi::setGlobalField(lua_State* L)
 {
     try
     {
@@ -562,7 +562,7 @@ int luaDebug::setGlobalField(lua_State* L)
 }
 
 // receives class name, function name, number of arguments, and arguments
-int luaDebug::invokeClassMethod(lua_State* L)
+int lua::debugApi::invokeClassMethod(lua_State* L)
 {
     try 
     {
@@ -602,7 +602,7 @@ int luaDebug::invokeClassMethod(lua_State* L)
 }
 
 // receives class name, class object, function name, number of arguments, and arguments
-int luaDebug::invokeClassObjectMethod(lua_State* L)
+int lua::debugApi::invokeClassObjectMethod(lua_State* L)
 {
     try
     {
@@ -652,7 +652,7 @@ int luaDebug::invokeClassObjectMethod(lua_State* L)
 }
 
 // receives function name, number of arguments, and arguments
-int luaDebug::invokeGlobalMethod(lua_State* L)
+int lua::debugApi::invokeGlobalMethod(lua_State* L)
 {
 
     try 
@@ -678,7 +678,7 @@ int luaDebug::invokeGlobalMethod(lua_State* L)
 }
 
 // receives object, class name, property name, value
-int luaDebug::setClassObjectField(lua_State* L)
+int lua::debugApi::setClassObjectField(lua_State* L)
 {
     try 
     {
@@ -722,7 +722,7 @@ int luaDebug::setClassObjectField(lua_State* L)
 }
 
 // receives class name, property name, value
-int luaDebug::setClassField(lua_State* L)
+int lua::debugApi::setClassField(lua_State* L)
 {
     try 
     {
@@ -791,7 +791,7 @@ void insertPropertyAndMethodData(const rttr::array_range<rttr::property>& proper
 }
 
 // receives: class name
-int luaDebug::getClassInfo(lua_State* L)
+int lua::debugApi::getClassInfo(lua_State* L)
 {
     try 
     {
@@ -855,7 +855,7 @@ int luaDebug::getClassInfo(lua_State* L)
     }
 }
 
-int luaDebug::getGlobalEnvironmentInfo(lua_State* L)
+int lua::debugApi::getGlobalEnvironmentInfo(lua_State* L)
 {
     try 
     {
@@ -872,27 +872,27 @@ int luaDebug::getGlobalEnvironmentInfo(lua_State* L)
 }
 
 // receives classObject, fieldName and accessPath
-int luaDebug::getContainerSize(lua_State* L)
+int lua::debugApi::getContainerSize(lua_State* L)
 {
     return 0;
 }
 
-int luaDebug::getContainerElement(lua_State* L)
+int lua::debugApi::getContainerElement(lua_State* L)
 {
     return 0;
 }
 
-int luaDebug::getContainerElementPtr(lua_State* L)
+int lua::debugApi::getContainerElementPtr(lua_State* L)
 {
     return 0;
 }
 
-int luaDebug::setContainerElement(lua_State* L)
+int lua::debugApi::setContainerElement(lua_State* L)
 {
     return 0;
 }
 
-int luaDebug::clearContainer(lua_State* L)
+int lua::debugApi::clearContainer(lua_State* L)
 {
     return 0;
 }

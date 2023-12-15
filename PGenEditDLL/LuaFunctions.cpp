@@ -59,21 +59,21 @@ extern "C"
 
 	const luaL_Reg pgeneditDebugApiReg[] =
 	{
-		{"getClassField", luaDebug::getClassField},
-		{"getClassObjectField", luaDebug::getClassObjectField},
-		{"getGlobalField", luaDebug::getGlobalField},
-		{"setClassField", luaDebug::setClassField},
-		{"setClassObjectField", luaDebug::setClassObjectField},
-		{"setGlobalField", luaDebug::setGlobalField},
-		{"invokeClassMethod", luaDebug::invokeClassMethod},
-		{"invokeClassObjectMethod", luaDebug::invokeClassObjectMethod},
-		{"invokeGlobalMethod", luaDebug::invokeGlobalMethod},
-		{"classExists", luaDebug::classExists},
-		{"copyObject", luaDebug::copyObject},
-		{"createObject", luaDebug::createObject},
-		{"destroyObject", luaDebug::destroyObject},
-		{"getClassInfo", luaDebug::getClassInfo},
-		{"getGlobalEnvironmentInfo", luaDebug::getGlobalEnvironmentInfo},
+		{"getClassField", lua::debugApi::getClassField},
+		{"getClassObjectField", lua::debugApi::getClassObjectField},
+		{"getGlobalField", lua::debugApi::getGlobalField},
+		{"setClassField", lua::debugApi::setClassField},
+		{"setClassObjectField", lua::debugApi::setClassObjectField},
+		{"setGlobalField", lua::debugApi::setGlobalField},
+		{"invokeClassMethod", lua::debugApi::invokeClassMethod},
+		{"invokeClassObjectMethod", lua::debugApi::invokeClassObjectMethod},
+		{"invokeGlobalMethod", lua::debugApi::invokeGlobalMethod},
+		{"classExists", lua::debugApi::classExists},
+		{"copyObject", lua::debugApi::copyObject},
+		{"createObject", lua::debugApi::createObject},
+		{"destroyObject", lua::debugApi::destroyObject},
+		{"getClassInfo", lua::debugApi::getClassInfo},
+		{"getGlobalEnvironmentInfo", lua::debugApi::getGlobalEnvironmentInfo},
 		{0, 0}
 	};
 
@@ -154,12 +154,12 @@ extern "C"
 	}
 }
 
-std::string buildWantedLuaTypeString(lua_State* L, std::initializer_list<int> list)
+std::string lua::utils::buildWantedLuaTypeString(lua_State* L, std::initializer_list<int> list)
 {
     static const std::string singleFormat = "%s", multipleFormat = "any of [%s]";
     std::string s;
 	std::vector<std::string> parts;
-	std::ranges::transform(list, std::back_inserter(parts), [L](int arg) { return luaTypeToString(L, arg); });
+	std::ranges::transform(list, std::back_inserter(parts), [L](int arg) { return lua::utils::luaTypeToString(L, arg); });
 	return wxString::Format(wxString(list.size() <= 1 ? singleFormat : multipleFormat), (wxString)stringConcat(parts)).ToStdString();
 }
 
@@ -426,7 +426,7 @@ void fillGameStaticPointersAndSizes()
 
 
 
-std::string luaTypeToString(lua_State* L, int idx)
+std::string lua::utils::luaTypeToString(lua_State* L, int idx)
 {
     switch (lua_type(L, idx))
     {
@@ -450,14 +450,14 @@ std::string luaTypeToString(lua_State* L, int idx)
     return "";
 }
 
-std::string getLuaTypeMismatchString(lua_State* L, std::initializer_list<int> wanted, int provided, int stackIndex)
+std::string lua::utils::getLuaTypeMismatchString(lua_State* L, std::initializer_list<int> wanted, int provided, int stackIndex)
 {
-    return wxString::Format("Expected %s, got %s (stack index of parameter is %d)", buildWantedLuaTypeString(L, wanted), luaTypeToString(L, provided), stackIndex).ToStdString();
+    return wxString::Format("Expected %s, got %s (stack index of parameter is %d)", lua::utils::buildWantedLuaTypeString(L, wanted), lua::utils::luaTypeToString(L, provided), stackIndex).ToStdString();
 }
 
-std::string getLuaTypeMismatchString(lua_State* L, int wanted, int provided, int stackIndex)
+std::string lua::utils::getLuaTypeMismatchString(lua_State* L, int wanted, int provided, int stackIndex)
 {
-    return getLuaTypeMismatchString(L, { wanted }, provided, stackIndex);
+    return lua::utils::getLuaTypeMismatchString(L, { wanted }, provided, stackIndex);
 }
 
 void lua::utils::luaExpectStackSize(lua_State* L, int expected)

@@ -5,7 +5,7 @@
 
 _Nil Nil;
 
-std::string convertLuaTypeInCppTypeToString(const LuaTypeInCpp& type)
+std::string lua::utils::convertLuaTypeInCppTypeToString(const LuaTypeInCpp& type)
 {
     if (const std::string* str = std::get_if<std::string>(&type))
     {
@@ -38,7 +38,7 @@ std::string convertLuaTypeInCppTypeToString(const LuaTypeInCpp& type)
     }
 }
 
-std::string convertLuaTypeInCppToString(const LuaTypeInCpp& type)
+std::string lua::utils::convertLuaTypeInCppToString(const LuaTypeInCpp& type)
 {
     using std::to_string;
     return std::visit([](const auto& arg) -> std::string
@@ -161,16 +161,16 @@ LuaTable LuaTable::fromLuaTable(lua_State* L, int index)
             break;
             // those below are unsupported
         case LUA_TFUNCTION:
-            argError("function", luaTypeToString(L, -2));
+            argError("function", lua::utils::luaTypeToString(L, -2));
             break;
         case LUA_TTHREAD:
-            argError("thread", luaTypeToString(L, -2));
+            argError("thread", lua::utils::luaTypeToString(L, -2));
             break;
         case LUA_TUSERDATA:
-            argError("userdata", luaTypeToString(L, -2));
+            argError("userdata", lua::utils::luaTypeToString(L, -2));
             break;
         case LUA_TLIGHTUSERDATA:
-            argError("light userdata", luaTypeToString(L, -2));
+            argError("light userdata", lua::utils::luaTypeToString(L, -2));
             break;
         }
 
@@ -185,16 +185,16 @@ LuaTable LuaTable::fromLuaTable(lua_State* L, int index)
             break;
             // those below are unsupported
         case LUA_TFUNCTION:
-            argError("function", luaTypeToString(L, -1));
+            argError("function", lua::utils::luaTypeToString(L, -1));
             break;
         case LUA_TTHREAD:
-            argError("thread", luaTypeToString(L, -1));
+            argError("thread", lua::utils::luaTypeToString(L, -1));
             break;
         case LUA_TUSERDATA:
-            argError("userdata", luaTypeToString(L, -1));
+            argError("userdata", lua::utils::luaTypeToString(L, -1));
             break;
         case LUA_TLIGHTUSERDATA:
-            argError("light userdata", luaTypeToString(L, -1));
+            argError("light userdata", lua::utils::luaTypeToString(L, -1));
             break;
         }
         t.emplace(std::move(key), std::move(value));

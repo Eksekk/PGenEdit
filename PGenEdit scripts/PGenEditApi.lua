@@ -651,6 +651,7 @@ local createObjectMetatable
 	end
 	classMT.new = new
 	local function newExisting(ptr)
+		assert(ptr ~= nil, "Pointer is nil")
 		return setmetatable({["?ptr"] = ptr}, objMT)
 	end
 

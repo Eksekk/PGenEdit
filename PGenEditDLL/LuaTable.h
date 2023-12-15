@@ -30,11 +30,14 @@ using LuaTypeInCpp = std::variant<
     LuaTable
 >;
 
-// it's like functions that return name of lua type, only that it takes LuaTypeInCpp instead of lua_State* and index
-// returns name of type, not value
-std::string convertLuaTypeInCppTypeToString(const LuaTypeInCpp& type);
-// this one returns value converted to string
-std::string convertLuaTypeInCppToString(const LuaTypeInCpp& type);
+namespace lua::utils
+{
+    // it's like functions that return name of lua type, only that it takes LuaTypeInCpp instead of lua_State* and index
+    // returns name of type, not value
+    std::string convertLuaTypeInCppTypeToString(const LuaTypeInCpp& type);
+    // this one returns value converted to string
+    std::string convertLuaTypeInCppToString(const LuaTypeInCpp& type);
+}
 
 // from stack overflow
 template<typename Float>
@@ -142,7 +145,7 @@ namespace std
         template<typename FormatContext>
         auto format(const LuaTypeInCpp& type, FormatContext& ctx) const
         {
-            std::string typ = convertLuaTypeInCppTypeToString(type), val = convertLuaTypeInCppToString(type);
+            std::string typ = lua::utils::convertLuaTypeInCppTypeToString(type), val = lua::utils::convertLuaTypeInCppToString(type);
             return format_to(ctx.out(), "{} ({})", val, typ);
         }
     };
