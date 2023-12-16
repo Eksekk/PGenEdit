@@ -46,6 +46,16 @@ namespace lua::utils
         throw LuaErrorException(std::vformat(msg, std::make_format_args(std::forward<Args>(args)...)));
     }
 
+	// throws error if condition is false
+	template<typename... Args>
+	void luaAssert(bool condition, const std::string& msg, Args&&... args)
+	{
+		if (!condition)
+		{
+			luaError(msg, std::forward<Args>(args)...);
+		}
+	}
+
     // just found out there's lua_typename() function, oh well
     std::string luaTypeToString(lua_State* L, int idx);
     std::string buildWantedLuaTypeString(lua_State* L, std::initializer_list<int> list);

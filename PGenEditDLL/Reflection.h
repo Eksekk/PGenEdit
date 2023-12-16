@@ -52,6 +52,7 @@ namespace // anonymous namespace makes it so that these aliases are only visible
     using ::lua::utils::getLuaTypeOrError;
     using ::lua::utils::isLuaType;
     using ::lua::utils::luaError;
+    using ::lua::utils::luaAssert;
     using ::lua::utils::luaExpectStackSize;
     using ::lua::utils::luaTableHasMetafield;
 }
@@ -1824,17 +1825,20 @@ public:
 
         static void setContainerField(rttr::variant& container, const LuaTypeInCpp& key, const LuaTypeInCpp& value, int paramIndex)
         {
-            if (!container.is_valid())
-            {
-                luaError("Can't set container field - container is invalid");
-                return;
-            }
+            luaAssert(container.is_valid(), "Can't set container field - container is invalid");
             if (container.is_sequential_container())
             {
                 rttr::variant cont = indexSequential(container, key, paramIndex);
                 rttr::variant_sequential_view view = cont.create_sequential_view();
                 rttr::type keyType = rttr::type::get<size_t>();
                 rttr::type valueType = view.get_value_type();
+                rttr::variant keyVar = convertLuaTypeInCppToVariantByTypeId(key, keyType);
+                luaAssert(keyVar.is_type<size_t>(), "Can't set sequential container field - can't convert key to type 'size_t'", keyType.get_name());
+                size_t idx = keyVar.get_value<size_t>();
+
+				rttr::variant valueVar = convertLuaTypeInCppToVariantByTypeId(value, valueType);
+                luaAssert(valueVar.is_valid(), "Can't set sequential container field - value '{}' is invalid after conversion to rttr::variant", value);
+                luaAssert(view.set_value(idx, valueVar), "Can't set sequential container field - couldn't set value '{}' at index {}", value, idx);
             }
             else if (container.is_associative_container())
             {
@@ -1844,10 +1848,11 @@ public:
                 {
                     rttr::type keyType = view.get_key_type();
                     rttr::variant keyVar = convertLuaTypeInCppToVariantByTypeId(key, keyType);
+                    luaAssert(keyVar.is_valid(), "Can't set key-only associative container field - key '{}' is invalid after conversion to rttr::variant", key);
                     auto [elem, inserted] = view.insert(keyVar);
                     if (!inserted)
 					{
-						luaError("Can't insert element '{}' into key-only associative container", keyVar);
+						luaError("Can't insert element of type '{}' into key-only associative container", keyVar.get_type().get_name());
 						return;
 					}
                 }
@@ -1857,11 +1862,12 @@ public:
                     rttr::type valueType = view.get_value_type();
 
                     rttr::variant keyVar = convertLuaTypeInCppToVariantByTypeId(key, keyType);
+                    luaAssert(keyVar.is_valid(), "Can't set container field - key '{}' is invalid after conversion to rttr::variant", key);
                     rttr::variant valueVar = convertLuaTypeInCppToVariantByTypeId(value, valueType);
 					auto [elem, inserted] = view.insert(keyVar, valueVar);
 					if (!inserted)
 					{
-						luaError("Can't set container field - couldn't insert key '{}' with value '{}'", keyVar, valueVar);
+						luaError("Can't set container field - couldn't insert key of type '{}' with value of type '{}'", keyVar.get_type().get_name(), valueVar.get_type().get_name());
 						return;
 					}
                 }

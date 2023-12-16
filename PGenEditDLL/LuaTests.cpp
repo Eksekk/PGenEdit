@@ -15,7 +15,7 @@ std::vector<wxString> LuaTests::run()
             LuaTable created = LuaTable::fromLuaTable(Lua);
             if (created != orig)
             {
-                myassertf(false, "[LuaTable] Test #%d failed", index);
+                myassertf(false, "[LuaTable] Passthrough test #%d failed", index);
                 lua_getglobal(Lua, "dump");
                 created.pushToLuaStack(Lua);
                 if (lua_pcall(Lua, 1, 1, 0))
@@ -87,6 +87,20 @@ std::vector<wxString> LuaTests::run()
         {4, 50000000000000.0}
     } };
     luaTablePassthrough(t6, 6);
+
+    auto table = [](const LuaTypeInCpp& val)
+        {
+            wxASSERT_MSG(std::holds_alternative<LuaTable>(val), "LuaTable::at() test: value is not a table");
+            return std::get<LuaTable>(val);
+        };
+
+    // "at" method tests
+    int atIndex = 1;
+    static const wxString atStr = "[LuaTable::at()] Test #%d failed";
+    myassertf(t1.at("abc") == 5LL, atStr, atIndex++);
+    myassertf(table(t1.at(true)).at("f") == "f"s, atStr, atIndex++);
+
+myassertf(t1.at(5LL) == 24LL, atStr, atIndex++);
 
     // TODO: also extended Nil test, once I implement appropriate behavior
     return myasserter.errors;
