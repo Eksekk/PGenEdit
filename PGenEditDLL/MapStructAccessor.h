@@ -102,6 +102,11 @@ public:
     virtual ArrayData getMapChestsArrayData() = 0;
     virtual ArrayData getMapMonstersArrayData() = 0;
 
+	PGENEDIT_FOR_EACH_DEF(MapMonster)
+    //PGENEDIT_FOR_EACH_STATIC_ARRAY_DEF(MapMonster)
+    PGENEDIT_FOR_EACH_STATIC_ARRAY_DECL(MapMonster, TemplatedMapStructAccessor)
+public:
+
     virtual ~MapStructAccessor();
 };
 
@@ -132,6 +137,8 @@ public:
     {
         forEachChestDo(map->chests.data(), map->chests_size, func);
     }
+
+    PGENEDIT_FOR_EACH_STATIC_ARRAY_DEF(MapMonster, map->monsters.data(), map->monsters_size)
 
     // Inherited via MapStructAccessor
     virtual std::string getName() const override

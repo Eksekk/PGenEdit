@@ -3,6 +3,7 @@
 #include "Enum_const.h"
 #include "Utility.h" // BaseBonus
 #include "InventoryCtrl.h"
+#include "StructAccessor.h"
 
 extern const bool MALE, FEMALE;
 
@@ -241,6 +242,8 @@ public:
 	[[nodiscard]] virtual InventoryPosition getItemInventoryPosition(const void* ptr) = 0;
 	virtual bool moveItemToInventoryPosition(const void* ptr, InventoryPosition pos) = 0;
 	virtual bool moveItemToInventoryPosition(const void* ptr, int x, int y) = 0;
+private:
+	PGENEDIT_GENERIC_METHODS_DEF(Player);
 };
 
 // ENTER CONFIRMS TEMPLATE FOR INTELLISENSE

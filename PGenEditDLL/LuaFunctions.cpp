@@ -6,6 +6,7 @@
 #include "Utility.h"
 #include "CallEvents.h"
 #include "Reflection.h"
+#include "MapStructAccessor.h"
 
 // TODOOOO
 // put global functions related to lua in "lua" namespace
@@ -84,6 +85,12 @@ extern "C"
 		wxLogInfo("Event handler: received int %d and bool %d, returning %d", i, b, i * 3);
 		lua_pushnumber(L, i * 3);
 		return 1;
+	}
+
+	extern "C" static int printMonsters(lua_State* L)
+	{
+		std::vector<int> ids;
+		mapAccessor->forEachMapMonsterArrayIndexDo([&](AnyMapMonsterStruct auto* ptr) { ids.push_back(ptr->id); });
 	}
 
 	void luaInit()

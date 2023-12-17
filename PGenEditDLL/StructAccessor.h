@@ -286,6 +286,27 @@ public:
 class StructAccessorGenericFor
 {
 protected:
+	template<typename Function6, typename Function7, typename Function8, typename... Args>
+	static auto versionBasedAccessorDispatch(Function6&& func6, Function7&& func7, Function8&& func8, Args&&... args)
+	{
+		if (MMVER == 6)
+		{
+			return func6(std::forward<Args>(args)...);
+		}
+		else if (MMVER == 7)
+		{
+			return func7(std::forward<Args>(args)...);
+		}
+		else if (MMVER == 8)
+		{
+			return func8(std::forward<Args>(args)...);
+		}
+		else
+		{
+			wxFAIL_MSG(wxString::Format("Invalid MM version (%d)", MMVER));
+		}
+		return decltype(func6(std::forward<Args>(args)...))(); // default-constructed return value, compiler will make sure all three returned types match
+	}
     // executes a function for any game version's struct over each array item
     template<typename Function, typename Type6, typename Type7, typename Type8>
     static auto genericForEachDo(void* ptr, int count, Function&& func, int first = 0)
@@ -309,6 +330,57 @@ protected:
         }
     }
 
+#define PGENEDIT_FOR_EACH_DEF(type) \
+	template<typename Function> \
+	static auto forEach ## type ## Do(void* ptr, int count, Function&& func, int first = 0) \
+	{ \
+        return genericForEachDo<Function, mm6::type, mm7::type, mm8::type>(ptr, count, std::forward<Function>(func), first); \
+	}
+
+	template<typename Function, typename T>
+	static auto genericForEachDoSpecialized(T* ptr, int count, Function&& func, int first = 0)
+	{
+		for (int i = 0; i < count; ++i)
+		{
+			accessorDetail::callWithOptionalIndexParam(ptr, first + i, std::forward<Function>(func));
+		}
+	}
+
+#define PGENEDIT_FOR_EACH_STATIC_ARRAY_DECL(type, accessor) \
+	template<typename Function> \
+	static auto forEach ## type ## ArrayIndexDo(Function&& func, int first = 0) \
+	{ \
+		if (MMVER == 6) \
+		{ \
+			return accessor<mm6::type>::template forEach ## type ## ArrayIndexDoSpecialized<Function, mm6::type>(std::forward<Function>(func), first); \
+		} \
+		else if (MMVER == 7) \
+		{ \
+			return accessor<mm7::type>::template forEach ## type ## ArrayIndexDoSpecialized<Function, mm7::type>(std::forward<Function>(func), first); \
+		} \
+		else if (MMVER == 8) \
+		{ \
+			return accessor<mm8::type>::template forEach ## type ## ArrayIndexDoSpecialized<Function, mm8::type>(std::forward<Function>(func), first); \
+		} \
+		else \
+		{ \
+			wxFAIL; \
+			return decltype(accessor<mm6::type>::template forEach ## type ## ArrayIndexDoSpecialized<Function, mm6::type>(std::forward<Function>(func), first))(); /* default-constructed return value */ \
+		} \
+	}
+// this needs to be in derived class to ease writing getArrCode and getCountCode
+#define PGENEDIT_FOR_EACH_STATIC_ARRAY_DEF(type, getArrCode, getCountCode) \
+	template<typename Function, typename T> \
+		static auto forEach ## type ## ArrayIndexDoSpecialized(Function&& func, int first = 0) \
+	{ \
+        int count = getCountCode; \
+		for (int i = 0; i < count; ++i) \
+		{ \
+			accessorDetail::callWithOptionalIndexParam<Function, T>(reinterpret_cast<T*>(getArrCode), first + i, std::forward<Function>(func)); \
+		} \
+	}
+
+
     // executes once a function receiving std::vector of pointers to structure entries
     template<typename Function, typename Type6, typename Type7, typename Type8>
     static auto genericForRangeDo(void* ptr, int count, Function&& func, int first = 0)
@@ -331,15 +403,13 @@ protected:
             return decltype(accessorDetail::callWithOptionalIndexParamVector(reinterpret_cast<Type6*>(ptr), count, std::forward<Function>(func), first))(); // default-constructed return value
         }
     }
-
-    template<typename Function, typename T>
-    static auto genericForEachDoSpecialized(T* ptr, int count, Function&& func, int first = 0)
-    {
-        for (int i = 0; i < count; ++i)
-        {
-            accessorDetail::callWithOptionalIndexParam(ptr, first + i, std::forward<Function>(func));
-        }
-    }
+    // define macros similar to above, but for std::vector of pointers
+#define PGENEDIT_FOR_RANGE_DEF(type) \
+	template<typename Function> \
+	static auto for ## type ## RangeDo(void* ptr, int count, Function&& func, int first = 0) \
+	{ \
+		return genericForRangeDo<Function, mm6::type, mm7::type, mm8::type>(ptr, count, std::forward<Function>(func), first); \
+	}
 
     template<typename Function, typename... Args>
     static auto gameVersionFunctionDispatch(Function&& func, Args&&... args)
@@ -386,6 +456,13 @@ protected:
         }
     }
 
+#define PGENEDIT_FOR_ITEM_EXECUTE_DEF(type) \
+	template<typename Function> \
+	static auto for ## type ## Execute(void* ptr, Function&& func) \
+	{ \
+		return genericForItemExecute<Function, mm6::type, mm7::type, mm8::type>(ptr, std::forward<Function>(func)); \
+	}
+
     // executes a function for single index of array
     // to be used for example with items.txt - where there is one array only, so if you need item id 5 data, you don't need to provide pointer outside of accessor internals
     template<typename Function, typename Type6, typename Type7, typename Type8>
@@ -409,6 +486,13 @@ protected:
             return decltype(accessorDetail::callWithOptionalIndexParam(reinterpret_cast<Type6*>(ptr), index + first, std::forward<Function>(func)))(); // default-constructed return value
         }
     }
+
+#define PGENEDIT_FOR_SINGLE_ARRAY_INDEX_EXECUTE_DEF(type) \
+	template<typename Function> \
+	static auto for ## type ## ArrayIndexExecute(void* ptr, int index, Function&& func, int first = 0) \
+	{ \
+		return genericForSingleArrayIndexExecute<Function, mm6::type, mm7::type, mm8::type>(ptr, index, std::forward<Function>(func), first); \
+	}
 
     // executes for single-instance struct at static address, like Game or Party
     template<typename Function, typename Type6, typename Type7, typename Type8>
@@ -472,26 +556,22 @@ protected:
             accessorDetail::callWithOptionalIndexParam(ptr, index + first, std::forward<Function>(func));
         }
     }
-
-    template<typename Function6, typename Function7, typename Function8, typename... Args>
-    static auto versionBasedAccessorDispatch(Function6&& func6, Function7&& func7, Function8&& func8, Args&&... args)
-    {
-        if (MMVER == 6)
-        {
-            return func6(std::forward<Args>(args)...);
-        }
-        else if (MMVER == 7)
-        {
-            return func7(std::forward<Args>(args)...);
-        }
-        else if (MMVER == 8)
-        {
-            return func8(std::forward<Args>(args)...);
-        }
-        else
-        {
-            wxFAIL_MSG(wxString::Format("Invalid MM version (%d)", MMVER));
-        }
-        return decltype(func6(std::forward<Args>(args)...))(); // default-constructed return value, compiler will make sure all three returned types match
+    // macro which dispatches on MMVER and chooses appropriate structure type, then calls genericForSpecificArrayIndexesExecuteSpecialized
+#define PGENEDIT_FOR_SPECIFIC_ARRAY_INDEXES_EXECUTE_DEF(type) \
+	template<typename Function> \
+	static auto for ## type ## ArrayIndexesExecute(void* ptr, Function&& func, const std::vector<int>& baseIndexes, bool sort = false, int first = 0) \
+	{ \
+		return genericForSpecificArrayIndexesExecute<Function, mm6::type, mm7::type, mm8::type>(ptr, std::forward<Function>(func), baseIndexes, sort, first); \
     }
 };
+
+#define PGENEDIT_GENERIC_METHODS_DECL(type) \
+    PGENEDIT_FOR_EACH_STATIC_ARRAY_DECL(type) \
+
+// excludes static array method
+#define PGENEDIT_GENERIC_METHODS_DEF(type) \
+    PGENEDIT_FOR_ITEM_EXECUTE_DEF(type) \
+    PGENEDIT_FOR_EACH_DEF(type) \
+	PGENEDIT_FOR_SINGLE_ARRAY_INDEX_EXECUTE_DEF(type) \
+	PGENEDIT_FOR_SPECIFIC_ARRAY_INDEXES_EXECUTE_DEF(type) \
+	PGENEDIT_FOR_RANGE_DEF(type) \
