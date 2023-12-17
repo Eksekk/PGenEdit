@@ -4,6 +4,7 @@
 #include "Asserter.h"
 #include "LuaWrapper.h"
 #include "LuaFunctions.h"
+#include "GameStructAccessor.h"
 
 std::vector<wxString> LuaTests::run()
 {

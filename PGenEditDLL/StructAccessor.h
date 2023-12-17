@@ -1,6 +1,107 @@
 #pragma once
 #include "main.h"
 
+// macro definitions for easy generation of getter/setter methods for struct fields
+
+// boost.pp for accessor methods generation needs widest types of all game fields, and return/set them
+// also need to somehow make first field letter capital (so it's getGold, not getgold)
+// to consider: issue a warning if assigning to or returning narrower type outside its range?
+// params to pass on example of gold: gold, Gold, int64_t
+
+// declaration will contain virtual and = 0, definition will contain override
+
+#define PGENEDIT_GETTER_DECL(type, fieldName, getterNamePart) \
+	[[nodiscard]] virtual type get##getterNamePart() = 0;\
+	[[nodiscard]] virtual void* get##getterNamePart##Ptr () = 0;
+#define PGENEDIT_GETTER_DEF(prefix, type, fieldName, getterNamePart) \
+	[[nodiscard]] type get##getterNamePart() override { return prefix fieldName; } \
+	\
+	[[nodiscard]] void* get##getterNamePart##Ptr () override { return & prefix fieldName; }
+#define PGENEDIT_SETTER_DECL(type, fieldName, setterNamePart) \
+	virtual void set##setterNamePart(type value) = 0;
+#define PGENEDIT_SETTER_DEF(prefix, type, fieldName, setterNamePart) \
+	void set##setterNamePart(type value) override { prefix fieldName = value; }
+
+#define PGENEDIT_GETTER_SETTER_DECL(type, fieldName, accessorNamePart) \
+	PGENEDIT_GETTER_DECL(type, fieldName, accessorNamePart) \
+	PGENEDIT_SETTER_DECL(type, fieldName, accessorNamePart)
+
+#define PGENEDIT_GETTER_SETTER_DEF(prefix, type, fieldName, accessorNamePart) \
+	PGENEDIT_GETTER_DEF(prefix, type, fieldName, accessorNamePart) \
+	PGENEDIT_SETTER_DEF(prefix, type, fieldName, accessorNamePart)
+
+// arrays need special handling
+// since amount of array items is not known at compile time, we need to pass it as a parameter
+// to handle various sizes, we will use std::vector with assertion that its size is equal to the size of array
+// PGENEDIT_ARRAY_GETTER_SETTER_DECL((std::array<int, 6>), test, Test, 6, 7, 8) // pass amount of elements for each game version
+
+// only supports primitive types for now
+
+#define PGENEDIT_ARRAY_GETTER_DECL(type, fieldName, accessorNamePart) \
+	[[nodiscard]] virtual std::vector<type> get##accessorNamePart() = 0;\
+    [[nodiscard]] virtual void* get##accessorNamePart##Ptr () = 0;\
+	[[nodiscard]] virtual int get##accessorNamePart##Size() = 0;
+#define PGENEDIT_ARRAY_GETTER_DEF(prefix, type, fieldName, accessorNamePart) \
+	[[nodiscard]] std::vector<type> get##accessorNamePart() override { \
+		std::vector<type> result; \
+		result.reserve(prefix fieldName.size()); \
+		std::copy(prefix fieldName.begin(), prefix fieldName.end(), std::back_inserter(result));\
+		return result; \
+	}\
+    \
+    [[nodiscard]] void* get##accessorNamePart##Ptr () override { \
+		return reinterpret_cast<void*>(prefix fieldName.data()); \
+	}\
+    \
+    [[nodiscard]] int get##accessorNamePart##Size() override { \
+		return prefix fieldName.size(); \
+	}
+#define PGENEDIT_ARRAY_SETTER_DECL(type, fieldName, accessorNamePart) \
+	virtual void set##accessorNamePart(const std::vector<type>& value) = 0;
+#define PGENEDIT_ARRAY_SETTER_DEF(prefix, type, fieldName, accessorNamePart) \
+	void set##accessorNamePart(const std::vector<type>& value) override { \
+		wxASSERT_MSG(value.size() == prefix fieldName.size(), wxString::Format(\
+            "Invalid number of array elements for %s %s (expected %d, got %d)", #type, #fieldName,\
+			prefix fieldName.size(), value.size())); \
+		std::copy(value.begin(), value.end(), prefix fieldName.begin()); \
+	}
+#define PGENEDIT_ARRAY_GETTER_SETTER_DECL(type, fieldName, accessorNamePart) \
+	PGENEDIT_ARRAY_GETTER_DECL(type, fieldName, accessorNamePart) \
+	PGENEDIT_ARRAY_SETTER_DECL(type, fieldName, accessorNamePart)
+
+#define PGENEDIT_ARRAY_GETTER_SETTER_DEF(prefix, type, fieldName, accessorNamePart) \
+	PGENEDIT_ARRAY_GETTER_DEF(prefix, type, fieldName, accessorNamePart) \
+	PGENEDIT_ARRAY_SETTER_DEF(prefix, type, fieldName, accessorNamePart)
+
+// pass a list of tuples containing 3 elements each: type, field name, accessor name part to some macro, which will iterate over them and generate getter/setter methods
+// example: PGENEDIT_GETTER_SETTER_METHODS_DEF((int, gold, Gold), (int, food, Food))
+#define PGENEDIT_GETTER_SETTER_METHODS_DEF(prefix, ...) \
+    BOOST_PP_ASSERT_MSG(BOOST_PP_NOT(BOOST_PP_IS_BEGIN_PARENS(prefix)), "First argument for accessor definitions should be prefix to access the field, not tuple")\
+	BOOST_PP_SEQ_FOR_EACH(PGENEDIT_GETTER_SETTER_METHODS_MACRO_DEF, prefix, BOOST_PP_VARIADIC_TO_SEQ(__VA_ARGS__))
+#define PGENEDIT_GETTER_SETTER_METHODS_MACRO_DEF(r, data, seq) \
+	PGENEDIT_GETTER_SETTER_DEF(data, BOOST_PP_TUPLE_ELEM(0, seq), BOOST_PP_TUPLE_ELEM(1, seq), BOOST_PP_TUPLE_ELEM(2, seq))
+
+#define PGENEDIT_GETTER_SETTER_METHODS_DECL(...) \
+	BOOST_PP_SEQ_FOR_EACH(PGENEDIT_GETTER_SETTER_METHODS_MACRO_DECL, _, BOOST_PP_VARIADIC_TO_SEQ(__VA_ARGS__))
+#define PGENEDIT_GETTER_SETTER_METHODS_MACRO_DECL(r, data, seq) \
+	PGENEDIT_GETTER_SETTER_DECL(BOOST_PP_TUPLE_ELEM(0, seq), BOOST_PP_TUPLE_ELEM(1, seq), BOOST_PP_TUPLE_ELEM(2, seq))
+
+// now the same, but for arrays
+// prefix, type, field name, accessor name part
+#define PGENEDIT_ARRAY_GETTER_SETTER_METHODS_DEF(prefix, ...) \
+	BOOST_PP_ASSERT_MSG(BOOST_PP_NOT(BOOST_PP_IS_BEGIN_PARENS(prefix)), "First argument for accessor definitions should be prefix to access the field, not tuple")\
+	BOOST_PP_SEQ_FOR_EACH(PGENEDIT_ARRAY_GETTER_SETTER_METHODS_MACRO_DEF, prefix, BOOST_PP_VARIADIC_TO_SEQ(__VA_ARGS__))
+#define PGENEDIT_ARRAY_GETTER_SETTER_METHODS_MACRO_DEF(r, data, seq) \
+	PGENEDIT_ARRAY_GETTER_SETTER_DEF(data, BOOST_PP_TUPLE_ELEM(0, seq), BOOST_PP_TUPLE_ELEM(1, seq), BOOST_PP_TUPLE_ELEM(2, seq))
+
+// type, field name, accessor name part
+#define PGENEDIT_ARRAY_GETTER_SETTER_METHODS_DECL(...) \
+	BOOST_PP_SEQ_FOR_EACH(PGENEDIT_ARRAY_GETTER_SETTER_METHODS_MACRO_DECL, _, BOOST_PP_VARIADIC_TO_SEQ(__VA_ARGS__))
+#define PGENEDIT_ARRAY_GETTER_SETTER_METHODS_MACRO_DECL(r, data, seq) \
+	PGENEDIT_ARRAY_GETTER_SETTER_DECL(BOOST_PP_TUPLE_ELEM(0, seq), BOOST_PP_TUPLE_ELEM(1, seq), BOOST_PP_TUPLE_ELEM(2, seq))
+
+//BOOST_PP_VARIADIC_TO_SEQ((int, gold, Gold), (int, food, Food))
+
 // holds dynamic array data
 // TODO: wrap all suitable dynamic arrays inside this class
 struct ArrayData
