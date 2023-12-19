@@ -12,6 +12,22 @@ namespace
     using MapType = std::unordered_map<std::string, int>;
 }
 
+struct ContainerContainer
+{
+
+    // int arr5Arr4Arr2Int[5][4][2]; // can't use raw arrays, compilation errors happen
+    std::array<std::array<std::array<int, 2>, 4>, 5> arr5Arr4Arr2Int;
+    std::vector<std::set<std::string>> vecSetStr;
+    std::array<std::unordered_map<std::string, int>, 3> arr3MapStrInt;
+	std::unordered_map<std::string, std::vector<std::string>> mapStrVecStr;
+    std::deque<std::unordered_map<std::string, std::vector<std::string>>> dequeMapStrVecStr;
+    //std::list<std::forward_list<bool>[5]> listFwdListArr5Bool;
+    std::list<std::forward_list<std::array<bool, 5>>> listFwdListArr5Bool;
+    std::vector<float> vecFloat;
+    std::deque<double> dequeDouble;
+    // TODO: containers of class types, which themself aren't containers, but have containers as fields
+};
+
 // WARNING: when modifying this struct, also modify the registration code below and lua debug api script (tests part)
 struct ReflectionSampleStruct
 {
@@ -20,6 +36,9 @@ struct ReflectionSampleStruct
     std::vector<int> vec;
     std::array<int, 5> arr;
     std::unordered_map<std::string, int> map;
+    ContainerContainer containers;
+
+    static ContainerContainer staticContainers;
 
     // some static properties
 static int staticInt;
@@ -254,6 +273,7 @@ public:
     RTTR_REGISTRATION_FRIEND
 };
 const char* const ReflectionSampleStruct::staticReadonlyPchar = "staticReadonlyPcharText";
+ContainerContainer ReflectionSampleStruct::staticContainers;
 
 // returns 0 for success, 1 and above for failure (specific error codes)
 // RTTR problem: free functions with calling convention other than project default apparently can't be registered
@@ -307,7 +327,18 @@ RTTR_REGISTRATION
     using namespace rttr;
     using Inner2 = ReflectionSampleStruct::InnerStruct2;
     using Inner = ReflectionSampleStruct::InnerStruct;
-using UnionSample = ReflectionSampleStruct::UnionSample;
+    using UnionSample = ReflectionSampleStruct::UnionSample;
+
+	registration::class_<ContainerContainer>("ContainerContainer")
+		.property("arr5Arr4Arr2Int", &ContainerContainer::arr5Arr4Arr2Int)(getParameterMetadata<std::array<std::array<std::array<int, 2>, 4>, 5>>())
+		.property("vecSetStr", &ContainerContainer::vecSetStr)(getParameterMetadata<std::vector<std::set<std::string>>>())
+		.property("arr3MapStrInt", &ContainerContainer::arr3MapStrInt)(getParameterMetadata<std::array<std::unordered_map<std::string, int>, 3>>())
+		.property("mapStrVecStr", &ContainerContainer::mapStrVecStr)(getParameterMetadata<std::unordered_map<std::string, std::vector<std::string>>>())
+		.property("dequeMapStrVecStr", &ContainerContainer::dequeMapStrVecStr)(getParameterMetadata<std::deque<std::unordered_map<std::string, std::vector<std::string>>>>())
+		.property("listFwdListArr5Bool", &ContainerContainer::listFwdListArr5Bool)(getParameterMetadata<std::list<std::forward_list<std::array<bool, 5>>>>())
+		.property("vecFloat", &ContainerContainer::vecFloat)(getParameterMetadata<std::vector<float>>())
+		.property("dequeDouble", &ContainerContainer::dequeDouble)(getParameterMetadata<std::deque<double>>())
+		.constructor<>();
 
     registration::class_<UnionSample>("UnionSample")
 .property("i", &UnionSample::i)
@@ -353,10 +384,12 @@ registerExtra<Inner>();
         .property("arr", &ReflectionSampleStruct::arr)(getParameterMetadata<std::array<int, 5>>())
         .property("map", &ReflectionSampleStruct::map)(getParameterMetadata<std::unordered_map<std::string, int>>())
         .property("u", &ReflectionSampleStruct::u)
-.property("protectedInt", &ReflectionSampleStruct::protectedInt)
+        .property("containers", &ReflectionSampleStruct::containers)
+        .property("protectedInt", &ReflectionSampleStruct::protectedInt)
         .property("protectedPtr", &ReflectionSampleStruct::protectedPtr)
-.property("privateInt", &ReflectionSampleStruct::privateInt)
+        .property("privateInt", &ReflectionSampleStruct::privateInt)
         .property("privatePtr", &ReflectionSampleStruct::privatePtr)
+        .property("staticContainers", &ReflectionSampleStruct::staticContainers)
         
         .property("inner", &ReflectionSampleStruct::inner)
         .property("inner2", &ReflectionSampleStruct::inner2)

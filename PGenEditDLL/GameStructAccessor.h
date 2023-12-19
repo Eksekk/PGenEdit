@@ -4,7 +4,15 @@
 
 class GameStructAccessor;
 extern GameStructAccessor* gameAccessor;
-#define PGENEDIT_GETTERS_SETTERS (int32_t, NPCCommand, NPCCommand), (bool, paused, Paused)
+// structures mm6::GameStructure, mm7::GameStructure, mm8::GameStructure are similar
+// most contain same fields, maybe slightly with different data types
+// what we need to do is to create a class that will be able to access all of them via getters/setters
+// so, we need to add getter/setter methods for each field in each structure, with caveat that some fields have different widths
+// (for example, int16_t in mm6, int32_t in mm7, int32_t in mm8)
+// and we need to choose the widest type for each field
+// for now I only want to handle primitives and single-level arrays of primitives (no arrays here, only below)
+// the define below is of form (type, fieldName, accessorNamePart)
+#define PGENEDIT_GETTERS_SETTERS (char**, autonoteTxt, AutonoteTxt)//, (int32_t*, autonoteCategory, AutonoteCategory)
 class GameStructAccessor : StructAccessorGenericFor
 {
 public:

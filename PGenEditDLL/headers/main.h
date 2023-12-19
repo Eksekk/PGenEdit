@@ -320,6 +320,40 @@ namespace std
             return format_to(ctx.out(), "{}", p.to_string());
         }
     };
+
+    // for rttr::type, returns name of the type
+	template<>
+	struct formatter<rttr::type>
+	{
+		template<typename ParseContext>
+		constexpr auto parse(ParseContext& ctx)
+		{
+			return ctx.begin();
+		}
+
+		template<typename FormatContext>
+		auto format(const rttr::type& p, FormatContext& ctx) const
+		{
+			return format_to(ctx.out(), "<RTTR type '{}'>", p.get_name().to_string());
+		}
+	};
+
+    // for rttr::variant, returns name of the type (because converting arbitrary variant value to string probably is impossible)
+    template<>
+    struct formatter<rttr::variant>
+	{
+		template<typename ParseContext>
+		constexpr auto parse(ParseContext& ctx)
+		{
+			return ctx.begin();
+		}
+
+		template<typename FormatContext>
+		auto format(const rttr::variant& p, FormatContext& ctx) const
+		{
+			return format_to(ctx.out(), "<RTTR variant of type '{}'>", p.get_type());
+		}
+	};
 }
 
 #endif // __MAIN_H__

@@ -882,17 +882,22 @@ int lua::debugApi::getContainerElement(lua_State* L)
     return 0;
 }
 
-int lua::debugApi::getContainerElementPtr(lua_State* L)
-{
-    return 0;
-}
-
 int lua::debugApi::setContainerElement(lua_State* L)
 {
     return 0;
 }
 
 int lua::debugApi::clearContainer(lua_State* L)
+{
+    return 0;
+}
+
+int lua::debugApi::getContainerKeys(lua_State* L)
+{
+    return 0;
+}
+
+int lua::debugApi::getContainerValues(lua_State* L)
 {
     return 0;
 }

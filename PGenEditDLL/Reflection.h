@@ -39,9 +39,10 @@ namespace lua::debugApi
         // containers
         int getContainerSize(lua_State* L);
         int getContainerElement(lua_State* L);
-        int getContainerElementPtr(lua_State* L);
         int setContainerElement(lua_State* L);
         int clearContainer(lua_State* L);
+        int getContainerKeys(lua_State* L);
+        int getContainerValues(lua_State* L);
     }
 }
 
@@ -1320,6 +1321,11 @@ public: // property getters
         return convertToLuaTypeOnStackByTypeId(L, prop.get_value(instance));
     }
 
+    static rttr::property getClassObjectFieldCpp(const rttr::variant& instance, const std::string& fieldName)
+	{
+		return getAndCheckClassObjectProperty(instance, fieldName);
+	}
+
 public: // property setters
 
     // uses variants
@@ -1818,32 +1824,110 @@ public:
             
             for (int i = 0; const auto& index : indexes)
             {
-                current = getContainerField(current, index, i++);
+                if (!(current.is_associative_container() || current.is_sequential_container() || current.get_type().is_wrapper()))
+                {
+					// it's object, get object field
+					luaAssert(std::holds_alternative<std::string>(index), "Can't index object field - index #{} is not a string", i + 1);
+                    current = getClassObjectFieldCpp(current, std::get<std::string>(index)).get_value(current);
+                }
+                else
+				{
+					current = getContainerField(current, index, i++);
+                }
             }
             return current;
         }
-
+    private:
+        // sets container/object field, which also is a container (assigns container to container)
+        static void setContainerContainerField(rttr::variant& container, const rttr::variant& key, const rttr::variant& value, int paramIndex)
+        {
+            if (container.is_sequential_container())
+            {
+                rttr::variant_sequential_view viewCurrent = container.create_sequential_view();
+                viewCurrent.clear();
+                if (value.is_sequential_container())
+                {
+                    rttr::variant_sequential_view viewNew = value.create_sequential_view();
+					luaAssert(viewCurrent.get_value_type() == viewNew.get_value_type(), "Can't set sequential container field (param #{}) - container element ({}) and new container element ({}) have different types", paramIndex, viewCurrent.get_value_type(), viewNew.get_value_type());
+					if (viewCurrent.is_dynamic())
+					{
+						viewCurrent.set_size(viewNew.get_size());
+					}
+                    for (int i = 0; auto& value : viewNew)
+                    {
+						viewCurrent.set_value(i++, value);
+                    }
+                }
+				else if (value.is_associative_container())
+				{
+					luaError("Can't set sequential container field (param #{}) - can't assign associative container to sequential container", paramIndex);
+				}
+				else
+				{
+					luaAssert(false, "Can't set sequential container field (param #{}) - value '{}' is neither sequential nor associative container", paramIndex, value);
+				}
+            }
+            else if (container.is_associative_container())
+            {
+                rttr::variant_associative_view viewCurrent = container.create_associative_view();
+                viewCurrent.clear();
+                if (value.is_associative_container())
+                {
+                    rttr::variant_associative_view viewNew = value.create_associative_view();
+                    luaAssert(viewCurrent.get_key_type() == viewNew.get_key_type(), "Can't set associative container field (param #{}) - container key ({}) and new container key ({}) have different types", paramIndex, viewCurrent.get_key_type(), viewNew.get_key_type());
+                    if (viewCurrent.is_key_only_type())
+                    {
+                        for (auto& key : viewNew)
+                        {
+                            viewCurrent.insert(key);
+                        }
+                    }
+                    else
+					{
+						luaAssert(viewCurrent.get_value_type() == viewNew.get_value_type(), "Can't set associative container field (param #{}) - container value ({}) and new container value ({}) have different types", paramIndex, viewCurrent.get_value_type(), viewNew.get_value_type());
+						for (auto& [key, value] : viewNew)
+						{
+							viewCurrent.insert(key, value);
+						}
+                    }
+                }
+            }
+            else
+			{
+				luaError("Can't set original field (param #{}) - original field is neither sequential nor associative container", paramIndex);
+			}
+        }
+    public:
         static void setContainerField(rttr::variant& container, const LuaTypeInCpp& key, const LuaTypeInCpp& value, int paramIndex)
         {
             luaAssert(container.is_valid(), "Can't set container field - container is invalid");
             if (container.is_sequential_container())
             {
-                rttr::variant cont = indexSequential(container, key, paramIndex);
-                rttr::variant_sequential_view view = cont.create_sequential_view();
+                rttr::variant_sequential_view view = container.create_sequential_view();
                 rttr::type keyType = rttr::type::get<size_t>();
                 rttr::type valueType = view.get_value_type();
                 rttr::variant keyVar = convertLuaTypeInCppToVariantByTypeId(key, keyType);
-                luaAssert(keyVar.is_type<size_t>(), "Can't set sequential container field - can't convert key to type 'size_t'", keyType.get_name());
+                luaAssert(keyVar.is_type<size_t>(), "Can't set sequential container field - can't convert key {} to type 'size_t'", key);
                 size_t idx = keyVar.get_value<size_t>();
 
 				rttr::variant valueVar = convertLuaTypeInCppToVariantByTypeId(value, valueType);
                 luaAssert(valueVar.is_valid(), "Can't set sequential container field - value '{}' is invalid after conversion to rttr::variant", value);
-                luaAssert(view.set_value(idx, valueVar), "Can't set sequential container field - couldn't set value '{}' at index {}", value, idx);
+                if (valueVar.is_type<LuaTable>())
+                {
+                    assert(false); // FIXME: not implemented
+                }
+                else if (valueVar.is_associative_container() || valueVar.is_sequential_container())
+                {
+                    setContainerContainerField(container, keyVar, valueVar, paramIndex);
+                }
+                else
+                {
+                    luaAssert(view.set_value(idx, valueVar), "Can't set sequential container field - couldn't set value '{}' at index {}", value, idx);
+                }
             }
             else if (container.is_associative_container())
             {
-                rttr::variant cont = indexAssociative(container, key, paramIndex);
-                rttr::variant_associative_view view = cont.create_associative_view();
+                rttr::variant_associative_view view = container.create_associative_view();
                 if (view.is_key_only_type()) // std::set and the like
                 {
                     rttr::type keyType = view.get_key_type();
@@ -1876,6 +1960,103 @@ public:
             {
                 luaError("Can't set container field - container is neither sequential nor associative");
                 return;
+            }
+        }
+
+        size_t getContainerSize(const rttr::variant& container)
+        {
+			if (container.is_sequential_container())
+			{
+				rttr::variant_sequential_view view = container.create_sequential_view();
+				return view.get_size();
+			}
+			else if (container.is_associative_container())
+			{
+				rttr::variant_associative_view view = container.create_associative_view();
+				return view.get_size();
+			}
+			else
+			{
+				luaError("Can't get container size - container is neither sequential nor associative");
+				return 0;
+			}
+        }
+
+        void clearContainer(rttr::variant& container)
+        {
+            if (container.is_sequential_container())
+            {
+                rttr::variant_sequential_view view = container.create_sequential_view();
+                view.clear();
+            }
+            else if (container.is_associative_container())
+			{
+				rttr::variant_associative_view view = container.create_associative_view();
+				view.clear();
+			}
+			else
+			{
+				luaError("Can't clear container - container is neither sequential nor associative");
+			}
+        }
+
+        // returns vector of indexes
+        std::vector<rttr::variant> getContainerKeys(const rttr::variant& container)
+		{
+			if (container.is_sequential_container())
+			{
+                std::vector<rttr::variant> v;
+                v.resize(container.create_sequential_view().get_size());
+                std::iota(v.begin(), v.end(), 0);
+                return v;
+			}
+			else if (container.is_associative_container())
+			{
+				std::vector<rttr::variant> v;
+				rttr::variant_associative_view view = container.create_associative_view();
+				v.reserve(view.get_size());
+				for (auto& [key, value] : view)
+				{
+					v.push_back(key);
+				}
+				return v;
+			}
+			else
+			{
+				luaError("Can't get container keys - container is neither sequential nor associative");
+				return std::vector<rttr::variant>();
+			}
+		}
+
+		// returns vector of values
+        std::vector<rttr::variant> getContainerValues(const rttr::variant& container)
+        {
+            if (container.is_sequential_container())
+            {
+                std::vector<rttr::variant> v;
+                rttr::variant_sequential_view view = container.create_sequential_view();
+                v.reserve(view.get_size());
+                for (auto& value : view)
+                {
+                    v.push_back(value);
+                }
+                return v;
+            }
+            else if (container.is_associative_container())
+            {
+                std::vector<rttr::variant> v;
+                rttr::variant_associative_view view = container.create_associative_view();
+                v.reserve(view.get_size());
+                for (auto& [key, value] : view)
+                {
+                    v.push_back(value);
+                }
+                return v;
+            }
+            else
+            {
+                luaError("Can't get container values - container is neither sequential nor associative");
+                return std::vector<rttr::variant>();
             }
         }
     };
