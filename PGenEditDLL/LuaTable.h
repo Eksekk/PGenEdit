@@ -29,6 +29,7 @@ using LuaTypeInCpp = std::variant<
     bool,
     LuaTable
 >;
+using LuaValue = LuaTypeInCpp;
 
 namespace lua::utils
 {
