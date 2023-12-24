@@ -335,24 +335,78 @@ std::string containerToString(const std::array<T, S>& container, const std::stri
 	return containerToString(std::vector<T>(container.begin(), container.end()), separator);
 }
 
-/*
-template<typename T>
-struct is_temporary
+// put all functions into relevant namespaces
+namespace util
 {
-	static const bool value = false;
-};
+	namespace string
+	{
+		static constexpr auto toLower = stringToLower;
+		static constexpr auto rep = stringRep;
+		template<size_t size>
+		static constexpr auto fromArray = stringFromArray<size>;
+		// not using single parameter pack here to show template argument readable names in IDE
+		template<template<typename, typename, typename...> typename Container, typename String, typename... Extra>
+		static constexpr auto concat = stringConcat<Container, String, Extra...>;
+		static constexpr std::vector<std::string>(*split)(const std::string& text, const std::string& delimiter, bool ignoreCase) = stringSplit;
+		static constexpr std::vector<std::string>(*splitChar)(const std::string& text, char delimiter, bool ignoreCase) = stringSplit;
+		template<typename... Args>
+		static constexpr auto containerToString = ::containerToString<Args...>;
+	}
 
-template<typename T, std::enable_if_t<!std::is_rvalue_reference_v<T>, bool> = true>
-struct is_temporary
-{
-    static const bool value = false;
-};
+	namespace wx
+	{
+		static constexpr auto redBlackGreenTextThreshold = ::redBlackGreenTextThreshold;
+	}
 
-template<typename T, std::enable_if_t<std::is_rvalue_reference_v<T>, bool> = true>
-struct is_temporary
-{
-	static const bool value = std::is_rvalue_reference_v<decltype(T)>;
-};
+	namespace json
+	{
+		static constexpr auto ensureIsObject = jsonEnsureIsObject;
+		static constexpr auto ensureIsArray = jsonEnsureIsArray;
+	}
 
-template<typename T, bool>
-using is_temporary_v = is_temporary<T>::value;*/
+	namespace container
+	{
+		template<typename Vector>
+		static constexpr auto mergeVectors = ::mergeVectors<Vector>;
+		template<template<typename, typename, typename...> typename Map, typename Key, typename Value, typename... Extra>
+		static constexpr auto invertMap = ::invertMap<Map, Key, Value, Extra...>;
+		template<typename T>
+		static constexpr auto existsInVector = ::existsInVector<T>;
+		template<typename T>
+		static constexpr auto indexInVector = ::indexInVector<T>;
+		template<typename Container, typename Val>
+		static constexpr auto existsInContainer = ::existsInContainer<Container, Val>;
+		template<typename Container, typename Val>
+		static constexpr auto indexInContainer = ::indexInContainer<Container, Val>;
+		template<typename Vector>
+ 		static constexpr auto compileTimeMergeVectors = ::compileTimeMergeVectors<Vector>;
+// 		template<typename T, size_t S>
+// 		static constexpr std::string(*toString)(const std::array<T, S>& container, const std::string& separator) = ::containerToString<T, S>;
+// template<template<typename, typename, typename...> typename Container, typename T, typename... Extra>
+// 		static constexpr std::string(*toString)(const Container<T, Extra...>& container, const std::string& separator) = ::containerToString<Container, T, Extra...>;
+
+		// "overload templated function pointers" (the above doesn't work)
+		template<typename... Args>
+		static constexpr auto toString = ::containerToString<Args...>;
+
+	}
+
+	namespace misc
+	{
+		template<typename T>
+		static constexpr auto mmv = ::mmv<T>;
+		static constexpr auto getTimeStr = ::getTimeStr;
+		template<typename T>
+		static constexpr auto boundsCheck = ::boundsCheck<T>;
+		template<typename T>
+		static constexpr auto showDeducedType = ::showDeducedType<T>;
+		// works on containers without random access iterators
+		template<typename R>
+		auto getNthRangeElement(const R& range, size_t n)
+		{
+			auto it = range.begin();
+			std::advance(it, n);
+			return *it;
+		}
+	}
+}

@@ -301,7 +301,7 @@ namespace rttr::detail
 #undef DEFINE_CALLING_CONV
 }
 
-// formatter specializations for rttr types
+// formatter specializations for rttr types and more
 namespace std
 {
     // note: you need to implement both functions, otherwise it won't work
@@ -354,6 +354,34 @@ namespace std
 			return format_to(ctx.out(), "<RTTR variant of type '{}'>", p.get_type());
 		}
 	};
+
+    // for std::vector
+	template<typename T, typename... Extra>
+	struct formatter<std::vector<T, Extra...>>
+	{
+		template<typename ParseContext>
+		constexpr auto parse(ParseContext& ctx)
+		{
+			return ctx.begin();
+		}
+
+		template<typename FormatContext>
+		auto format(const std::vector<T, Extra...>& p, FormatContext& ctx) const
+		{
+            std::string s = "<std::vector> ";
+            for (int i = 0; i < (int)p.size(); ++i)
+            {
+                std::format_to(std::back_inserter(s), "{}", p[i]);
+				if (i != p.size() - 1)
+				{
+					s += ", ";
+				}
+			}
+			return format_to(ctx.out(), "{}", s);
+		}
+	};
+
+	// for std::array
 }
 
 #endif // __MAIN_H__

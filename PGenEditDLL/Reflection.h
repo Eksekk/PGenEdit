@@ -124,6 +124,15 @@ public:
 
 private:
 
+	/// <summary>
+/// Tries to convert a number to the specified type.
+/// </summary>
+/// <param name="val">The value to be converted.</param>
+/// <param name="typeId">The type to convert the value to.</param>
+/// <param name="allowCrossTypeConversions">Flag to allow cross type conversions.</param>
+/// <returns>
+/// A variant containing the converted value, or an empty variant if conversion fails.
+/// </returns>
 	template<typename T>
 	static rttr::variant tryConvertNumberToType(T val, type_id typeId, bool allowCrossTypeConversions = false)
 	{
@@ -207,14 +216,54 @@ public:
 		// type metadata won't work, because would need to register a ton of types, and I don't want to do that
 		// method and constructor require index in addition to type, so I can use metadata
 		LuaWrapper wrapper(L);
-		auto getNthParameterInfo = [](const rttr::array_range<rttr::parameter_info>& range, size_t n) -> rttr::parameter_info
+
+		// returns a constructor, which might be a "wrapper constructor", which returns a shared_ptr to the object, and a bool, which is true if constructor was unwrapped
+		auto getMaybeWrappedConstructor = [](rttr::constructor ctor) -> std::pair<rttr::constructor, bool>
 			{
-				auto it = range.begin();
-				std::advance(it, n);
-				return *it;
+
+				// PROBLEM: we might or might not be passed a "wrapper constructor", which returns a shared_ptr to the object
+				// should work, constructor always returns instance of the class, so we can just check if it's the same as declaring type
+				const bool isWrapper = ctor.get_instantiated_type() != ctor.get_declaring_type();
+				if (isWrapper)
+				{
+					// unwrap
+					std::vector<rttr::type> types;
+					for (auto&& param : ctor.get_parameter_infos())
+					{
+						types.push_back(param.get_type());
+					}
+					rttr::type unwrapped = rttr::type::get<void*>(); // dummy value
+					rttr::type inst = ctor.get_instantiated_type();
+					if (inst.is_wrapper())
+					{
+						unwrapped = inst.get_wrapped_type();
+					}
+					else if (inst.is_sequential_container())
+					{
+						auto args = inst.get_template_arguments();
+						wxASSERT_MSG(args.size() >= 1, std::format("Sequential container '{}' has {} template arguments, expected at least 1", inst, args.size()));
+						unwrapped = .;
+					}
+					else if (inst.is_associative_container())
+					{
+						unwrapped = inst.get_wrapped_type();
+					}
+					else
+					{
+						unwrapped = inst;
+					}
+					auto ctor2 = ctor.get_instantiated_type().get_constructor(types);
+					wxASSERT_MSG(ctor2.is_valid(), std::format("Couldn't find wrapped constructor of type '{}' with types: {}", ctor.get_instantiated_type(), types));
+					return std::make_pair(ctor2, true);
+				}
+				else
+				{
+					return std::make_pair(ctor, false);
+				}
+
 			};
 
-		auto getType = [getNthParameterInfo](const RttrClassMemberVariant& var) -> rttr::type
+		auto getType = [&](const RttrClassMemberVariant& var) -> rttr::type
 			{
 				if (const rttr::property* prop = std::get_if<rttr::property>(&var))
 				{
@@ -222,11 +271,12 @@ public:
 				}
 				else if (const std::pair<rttr::constructor, size_t>* constr = std::get_if<std::pair<rttr::constructor, size_t>>(&var))
 				{
-					return getNthParameterInfo(constr->first.get_parameter_infos(), constr->second).get_type();
+					auto [ctor, _] = getMaybeWrappedConstructor(constr->first);
+					return util::misc::getNthRangeElement(ctor.get_parameter_infos(), constr->second).get_type();
 				}
 				else if (const std::pair<rttr::method, size_t>* method = std::get_if<std::pair<rttr::method, size_t>>(&var))
 				{
-					return getNthParameterInfo(method->first.get_parameter_infos(), method->second).get_type();
+					return util::misc::getNthRangeElement(method->first.get_parameter_infos(), method->second).get_type();
 				}
 				else
 				{
@@ -236,25 +286,26 @@ public:
 
 			};
 
-		auto getCreationFunction = [getNthParameterInfo](const RttrClassMemberVariant& var) -> rttr::variant
+		auto getCreationFunction = [&](const RttrClassMemberVariant& var) -> rttr::variant
 			{
 				using FuncVector = std::vector<CreateContainerFunc>;
 				if (const rttr::property* prop = std::get_if<rttr::property>(&var))
 				{
 					rttr::variant m = prop->get_metadata(g_CONTAINER_CREATION_FUNC_METADATA_NAME);
-					wxASSERT_MSG(m.is_type<FuncVector>(), wxString::Format("Property '%s' of type '%s' doesn't have metadata with creation function", prop->get_name().data(), prop->get_type().get_name().data()));
+					wxASSERT_MSG(m.is_type<FuncVector>(), std::format("Property '{}' of type '{}' doesn't have metadata with creation function", prop->get_name(), prop->get_type()));
 					return m.get_value<FuncVector>()[0];
 				}
 				else if (const std::pair<rttr::constructor, size_t>* constr = std::get_if<std::pair<rttr::constructor, size_t>>(&var))
 				{
-					rttr::variant m = constr->first.get_metadata(g_CONTAINER_CREATION_FUNC_METADATA_NAME);
-					wxASSERT_MSG(m.is_type<FuncVector>(), wxString::Format("Constructor '%s' of type '%s' doesn't have metadata with creation function", constr->first.get_signature().data(), constr->first.get_declaring_type().get_name().data()));
+					auto [ctor, unwrapped] = getMaybeWrappedConstructor(constr->first);
+					rttr::variant m = ctor.get_metadata(g_CONTAINER_CREATION_FUNC_METADATA_NAME);
+					wxASSERT_MSG(m.is_type<FuncVector>(), std::format("Constructor '{}' of type '{}'{} doesn't have metadata with creation function", ctor.get_signature(), unwrapped ? " [unwrapped]" : "", ctor.get_declaring_type()));
 					return m.get_value<FuncVector>()[constr->second];
 				}
 				else if (const std::pair<rttr::method, size_t>* method = std::get_if<std::pair<rttr::method, size_t>>(&var))
 				{
 					rttr::variant m = method->first.get_metadata(g_CONTAINER_CREATION_FUNC_METADATA_NAME);
-					wxASSERT_MSG(m.is_type<FuncVector>(), wxString::Format("Method '%s' of type '%s' doesn't have metadata with creation function", method->first.get_signature().data(), method->first.get_declaring_type().get_name().data()));
+					wxASSERT_MSG(m.is_type<FuncVector>(), std::format("Method '{}' of type '{}' doesn't have metadata with creation function", method->first.get_signature(), method->first.get_declaring_type()));
 					return m.get_value<FuncVector>()[method->second];
 				}
 				else
@@ -426,7 +477,7 @@ public:
 				seqView.set_size(arr.size());
 				for (int i = 0; const LuaTypeInCpp & val : arr)
 				{
-					rttr::variant var = convertLuaTypeInCppToVariantByTypeId(val, wrappedType);
+					rttr::variant var = convertLuaTypeInCppToVariant(val, wrappedType);
 					seqView.set_value(i++, var);
 				}
 				return var;
@@ -457,8 +508,8 @@ public:
 				LuaTable t = LuaTable::fromLuaTable(L, stackIndex);
 				for (auto&& [key, value] : t)
 				{
-					rttr::variant keyVar = convertLuaTypeInCppToVariantByTypeId(key, wrappedKeyType);
-					rttr::variant valueVar = convertLuaTypeInCppToVariantByTypeId(value, wrappedValueType);
+					rttr::variant keyVar = convertLuaTypeInCppToVariant(key, wrappedKeyType);
+					rttr::variant valueVar = convertLuaTypeInCppToVariant(value, wrappedValueType);
 					assocView.insert(keyVar, valueVar);
 				}
 				return var;
@@ -496,7 +547,7 @@ public:
 	// will be used to allow reflected methods to return values in lua
 	// takes constituent types of LuaTypeInCpp and converts them to lua types
 	template<typename T>
-	static void convertToLuaTypeOnStack(lua_State* L, const T& val)
+	static void convertValueToLuaTypeOnStack(lua_State* L, const T& val)
 	{
 		LuaWrapper wrapper(L);
 		using BaseType = std::remove_cvref_t<T>;
@@ -644,7 +695,7 @@ public:
 		}
 	}
 
-	static rttr::variant convertLuaTypeInCppToVariantByTypeId(const LuaTypeInCpp& var, const rttr::type& typ, bool allowCrossTypeConversions = false)
+	static rttr::variant convertLuaTypeInCppToVariant(const LuaTypeInCpp& var, const rttr::type& typ, bool allowCrossTypeConversions = false)
 	{
 		type_id typeId = typ.get_id();
 		// let's assume integers can be converted to floats and vice versa, even if allowCrossTypeConversions is false
@@ -783,7 +834,7 @@ public:
 				seqView.set_size(arr.size());
 				for (int i = 0; const LuaTypeInCpp & val : arr)
 				{
-					rttr::variant var = convertLuaTypeInCppToVariantByTypeId(val, wrappedType);
+					rttr::variant var = convertLuaTypeInCppToVariant(val, wrappedType);
 					seqView.set_value(i++, var);
 				}
 				return var;
@@ -809,7 +860,7 @@ public:
 	}
 
 	// now similar function to above, but using runtime type_id of rttr::variant to perform the conversions
-	static bool convertToLuaTypeOnStackByTypeId(lua_State* L, const rttr::variant& val)
+	static bool convertVariantToLuaTypeOnStack(lua_State* L, const rttr::variant& val)
 	{
 		LuaWrapper wrapper(L);
 		type_id typ = val.get_type().get_id();
@@ -939,7 +990,7 @@ public:
 		}
 		else
 		{
-			luaError("Unsupported type '{}' in convertToLuaTypeOnStackByTypeId", val.get_type().get_name().to_string());
+			luaError("Unsupported type '{}' in convertVariantToLuaTypeOnStack", val.get_type().get_name().to_string());
 			return false;
 			//wxFAIL_MSG(wxString::Format("Can't convert type '%s' to matching lua type", val.get_type().get_name().data()));
 		}
@@ -1114,11 +1165,26 @@ private:
 			{
 				// FIXME: unfortunately, function parameter names need to be provided by user, so we can't show them here
 				// that was to be expected though
-				luaError("Can't convert parameter {} (stack index {}, name '{}') of lua type '{}' to C++ type '{}'", i + 1, stackIndex, /*required[i].get_name().data()*/"", lua_typename(L, stackIndex), required[i].get_type().get_name().data());
+				// luaError("Can't convert parameter {} (stack index {}, name '{}') of lua type '{}' to C++ type '{}'", i + 1, stackIndex, /*required[i].get_name().data()*/"", lua_typename(L, stackIndex), required[i].get_type().get_name().data());
 				return false;
 			}
 		}
 		return true;
+	}
+
+	static int defaultArgumentCount(const std::vector<rttr::parameter_info>& paramInfo)
+	{
+		int result = 0;
+		int i = 0;
+		for (auto itr = paramInfo.rbegin(); itr != paramInfo.rend(); ++itr, ++i)
+		{
+			if (!itr->has_default_value())
+			{
+				return i;
+			}
+		}
+		// all default
+		return paramInfo.size();
 	}
 
 	static rttr::variant callWithLuaParamsCommon(lua_State* L, const rttr::method& meth, rttr::instance inst, int nArgs)
@@ -1156,20 +1222,73 @@ private:
 	{
 		return callWithLuaParamsCommonTemplated(L, name, static_cast<void*>(nullptr), nArgs);
 	}
-
-	static int defaultArgumentCount(const std::vector<rttr::parameter_info>& paramInfo)
+	
+	static rttr::variant callWithCppParamsCommon(const rttr::method& meth, rttr::instance inst, const std::vector<rttr::variant>& args)
 	{
-		int result = 0;
-		int i = 0;
-		for (auto itr = paramInfo.rbegin(); itr != paramInfo.rend(); ++itr, ++i)
+		if (!meth.is_valid())
 		{
-			if (!itr->has_default_value())
+			return rttr::variant();
+		}
+		auto paramsArray = meth.get_parameter_infos();
+		std::vector<rttr::parameter_info> params(paramsArray.begin(), paramsArray.end());
+		int defaultCount = defaultArgumentCount(params);
+		const bool isGlobal = !meth.get_declaring_type().is_valid(); // global methods don't have declaring type
+		const std::string formatString = inst.is_valid() ? "instance method '{}'"
+			: (isGlobal ? "global function '{}'" : "static class method '{}'");
+		const std::string funcName = std::vformat(formatString, std::make_format_args(meth.get_name()));
+		if (args.size() > params.size())
+		{
+			luaError("Too many parameters passed to {} (expected at most {}, got {})", funcName, params.size(), args.size());
+			return rttr::variant();
+		}
+		else if (args.size() + defaultCount < params.size())
+		{
+			luaError("Not enough parameters passed to {} (expected at least {}, got {})", funcName, params.size() - defaultCount, args.size());
+			return rttr::variant();
+		}
+		auto argsCopy = args;
+
+		// fill in default values
+		for (int i = args.size(); i < (int)params.size(); ++i)
+		{
+			argsCopy.push_back(params[i].get_default_value());
+		}
+		for (int i = 0; i < (int)argsCopy.size(); ++i)
+		{
+			// check if types match
+			if (argsCopy[i].get_type() != params[i].get_type())
 			{
-				return i;
+				// if not, try to convert
+
+				// convert works on existing variant, it doesn't create a new one
+				if (!argsCopy[i].convert(params[i].get_type()))
+				{
+					luaError("Parameter {} of {} is of type '{}', but expected type '{}'", i + 1, funcName, argsCopy[i].get_type(), params[i].get_type());
+					return rttr::variant();
+				}
 			}
 		}
-		// all default
-		return paramInfo.size();
+		std::vector<rttr::argument> v(argsCopy.begin(), argsCopy.end());
+		rttr::variant result = meth.invoke_variadic(inst.is_valid() ? inst : rttr::instance(), v);
+		return result;
+	}
+
+	static rttr::variant callGlobalFunctionCpp(const std::string& name, const std::vector<rttr::variant>& args)
+	{
+		rttr::method meth = rttr::type::get_global_method(name);
+		return callWithCppParamsCommon(meth, rttr::instance(), args);
+	}
+
+	static rttr::variant callClassObjectMethodCpp(rttr::variant& instancePtr, const std::string& className, const std::string& methodName, const std::vector<rttr::variant>& args)
+	{
+		rttr::method meth = rttr::type::get_by_name(className).get_method(methodName);
+		return callWithCppParamsCommon(meth, rttr::instance(instancePtr), args);
+	}
+
+	static rttr::variant callClassStaticMethodCpp(const std::string& className, const std::string& methodName, const std::vector<rttr::variant>& args)
+	{
+		rttr::method meth = rttr::type::get_by_name(className).get_method(methodName);
+		return callWithCppParamsCommon(meth, rttr::instance(), args);
 	}
 
 	static void classDoesNotExistLuaError(const std::string& className)
@@ -1258,7 +1377,7 @@ private:
 			propertyStaticLuaError(className, propertyName);
 		}
 	}
-	
+
 public: // property getters
 
 	// takes not an instance, but raw pointer to instance
@@ -1278,8 +1397,8 @@ public: // property getters
 		return prop;
 	}
 
-		// takes an instance, not raw pointer to instance
-		static rttr::property getClassObjectProperty(const rttr::variant & instance, const std::string & propertyName)
+	// takes an instance, not raw pointer to instance
+	static rttr::property getClassObjectProperty(const rttr::variant& instance, const std::string& propertyName)
 	{
 		rttr::property prop = instance.get_type().get_raw_type().get_property(propertyName);
 		if (!prop.is_valid())
@@ -1289,7 +1408,7 @@ public: // property getters
 		return prop;
 	}
 
-	static rttr::property getGlobalPropertyCpp(const std::string & varName)
+	static rttr::property getGlobalPropertyCpp(const std::string& varName)
 	{
 		rttr::property prop = rttr::type::get_global_property(varName);
 		if (!prop.is_valid()) // global variable doesn't exist
@@ -1299,14 +1418,14 @@ public: // property getters
 		return prop;
 	}
 
-	static rttr::variant getGlobalFieldCpp(const std::string & varName)
+	static rttr::variant getGlobalFieldCpp(const std::string& varName)
 	{
 		rttr::property prop = getGlobalPropertyCpp(varName);
 		return prop.get_value(rttr::instance());
 	}
 
 	// ensures class exists and property exists, returns the property. Doesn't check if property is static or not
-	static rttr::property getClassPropertyCpp(const std::string & className, const std::string & propertyName)
+	static rttr::property getClassPropertyCpp(const std::string& className, const std::string& propertyName)
 	{
 		rttr::type type = getAndCheckClassType(className);
 		rttr::property prop = type.get_property(propertyName);
@@ -1317,35 +1436,35 @@ public: // property getters
 		return prop;
 	}
 
-	static rttr::variant getClassFieldCpp(const std::string & className, const std::string & fieldName)
+	static rttr::variant getClassFieldCpp(const std::string& className, const std::string& fieldName)
 	{
 		rttr::property prop = getClassPropertyCpp(className, fieldName);
 		checkPropertyIsStatic(className, fieldName, prop);
 		return prop.get_value(rttr::instance());
 	}
 
-	static bool getClassFieldToLuaStack(lua_State * L, const std::string & className, const std::string & fieldName)
+	static bool getClassFieldToLuaStack(lua_State* L, const std::string& className, const std::string& fieldName)
 	{
 		rttr::property prop = getClassPropertyCpp(className, fieldName);
 		checkPropertyIsStatic(className, fieldName, prop);
-		return convertToLuaTypeOnStackByTypeId(L, prop.get_value(rttr::instance()));
+		return convertVariantToLuaTypeOnStack(L, prop.get_value(rttr::instance()));
 	}
 
-	static bool getGlobalVariableToLuaStack(lua_State * L, const std::string & fieldName)
+	static bool getGlobalVariableToLuaStack(lua_State* L, const std::string& fieldName)
 	{
 		rttr::property prop = getGlobalPropertyCpp(fieldName);
-		return convertToLuaTypeOnStackByTypeId(L, prop.get_value(rttr::instance()));
+		return convertVariantToLuaTypeOnStack(L, prop.get_value(rttr::instance()));
 	}
 
 	// variant must contain pointer to real object type, not void* or instance
-	static bool getClassObjectFieldToLuaStack(lua_State * L, const std::string & className, const std::string & fieldName, const rttr::variant & instance)
+	static bool getClassObjectFieldToLuaStack(lua_State* L, const std::string& className, const std::string& fieldName, const rttr::variant& instance)
 	{
 		rttr::property prop = getClassPropertyCpp(className, fieldName);
 		checkPropertyIsNotStatic(className, fieldName, prop);
-		return convertToLuaTypeOnStackByTypeId(L, prop.get_value(instance));
+		return convertVariantToLuaTypeOnStack(L, prop.get_value(instance));
 	}
 
-	static rttr::property getClassObjectFieldCpp(const rttr::variant & instance, const std::string & fieldName)
+	static rttr::property getClassObjectFieldCpp(const rttr::variant& instance, const std::string& fieldName)
 	{
 		return getAndCheckClassObjectProperty(instance, fieldName);
 	}
@@ -1353,7 +1472,7 @@ public: // property getters
 public: // property setters
 
 	// uses variants
-	static bool setClassObjectFieldFromLuaStack(lua_State * L, const rttr::variant & instance, const std::string & propertyName, int stackIndex = -1)
+	static bool setClassObjectFieldFromLuaStack(lua_State* L, const rttr::variant& instance, const std::string& propertyName, int stackIndex = -1)
 	{
 		rttr::property prop = getClassObjectPtrField(instance, propertyName);
 		//static
@@ -1366,7 +1485,7 @@ public: // property setters
 		return prop.set_value(instance, value);
 	}
 
-	static bool setClassFieldFromLuaStack(lua_State * L, const std::string & className, const std::string & propertyName, int stackIndex = -1)
+	static bool setClassFieldFromLuaStack(lua_State* L, const std::string& className, const std::string& propertyName, int stackIndex = -1)
 	{
 		rttr::property prop = getClassPropertyCpp(className, propertyName);
 		checkPropertyIsStatic(className, propertyName, prop);
@@ -1379,7 +1498,7 @@ public: // property setters
 		return prop.set_value(rttr::instance(), value);
 	}
 
-	static bool setGlobalVariableFromLuaStack(lua_State * L, const std::string & variableName, int stackIndex = -1)
+	static bool setGlobalVariableFromLuaStack(lua_State* L, const std::string& variableName, int stackIndex = -1)
 	{
 		rttr::property prop = getGlobalPropertyCpp(variableName);
 		rttr::variant value = convertStackIndexToType(L, stackIndex, prop);
@@ -1391,28 +1510,28 @@ public: // property setters
 		return prop.set_value(rttr::instance(), value);
 	}
 
-	static bool setClassObjectPtrFieldCpp(const rttr::variant & instance, const std::string & propertyName, const rttr::variant & value)
+	static bool setClassObjectPtrFieldCpp(const rttr::variant& instance, const std::string& propertyName, const rttr::variant& value)
 	{
 		rttr::property prop = getClassObjectPtrField(instance, propertyName);
 		checkPropertyIsNotStatic(instance.get_type().get_raw_type().get_name().to_string(), propertyName, prop);
 		return prop.set_value(instance, value);
 	}
 
-	static bool setClassObjectFieldCpp(const rttr::variant & instance, const std::string & propertyName, const rttr::variant & value)
+	static bool setClassObjectFieldCpp(const rttr::variant& instance, const std::string& propertyName, const rttr::variant& value)
 	{
 		rttr::property prop = getClassObjectPtrField(instance, propertyName);
 		checkPropertyIsNotStatic(instance.get_type().get_raw_type().get_name().to_string(), propertyName, prop);
 		return prop.set_value(instance, value);
 	}
 
-	static bool setClassFieldCpp(const std::string & className, const std::string & propertyName, const rttr::variant & value)
+	static bool setClassFieldCpp(const std::string& className, const std::string& propertyName, const rttr::variant& value)
 	{
 		rttr::property prop = getClassPropertyCpp(className, propertyName);
 		checkPropertyIsStatic(className, propertyName, prop);
 		return prop.set_value(rttr::instance(), value);
 	}
 
-	static bool setGlobalVariableCpp(const std::string & variableName, const rttr::variant & value)
+	static bool setGlobalVariableCpp(const std::string& variableName, const rttr::variant& value)
 	{
 		rttr::property prop = getGlobalPropertyCpp(variableName);
 		return prop.set_value(rttr::instance(), value);
@@ -1420,14 +1539,14 @@ public: // property setters
 
 public: // function calls
 
-	static rttr::variant callGlobalFunctionWithLuaParams(lua_State * L, const std::string & name, int nArgs = -1)
+	static rttr::variant callGlobalFunctionWithLuaParams(lua_State* L, const std::string& name, int nArgs = -1)
 	{
 		rttr::method meth = rttr::type::get_global_method(name);
 
 		return callWithLuaParamsCommon(L, meth, rttr::instance(), nArgs);
 	}
 
-	static rttr::variant callClassObjectMethodWithLuaParams(lua_State * L, rttr::variant instance, const std::string & methodName, int nArgs = -1)
+	static rttr::variant callClassObjectMethodWithLuaParams(lua_State* L, rttr::variant instance, const std::string& methodName, int nArgs = -1)
 	{
 		rttr::type t = instance.get_type().get_raw_type();
 		if (!t.is_class())
@@ -1443,7 +1562,7 @@ public: // function calls
 		return callWithLuaParamsCommon(L, meth, instance, nArgs);
 	}
 
-	static rttr::variant callClassMethodWithLuaParams(lua_State * L, const std::string & className, const std::string & methodName, int nArgs = -1)
+	static rttr::variant callClassMethodWithLuaParams(lua_State* L, const std::string& className, const std::string& methodName, int nArgs = -1)
 	{
 		rttr::type t = rttr::type::get_by_name(className);
 		if (!t.is_class())
@@ -1467,7 +1586,7 @@ public: // constructor call helpers
 
 	// also takes a nArgs parameter, which specifies, how many arguments from lua stack should be passed to constructor (if -1, then any number of arguments is allowed). It needs to be greater or equal to the number of non-default parameters
 	// returns variant containing shared_ptr to created object, or invalid variant if no matching constructor was found
-	static rttr::variant findAndInvokeConstructorWithLuaArgs(lua_State * L, const rttr::type & type, int nArgs = -1)
+	static rttr::variant findAndInvokeConstructorWithLuaArgs(lua_State* L, const rttr::type& type, int nArgs = -1)
 	{
 		for (rttr::constructor ctor : type.get_constructors())
 		{
@@ -1493,7 +1612,7 @@ public: // constructor call helpers
 	}
 
 	// returns variant containing shared_ptr to created object, or invalid variant if no matching constructor was found
-	static rttr::variant findAndInvokeConstructorWithCppArgs(const rttr::type & type, const std::vector<rttr::variant>&args)
+	static rttr::variant findAndInvokeConstructorWithCppArgs(const rttr::type& type, const std::vector<rttr::variant>& args)
 	{
 		for (rttr::constructor ctor : type.get_constructors())
 		{
@@ -1533,7 +1652,7 @@ public: // constructor calls
 	// returns shared_ptr to created instance, or nullptr if no matching constructor was found
 	// this one returns shared_ptr, because it's provided with a class type, so it can have nicer form of usage
 	template<typename Class>
-	static std::shared_ptr<Class> createInstanceByConstructorFromLuaStack(lua_State * L, int nArgs = -1)
+	static std::shared_ptr<Class> createInstanceByConstructorFromLuaStack(lua_State* L, int nArgs = -1)
 	{
 		auto result = findAndInvokeConstructorWithLuaArgs(L, rttr::type::get<Class>(), nArgs);
 		// we need to do copy construction, because there are three options for constructor policies regarding object creation:
@@ -1550,7 +1669,7 @@ public: // constructor calls
 	// creates instance of given class by calling constructor with matching parameters
 	// returns a variant with std::shared_ptr to dynamically-allocated variant containing instance. Variant is invalid if no matching constructor was found
 	// returns variant containing shared_ptr to created object, or invalid variant if no matching constructor was found
-	static rttr::variant createInstanceByConstructorFromLuaStack(lua_State * L, const std::string & className, int nArgs = -1)
+	static rttr::variant createInstanceByConstructorFromLuaStack(lua_State* L, const std::string& className, int nArgs = -1)
 	{
 		rttr::type type = getAndCheckClassType(className);
 		auto result = findAndInvokeConstructorWithLuaArgs(L, type, nArgs);
@@ -1576,7 +1695,7 @@ public: // constructor calls
 
 private:
 
-	rttr::variant getContainerFieldSequence(lua_State * L, const std::vector<LuaTypeInCpp>&parts, rttr::variant & entity)
+	rttr::variant getContainerFieldSequence(lua_State* L, const std::vector<LuaTypeInCpp>& parts, rttr::variant& entity)
 	{
 		for (int i = 0; i < (int)parts.size(); ++i)
 		{
@@ -1586,7 +1705,7 @@ private:
 	}
 
 	// value at "entityIndex" can actually be global variable or function, class static field or method, or class object field or method
-	rttr::variant getContainerByPath(lua_State * L, int accessPathIndex, int entityIndex, int fieldNameIndex)
+	rttr::variant getContainerByPath(lua_State* L, int accessPathIndex, int entityIndex, int fieldNameIndex)
 	{
 		LuaWrapper w(L);
 		accessPathIndex = w.makeAbsoluteStackIndex(accessPathIndex);
@@ -1703,7 +1822,7 @@ public:
 			rttr::variant_associative_view view = container.create_associative_view();
 			// need to convert lua type to rttr::variant
 			rttr::type keyType = view.get_key_type();
-			rttr::variant index = convertLuaTypeInCppToVariantByTypeId(arg, keyType);
+			rttr::variant index = convertLuaTypeInCppToVariant(arg, keyType);
 			auto iter = view.find(index);
 			if (iter == view.end())
 			{
@@ -1934,11 +2053,11 @@ public:
 				rttr::variant_sequential_view view = container.create_sequential_view();
 				rttr::type keyType = rttr::type::get<size_t>();
 				rttr::type valueType = view.get_value_type();
-				rttr::variant keyVar = convertLuaTypeInCppToVariantByTypeId(key, keyType);
+				rttr::variant keyVar = convertLuaTypeInCppToVariant(key, keyType);
 				luaAssert(keyVar.is_type<size_t>(), "Can't set sequential container field - can't convert key {} to type 'size_t'", key);
 				size_t idx = keyVar.get_value<size_t>();
 
-				rttr::variant valueVar = convertLuaTypeInCppToVariantByTypeId(value, valueType);
+				rttr::variant valueVar = convertLuaTypeInCppToVariant(value, valueType);
 				luaAssert(valueVar.is_valid(), "Can't set sequential container field - value '{}' is invalid after conversion to rttr::variant", value);
 				if (valueVar.is_type<LuaTable>())
 				{
@@ -1959,7 +2078,7 @@ public:
 				if (view.is_key_only_type()) // std::set and the like
 				{
 					rttr::type keyType = view.get_key_type();
-					rttr::variant keyVar = convertLuaTypeInCppToVariantByTypeId(key, keyType);
+					rttr::variant keyVar = convertLuaTypeInCppToVariant(key, keyType);
 					luaAssert(keyVar.is_valid(), "Can't set key-only associative container field - key '{}' is invalid after conversion to rttr::variant", key);
 					auto [elem, inserted] = view.insert(keyVar);
 					if (!inserted)
@@ -1973,9 +2092,9 @@ public:
 					rttr::type keyType = view.get_key_type();
 					rttr::type valueType = view.get_value_type();
 
-					rttr::variant keyVar = convertLuaTypeInCppToVariantByTypeId(key, keyType);
+					rttr::variant keyVar = convertLuaTypeInCppToVariant(key, keyType);
 					luaAssert(keyVar.is_valid(), "Can't set container field - key '{}' is invalid after conversion to rttr::variant", key);
-					rttr::variant valueVar = convertLuaTypeInCppToVariantByTypeId(value, valueType);
+					rttr::variant valueVar = convertLuaTypeInCppToVariant(value, valueType);
 					auto [elem, inserted] = view.insert(keyVar, valueVar);
 					if (!inserted)
 					{
@@ -2022,7 +2141,7 @@ public:
 			{
 				luaAssert(std::holds_alternative<std::string>(indexes.back()), "Can't index object field - index #{} is not a string", indexes.size());
 				rttr::property prop = getClassObjectFieldCpp(current, std::get<std::string>(indexes.back()));
-				rttr::variant valueVar = convertLuaTypeInCppToVariantByTypeId(value, prop.get_type());
+				rttr::variant valueVar = convertLuaTypeInCppToVariant(value, prop.get_type());
 				luaAssert(valueVar.is_valid(), "Can't set object field - value '{}' is invalid after conversion to rttr::variant", value);
 				if (!prop.set_value(current, valueVar))
 				{
@@ -2153,6 +2272,7 @@ public:
 	// function aliases
 	// using namespaces for clarity and not having to remember 20 names of functions
 
+	// these are the functions, which directly access lua stack, whether it's for getting or setting values
 	struct lua
 	{
 		lua() = delete;
@@ -2184,10 +2304,21 @@ public:
 		struct create
 		{
 			create() = delete;
-			static constexpr auto classObject = &createInstanceByConstructorFromLuaStack;
+			static constexpr rttr::variant(*classObjectVariant)(lua_State*, const std::string&, int) = &createInstanceByConstructorFromLuaStack; // need to specify signature, because otherwise it's ambiguous (overloaded function)
+			template<typename Class>
+			static constexpr std::shared_ptr<Class>(*classObjectSharedPtr)(lua_State*, int) = &createInstanceByConstructorFromLuaStack<Class>;
+		};
+
+		struct convert
+		{
+			convert() = delete;
+			template<typename T>
+			static constexpr auto valueToLuaTypeOnStack = &convertValueToLuaTypeOnStack<T>;
+			static constexpr auto variantToLuaTypeOnStack = &convertVariantToLuaTypeOnStack;
 		};
 	};
 
+	// these are the functions, which don't use lua stack, but may use C++ representations of lua types (LuaTypeInCpp)
 	struct cpp
 	{
 		cpp() = delete;
@@ -2232,16 +2363,7 @@ public:
 		{
 			convert() = delete;
 			static constexpr auto variantToLuaTypeInCpp = &convertVariantToLuaTypeInCpp;
-			template<typename T>
-			static constexpr auto valueToLuaTypeOnStackTemplated = &convertToLuaTypeOnStack<T>;
-			static constexpr auto variantTooLuaTypeOnStack = &convertToLuaTypeOnStackByTypeId;
-			static constexpr auto luaTypeInCppToVariant = &convertLuaTypeInCppToVariantByTypeId;
-		};
-
-		struct push
-		{
-			push() = delete;
-			static constexpr auto variantToLuaStack = &convertToLuaTypeOnStackByTypeId;
+			static constexpr auto luaTypeInCppToVariant = &convertLuaTypeInCppToVariant;
 		};
 	};
 

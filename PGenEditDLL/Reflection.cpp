@@ -589,7 +589,7 @@ int lua::debugApi::invokeClassMethod(lua_State* L)
             }
             else
             {
-                Reflection::convertToLuaTypeOnStackByTypeId(L, result);
+                Reflection::convertVariantToLuaTypeOnStack(L, result);
                 return 1;
             }
         }
@@ -637,7 +637,7 @@ int lua::debugApi::invokeClassObjectMethod(lua_State* L)
                 }
                 else
                 {
-                    Reflection::convertToLuaTypeOnStackByTypeId(L, result);
+                    Reflection::convertVariantToLuaTypeOnStack(L, result);
                     return 1;
                 }
             }
@@ -666,7 +666,7 @@ int lua::debugApi::invokeGlobalMethod(lua_State* L)
         }
         else
         {
-            Reflection::convertToLuaTypeOnStackByTypeId(L, result);
+            Reflection::convertVariantToLuaTypeOnStack(L, result);
             return 1;
         }
     }
