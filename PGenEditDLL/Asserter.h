@@ -4,8 +4,12 @@
 
 #define myassert(cond, ...) ((!!(cond)) || myasserter(__FUNCTION__, __FILE__, __LINE__, "Assertion failed! (" #cond ")" __VA_OPT__(,) __VA_ARGS__))
 
+#define myfail(msg) myasserter.fail(__FUNCTION__, __FILE__, __LINE__, wxString("Failure! " + msg))
+
 // could also be simply macro invoking directly format function
-#define myassertf(cond, fmt, ...) ((!!(cond)) || myasserter.assertFormat(__FUNCTION__, __FILE__, __LINE__, wxString("Assertion failed! (" #cond "): ") + fmt __VA_OPT__(,) __VA_ARGS__))
+#define myassertf(cond, fmt, ...) ((!!(cond)) || myasserter(__FUNCTION__, __FILE__, __LINE__, wxString::Format(wxString("Assertion failed! (" #cond "): ") + fmt __VA_OPT__(,) __VA_ARGS__)))
+
+#define myfailf(fmt, ...) myasserter.failFormat(__FUNCTION__, __FILE__, __LINE__, wxString("Failure! ") + fmt __VA_OPT__(,) __VA_ARGS__)
 
 // using this to not require exact name "myasserter" to be written every time
 // still a primitive test system, but a bit better
@@ -34,9 +38,9 @@ public:
 	template<typename... Args>
     bool assertFormat(const char* func, const char* file, int line, Args&&... args);
     template<typename... Args>
-    bool fail(const wxString& str);
+    bool fail(const char* func, const char* file, int line, const wxString& str);
     template<typename... Args>
-    bool failFormat(const wxString& format, Args&&... args);
+	bool failFormat(const char* func, const char* file, int line, const wxString& format, Args&&... args);
 	static bool logAutomatically;
 	void flush();
 
@@ -88,15 +92,13 @@ bool Asserter::assertFormat(const char* func, const char* file, int line, Args&&
 }
 
 template<typename ...Args>
-inline bool Asserter::fail(const wxString& str)
+inline bool Asserter::fail(const char* func, const char* file, int line, const wxString& str)
 {
-	const std::source_location& loc = std::source_location::current();
-	return operator()(loc.function_name(), loc.file_name(), loc.line(), str);
+	return operator()(func, file, line, str);
 }
 
 template<typename ...Args>
-inline bool Asserter::failFormat(const wxString& format, Args && ...args)
+inline bool Asserter::failFormat(const char* func, const char* file, int line, const wxString& format, Args&& ...args)
 {
-	const std::source_location& loc = std::source_location::current();
-	return operator()(loc.function_name(), loc.file_name(), loc.line(), wxString::Format(format, std::forward<Args>(args)...));
+	return operator()(func, file, line, wxString::Format(format, std::forward<Args>(args)...));
 }

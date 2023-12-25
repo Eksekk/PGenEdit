@@ -594,10 +594,11 @@ std::vector<wxString> ReflectionTests::run()
         pValue = var.get_value<std::shared_ptr<ReflectionSampleStruct>>();
         myassertf(pValue->i == 21 && pValue->str == "a", constructorCheckFormat, testIndex, "i = 21; str = a;", to_string(*pValue).c_str());
         // now similar to above, but get all fields reflectively
-        auto type = var.get_type();
-        auto reflI = type.get_property_value("i", var);
+        rttr::variant varUnwrapped = var.extract_wrapped_value();
+        auto type = varUnwrapped.get_type();
+        auto reflI = type.get_property_value("i", varUnwrapped);
         int i = -1;
-        auto reflStr = type.get_property_value("str", var);
+        auto reflStr = type.get_property_value("str", varUnwrapped);
         std::string str;
         // check that variant is correct and set variable to value
         if (reflI.is_type<int>())
@@ -606,7 +607,7 @@ std::vector<wxString> ReflectionTests::run()
         }
         else
         {
-           myasserter.failFormat("[constructors; test #%d] couldn't get proper value of 'i' reflectively (got '%s', expected '%s')", testIndex, reflI.get_type().get_name().data(), "int");
+           myfailf("[constructors; test #%d] couldn't get proper value of 'i' reflectively (got '%s', expected '%s')", testIndex, reflI.get_type().get_name().data(), "int");
         }
 
         if (reflStr.is_type<std::string>())
@@ -615,7 +616,7 @@ std::vector<wxString> ReflectionTests::run()
         }
         else
         {
-            myasserter.failFormat("[constructors; test #%d] couldn't get proper value of 'str' reflectively (got '%s', expected '%s')", testIndex, reflStr.get_type().get_name().data(), "std::string");
+            myfailf("[constructors; test #%d] couldn't get proper value of 'str' reflectively (got '%s', expected '%s')", testIndex, reflStr.get_type().get_name().data(), "std::string");
         }
 
         

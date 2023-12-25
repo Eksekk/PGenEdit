@@ -460,6 +460,9 @@ local function getContainerReference(classObject, fieldName, accessPath)
 
 	-- it would be more convenient to have this function be a closure inside __newindex, but then it would be recreated every time __newindex is called, which is not good
 	local function trySetNoConvert(nestedPath, nestedData, value)
+		if nestedData.isConst then
+			error(format("'%s': Attempt to set const field %q", path, nestedData.name), 3)
+		end
 		local old = pgenedit.debug.attemptTypeConversion
 		pgenedit.debug.attemptTypeConversion = false
 		local converted = validateOrConvertParameter(value, nestedData, 1, path, true)
@@ -586,6 +589,9 @@ local function currentOrInheritedMemberSet(obj, key, value, className, treatAsCl
 		error(format("Received object of type %q, expected %q", getmetatable(obj).className, className), 3)
 	end
 	local data = getmetatable(obj).classMetatable.getMemberData(key)
+	if data.isConst then
+		error(format("Attempt to set const field %q of class %q", key, className), 3)
+	end
 	local staticMatches = shouldBeStatic == nil or data.isStatic == shouldBeStatic
 	if data.isField and staticMatches then -- class has field
 		if isAnyContainerOrWrapper(data) then
@@ -693,6 +699,9 @@ local createObjectMetatable
 		local data = getMemberData(key)
 		if not data then
 			error(format("Attempt to set unknown static field %q of class %q", key, className), 2)
+		end
+		if data.isConst then
+			error(format("Attempt to set const static field %q of class %q", key, className), 2)
 		end
 		-- changing callable members that aren't methods is not allowed, because they are not expecting possible lua errors/type differences from writing lua callback to be called from C++ via field
 		assert(not data.isCallable, format("Attempt to set callable member %q of class %q", key, className), 2)
@@ -810,7 +819,10 @@ do
 	function mt.__newindex(t, key, value)
 		local data = members[key]
 		if not data then
-			error(format("Attempt to set unknown global function/variable %q", key))
+			error(format("Attempt to set unknown global function/variable %q", key), 2)
+		end
+		if data.isConst then
+			error(format("Attempt to set const global function/variable %q", key), 2)
 		end
 		if data.isCallable then
 			error(format("Attempt to set global callable %q", key), 2)
