@@ -400,13 +400,38 @@ namespace util
 		static constexpr auto boundsCheck = ::boundsCheck<T>;
 		template<typename T>
 		static constexpr auto showDeducedType = ::showDeducedType<T>;
+		namespace
+		{
+			template<typename T>
+			concept hasSize = requires(T t)
+			{
+				{ t.size() } -> std::convertible_to<size_t>;
+			};
+		}
 		// works on containers without random access iterators
 		template<typename R>
-		auto getNthRangeElement(const R& range, size_t n)
+		auto getNthRangeElement(R&& range, size_t n)
 		{
+			wxASSERT_MSG(n >= 0, "Index out of range");
+			if constexpr (hasSize<R>)
+			{
+				wxASSERT_MSG(n < range.size(), "Index out of range");
+			}
 			auto it = range.begin();
 			std::advance(it, n);
 			return *it;
 		}
+	}
+
+	// TODO: change file Reflection.h to use new qualified name
+	namespace rttr
+	{
+		namespace
+		{
+			namespace rttrOrig = ::rttr;
+		}
+
+		// returns a constructor, which might potentially be wrapped by another one, such as to return a shared_ptr to the object, and a bool, which is true if constructor was unwrapped
+		std::pair<rttrOrig::constructor, bool> getMaybeWrappedConstructor(rttrOrig::constructor ctor);
 	}
 }

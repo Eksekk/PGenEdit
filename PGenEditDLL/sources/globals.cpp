@@ -37,3 +37,23 @@ isEquippableInOffhand_ptr isEquippableInOffhand = (isEquippableInOffhand_ptr)0;
 bool inMM = false;
 
 std::vector<wxString> jsonErrors;
+
+RTTR_REGISTRATION
+{
+	// register all global properties in this file
+	using namespace rttr;
+rttr::registration::property("game", &game)
+	.property("playersFullArray", &playersFullArray)
+	.property("playersInParty", &playersInParty)
+	.property("inGame", &inGame)
+	.property("mainUpdateTimer", &mainUpdateTimer)
+	.property("MMVER", &MMVER)
+	.property("inMM", &inMM)
+	.property("jsonErrors", &jsonErrors)
+	.property("isTwoHanded", &isTwoHanded)
+	.property("isEquippableInOffhand", &isEquippableInOffhand)
+	.property("generator", &generator)
+	.property("unloadCleanupStarted", &unloadCleanupStarted)
+	.property_readonly("INVALID_ID", &INVALID_ID)
+	.property_readonly("DEFAULT_SETTINGS_INDEX", &DEFAULT_SETTINGS_INDEX);
+}

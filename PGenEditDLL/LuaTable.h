@@ -84,6 +84,7 @@ struct LuaTable // TODO: storing array part and hashed part separately - will im
     LuaTableValues::const_iterator cend() const;
     LuaTable(const LuaTableValues& values);
     LuaTable(LuaTableValues&& values);
+    LuaTable(lua_State* L, int index);
 
     // unfortunately, can't make this a constructor, because it will be ambiguous with LuaTableValues when passed initializer_list
     // also accepts normal key-value pairs in addition to individual array elements

@@ -217,52 +217,9 @@ public:
 		// method and constructor require index in addition to type, so I can use metadata
 		LuaWrapper wrapper(L);
 
-		// returns a constructor, which might be a "wrapper constructor", which returns a shared_ptr to the object, and a bool, which is true if constructor was unwrapped
-		auto getMaybeWrappedConstructor = [](rttr::constructor ctor) -> std::pair<rttr::constructor, bool>
-			{
-
-				// PROBLEM: we might or might not be passed a "wrapper constructor", which returns a shared_ptr to the object
-				// should work, constructor always returns instance of the class, so we can just check if it's the same as declaring type
-				const bool isWrapper = ctor.get_instantiated_type() != ctor.get_declaring_type();
-				if (isWrapper)
-				{
-					// unwrap
-					std::vector<rttr::type> types;
-					for (auto&& param : ctor.get_parameter_infos())
-					{
-						types.push_back(param.get_type());
-					}
-					rttr::type unwrapped = rttr::type::get<void*>(); // dummy value
-					rttr::type inst = ctor.get_instantiated_type();
-					if (inst.is_wrapper())
-					{
-						unwrapped = inst.get_wrapped_type();
-					}
-					else if (inst.is_sequential_container())
-					{
-						auto args = inst.get_template_arguments();
-						wxASSERT_MSG(args.size() >= 1, std::format("Sequential container '{}' has {} template arguments, expected at least 1", inst, args.size()));
-						unwrapped = .;
-					}
-					else if (inst.is_associative_container())
-					{
-						unwrapped = inst.get_wrapped_type();
-					}
-					else
-					{
-						unwrapped = inst;
-					}
-					auto ctor2 = ctor.get_instantiated_type().get_constructor(types);
-					wxASSERT_MSG(ctor2.is_valid(), std::format("Couldn't find wrapped constructor of type '{}' with types: {}", ctor.get_instantiated_type(), types));
-					return std::make_pair(ctor2, true);
-				}
-				else
-				{
-					return std::make_pair(ctor, false);
-				}
-
-			};
-
+		// gets type of property, method parameter or constructorm parameter
+		// takes into account that constructor might be wrapped
+		// receives also index of parameter in case of method or constructor (pair)
 		auto getType = [&](const RttrClassMemberVariant& var) -> rttr::type
 			{
 				if (const rttr::property* prop = std::get_if<rttr::property>(&var))
@@ -271,7 +228,7 @@ public:
 				}
 				else if (const std::pair<rttr::constructor, size_t>* constr = std::get_if<std::pair<rttr::constructor, size_t>>(&var))
 				{
-					auto [ctor, _] = getMaybeWrappedConstructor(constr->first);
+					auto [ctor, _] = util::rttr::getMaybeWrappedConstructor(constr->first);
 					return util::misc::getNthRangeElement(ctor.get_parameter_infos(), constr->second).get_type();
 				}
 				else if (const std::pair<rttr::method, size_t>* method = std::get_if<std::pair<rttr::method, size_t>>(&var))
@@ -297,7 +254,7 @@ public:
 				}
 				else if (const std::pair<rttr::constructor, size_t>* constr = std::get_if<std::pair<rttr::constructor, size_t>>(&var))
 				{
-					auto [ctor, unwrapped] = getMaybeWrappedConstructor(constr->first);
+					auto [ctor, unwrapped] = util::rttr::getMaybeWrappedConstructor(constr->first);
 					rttr::variant m = ctor.get_metadata(g_CONTAINER_CREATION_FUNC_METADATA_NAME);
 					wxASSERT_MSG(m.is_type<FuncVector>(), std::format("Constructor '{}' of type '{}'{} doesn't have metadata with creation function", ctor.get_signature(), unwrapped ? " [unwrapped]" : "", ctor.get_declaring_type()));
 					return m.get_value<FuncVector>()[constr->second];
@@ -2369,3 +2326,8 @@ public:
 
 	// set, nonptr, etc.
 };
+
+namespace lua
+{
+	using reflect = ::Reflection::lua;
+}

@@ -4,6 +4,11 @@
 
 // string functions
 
+namespace
+{
+	namespace rttrOrig = ::rttr;
+}
+
 std::string stringToLower(const std::string& source)
 {
 	std::string out = source;
@@ -237,3 +242,60 @@ class variant_wrapper
         return std::get_if<T>(&var) ? std::get<T>(var) : T();
     }
 };
+
+std::pair<rttrOrig::constructor, bool> util::rttr::getMaybeWrappedConstructor(rttrOrig::constructor ctor)
+{
+	// PROBLEM: we might or might not be passed a "wrapper constructor", which returns a shared_ptr to the object
+	// should work, constructor always returns instance of the class, so we can just check if it's the same as declaring type
+	const bool isWrapper = ctor.get_instantiated_type() != ctor.get_declaring_type();
+	if (isWrapper)
+	{
+		// unwrap
+		std::vector<rttrOrig::type> types;
+		for (auto&& param : ctor.get_parameter_infos())
+		{
+			types.push_back(param.get_type());
+		}
+		rttrOrig::type unwrapped = rttrOrig::type::get<void*>(); // dummy value
+		rttrOrig::type inst = ctor.get_instantiated_type();
+		if (inst.is_wrapper())
+		{
+			unwrapped = inst.get_wrapped_type().get_raw_type();
+		}
+		else if (inst.is_sequential_container())
+		{
+			__debugbreak(); // is this even possible?
+			auto args = inst.get_template_arguments();
+			wxASSERT_MSG(args.size() >= 1, std::format("Sequential container '{}' has {} template arguments, expected at least 1", inst, args.size()));
+			unwrapped = util::misc::getNthRangeElement(args, 0);
+
+		}
+		else if (inst.is_associative_container())
+		{
+			__debugbreak(); // is this even possible?
+			auto args = inst.get_template_arguments();
+			// support key-only associative containers
+			wxASSERT_MSG(args.size() >= 1, std::format("Associative container '{}' has {} template arguments, expected at least 1", inst, args.size()));
+			if (args.size() == 1) // key-only
+			{
+				unwrapped = util::misc::getNthRangeElement(args, 0);
+			}
+			else // key-value
+			{
+				unwrapped = util::misc::getNthRangeElement(args, 1);
+			}
+		}
+		else
+		{
+			__debugbreak(); // shouldn't happen?
+			unwrapped = inst;
+		}
+		auto ctor2 = unwrapped.get_constructor(types);
+		wxASSERT_MSG(ctor2.is_valid(), std::format("Couldn't find wrapped constructor of type '{}' with types: {}", ctor.get_instantiated_type(), types));
+		return std::make_pair(ctor2, true);
+	}
+	else
+	{
+		return std::make_pair(ctor, false);
+	}
+}

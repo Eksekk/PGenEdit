@@ -243,6 +243,11 @@ LuaTable::LuaTable(LuaTableValues&& values) : values(tryToIntegerFull(std::forwa
 {
 }
 
+LuaTable::LuaTable(lua_State* L, int index)
+{
+    *this = fromLuaTable(L, index);
+}
+
 void LuaTable::emplace(LuaTypeInCpp&& key, LuaTypeInCpp&& value)
 {
     tryToIntegerRef(key);
@@ -441,6 +446,7 @@ RTTR_REGISTRATION
 .constructor<LuaTableValues&&>(registration::public_access)
 .constructor<const LuaTable&>(registration::public_access)
 .constructor<LuaTable&&>(registration::public_access)
+.constructor<lua_State*, int>(registration::public_access)
 .constructor<>()
 .method("constructFromValuesWithArray", select_overload<LuaTable(const LuaTableValuesWithArray&)>(&LuaTable::constructFromValuesWithArray), registration::public_access)
 .method("constructFromValuesWithArray", select_overload<LuaTable(LuaTableValuesWithArray&&)>(&LuaTable::constructFromValuesWithArray), registration::public_access)
