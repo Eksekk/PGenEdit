@@ -260,6 +260,38 @@ const LuaTypeInCpp& LuaTable::at(const LuaTypeInCpp& type) const
     return values.at(type);
 }
 
+LuaTable& LuaTable::att(const LuaTypeInCpp& type)
+{
+	return const_cast<LuaTable&>(static_cast<const LuaTable&>(*this).att(type));
+}
+
+const LuaTable& LuaTable::att(const LuaTypeInCpp& type) const
+{
+	const LuaTypeInCpp& val = at(type);
+	if (const LuaTable* t = std::get_if<LuaTable>(&val))
+	{
+		return *t;
+	}
+	else
+	{
+		lua::utils::luaError("LuaTable::att() called with key which contains non-table value of type '{}'", typeid(val).name());
+		return *this;
+	}
+}
+
+LuaTable& LuaTable::attc(const LuaTypeInCpp& type)
+{
+    if (contains(type))
+    {
+		return att(type);
+	}
+    else
+    {
+		values[type] = LuaTable{};
+		return std::get<LuaTable>(at(type));
+	}
+}
+
 LuaTypeInCpp& LuaTable::at(const LuaTypeInCpp& type)
 {
     return values.at(type);
@@ -461,6 +493,9 @@ RTTR_REGISTRATION
 .method("emplace", &LuaTable::emplace, registration::public_access)
 .method("at", select_overload<const LuaTypeInCpp&(const LuaTypeInCpp&) const>(&LuaTable::at), registration::public_access)
 .method("at", select_overload<LuaTypeInCpp&(const LuaTypeInCpp&)>(&LuaTable::at), registration::public_access)
+.method("att", select_overload<const LuaTable&(const LuaTypeInCpp&) const>(&LuaTable::att), registration::public_access)
+.method("att", select_overload<LuaTable&(const LuaTypeInCpp&)>(&LuaTable::att), registration::public_access)
+.method("attc", &LuaTable::attc, registration::public_access)
 .method("getArrayPart", &LuaTable::getArrayPart, registration::public_access)
 .method("contains", &LuaTable::contains, registration::public_access)
 .method("fromLuaTable", &LuaTable::fromLuaTable)

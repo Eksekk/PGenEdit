@@ -861,7 +861,8 @@ int lua::debugApi::getGlobalEnvironmentInfo(lua_State* L)
     {
         LuaTable info;
         insertPropertyAndMethodData(rttr::type::get_global_properties(), rttr::type::get_global_methods(), info);
-        info.pushToLuaStack(L);
+        std::get<LuaTable>(info["members"]).pushToLuaStack(L);
+        //info.pushToLuaStack(L);
         return 1;
     }
     catch (const LuaErrorException& ex)
@@ -874,29 +875,35 @@ int lua::debugApi::getGlobalEnvironmentInfo(lua_State* L)
 // receives classObject, fieldName and accessPath
 int lua::debugApi::getContainerSize(lua_State* L)
 {
+    LuaTable path = getLuaTypeOrError<LuaTable>(L, 3);
     return 0;
 }
 
+// receives classObject, fieldName and accessPath
 int lua::debugApi::getContainerElement(lua_State* L)
 {
     return 0;
 }
 
+// receives classObject, fieldName, accessPath and value
 int lua::debugApi::setContainerElement(lua_State* L)
 {
     return 0;
 }
 
+// receives classObject, fieldName and accessPath
 int lua::debugApi::clearContainer(lua_State* L)
 {
     return 0;
 }
 
+// receives classObject, fieldName and accessPath
 int lua::debugApi::getContainerKeys(lua_State* L)
 {
     return 0;
 }
 
+// receives classObject, fieldName and accessPath
 int lua::debugApi::getContainerValues(lua_State* L)
 {
     return 0;

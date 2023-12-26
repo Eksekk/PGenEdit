@@ -9,7 +9,7 @@ namespace
 {
     using VectorType = std::vector<int>;
     using ArrayType = std::array<int, 5>;
-    using MapType = std::unordered_map<std::string, int>;
+	using MapType = std::unordered_map<std::string, int>;
 }
 
 struct ContainerContainer
@@ -275,6 +275,12 @@ public:
 const char* const ReflectionSampleStruct::staticReadonlyPchar = "staticReadonlyPcharText";
 ContainerContainer ReflectionSampleStruct::staticContainers;
 
+namespace
+{
+	using Inner = ReflectionSampleStruct::InnerStruct;
+	using Inner2 = ReflectionSampleStruct::InnerStruct2;
+}
+
 // returns 0 for success, 1 and above for failure (specific error codes)
 // RTTR problem: free functions with calling convention other than project default apparently can't be registered
 static int __declspec(naked) __fastcall fastcallGlobalFunctionTest(int argEcx, int argEdx, int argEsp)
@@ -509,24 +515,16 @@ void testPropertyGetSet(Asserter& myasserter, Struct& stru, PropType Struct::* p
 
 std::vector<wxString> ReflectionTests::run()
 {
-    Asserter myasserter("Reflection");
-    using namespace rttr;
-    int testIndex = 0;
-    // property iteration
+	Asserter myasserter("Reflection");
+	using namespace rttr;
+	int testIndex = 0;
+	// property iteration
 
-    auto reflType = type::get("ReflectionSampleStruct");
-    using Inner = ReflectionSampleStruct::InnerStruct;
-    using Inner2 = ReflectionSampleStruct::InnerStruct2;
-    ReflectionSampleStruct rss;
-    // call testPropertyGetSet for all properties of 'rss', without using a loop
-    testPropertyGetSet(myasserter, rss, &ReflectionSampleStruct::i, "i", testIndex++);
-    testPropertyGetSet(myasserter, rss, &ReflectionSampleStruct::str, "str", testIndex++);
-    testPropertyGetSet(myasserter, rss, &ReflectionSampleStruct::vec, "vec", testIndex++);
-    testPropertyGetSet(myasserter, rss, &ReflectionSampleStruct::arr, "arr", testIndex++);
-    testPropertyGetSet(myasserter, rss, &ReflectionSampleStruct::map, "map", testIndex++);
-    testPropertyGetSet(myasserter, rss, &ReflectionSampleStruct::u, "u", testIndex++);
-    testPropertyGetSet(myasserter, rss, &ReflectionSampleStruct::inner, "inner", testIndex++);
-    testPropertyGetSet(myasserter, rss, &ReflectionSampleStruct::inner2, "inner2", testIndex++);
+	auto reflType = type::get("ReflectionSampleStruct");
+	ReflectionSampleStruct rss;
+
+    std::ranges::copy(testProperties(), std::back_inserter(myasserter.errors));
+
 
     // methods, in particular using Reflection class for tests
 // 	auto unpackParamsFromLuaTableToStack = [](const LuaTable& t)
@@ -637,6 +635,26 @@ std::vector<wxString> ReflectionTests::run()
     ++testIndex;
 
     // manipulate LuaTable class 100% reflectively
+
+    return myasserter.errors;
+}
+
+std::vector<wxString> ReflectionTests::testProperties()
+{
+	Asserter myasserter("Reflection property get/set");
+	using namespace rttr;
+	int testIndex = 0;
+	// property iteration
+	ReflectionSampleStruct rss;
+	// call testPropertyGetSet for all properties of 'rss', without using a loop
+	testPropertyGetSet(myasserter, rss, &ReflectionSampleStruct::i, "i", testIndex++);
+	testPropertyGetSet(myasserter, rss, &ReflectionSampleStruct::str, "str", testIndex++);
+	testPropertyGetSet(myasserter, rss, &ReflectionSampleStruct::vec, "vec", testIndex++);
+	testPropertyGetSet(myasserter, rss, &ReflectionSampleStruct::arr, "arr", testIndex++);
+	testPropertyGetSet(myasserter, rss, &ReflectionSampleStruct::map, "map", testIndex++);
+	testPropertyGetSet(myasserter, rss, &ReflectionSampleStruct::u, "u", testIndex++);
+	testPropertyGetSet(myasserter, rss, &ReflectionSampleStruct::inner, "inner", testIndex++);
+	testPropertyGetSet(myasserter, rss, &ReflectionSampleStruct::inner2, "inner2", testIndex++);
 
     return myasserter.errors;
 }

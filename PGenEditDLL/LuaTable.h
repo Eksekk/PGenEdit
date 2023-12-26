@@ -104,6 +104,11 @@ struct LuaTable // TODO: storing array part and hashed part separately - will im
     // WARNING: this will overwrite existing value if it's not a table
     LuaTable& getTableFieldOrCreate(const LuaTypeInCpp& type);
     const LuaTypeInCpp& at(const LuaTypeInCpp& type) const;
+    // version of "at" that returns reference to table value, throwing error if it's not a table
+    LuaTable& att(const LuaTypeInCpp& type);
+    const LuaTable& att(const LuaTypeInCpp& type) const;
+    // version of "att" that creates table if it doesn't exist
+    LuaTable& attc(const LuaTypeInCpp& type);
     LuaTypeInCpp& at(const LuaTypeInCpp& type);
     bool contains(const LuaTypeInCpp& type) const;
     // gets consecutive integer keys' values as a vector

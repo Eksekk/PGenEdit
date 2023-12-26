@@ -216,5 +216,7 @@ namespace lua
 		}
 
 		void luaExpectStackSize(lua_State* L, int expected);
+
+		LuaTypeInCpp convertStackIndexToLuaTypeInCpp(lua_State* L, int stackIndex);
 	}
 }

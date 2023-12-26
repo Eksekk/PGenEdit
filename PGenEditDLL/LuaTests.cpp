@@ -99,9 +99,42 @@ std::vector<wxString> LuaTests::run()
     int atIndex = 1;
     static const wxString atStr = "[LuaTable::at()] Test #%d failed";
     myassertf(t1.at("abc") == 5LL, atStr, atIndex++);
-    myassertf(table(t1.at(true)).at("f") == "f"s, atStr, atIndex++);
+    myassertf(t1.att(true).at("f") == "f"s, atStr, atIndex++);
 
-myassertf(t1.at(5LL) == 24LL, atStr, atIndex++);
+    myassertf(t1.at(5LL) == 24LL, atStr, atIndex++);
+    myassertf(t1.att(true).at(51111) == false, atStr, atIndex++);
+    myassertf(t1.att(true).at(1) == 3LL, atStr, atIndex++);
+    myassertf(t1.att(true).att("abcd").at("f") == "b"s, atStr, atIndex++);
+
+    myassertf(t5.att(5.0).at("abc") == 5LL, atStr, atIndex++);
+    myassertf(t5.att("ddd").att(false) == true, atStr, atIndex++);
+    myassertf(t5.att(t3).att(3) == true, atStr, atIndex++);
+
+    myassertf(t5.att(t2).at(t2) == 333333333333LL, atStr, atIndex++);
+
+    // contains() method tests
+    int containsIndex = 1;
+    static const wxString containsStr = "[LuaTable::contains()] Test #%d failed";
+    myassertf(t1.contains("abc"), containsStr, containsIndex++);
+    myassertf(t1.att(true).contains("f"), containsStr, containsIndex++);
+    myassertf(t1.contains(5LL), containsStr, containsIndex++);
+    myassertf(t1.att(true).contains(51111), containsStr, containsIndex++);
+    myassertf(t1.att(true).contains(1), containsStr, containsIndex++);
+    myassertf(t1.att(true).att("abcd").contains("f"), containsStr, containsIndex++);
+    myassertf(t5.att(5.0).contains("abc"), containsStr, containsIndex++);
+    myassertf(t5.att("ddd").contains(false), containsStr, containsIndex++);
+    myassertf(t5.att(t3).contains(3), containsStr, containsIndex++);
+
+    // negative tests
+    myassertf(!t1.contains("abcd"), containsStr, containsIndex++);
+    myassertf(!t1.contains(51112), containsStr, containsIndex++);
+    myassertf(!t1.att(true).contains("abcd"), containsStr, containsIndex++);
+    myassertf(!t1.att(true).contains(51112), containsStr, containsIndex++);
+    myassertf(!t5.att(5.0).contains("abcd"), containsStr, containsIndex++);
+    myassertf(!t5.att("ddd").contains(true), containsStr, containsIndex++);
+    myassertf(!t5.att(t3).contains(4), containsStr, containsIndex++);
+    myassertf(!t5.att(t2).contains(t3), containsStr, containsIndex++);
+    myassertf(!t5.att(t2).contains(t2), containsStr, containsIndex++);
 
     // TODO: also extended Nil test, once I implement appropriate behavior
     return myasserter.errors;

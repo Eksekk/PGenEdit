@@ -812,7 +812,7 @@ do
 			--rawset(t, key, f) -- commented out, because std::function fields might theoretically change their value
 			return f
 		else
-			return api.getGlobal(key)
+			return api.getGlobalField(key)
 		end
 	end
 
@@ -837,7 +837,7 @@ do
 			-- for now don't support assigning to class objects, because it would open a big can of worms regarding copy construction, copy assignment, etc.
 			error(format("Attempt to set global class object %q", key), 2)
 		else
-			api.setGlobal(key, value)
+			api.setGlobalField(key, value)
 		end
 	end
 end

@@ -4,6 +4,7 @@
 extern int MMVER;
 
 // string functions
+
 std::string stringToLower(const std::string& source);
 
 std::vector<std::string> stringSplit(const std::string& text, const std::string& delimiter, bool ignoreCase = true);
@@ -16,27 +17,62 @@ wxString getTimeStr();
 template<typename T>
 wxString my_to_string(const T& t)
 {
-    return wxString().operator<<(t); // sorry for clever code, couldn't help myself!
-    // we are calling operator<< (which inserts argument into string) on temporary string,
-    // taking advantage that it returns modified string (intended to allow chaining,
-    // like str << "x" << "y" << 5)
+	return wxString().operator<<(t); // sorry for clever code, couldn't help myself!
+	// we are calling operator<< (which inserts argument into string) on temporary string,
+	// taking advantage that it returns modified string (intended to allow chaining,
+	// like str << "x" << "y" << 5)
 }
 
+/// <summary>
+/// Concatenates the elements of a container into a single string using the specified separator.
+/// </summary>
+/// <typeparam name="Container">The type of the container.</typeparam>
+/// <typeparam name="String">The type of the elements in the container.</typeparam>
+/// <typeparam name="Extra">Additional template parameters for the container.</typeparam>
+/// <param name="container">The container of strings to concatenate.</param>
+/// <param name="separator">The separator to use between concatenated strings (default is "\n").</param>
+/// <returns>The concatenated string.</returns>
 template<template<typename, typename, typename...> typename Container, typename String, typename... Extra>
 String stringConcat(const Container<String, Extra...>& container, const std::string& separator = "\n")
 {
 	String s = "";
-    const int size = container.size();
-    int i = 0;
-    for (const auto& val : container)
-    {
-        s += val;
-        if (i++ < size - 1)
-        {
-            s += separator;
-        }
-    }
-    return s;
+	const int size = container.size();
+	int i = 0;
+	for (const auto& val : container)
+	{
+		s += val;
+		if (i++ < size - 1)
+		{
+			s += separator;
+		}
+	}
+	return s;
+}
+
+/// <summary>
+/// Converts the elements of the given container to a string and concatenates them using the specified separator.
+/// </summary>
+/// <typeparam name="Container">The type of the container template.</typeparam>
+/// <typeparam name="ValType">The type of the elements in the container.</typeparam>
+/// <typeparam name="Extra">Additional template parameters for the container.</typeparam>
+/// <param name="container">The container whose elements are to be converted and concatenated.</param>
+/// <param name="separator">The separator used to concatenate the elements (default is "\n").</param>
+/// <returns>A string containing the converted and concatenated elements of the container.</returns>
+template<template<typename, typename, typename...> typename Container, typename ValType, typename... Extra>
+std::string convertAndConcat(const Container<ValType, Extra...>& container, const std::string& separator = "\n")
+{
+	std::string s = "";
+	const int size = container.size();
+	int i = 0;
+	for (const auto& val : container)
+	{
+		s += std::format("{}", val);
+		if (i++ < size - 1)
+		{
+			s += separator;
+		}
+	}
+	return s;
 }
 
 using StringReplaceFuncType = std::function<std::string(const std::smatch&)>;
@@ -109,29 +145,29 @@ bool existsInContainer(const Container& container, const Val& val)
 template<typename Vector>
 Vector mergeVectors(std::initializer_list<Vector> list)
 {
-    size_t n = 0;
-    for (auto& vec : list)
-    {
-        n += vec.size();
-    }
-    Vector out;
-    out.reserve(n);
-    for (auto& vec : list)
-    {
-        out.insert(out.end(), vec.begin(), vec.end());
-    }
-    return out;
+	size_t n = 0;
+	for (auto& vec : list)
+	{
+		n += vec.size();
+	}
+	Vector out;
+	out.reserve(n);
+	for (auto& vec : list)
+	{
+		out.insert(out.end(), vec.begin(), vec.end());
+	}
+	return out;
 }
 
 template<template<typename, typename, typename...> typename Map, typename Key, typename Value, typename... Extra>
 Map<Value, Key> invertMap(const Map<Key, Value, Extra...>& map)
 {
-    Map<Value, Key> outMap;
-    for (const auto& [key, value] : map)
-    {
-        outMap[value] = key;
-    }
-    return outMap;
+	Map<Value, Key> outMap;
+	for (const auto& [key, value] : map)
+	{
+		outMap[value] = key;
+	}
+	return outMap;
 }
 
 template<typename T>
@@ -158,12 +194,12 @@ T&& mmv(T&& e6, T&& e7, T&& e8)
 template<typename Vector>
 constexpr Vector compileTimeMergeVectors(std::initializer_list<Vector> list)
 {
-    Vector out;
-    for (auto& vec : list)
-    {
-        out.insert(out.end(), vec.begin(), vec.end());
-    }
-    return out;
+	Vector out;
+	for (auto& vec : list)
+	{
+		out.insert(out.end(), vec.begin(), vec.end());
+	}
+	return out;
 }
 
 struct BaseBonus
@@ -263,15 +299,17 @@ template <typename T>
 struct deduced_type;
 
 template<typename T>
-void showDeducedType(T&&) {
+void showDeducedType(T&&)
+{
 
 	deduced_type<T>::show;
 }
 
 template<typename T>
-void showDeducedType(const T&&) {
+void showDeducedType(const T&&)
+{
 
-    deduced_type<T>::show;
+	deduced_type<T>::show;
 }
 
 // don't know the exact terminology, but it needs to be "potentially-evaluated" if invalid constexpr if branch is entered, so can't be function
@@ -288,45 +326,45 @@ namespace std
 {
 	template<typename T, typename U>
 	struct formatter<std::pair<T, U>>
-    {
-        template<typename ParseContext>
-        constexpr auto parse(ParseContext& ctx)
-        {
-            return ctx.begin();
-        }
+	{
+		template<typename ParseContext>
+		constexpr auto parse(ParseContext& ctx)
+		{
+			return ctx.begin();
+		}
 
-        template<typename FormatContext>
-        auto format(const std::pair<T, U>& pair, FormatContext& ctx) const
-        {
-            return format_to(ctx.out(), "({}, {})", pair.first, pair.second);
-        }
-    };
+		template<typename FormatContext>
+		auto format(const std::pair<T, U>& pair, FormatContext& ctx) const
+		{
+			return format_to(ctx.out(), "({}, {})", pair.first, pair.second);
+		}
+	};
 }
 
 template<typename T, typename U>
 std::string to_string(const std::pair<T, U>& pair)
 {
 	// using std::to_string; // ADL
-    return std::format("{}", pair);
+	return std::format("{}", pair);
 }
 
 // TODO: support associative containers
 template<template<typename, typename, typename...> typename Container, typename T, typename... Extra>
 std::string containerToString(const Container<T, Extra...>& container, const std::string& separator = ", ")
 {
-    std::string s = "";
-    const int size = container.size();
-    int i = 0;
-    for (const auto& val : container)
-    {
+	std::string s = "";
+	const int size = container.size();
+	int i = 0;
+	for (const auto& val : container)
+	{
 		//using std::to_string; // ADL
-        s += std::format("{}", val);
-        if (i++ < size - 1)
-        {
-            s += separator;
-        }
-    }
-    return "{ " + s + " }";
+		s += std::format("{}", val);
+		if (i++ < size - 1)
+		{
+			s += separator;
+		}
+	}
+	return "{ " + s + " }";
 }
 
 template<typename T, size_t S>
@@ -345,8 +383,14 @@ namespace util
 		template<size_t size>
 		static constexpr auto fromArray = stringFromArray<size>;
 		// not using single parameter pack here to show template argument readable names in IDE
-		template<template<typename, typename, typename...> typename Container, typename String, typename... Extra>
-		static constexpr auto concat = stringConcat<Container, String, Extra...>;
+
+		// DOESN'T DO TYPE DEDUCTION!
+// 		template<template<typename, typename, typename...> typename Container, typename String, typename... Extra>
+// 		static constexpr auto concat = stringConcat<Container, String, Extra...>;
+// 		template<template<typename, typename, typename...> typename Container, typename ValType, typename... Extra>
+// 		static constexpr auto convertAndConcat = &convertAndConcat<Container, ValType, Extra...>;
+		using ::stringConcat;
+		using ::convertAndConcat;
 		static constexpr std::vector<std::string>(*split)(const std::string& text, const std::string& delimiter, bool ignoreCase) = stringSplit;
 		static constexpr std::vector<std::string>(*splitChar)(const std::string& text, char delimiter, bool ignoreCase) = stringSplit;
 		template<typename... Args>
@@ -379,13 +423,13 @@ namespace util
 		template<typename Container, typename Val>
 		static constexpr auto indexInContainer = ::indexInContainer<Container, Val>;
 		template<typename Vector>
- 		static constexpr auto compileTimeMergeVectors = ::compileTimeMergeVectors<Vector>;
-// 		template<typename T, size_t S>
-// 		static constexpr std::string(*toString)(const std::array<T, S>& container, const std::string& separator) = ::containerToString<T, S>;
-// template<template<typename, typename, typename...> typename Container, typename T, typename... Extra>
-// 		static constexpr std::string(*toString)(const Container<T, Extra...>& container, const std::string& separator) = ::containerToString<Container, T, Extra...>;
+		static constexpr auto compileTimeMergeVectors = ::compileTimeMergeVectors<Vector>;
+		// 		template<typename T, size_t S>
+		// 		static constexpr std::string(*toString)(const std::array<T, S>& container, const std::string& separator) = ::containerToString<T, S>;
+		// template<template<typename, typename, typename...> typename Container, typename T, typename... Extra>
+		// 		static constexpr std::string(*toString)(const Container<T, Extra...>& container, const std::string& separator) = ::containerToString<Container, T, Extra...>;
 
-		// "overload templated function pointers" (the above doesn't work)
+				// "overload templated function pointers" (the above doesn't work)
 		template<typename... Args>
 		static constexpr auto toString = ::containerToString<Args...>;
 
