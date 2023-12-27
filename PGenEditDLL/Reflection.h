@@ -1335,6 +1335,14 @@ private:
 		}
 	}
 
+	static void checkPropertyIsNotReadonly(const std::string& className, const std::string& propertyName, const rttr::property& prop)
+	{
+		if (prop.is_readonly())
+		{
+			luaError("Property {} in class {} is read-only", propertyName, className);
+		}
+	}
+
 public: // property getters
 
 	// takes not an instance, but raw pointer to instance
@@ -1432,11 +1440,13 @@ public: // property setters
 	static bool setClassObjectFieldFromLuaStack(lua_State* L, const rttr::variant& instance, const std::string& propertyName, int stackIndex = -1)
 	{
 		rttr::property prop = getClassObjectPtrField(instance, propertyName);
-		//static
+		auto className = instance.get_type().get_raw_type().get_name().to_string();
+		checkPropertyIsNotStatic(className, propertyName, prop);
+		checkPropertyIsNotReadonly(className, propertyName, prop);
 		rttr::variant value = convertStackIndexToType(L, stackIndex, prop);
 		if (!value.is_valid())
 		{
-			luaError("Can't set property {} of object of type {} - can't convert lua stack index {} to type {}", propertyName, instance.get_type().get_raw_type().get_name(), stackIndex, prop.get_type().get_name());
+			luaError("Can't set property {} of object of type {} - can't convert lua stack index {} to type {}", propertyName, className, stackIndex, prop.get_type().get_name());
 			return false;
 		}
 		return prop.set_value(instance, value);
@@ -1446,6 +1456,7 @@ public: // property setters
 	{
 		rttr::property prop = getClassPropertyCpp(className, propertyName);
 		checkPropertyIsStatic(className, propertyName, prop);
+		checkPropertyIsNotReadonly(className, propertyName, prop);
 		rttr::variant value = convertStackIndexToType(L, stackIndex, prop);
 		if (!value.is_valid())
 		{
@@ -1458,6 +1469,7 @@ public: // property setters
 	static bool setGlobalVariableFromLuaStack(lua_State* L, const std::string& variableName, int stackIndex = -1)
 	{
 		rttr::property prop = getGlobalPropertyCpp(variableName);
+		checkPropertyIsNotReadonly("", variableName, prop);
 		rttr::variant value = convertStackIndexToType(L, stackIndex, prop);
 		if (!value.is_valid())
 		{
@@ -1470,14 +1482,18 @@ public: // property setters
 	static bool setClassObjectPtrFieldCpp(const rttr::variant& instance, const std::string& propertyName, const rttr::variant& value)
 	{
 		rttr::property prop = getClassObjectPtrField(instance, propertyName);
-		checkPropertyIsNotStatic(instance.get_type().get_raw_type().get_name().to_string(), propertyName, prop);
+		auto className = instance.get_type().get_raw_type().get_name().to_string();
+		checkPropertyIsNotStatic(className, propertyName, prop);
+		checkPropertyIsNotReadonly(className, propertyName, prop);
 		return prop.set_value(instance, value);
 	}
 
 	static bool setClassObjectFieldCpp(const rttr::variant& instance, const std::string& propertyName, const rttr::variant& value)
 	{
 		rttr::property prop = getClassObjectPtrField(instance, propertyName);
-		checkPropertyIsNotStatic(instance.get_type().get_raw_type().get_name().to_string(), propertyName, prop);
+		auto className = instance.get_type().get_raw_type().get_name().to_string();
+		checkPropertyIsNotStatic(className, propertyName, prop);
+		checkPropertyIsNotReadonly(className, propertyName, prop);
 		return prop.set_value(instance, value);
 	}
 
@@ -1485,12 +1501,14 @@ public: // property setters
 	{
 		rttr::property prop = getClassPropertyCpp(className, propertyName);
 		checkPropertyIsStatic(className, propertyName, prop);
+		checkPropertyIsNotReadonly(className, propertyName, prop);
 		return prop.set_value(rttr::instance(), value);
 	}
 
 	static bool setGlobalVariableCpp(const std::string& variableName, const rttr::variant& value)
 	{
 		rttr::property prop = getGlobalPropertyCpp(variableName);
+		checkPropertyIsNotReadonly("", variableName, prop);
 		return prop.set_value(rttr::instance(), value);
 	}
 

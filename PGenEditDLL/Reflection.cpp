@@ -498,8 +498,9 @@ int lua::debugApi::getClassField(lua_State* L)
 // receives global name
 int lua::debugApi::getGlobalField(lua_State* L)
 {
-    try 
+    try
     {
+        luaExpectStackSize(L, 1);
         if (!Reflection::getGlobalVariableToLuaStack(L, getLuaTypeOrError<std::string>(L, 1)))
         {
             luaError("Couldn't get global '{}'", getLuaTypeOrError<std::string>(L, 1));
@@ -527,38 +528,6 @@ int lua::debugApi::getClassFieldPtr(lua_State* L)
 int lua::debugApi::getGlobalFieldPtr(lua_State* L)
 {
     return 0;
-}
-
-// receives global name and value
-int lua::debugApi::setGlobalField(lua_State* L)
-{
-    try
-    {
-        LuaWrapper w(L);
-        luaExpectStackSize(L, 2);
-        std::string name = getLuaTypeOrError<std::string>(L, 1);
-        rttr::type t = rttr::type::get_by_name(name);
-        if (!t.is_valid())
-        {
-            luaError("Global '{}' doesn't exist", name);
-            return 0;
-        }
-        else if (t.is_class())
-        {
-            luaError("Couldn't set global '{}' - it's a class", name);
-            return 0;
-        }
-        else
-        {
-            Reflection::setGlobalVariableFromLuaStack(L, name, 2);
-            return 0;
-        }
-    }
-    catch (const LuaErrorException& e)
-    {
-        luaL_error(L, e.what());
-        return 0;
-    }
 }
 
 // receives class name, function name, number of arguments, and arguments
@@ -677,10 +646,29 @@ int lua::debugApi::invokeGlobalMethod(lua_State* L)
     }
 }
 
+// receives global name and value
+int lua::debugApi::setGlobalField(lua_State* L)
+{
+    try
+    {
+		luaExpectStackSize(L, 2);
+        if (!Reflection::setGlobalVariableFromLuaStack(L, getLuaTypeOrError<std::string>(L, 1), 2))
+        {
+            luaError("Global '{}' doesn't exist", getLuaTypeOrError<std::string>(L, 1));
+		}
+		return 0;
+    }
+    catch (const LuaErrorException& e)
+    {
+        luaL_error(L, e.what());
+        return 0;
+    }
+}
+
 // receives object, class name, property name, value
 int lua::debugApi::setClassObjectField(lua_State* L)
 {
-    try 
+    try
     {
         LuaWrapper w(L);
         luaExpectStackSize(L, 4);
