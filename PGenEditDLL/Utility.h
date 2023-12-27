@@ -410,8 +410,7 @@ namespace util
 
 	namespace container
 	{
-		template<typename Vector>
-		static constexpr auto mergeVectors = ::mergeVectors<Vector>;
+		using ::mergeVectors;
 		template<template<typename, typename, typename...> typename Map, typename Key, typename Value, typename... Extra>
 		static constexpr auto invertMap = ::invertMap<Map, Key, Value, Extra...>;
 		template<typename T>

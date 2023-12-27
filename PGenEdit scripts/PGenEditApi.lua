@@ -26,6 +26,7 @@ pgenedit = pgenedit or {}
 tget(pgenedit, "debug").attemptTypeConversion = false -- if true, will attempt to convert parameters to correct type, if false, will throw an error
 
 local cpp = tget(pgenedit, "cpp")
+_G.cpp = cpp
 
 local makeClass
 local class = {}

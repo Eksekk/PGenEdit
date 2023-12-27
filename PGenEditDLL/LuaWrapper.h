@@ -1,5 +1,6 @@
 #pragma once
 #include "main.h"
+#include "LuaTable.h"
 
 class LuaWrapper;
 extern LuaWrapper luaWrapper;
@@ -25,6 +26,7 @@ public:
     LuaWrapper& rawset(int idx);
     LuaWrapper& getglobal(const char* name);
     LuaWrapper& setglobal(const char* name);
+    LuaWrapper& unsetGlobal(const char* name);
 
     LuaWrapper& settop(int index);
     int gettop();
@@ -43,6 +45,7 @@ public:
     bool toboolean(int index);
     void* touserdata(int index);
     lua_CFunction tocfunction(int index);
+    LuaTable totable(int index);
 
     int checkstack(int extra);
     LuaWrapper& concat(int n);
@@ -52,6 +55,7 @@ public:
     LuaWrapper& call(int nargs, int nresults);
 
     int type(int index);
+    std::string typename_(int index);
     bool isNil(int index);
     bool isNumber(int index);
     bool isString(int index);
@@ -65,15 +69,15 @@ public:
     bool loadstring(const std::string& str);
     bool dostring(const std::string& str);
 
-    // tries to get sequence of tables corresponding to given path separated with dots, uses global environment for first part
+    // tries to get sequence of tables corresponding to given path separated with dots, uses provided table or global environment, if it's not provided or LUA_GLOBALSINDEX, for first part
     // returns true if successful and only adds to the stack requested object, otherwise returns false and stack is fully restored
     // if "create" is true, acts like "tget" function
-    bool getPath(const std::string& path, bool lastMustBeTable = false, bool create = false);
+    bool getPath(const std::string& path, int firstElemIndex = LUA_GLOBALSINDEX, bool lastMustBeTable = false, bool create = false);
 
-    bool getPath(const std::vector<std::string>& parts, bool lastMustBeTable = false, bool create = false);
+    bool getPath(const std::vector<std::string>& parts, int firstElemIndex = LUA_GLOBALSINDEX, bool lastMustBeTable = false, bool create = false);
 
     // gets the path (without last element) with getPath and then sets last element to value at provided stack index
-    bool setPath(const std::string& path, int index);
+    bool setPath(const std::string& path, int valueIndex, int firstElemIndex = LUA_GLOBALSINDEX);
 
     lua_State* getLuaState() const { return L; }
     void setLuaState(lua_State* val) { L = val; }

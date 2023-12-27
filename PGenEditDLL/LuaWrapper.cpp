@@ -84,18 +84,19 @@ int LuaWrapper::gettop()
     return lua_gettop(L);
 }
 
-bool LuaWrapper::getPath(const std::string& path, bool lastMustBeTable, bool create)
+bool LuaWrapper::getPath(const std::string& path, int firstElemIndex, bool lastMustBeTable, bool create)
 {
     auto parts = stringSplit(path, ".");
-    return getPath(parts, lastMustBeTable, create);
+    return getPath(parts,firstElemIndex, lastMustBeTable, create);
 }
 
-bool LuaWrapper::getPath(const std::vector<std::string>& parts, bool lastMustBeTable /*= false*/, bool create /*= false*/)
+bool LuaWrapper::getPath(const std::vector<std::string>& parts, int firstElemIndex, bool lastMustBeTable /*= false*/, bool create /*= false*/)
 {
+    firstElemIndex = makeAbsoluteStackIndex(firstElemIndex);
     if (create)
     {
         lua_getglobal(L, "tget");
-        lua_pushvalue(L, LUA_GLOBALSINDEX);
+        lua_pushvalue(L, firstElemIndex);
         for (const auto& part : parts)
         {
             pushstring(part);
@@ -110,19 +111,13 @@ bool LuaWrapper::getPath(const std::vector<std::string>& parts, bool lastMustBeT
         }
         return true;
     }
-    lua_getglobal(L, parts.at(0).c_str());
-    int n = 1;
+    int n = 0;
     static const wxString format = "[index %d, key %s] couldn't get proper value (got '%s', expected '%s')";
-    if (lua_type(L, -1) != LUA_TTABLE)
-    {
-        wxLogError(format, 0, parts.at(0), lua::utils::luaTypeToString(L, -1), "table");
-        lua_pop(L, n);
-        return false;
-    }
-    for (size_t i = 1; i < parts.size(); ++i)
+    for (size_t i = 0; i < parts.size(); ++i)
     {
         const auto& part = parts[i];
-        lua_getfield(L, -1, part.c_str());
+        int idx = i == 0 ? firstElemIndex : -1;
+        lua_getfield(L, idx, part.c_str());
         ++n;
         if ((lastMustBeTable || i != parts.size() - 1) && lua_type(L, -1) != LUA_TTABLE) // last part can be any value
         {
@@ -132,7 +127,10 @@ bool LuaWrapper::getPath(const std::vector<std::string>& parts, bool lastMustBeT
         }
     }
     // set first added stack value to result and pop all others
-    lua_replace(L, -n);
+    if (n > 1) // lua_replace with -1 only pops top element, so don't do it if there's only one element
+	{
+		lua_replace(L, -n);
+    }
     lua_pop(L, std::max(0, n - 2));
     return true;
 }
@@ -285,25 +283,26 @@ bool LuaWrapper::isLightuserdata(int index)
     return lua_islightuserdata(L, index);
 }
 
-bool LuaWrapper::setPath(const std::string& path, int index)
+bool LuaWrapper::setPath(const std::string& path, int valueIndex, int firstElemIndex)
 {
     auto parts = stringSplit(path, ".");
-    index = makeAbsoluteStackIndex(index);
+    valueIndex = makeAbsoluteStackIndex(valueIndex);
+    firstElemIndex = makeAbsoluteStackIndex(firstElemIndex);
     if (parts.size() == 1)
     {
         pushstring(path.data());
-        pushvalue(index);
-        lua_settable(L, LUA_GLOBALSINDEX);
+        pushvalue(valueIndex);
+        lua_settable(L, firstElemIndex);
     }
     else
     {
         auto firstParts = std::vector<std::string>(parts.begin(), parts.end() - 1);
-        if (!getPath(firstParts))
+        if (!getPath(firstParts, firstElemIndex))
         {
             return false;
         }
         lua_pushstring(L, parts.back().data());
-        pushvalue(index);
+        pushvalue(valueIndex);
         lua_settable(L, -3);
         lua_pop(L, 1);
     }
@@ -312,6 +311,13 @@ bool LuaWrapper::setPath(const std::string& path, int index)
 
 int LuaWrapper::makeAbsoluteStackIndex(int index)
 {
+    // in case it gets changed in the future
+    static_assert(lua_upvalueindex(2) < lua_upvalueindex(1), "lua_upvalueindex(2) must be less than lua_upvalueindex(1)");
+    // don't break special indices
+    if (index == LUA_GLOBALSINDEX || index == LUA_REGISTRYINDEX || index == LUA_ENVIRONINDEX || index <= lua_upvalueindex(1))
+    {
+		return index;
+	}
     return index >= 0 ? index : lua_gettop(L) + index + 1;
 }
 
@@ -323,4 +329,21 @@ bool LuaWrapper::loadstring(const std::string& str)
 bool LuaWrapper::dostring(const std::string& str)
 {
     return static_cast<bool>(luaL_dostring(L, str.c_str()));
+}
+
+LuaTable LuaWrapper::totable(int index)
+{
+    return LuaTable(L, index);
+}
+
+std::string LuaWrapper::typename_(int index)
+{
+    return lua_typename(L, index);
+}
+
+LuaWrapper& LuaWrapper::unsetGlobal(const char* name)
+{
+    lua_pushnil(L);
+	lua_setglobal(L, name);
+	return *this;
 }

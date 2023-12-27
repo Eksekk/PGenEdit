@@ -257,7 +257,8 @@ void LuaTable::emplace(LuaTypeInCpp&& key, LuaTypeInCpp&& value)
 
 const LuaTypeInCpp& LuaTable::at(const LuaTypeInCpp& type) const
 {
-    return values.at(type);
+    auto type2 = tryToIntegerRet(type);
+    return values.at(type2);
 }
 
 LuaTable& LuaTable::att(const LuaTypeInCpp& type)
@@ -443,6 +444,26 @@ void LuaTable::arrayInsert(const LuaTypeInCpp& value)
     }
 }
 
+std::string LuaTable::dump(int depth) const
+{
+    LuaWrapper w(Lua);
+    w.getglobal("dump");
+    pushToLuaStack(Lua);
+    depth != -1 ? w.pushnumber(depth) : w.pushnil();
+    if (w.pcall(2, 1, 0))
+	{
+		std::string str = std::format("Error in dump(): {}", w.tostring(-1));
+		w.pop(1);
+		return str;
+	}
+    else
+	{
+		std::string str = w.tostring(-1);
+		w.pop(1);
+		return str;
+	}
+}
+
 bool operator==(const LuaTypeInCpp& a, const LuaTypeInCpp& b)
 {
     // cleanest way to have default operator for most types and custom behavior for some, without endless recursion, is this lambda way, I think
@@ -498,6 +519,9 @@ RTTR_REGISTRATION
 .method("attc", &LuaTable::attc, registration::public_access)
 .method("getArrayPart", &LuaTable::getArrayPart, registration::public_access)
 .method("contains", &LuaTable::contains, registration::public_access)
+.method("getTableFieldOrCreate", &LuaTable::getTableFieldOrCreate, registration::public_access)
+.method("arrayInsert", &LuaTable::arrayInsert, registration::public_access)
+.method("dump", &LuaTable::dump, registration::public_access)
 .method("fromLuaTable", &LuaTable::fromLuaTable)
 .method("luaConvertTypeCommon", &LuaTable::luaConvertTypeCommon, registration::private_access)
 .method("tryToIntegerRef", &LuaTable::tryToIntegerRef, registration::private_access)

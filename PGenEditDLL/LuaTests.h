@@ -5,5 +5,6 @@ class LuaTests
 {
 public:
     static std::vector<wxString> run();
+    static std::vector<wxString> testLuaWrapper();
 };
 

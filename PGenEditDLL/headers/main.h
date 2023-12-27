@@ -380,8 +380,6 @@ namespace std
 			return format_to(ctx.out(), "{}", s);
 		}
 	};
-
-	// for std::array
 }
 
 #endif // __MAIN_H__

@@ -114,6 +114,7 @@ struct LuaTable // TODO: storing array part and hashed part separately - will im
     // gets consecutive integer keys' values as a vector
     // stops on first missing index
     std::vector<LuaTypeInCpp> getArrayPart() const;
+    std::string dump(int depth = -1) const;
 private:
     static void luaConvertTypeCommon(lua_State* L, LuaTypeInCpp& val, int stack);
     static void tryToIntegerRef(LuaTypeInCpp& type);
@@ -134,7 +135,7 @@ namespace std
         template<typename FormatContext>
         auto format(const _Nil& nil, FormatContext& ctx) const
         {
-            return formatter<string_view>::format("nil", ctx);
+            return formatter<string_view>::format("<nil>", ctx);
         }
     };
     template<>
@@ -143,7 +144,7 @@ namespace std
         template<typename FormatContext>
         auto format(const LuaTable& table, FormatContext& ctx) const
         {
-            return formatter<string_view>::format("<table>", ctx);
+            return formatter<string_view>::format(table.dump(), ctx);
         }
     };
     template<>
