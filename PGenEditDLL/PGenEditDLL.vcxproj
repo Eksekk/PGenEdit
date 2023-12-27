@@ -112,6 +112,7 @@
     <ClInclude Include="PrimaryStatWidget.h" />
     <ClInclude Include="Profiler.h" />
     <ClInclude Include="Reflection.h" />
+    <ClInclude Include="ReflectionConversions.h" />
     <ClInclude Include="ReflectionTests.h" />
     <ClInclude Include="ResistanceWidget.h" />
     <ClInclude Include="SaveGameData.h" />
@@ -183,6 +184,7 @@
     <ClCompile Include="PrimaryStatWidget.cpp" />
     <ClCompile Include="Profiler.cpp" />
     <ClCompile Include="Reflection.cpp" />
+    <ClCompile Include="ReflectionConversions.cpp" />
     <ClCompile Include="ReflectionTests.cpp" />
     <ClCompile Include="ResistanceWidget.cpp" />
     <ClCompile Include="SaveGameData.cpp" />
