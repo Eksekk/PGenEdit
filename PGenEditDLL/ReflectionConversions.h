@@ -15,6 +15,8 @@ namespace // anonymous namespace makes it so that these aliases are only visible
 	using ::lua::utils::luaTableHasMetafield;
 }
 
+void* luaGetObjectPtr(lua_State* L, int index);
+
 // handles conversions of all types for reflection, whether at cpp/lua boundary or within cpp
 class ReflectionConversions
 {
@@ -67,7 +69,54 @@ public:
 	// lightuserdata -> void*
 	// any lua type representable in cpp -> LuaTypeInCpp, rttr::variant
 
+
+	// property, method, constructor can have metadata, which will allow to create new, empty container of desired type
+	// type metadata won't work, because would need to register a ton of types, and I don't want to do that
+	// method and constructor require index in addition to type, so I can use metadata
+
+	// captures all information needed to properly create a parameter of method/field of class, or nested type inside a container
+	// for constructors and methods it's pair of constructor/method and index of parameter, so you can get creation function from metadata,
+	// for properties it's just property, also has function in metadata,
+	// for nested containers it's a dummy instance (variant) of the container to use (fill with needed data/clear/etc.),
+	// and for simple types nested in containers it's just the type
+	using RttrClassMemberVariant = std::variant<rttr::variant, rttr::type, rttr::property, std::pair<rttr::constructor, size_t>, std::pair<rttr::method, size_t>>;
+
 private:
+
+	static rttr::variant createContainerFromClassMemberVariant(const RttrClassMemberVariant& member)
+	{
+		if (const rttr::variant* var = std::get_if<rttr::variant>(&member))
+		{
+			rttr::variant ret = *var; // make a copy
+			if (ret.is_sequential_container() && ret.create_sequential_view().is_dynamic())
+			{
+				ret.create_sequential_view().set_size(0);
+			}
+			else if (ret.is_associative_container())
+			{
+				ret.create_associative_view().clear();
+			}
+			return ret;
+		}
+		else
+		{
+			rttr::variant f = getCreationFunction(member);
+			wxASSERT_MSG(f.is_type<CreateContainerFunc>(), std::format("Member of type '{}' doesn't have metadata with creation function", getType(member)));
+			try
+			{
+				rttr::variant var = f.get_value<CreateContainerFunc>()();
+				wxASSERT_MSG(var.is_valid(), std::format("Creation function for member of type '{}' returned invalid variant", getType(member)));
+				wxASSERT_MSG(var.is_sequential_container() || var.is_associative_container(), std::format("Creation function for member of type '{}' returned variant of type '{}', which is neither sequential nor associative container", getType(member), var.get_type()));
+				wxASSERT_MSG(var.get_type() == getType(member), std::format("Creation function for member of type '{}' returned variant of type '{}'", getType(member), var.get_type()));
+				return var;
+			}
+			catch (const std::exception& ex)
+			{
+				wxFAIL_MSG(std::format("Exception '{}' thrown when creating container for member of type '{}'", ex.what(), getType(member)));
+				return rttr::variant();
+			}
+		}
+	}
 
 	/// <summary>
 /// Tries to convert a number to the specified type.
@@ -151,71 +200,70 @@ private:
 		}
 		return rttr::variant();
 	}
+
+	// gets type of property, method parameter or constructorm parameter
+	// takes into account that constructor might be wrapped
+	// receives also index of parameter in case of method or constructor (pair)
+	static rttr::type getType(const RttrClassMemberVariant& var)
+	{
+		if (const rttr::property* prop = std::get_if<rttr::property>(&var))
+		{
+			return prop->get_type();
+		}
+		else if (const std::pair<rttr::constructor, size_t>* constr = std::get_if<std::pair<rttr::constructor, size_t>>(&var))
+		{
+			auto [ctor, _] = util::rttr::getMaybeWrappedConstructor(constr->first);
+			return util::misc::getNthRangeElement(ctor.get_parameter_infos(), constr->second).get_type();
+		}
+		else if (const std::pair<rttr::method, size_t>* method = std::get_if<std::pair<rttr::method, size_t>>(&var))
+		{
+			return util::misc::getNthRangeElement(method->first.get_parameter_infos(), method->second).get_type();
+		}
+		else
+		{
+			wxFAIL_MSG("Unknown type of std::variant");
+			return rttr::type::get<void*>(); // dummy return
+		}
+	}
+
+	static rttr::variant getCreationFunction(const RttrClassMemberVariant& var)
+	{
+		using FuncVector = std::vector<CreateContainerFunc>;
+		if (const rttr::property* prop = std::get_if<rttr::property>(&var))
+		{
+			rttr::variant m = prop->get_metadata(g_CONTAINER_CREATION_FUNC_METADATA_NAME);
+			wxASSERT_MSG(m.is_type<FuncVector>(), std::format("Property '{}' of type '{}' doesn't have metadata with creation function", prop->get_name(), prop->get_type()));
+			return m.get_value<FuncVector>().at(0);
+		}
+		else if (const std::pair<rttr::constructor, size_t>* constr = std::get_if<std::pair<rttr::constructor, size_t>>(&var))
+		{
+			auto [ctor, unwrapped] = util::rttr::getMaybeWrappedConstructor(constr->first);
+			rttr::variant m = ctor.get_metadata(g_CONTAINER_CREATION_FUNC_METADATA_NAME);
+			wxASSERT_MSG(m.is_type<FuncVector>(), std::format("Constructor '{}' of type '{}'{} doesn't have metadata with creation function", ctor.get_signature(), unwrapped ? " [unwrapped]" : "", ctor.get_declaring_type()));
+			return m.get_value<FuncVector>().at(constr->second);
+		}
+		else if (const std::pair<rttr::method, size_t>* method = std::get_if<std::pair<rttr::method, size_t>>(&var))
+		{
+			rttr::variant m = method->first.get_metadata(g_CONTAINER_CREATION_FUNC_METADATA_NAME);
+			wxASSERT_MSG(m.is_type<FuncVector>(), std::format("Method '{}' of type '{}' doesn't have metadata with creation function", method->first.get_signature(), method->first.get_declaring_type()));
+			return m.get_value<FuncVector>().at(method->second);
+		}
+		else if (const rttr::type* typ = std::get_if<rttr::type>(&var))
+		{
+			wxFAIL_MSG("Creating container from type is not supported, because it would require registering (probably manually) all types that will be used as containers. Pass a property, method, constructor, or container instance instead.");
+		}
+		else
+		{
+			wxFAIL_MSG("Unknown type of std::variant");
+			return rttr::variant(); // dummy return
+		}
+	};
 public:
 	// converts lua parameter from stack to given type (using RTTR type_id)
 	// allowCrossTypeCategoryConversions allows to convert lua types to C++ types, which are not exactly matching, but are compatible (like number to boolean)
-	using RttrClassMemberVariant = std::variant<rttr::property, std::pair<rttr::constructor, size_t>, std::pair<rttr::method, size_t>>;
 	static rttr::variant convertStackIndexToType(lua_State* L, int stackIndex, const RttrClassMemberVariant& classPropertyVariant, bool allowCrossTypeCategoryConversions = false)
 	{
-		// property, method, constructor can have metadata, which will allow to create new, empty container of desired type
-		// type metadata won't work, because would need to register a ton of types, and I don't want to do that
-		// method and constructor require index in addition to type, so I can use metadata
 		LuaWrapper wrapper(L);
-
-		// gets type of property, method parameter or constructorm parameter
-		// takes into account that constructor might be wrapped
-		// receives also index of parameter in case of method or constructor (pair)
-		auto getType = [&](const RttrClassMemberVariant& var) -> rttr::type
-			{
-				if (const rttr::property* prop = std::get_if<rttr::property>(&var))
-				{
-					return prop->get_type();
-				}
-				else if (const std::pair<rttr::constructor, size_t>* constr = std::get_if<std::pair<rttr::constructor, size_t>>(&var))
-				{
-					auto [ctor, _] = util::rttr::getMaybeWrappedConstructor(constr->first);
-					return util::misc::getNthRangeElement(ctor.get_parameter_infos(), constr->second).get_type();
-				}
-				else if (const std::pair<rttr::method, size_t>* method = std::get_if<std::pair<rttr::method, size_t>>(&var))
-				{
-					return util::misc::getNthRangeElement(method->first.get_parameter_infos(), method->second).get_type();
-				}
-				else
-				{
-					wxFAIL_MSG("Unknown type of std::variant");
-					return rttr::type::get<void*>(); // dummy return
-				}
-
-			};
-
-		auto getCreationFunction = [&](const RttrClassMemberVariant& var) -> rttr::variant
-			{
-				using FuncVector = std::vector<CreateContainerFunc>;
-				if (const rttr::property* prop = std::get_if<rttr::property>(&var))
-				{
-					rttr::variant m = prop->get_metadata(g_CONTAINER_CREATION_FUNC_METADATA_NAME);
-					wxASSERT_MSG(m.is_type<FuncVector>(), std::format("Property '{}' of type '{}' doesn't have metadata with creation function", prop->get_name(), prop->get_type()));
-					return m.get_value<FuncVector>()[0];
-				}
-				else if (const std::pair<rttr::constructor, size_t>* constr = std::get_if<std::pair<rttr::constructor, size_t>>(&var))
-				{
-					auto [ctor, unwrapped] = util::rttr::getMaybeWrappedConstructor(constr->first);
-					rttr::variant m = ctor.get_metadata(g_CONTAINER_CREATION_FUNC_METADATA_NAME);
-					wxASSERT_MSG(m.is_type<FuncVector>(), std::format("Constructor '{}' of type '{}'{} doesn't have metadata with creation function", ctor.get_signature(), unwrapped ? " [unwrapped]" : "", ctor.get_declaring_type()));
-					return m.get_value<FuncVector>()[constr->second];
-				}
-				else if (const std::pair<rttr::method, size_t>* method = std::get_if<std::pair<rttr::method, size_t>>(&var))
-				{
-					rttr::variant m = method->first.get_metadata(g_CONTAINER_CREATION_FUNC_METADATA_NAME);
-					wxASSERT_MSG(m.is_type<FuncVector>(), std::format("Method '{}' of type '{}' doesn't have metadata with creation function", method->first.get_signature(), method->first.get_declaring_type()));
-					return m.get_value<FuncVector>()[method->second];
-				}
-				else
-				{
-					wxFAIL_MSG("Unknown type of std::variant");
-					return rttr::variant(); // dummy return
-				}
-			};
 
 		rttr::type typ = getType(classPropertyVariant);
 		rttr::type::type_id typeId = typ.get_id();
@@ -351,32 +399,15 @@ public:
 			}
 			else if (typ.is_sequential_container())
 			{
-				// have to extract information from lua table into rttr::variant containing desired container
-				// VECTOR IS NOT REGISTERED
-				//rttr::variant var = toContainer::vector{}; // shared_ptr
-				//assert(var.convert(classPropertyVariant)); // hopefully convert element to vector
-				//assert(classPropertyVariant.get_metadata("createFunc").is_type<CreateContainerFunc>()); // getting metadata from PROPERTY might allow it to work
-				//rttr::variant var = classPropertyVariant.get_metadata("createFunc").get_value<CreateContainerFunc>()();
-				rttr::variant f = getCreationFunction(classPropertyVariant);
-				assert(f.is_type<CreateContainerFunc>());
-				rttr::variant var = f.get_value<CreateContainerFunc>()();
-				//CreateObjectVisitor visitor(var);
-				//visitor.visit(classPropertyVariant);
-				assert(var.is_valid());
-				assert(var.is_sequential_container());
+				rttr::variant var = createContainerFromClassMemberVariant(classPropertyVariant);
 
 				rttr::variant_sequential_view seqView = var.create_sequential_view();
-				//rttr::variant_sequential_view seqView = var.extract_wrapped_value().create_sequential_view();
-//                 rttr::type valType = seqView.get_value_type();
-//                 if (!valType.is_wrapper())
-//                 {
-//                     throw std::runtime_error("Can't convert lua table to sequential container, because it contains elements of non-wrapped type");
-//                 }
-//                 rttr::type wrappedType = valType.get_wrapped_type();
 				rttr::type wrappedType = seqView.get_value_type();
 				LuaTable t = LuaTable::fromLuaTable(L, stackIndex);
 				auto arr = t.getArrayPart();
 				seqView.set_size(arr.size());
+				// std::vector<std::vector<int>>: how to create inner container? (it doesn't have metadata)
+				// resize if needed and get any value, then pass it?
 				for (int i = 0; const LuaTypeInCpp & val : arr)
 				{
 					rttr::variant var = convertLuaTypeInCppToVariant(val, wrappedType);
@@ -387,23 +418,10 @@ public:
 			else if (typ.is_associative_container())
 			{
 				// have to extract information from lua table into rttr::variant containing desired container
-				auto f = getCreationFunction(classPropertyVariant);
-				assert(f.is_type<CreateContainerFunc>());
-				rttr::variant var = f.get_value<CreateContainerFunc>()();
-				assert(var.is_valid());
+				auto var = createContainerFromClassMemberVariant(classPropertyVariant);
 				rttr::variant_associative_view assocView = var.create_associative_view();
 				rttr::type keyType = assocView.get_key_type();
 				rttr::type valueType = assocView.get_value_type();
-				//                 if (!keyType.is_wrapper())
-				//                 {
-				//                     throw std::runtime_error("Can't convert lua table to associative container, because it contains keys of non-wrapped type");
-				//                 }
-				//                 if (!valueType.is_wrapper())
-				//                 {
-				//                     throw std::runtime_error("Can't convert lua table to associative container, because it contains values of non-wrapped type");
-				//                 }
-				//                 rttr::type wrappedKeyType = keyType.get_wrapped_type();
-				//                 rttr::type wrappedValueType = valueType.get_wrapped_type();
 				rttr::type wrappedKeyType = keyType;
 				rttr::type wrappedValueType = valueType;
 
@@ -597,8 +615,9 @@ public:
 		}
 	}
 
-	static rttr::variant convertLuaTypeInCppToVariant(const LuaTypeInCpp& var, const rttr::type& typ, bool allowCrossTypeConversions = false)
+	static rttr::variant convertLuaTypeInCppToVariant(const LuaTypeInCpp& var, const RttrClassMemberVariant& member, bool allowCrossTypeConversions = false)
 	{
+		type typ = getType(member);
 		type_id typeId = typ.get_id();
 		// let's assume integers can be converted to floats and vice versa, even if allowCrossTypeConversions is false
 		if (const sqword_t* val = std::get_if<sqword_t>(&var))
@@ -717,6 +736,7 @@ public:
 		}
 		else if (const LuaTable* val = std::get_if<LuaTable>(&var))
 		{
+			// member is "rttr::variant" if we need to convert table to container inside any other container
 			if (typeId == TYPE_ID_LUA_TABLE)
 			{
 				return *val;
@@ -724,33 +744,52 @@ public:
 			else if (typ.is_sequential_container())
 			{
 				// have to extract information from lua table into rttr::variant containing desired container
-				rttr::variant var = typ.create();
+
+				// for containers, we need to be passed an instance of it (created earlier by (optionally resizing) and taking first element)
+				rttr::variant var = createContainerFromClassMemberVariant(member);
+				wxASSERT_MSG(var.is_valid(), "Creation function for member returned invalid variant");
+				wxASSERT_MSG(var.is_sequential_container(), "Member is not sequential container, but sequential container is expected");
 				rttr::variant_sequential_view seqView = var.create_sequential_view();
 				rttr::type valType = seqView.get_value_type();
+
+				rttr::type wrappedType = valType.get_wrapped_type();
+				auto arr = val->getArrayPart();
+				if (seqView.is_dynamic())
+				{
+					seqView.set_size(arr.size());
+				}
+				else
+				{
+					luaAssert(arr.size() == seqView.get_size(), "Lua table size ({}) doesn't match sequential container size ({})", arr.size(), seqView.get_size());
+					wxASSERT_MSG(seqView.get_size() > 0, "Nondynamic sequential container size is 0");
+				}
+				rttr::variant containerInstance;
+				bool isAnyContainer = valType.is_wrapper() || valType.is_associative_container() || valType.is_sequential_container();
+				if (isAnyContainer)
+				{
+					containerInstance = seqView.get_value(0);
+				}
+				for (int i = 0; const LuaTypeInCpp & val : arr)
+				{
+					rttr::variant var = convertLuaTypeInCppToVariant(val, isAnyContainer ? containerInstance : );///!!!!!!!!!!!
+					seqView.set_value(i++, var);
+				}
 				if (!valType.is_wrapper())
 				{
 					throw std::runtime_error("Can't convert lua table to sequential container, because it contains elements of non-wrapped type");
-				}
-				rttr::type wrappedType = valType.get_wrapped_type();
-				auto arr = val->getArrayPart();
-				seqView.set_size(arr.size());
-				for (int i = 0; const LuaTypeInCpp & val : arr)
-				{
-					rttr::variant var = convertLuaTypeInCppToVariant(val, wrappedType);
-					seqView.set_value(i++, var);
 				}
 				return var;
 			}
 			else if (typ.is_associative_container())
 			{
 				// have to extract information from lua table into rttr::variant containing desired container
-				rttr::type wrappedType = typ.get_wrapped_type();/// FIX
+				rttr::variant var = createContainerFromClassMemberVariant(member);
+				rttr::type valType = typ.get_wrapped_type();
+			}
+			else if (typ.is_class()) // must be registered
+			{
 				rttr::variant var = typ.create();
-				rttr::variant_associative_view assocView = var.create_associative_view();
-				for (auto&& [key, value] : *val)
-				{
-					assocView.insert(key, value);
-				}
+				wxASSERT_MSG(var.is_valid(), std::format("Couldn't create instance of class '{}'", typ));
 				return var;
 			}
 			else if (allowCrossTypeConversions && typeId == TYPE_ID_BOOL)
@@ -775,11 +814,6 @@ public:
 			LuaTable t;
 			for (int i = 0; auto & value : seqView)
 			{
-				//                 if (value.get_type().get_id() != wrappedType.get_id())
-				//                 {
-				//                     throw std::runtime_error("Can't convert sequential container to lua table, because it contains elements of different types");
-				//                 }
-								// TODO: a way to avoid copy here?
 				t[i++] = convertVariantToLuaTypeInCpp(value.extract_wrapped_value());
 			}
 			t.pushToLuaStack(L);
@@ -794,14 +828,6 @@ public:
 			LuaTable t;
 			for (auto&& [key, value] : assocView)
 			{
-				//                 if (key.get_type().get_id() != keyType.get_id())
-				//                 {
-				//                     throw std::runtime_error("Can't convert associative container to lua table, because it contains keys of different types");
-				//                 }
-				//                 if (value.get_type().get_id() != valueType.get_id())
-				//                 {
-				//                     throw std::runtime_error("Can't convert associative container to lua table, because it contains values of different types");
-				//                 }
 				t[convertVariantToLuaTypeInCpp(key.extract_wrapped_value())] = convertVariantToLuaTypeInCpp(value.extract_wrapped_value());
 			}
 			t.pushToLuaStack(L);
@@ -899,4 +925,3 @@ public:
 		return true;
 	}
 };
-

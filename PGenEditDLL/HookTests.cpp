@@ -8,7 +8,7 @@ static const char NOP[] = "\x90";
 using BasicFuncType = void(*)(); // function returning void and without arguments
 
 // dst, src, size
-std::vector<uint8_t> memcpyVector(void* src, uint32_t size)
+std::vector<uint8_t> util::lowLevel::memcpyVector(void* src, uint32_t size)
 {
     std::vector<uint8_t> v(size);
     memcpy(v.data(), src, size);
@@ -94,6 +94,7 @@ static std::vector<wxString> HookTests::testHookPlacingAndSize()
     // on the occasion, also test if disabling a hook fully restores previous instructions/data
     // also testing both manual function calls and creating complex hook would be nice, but not required
     int funcSizes[3] = { 10, 13, 18 };
+    using util::lowLevel::memcpyVector;
     codeBackup.push_back(memcpyVector(hook2Bytes, funcSizes[0]));
     codeBackup.push_back(memcpyVector(hook5Bytes, funcSizes[1]));
     codeBackup.push_back(memcpyVector(hook10Bytes, funcSizes[2]));
@@ -1136,6 +1137,7 @@ std::vector<wxString> HookTests::testAsmHookFunctions()
     // no jump back
     // myassertf(relJumpCallTarget(dest + 8) == (uint32_t)compiledAsmpatchCode.data(), "Asmpatch test #4 memory compare #2 failed - generated jump back jumps to wrong address");
 
+    using util::lowLevel::memcpyVector;
     // predefined tests
     int i = 1;
     for (auto& [func, data] : asmpatchTestsBasic)

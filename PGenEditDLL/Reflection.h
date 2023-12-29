@@ -119,6 +119,7 @@ public:
 				errorParts.push_back(wxString::Format("Not enough parameters passed by lua function (expected %d, got %d), can't recover using default values", requiredParameters.size(), nArgs));
 			}
 		}
+		wxASSERT(nArgs >= 0 && nArgs <= (int)requiredParameters.size());
 		int defaultCount = requiredParameters.size() - nArgs;
 		wxASSERT_MSG(wrapper.gettop() >= nArgs, "Not enough parameters on lua stack to convert to C++ types");
 		std::vector<rttr::variant> result(requiredParameters.size());
@@ -132,11 +133,11 @@ public:
 				auto&& param = requiredParameters[i];
 				if (const rttr::method* meth = std::get_if<rttr::method>(&callable))
 				{
-					result[i] = conversions::convertStackIndexToType(L, currentStackIndex, std::make_pair(*meth, i), true);
+					result[i] = conversions::convertStackIndexToType(L, currentStackIndex, std::make_pair(*meth, (size_t)i), true);
 				}
 				else if (const rttr::constructor* constr = std::get_if<rttr::constructor>(&callable))
 				{
-					result[i] = conversions::convertStackIndexToType(L, currentStackIndex, std::make_pair(*constr, i), true);
+					result[i] = conversions::convertStackIndexToType(L, currentStackIndex, std::make_pair(*constr, (size_t)i), true);
 				}
 				else
 				{

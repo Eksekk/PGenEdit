@@ -3,6 +3,11 @@
 #include "Utility.h"
 #include "Asserter.h"
 
+namespace util::lowLevel
+{
+	std::vector<uint8_t> memcpyVector(void* src, uint32_t size);
+}
+
 class HookTests
 {
 public:

@@ -109,6 +109,12 @@
     <Filter Include="Pliki nagłówkowe\Shared GUI\Item dialog">
       <UniqueIdentifier>{2d55d4a5-d593-4b46-af32-92d98f44a204}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Pliki źródłowe\Misc\Reflection">
+      <UniqueIdentifier>{f0a5d4ff-1ba5-4f00-a796-926d4e6e1952}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Pliki nagłówkowe\Misc\Reflection">
+      <UniqueIdentifier>{d2124ad4-855a-471d-ac9b-60e51a73dcce}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="headers\Structs.h">
@@ -399,26 +405,26 @@
     <ClInclude Include="accessorCommonCode.h">
       <Filter>Pliki nagłówkowe\GameStructs\Accessors</Filter>
     </ClInclude>
-    <ClInclude Include="EditItemDialog.h">
-      <Filter>Pliki nagłówkowe</Filter>
-    </ClInclude>
-    <ClInclude Include="Command.h">
-      <Filter>Pliki nagłówkowe</Filter>
-    </ClInclude>
     <ClInclude Include="DebugConsole.h">
       <Filter>Pliki nagłówkowe\Shared GUI</Filter>
     </ClInclude>
     <ClInclude Include="Reflection.h">
-      <Filter>Pliki nagłówkowe\Misc</Filter>
+      <Filter>Pliki nagłówkowe\Misc\Reflection</Filter>
     </ClInclude>
     <ClInclude Include="ReflectionTests.h">
-      <Filter>Pliki nagłówkowe</Filter>
-    </ClInclude>
-    <ClInclude Include="CreateObjectVisitor.h">
-      <Filter>Pliki nagłówkowe</Filter>
+      <Filter>Pliki nagłówkowe\Misc\Reflection</Filter>
     </ClInclude>
     <ClInclude Include="ReflectionConversions.h">
-      <Filter>Pliki nagłówkowe</Filter>
+      <Filter>Pliki nagłówkowe\Misc\Reflection</Filter>
+    </ClInclude>
+    <ClInclude Include="CreateObjectVisitor.h">
+      <Filter>Pliki nagłówkowe\Misc\Reflection</Filter>
+    </ClInclude>
+    <ClInclude Include="Command.h">
+      <Filter>Pliki nagłówkowe\Misc</Filter>
+    </ClInclude>
+    <ClInclude Include="EditItemDialog.h">
+      <Filter>Pliki nagłówkowe\Shared GUI\Item dialog</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -692,29 +698,29 @@
     <ClCompile Include="accessorCommonCode.cpp">
       <Filter>Pliki źródłowe\GameStructs\Accessors</Filter>
     </ClCompile>
-    <ClCompile Include="EditItemDialog.cpp">
-      <Filter>Pliki źródłowe</Filter>
-    </ClCompile>
-    <ClCompile Include="Command.cpp">
-      <Filter>Pliki źródłowe</Filter>
-    </ClCompile>
     <ClCompile Include="DebugConsole.cpp">
       <Filter>Pliki źródłowe\Shared GUI</Filter>
     </ClCompile>
-    <ClCompile Include="Reflection.cpp">
-      <Filter>Pliki źródłowe\Misc</Filter>
-    </ClCompile>
-    <ClCompile Include="wxWidgetsReflectionRegistration.cpp">
-      <Filter>Pliki źródłowe\Misc</Filter>
-    </ClCompile>
     <ClCompile Include="ReflectionTests.cpp">
-      <Filter>Pliki źródłowe</Filter>
-    </ClCompile>
-    <ClCompile Include="CreateObjectVisitor.cpp">
-      <Filter>Pliki źródłowe</Filter>
+      <Filter>Pliki źródłowe\Misc\Reflection</Filter>
     </ClCompile>
     <ClCompile Include="ReflectionConversions.cpp">
-      <Filter>Pliki źródłowe</Filter>
+      <Filter>Pliki źródłowe\Misc\Reflection</Filter>
+    </ClCompile>
+    <ClCompile Include="CreateObjectVisitor.cpp">
+      <Filter>Pliki źródłowe\Misc\Reflection</Filter>
+    </ClCompile>
+    <ClCompile Include="wxWidgetsReflectionRegistration.cpp">
+      <Filter>Pliki źródłowe\Misc\Reflection</Filter>
+    </ClCompile>
+    <ClCompile Include="Reflection.cpp">
+      <Filter>Pliki źródłowe\Misc\Reflection</Filter>
+    </ClCompile>
+    <ClCompile Include="Command.cpp">
+      <Filter>Pliki źródłowe\Misc</Filter>
+    </ClCompile>
+    <ClCompile Include="EditItemDialog.cpp">
+      <Filter>Pliki źródłowe\Shared GUI\Item dialog</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
