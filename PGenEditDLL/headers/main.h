@@ -243,6 +243,7 @@ rttr::variant getEmptyVector()
 }
 
 const std::string g_CONTAINER_CREATION_FUNC_METADATA_NAME = "creationFunctions";
+const std::string g_CALLABLE_AS_PROPERTY_METADATA_NAME = "callableAsProperty";
 template<typename... Types>
 auto getParameterMetadata()
 {

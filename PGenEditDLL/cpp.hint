@@ -31,3 +31,5 @@ concept Any##name##Struct = SAME(T, mm6::codeName) || SAME(T, mm7::codeName) || 
 #define LUA_TTABLE
 #define wxFAIL_MSG(msg) wxFAIL_COND_MSG("Assert failure", msg)
 #define wxFAIL_MSG(msg)
+#define wxASSERT_MSG(cond, msg) wxASSERT_MSG_AT(cond, msg, __FILE__, __LINE__, __WXFUNCTION__)
+#define wxASSERT_MSG(cond, msg)

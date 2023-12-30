@@ -76,6 +76,9 @@ struct LuaTable // TODO: storing array part and hashed part separately - will im
     // converts table at specified stack index into this value
     static LuaTable fromLuaTable(lua_State* L, int index = -1);
 
+    using iterator = typename LuaTableValues::iterator;
+    using const_iterator = typename LuaTableValues::const_iterator;
+
     LuaTableValues::iterator begin();
     LuaTableValues::iterator end();
     LuaTableValues::const_iterator begin() const;

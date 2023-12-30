@@ -50,7 +50,11 @@ rttr::registration::property("game", &game)
 	.property("MMVER", &MMVER)
 	.property("inMM", &inMM)
 	.property("jsonErrors", &jsonErrors)
-	.property("isTwoHanded", &isTwoHanded)
+	.property("isTwoHanded::prop", &isTwoHanded)
+.method("isTwoHanded", isTwoHanded)(metadata(g_CALLABLE_AS_PROPERTY_METADATA_NAME, true)) // ACCEPTS function pointers as well, and also std::function fields
+// NOTE: can register a function pointer, maybe also std::function, as both a method and a property, and it will work
+.property("isEquippableInOffhand::prop", &isEquippableInOffhand)
+.method("isEquippableInOffhand", isEquippableInOffhand)(metadata(g_CALLABLE_AS_PROPERTY_METADATA_NAME, true))
 	.property("isEquippableInOffhand", &isEquippableInOffhand)
 	.property("generator", &generator)
 	.property("unloadCleanupStarted", &unloadCleanupStarted)

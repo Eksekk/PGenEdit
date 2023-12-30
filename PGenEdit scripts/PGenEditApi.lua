@@ -29,20 +29,29 @@ local cpp = tget(pgenedit, "cpp")
 _G.cpp = cpp
 
 local makeClass
-local class = {}
-cpp.class = class
--- pgenedit.cpp.class
--- pgenedit.cpp.global
-local classContainerMT = {}
-function classContainerMT.__index(t, key) -- if __index fires, this means that class is not yet created
-	local cls = makeClass(key)
-	rawset(t, key, cls)
-	return cls
+local isObjectOfClassOrDerived
+do
+	local class = {}
+	cpp.class = class
+	-- pgenedit.cpp.class
+	-- pgenedit.cpp.global
+	local classContainerMT = {}
+	local customIndexes = {
+		["?isObjectOfClassOrDerived"] = isObjectOfClassOrDerived,
+	}
+	function classContainerMT.__index(t, key) -- if __index fires, this means that class is not yet created
+		if customIndexes[key] then
+			return customIndexes[key]
+		end
+		local cls = makeClass(key)
+		rawset(t, key, cls)
+		return cls
+	end
+	function classContainerMT.__newindex(t, key, value)
+		error(format("Attempt to set class %q", key), 2)
+	end
+	setmetatable(class, classContainerMT)
 end
-function classContainerMT.__newindex(t, key, value)
-	error(format("Attempt to set class %q", key), 2)
-end
-setmetatable(class, classContainerMT)
 -- pgenedit.class.wxWindow.new("test", nil, 0, 0, 0, 0)
 
 -- userdata are objects created by lua, tables are objects created by C++ (so no automatic garbage collection happens)
@@ -56,8 +65,7 @@ local function isClass(entity)
 end
 pgenedit.cpp.isClass = isClass
 
--- TODO: this actually doesn't take into account derived classes!
-local function isObjectOfClassOrDerived(obj, checkName)
+function isObjectOfClassOrDerived(obj, checkName)
 	if not isClassObject(obj) then
 		return false
 	end
@@ -321,6 +329,16 @@ local function getEntityMetadataByPath(entity, fieldName, accessPath)
 	return metadata
 end
 
+-- returns key, value, type metadata
+local function enumMembersGeneric(members, obj)
+	return function(t, k)
+		k = next(members, k)
+		if k then
+			return k, obj[k], members[k]
+		end
+	end
+end
+
 -- need to know: whether field being assigned to is a container, if so, container type and its data type
 -- TODO: handle LuaTable cpp class
 local function assignTableToField(classObject, fieldName, accessPath, val)
@@ -542,7 +560,16 @@ local function getContainerReference(classObject, fieldName, accessPath)
 			end
 		end
 	end
-	mt.__call = t.enum
+	local keys
+	function mt:__call(_, k)
+		if k == nil then
+			keys = self:getKeys()
+		end
+		k = next(keys, k)
+		if k then
+			return k, self[k]
+		end
+	end
 
 	return setmetatable(t, mt)
 end
@@ -667,7 +694,11 @@ local createObjectMetatable
 		new = new, -- this is without question mark, because it's restricted keyword in C++ anyways, probably should change this for consistency
 		["?getMemberData"] = getMemberData,
 		["?getMetadata"] = function() return info end,
-		["?existingObjectAt"] = newExisting
+		["?existingObjectAt"] = newExisting,
+		["?members"] = members,
+		["?bases"] = classMT.bases,
+		["?derived"] = classMT.derived,
+		["?info"] = info
 	}
 
 	-- static variables
@@ -712,7 +743,11 @@ local createObjectMetatable
 			error(format("Attempt to set unknown static field %q of class %q", key, className), 2)
 		end
 	end
-	return setmetatable({}, classMT)
+	local class = {}
+	function class.enum()
+		return enumMembersGeneric(members, class)
+	end
+	return setmetatable(class, classMT)
 end
 
 --[[local ]]function createObjectMetatable(classMT)
@@ -779,7 +814,22 @@ end
 		return obj
 	end
 	-- TODO: dumpAllProperties (including functions shown clearly as such)
-	-- TODO: readonly properties
+
+	function objMT.__tostring(obj)
+		return format("%s: %s", className, api.getObjectAddress(obj))
+	end
+
+	-- enum members
+	function objMT.__call(obj, _, k)
+		k = next(classMT.members, k)
+		if k then
+			return k, obj[k], classMT.members[k]
+		end
+	end
+
+	function objMT:enum()
+		return enumMembersGeneric(classMT.members, self)
+	end
 	return objMT
 end
 
@@ -791,10 +841,14 @@ do
 	setmetatable(global, mt)
 	local members = api.getGlobalEnvironmentInfo()
 	mt.members = members
+	function global.enum() -- this can be called as global.enum(), because "enum" is a reserved keyword in C++
+		return enumMembersGeneric(members, global)
+	end
 	local customIndexes = {
 		["?getMemberData"] = function(memberName)
 			return members[memberName]
 		end,
+		["?members"] = members
 	}
 	function mt.__index(t, key)
 		if customIndexes[key] then
@@ -839,6 +893,15 @@ do
 			error(format("Attempt to set global class object %q", key), 2)
 		else
 			api.setGlobalField(key, value)
+		end
+	end
+
+	-- enum members
+	-- returns key, value, type metadata
+	function mt.__call(_, _, k) -- args are: iterator function (table in this case), state (table) and key
+		k = next(members, k)
+		if k then
+			return k, global[k], members[k]
 		end
 	end
 end
@@ -1167,7 +1230,7 @@ ReflectionSampleStruct(int a, int b, int c = 5, int d = 20) : ReflectionSampleSt
 	assert(pcharData.isStatic, "pcharData.isStatic == %s, expected true", tostring(pcharData.isStatic))
 	assert(not pcharData.isCallable, "pcharData.isCallable == %s, expected false", tostring(pcharData.isCallable))
 	assert(pcharData.isConst, "pcharData.isConst == %s, expected true", tostring(pcharData.isConst))
-	assert(pcharData.isPointer, "pcharData.isPointer == %s, expected true", tostring(pcharData.isPointer))
+	assert(pcharData.type.isPointer, "pcharData.type.isPointer == %s, expected true", tostring(pcharData.type.isPointer))
 	assert(cls.staticReadonlyPchar == "staticReadonlyPcharText", "cls.staticReadonlyPchar == %q, expected %q", cls.staticReadonlyPchar, "staticReadonlyPcharText")
 	cls.staticReadonlyPchar = "test34325"
 	assert(cls.staticReadonlyPchar == "test34325", "cls.staticReadonlyPchar == %q, expected %q", cls.staticReadonlyPchar, "test34325")
