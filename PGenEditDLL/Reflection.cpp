@@ -695,6 +695,8 @@ static void insertPropertyAndMethodData(const rttr::array_range<rttr::property>&
         propInfo["isField"] = false;
         propInfo["isMethod"] = true;
         propInfo["isCallable"] = true;
+        
+        propInfo["type"] = LuaTable{ { { "isClass", false } } }; // FIXME: this is a hack, but it's needed for now. Ideally we'd check if method is also a property and get information about being class instance from there
 
         propInfo["params"] = getCallableParamsTable(method.get_parameter_infos());
         propInfo["signature"] = method.get_signature().to_string();

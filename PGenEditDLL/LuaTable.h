@@ -88,12 +88,17 @@ struct LuaTable // TODO: storing array part and hashed part separately - will im
     LuaTable(const LuaTableValues& values);
     LuaTable(LuaTableValues&& values);
     LuaTable(lua_State* L, int index);
+    // creates table from lua code, like "{a = 1, b = 2}"
+    LuaTable(lua_State* L, const std::string& luaCode);
 
     // unfortunately, can't make this a constructor, because it will be ambiguous with LuaTableValues when passed initializer_list
     // also accepts normal key-value pairs in addition to individual array elements
     static LuaTable constructFromValuesWithArray(LuaTableValuesWithArray&& values);
     // also accepts normal key-value pairs in addition to individual array elements
     static LuaTable constructFromValuesWithArray(const LuaTableValuesWithArray& values);
+
+    // 
+    static LuaTable fromLuaCode(lua_State* L, const std::string& code);
     LuaTable() = default;
     LuaTable(const LuaTable& other) = default;
     LuaTable& operator=(const LuaTable& other) = default;//FIX
@@ -128,6 +133,9 @@ private:
 
     RTTR_REGISTRATION_FRIEND
 };
+
+// creates a lua table from lua code string as string literal, uses global "Lua" state to run code
+LuaTable operator ""_luaTable(const char* text, size_t len);
 
 namespace std
 {

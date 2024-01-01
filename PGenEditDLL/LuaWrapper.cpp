@@ -347,3 +347,65 @@ LuaWrapper& LuaWrapper::unsetGlobal(const char* name)
 	lua_setglobal(L, name);
 	return *this;
 }
+
+LuaWrapper& LuaWrapper::unsetGlobals(std::initializer_list<std::string> names, bool needToExist)
+{
+    for (const auto& name : names)
+    {
+        if (needToExist)
+        {
+            getglobal(name.c_str());
+            if (isNil(-1))
+			{
+				pop(1);
+				lua::utils::luaError("Global '{}' doesn't exist", name);
+			}
+            else
+            {
+                pop(1);
+            }
+		}
+		unsetGlobal(name.c_str());
+	}
+    return *this;
+}
+
+LuaWrapper& LuaWrapper::getmetatable(int index)
+{
+    lua_getmetatable(L, index);
+    return *this;
+}
+
+LuaWrapper& LuaWrapper::setmetatable(int index)
+{
+    lua_setmetatable(L, index);
+    return *this;
+}
+
+LuaWrapper& LuaWrapper::replace(int pos)
+{
+    lua_replace(L, pos);
+    return *this;
+}
+
+LuaStackAutoRestore::LuaStackAutoRestore(lua_State* L)
+{
+    this->L = L;
+	top = lua_gettop(L);
+}
+
+LuaStackAutoRestore::~LuaStackAutoRestore()
+{
+	lua_settop(L, top);
+}
+
+LuaStackTopBackup::LuaStackTopBackup(lua_State* L)
+{
+	this->L = L;
+	top = lua_gettop(L);
+}
+
+void LuaStackTopBackup::restore()
+{
+	lua_settop(L, top);
+}

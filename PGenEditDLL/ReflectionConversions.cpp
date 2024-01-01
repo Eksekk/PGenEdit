@@ -88,3 +88,175 @@ void* luaGetObjectPtr(lua_State* L, int index)
 		return nullptr;
 	}
 }
+
+bool ReflectionConversions::convertVariantToLuaTypeOnStack(lua_State* L, const rttr::variant& val)
+{
+	LuaWrapper w(L);
+	type typ = val.get_type();
+	type_id typeId = typ.get_id();
+	if (typ.is_pointer())
+	{
+		type raw = typ.get_raw_type();
+		// pointer to class type will be converted to instance of class (as a table with ptr)
+		// pointer to primitive type will be converted to that type
+		// pointer to void will be converted to number
+
+		if (val.is_type<void*>())
+		{
+			w.pushnumber((dword_t)val.get_value<void*>());
+		}
+		else if (val.is_type<std::nullptr_t>())
+		{
+			w.pushnumber(0);
+		}
+		else if (raw.is_class())
+		{
+			std::string rawTypeName = typ.get_raw_type().get_name().to_string();
+			w.getPath("pgenedit.cpp.class." + rawTypeName);
+			if (!lua_istable(L, -1))
+			{
+				luaError("Couldn't get class table for class '{}'", rawTypeName);
+				return false;
+			}
+			w.getfield(-1, "?existingObjectAt");
+			if (!lua_isfunction(L, -1))
+			{
+				luaError("Couldn't get function '?existingObjectAt' from class table for class '{}'", rawTypeName);
+				return false;
+			}
+			w.replace(-2); // replace class table with function
+			wxASSERT_MSG(val.convert<void*>() && val.convert<dword_t>(), std::format("Can't convert pointer to class to number. Is type '{}' not registered?", raw));
+			w.pushnumber(val.get_value<dword_t>());
+			if (w.pcall(1, 1, 0) != LUA_OK)
+			{
+				luaError("Couldn't call function '?existingObjectAt' from class table for class '{}': '{}'", rawTypeName, w.tostring(-1));
+				return false;
+			}
+			// leave result on stack
+			return true;
+		}
+		else
+		{
+			luaError("Unsupported pointer type '{}' in convertVariantToLuaTypeOnStack", typ.get_name().to_string());
+			return false;
+		}
+	}
+	if (val.is_sequential_container())
+	{
+		// create table from sequential container
+		rttr::variant_sequential_view seqView = val.create_sequential_view();
+		// IMPORTANT: values are stored inside reference_wrapper, so we have to get wrapped type
+		rttr::type wrappedType = seqView.get_value_type();
+		LuaTable t;
+		for (int i = 0; auto & value : seqView)
+		{
+			t[i++] = convertVariantToLuaTypeInCpp(value.extract_wrapped_value());
+		}
+		t.pushToLuaStack(L);
+	}
+	else if (val.is_associative_container())
+	{
+		// create table from associative container
+		rttr::type wrappedType = val.get_type().get_wrapped_type();
+		rttr::variant_associative_view assocView = val.create_associative_view();
+		rttr::type wrappedKeyType = assocView.get_key_type();
+		rttr::type wrappedValueType = assocView.get_value_type();
+		LuaTable t;
+		for (auto&& [key, value] : assocView)
+		{
+			t[convertVariantToLuaTypeInCpp(key.extract_wrapped_value())] = convertVariantToLuaTypeInCpp(value.extract_wrapped_value());
+		}
+		t.pushToLuaStack(L);
+	}
+	else if (typeId == TYPE_ID_NIL)
+	{
+		w.pushnil();
+	}
+	else if (typeId == TYPE_ID_LUA_TABLE)
+	{
+		if (!val.is_type<LuaTable>())
+		{
+			throw std::runtime_error("Can't convert lua table to lua table, because it's not of type LuaTable");
+		}
+		val.get_value<LuaTable>().pushToLuaStack(L);
+	}
+	else if (typeId == TYPE_ID_BOOL)
+	{
+		w.pushboolean(val.get_value<bool>());
+	}
+	else if (typeId == TYPE_ID_CHAR)
+	{
+		w.pushnumber(static_cast<lua_Number>(val.get_value<char>()));
+	}
+	else if (typeId == TYPE_ID_UNSIGNED_CHAR)
+	{
+		w.pushnumber(static_cast<lua_Number>(val.get_value<unsigned char>()));
+	}
+	else if (typeId == TYPE_ID_SHORT)
+	{
+		w.pushnumber(static_cast<lua_Number>(val.get_value<short>()));
+	}
+	else if (typeId == TYPE_ID_UNSIGNED_SHORT)
+	{
+		w.pushnumber(static_cast<lua_Number>(val.get_value<unsigned short>()));
+	}
+	else if (typeId == TYPE_ID_INT)
+	{
+		w.pushnumber(static_cast<lua_Number>(val.get_value<int>()));
+	}
+	else if (typeId == TYPE_ID_UNSIGNED_INT)
+	{
+		w.pushnumber(static_cast<lua_Number>(val.get_value<unsigned int>()));
+	}
+	else if (typeId == TYPE_ID_LONG)
+	{
+		w.pushnumber(static_cast<lua_Number>(val.get_value<long>()));
+	}
+	else if (typeId == TYPE_ID_UNSIGNED_LONG)
+	{
+		w.pushnumber(static_cast<lua_Number>(val.get_value<unsigned long>()));
+	}
+	else if (typeId == TYPE_ID_LONG_LONG)
+	{
+		w.pushnumber(static_cast<lua_Number>(val.get_value<long long>()));
+	}
+	else if (typeId == TYPE_ID_UNSIGNED_LONG_LONG)
+	{
+		w.pushnumber(static_cast<lua_Number>(val.get_value<unsigned long long>()));
+	}
+	else if (typeId == TYPE_ID_FLOAT)
+	{
+		w.pushnumber(static_cast<lua_Number>(val.get_value<float>()));
+	}
+	else if (typeId == TYPE_ID_DOUBLE)
+	{
+		w.pushnumber(static_cast<lua_Number>(val.get_value<double>()));
+	}
+	else if (typeId == TYPE_ID_LONG_DOUBLE)
+	{
+		w.pushnumber(static_cast<lua_Number>(val.get_value<long double>()));
+	}
+	else if (typeId == TYPE_ID_STRING)
+	{
+		w.pushstring(val.get_value<std::string>());
+	}
+	else if (typeId == TYPE_ID_STRING_VIEW)
+	{
+		w.pushstring(std::string(val.get_value<std::string_view>()));
+	}
+	else if (typeId == TYPE_ID_VOID)
+	{
+		// explicit lack of return value, ignore
+	}
+	else if (typeId == TYPE_ID_VOID_PTR)
+	{
+		w.pushlightuserdata(val.get_value<void*>());
+	}
+	else
+	{
+		luaError("Unsupported type '{}' in convertVariantToLuaTypeOnStack", val.get_type().get_name().to_string());
+		return false;
+		//wxFAIL_MSG(wxString::Format("Can't convert type '%s' to matching lua type", tbl.get_type().get_name().data()));
+	}
+	return true;
+}

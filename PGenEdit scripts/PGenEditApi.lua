@@ -14,11 +14,15 @@ local format = string.format
 -- 7. implement caching for subobjects (as fields or inside containers), so that they are not recreated every time they are accessed
 -- 8. for easy integration of member types (for example inner structs) and data members, store in metadata declaring type?
 
+
 -- for functions need to handle:
 -- 1. type checking for arguments and return types (including small value types range compatibility), C++ will also check this, but it's better to check it here too
 -- 2. objects as arguments and return values
 -- 3. error handling
 -- 4. pass the number of arguments to C++ (for functions with default arguments or for checking if parameters are missing/extra)
+-- 5. don't use type names to do the conversions if possible, use type ids instead
+
+-- CONVENTION: for callables, those that reside at static address are only "methods", those that are reassignable fields (such at function pointers or std::function) are considered "methods" and "fields" at the same time
 
 -- minor style convention I adopted: functions in metatables should be qualified with __, for consistency with built-in metamethods, and also to disambiguate them from regular functions
 
@@ -58,6 +62,7 @@ end
 local function isClassObject(obj)
 	return obj and (type(obj) == "userdata" or type(obj) == "table") and getmetatable(obj) and getmetatable(obj).className
 end
+-- assign to global variable, so that it can be used in C++ code
 pgenedit.cpp.isClassObject = isClassObject
 
 local function isClass(entity)
@@ -81,7 +86,7 @@ function isObjectOfClassOrDerived(obj, checkName)
 	elseif table.find(objMT.classMetatable.bases, checkName) then -- first-level base class
 		return true
 	elseif cpp.class[checkName] then -- check recursively for all base classes
-		for i, name in ipairs(getmetatable(cpp.class[checkName]).bases) do
+		for i, name in ipairs(cpp.class[checkName]["?bases"]) do
 			if isObjectOfClassOrDerived(obj, name) then
 				return true
 			end
@@ -330,11 +335,15 @@ local function getEntityMetadataByPath(entity, fieldName, accessPath)
 end
 
 -- returns key, value, type metadata
-local function enumMembersGeneric(members, obj)
+local function enumMembersGeneric(members, obj, returnValues)
 	return function(t, k)
 		k = next(members, k)
 		if k then
-			return k, obj[k], members[k]
+			if returnValues then
+				return k, obj[k], members[k]
+			else
+				return k, members[k]
+			end
 		end
 	end
 end
@@ -424,7 +433,7 @@ end
 -- for x[555][333] it would be {555}, and 333 would be field name (x is an object)
 
 local function isAnyContainerOrWrapper(metadata)
-	return metadata.isSequentialContainer or metadata.isAssociativeContainer or metadata.isWrapper
+	return metadata.type.isSequentialContainer or metadata.type.isAssociativeContainer or metadata.type.isWrapper
 end
 
 -- returns a copy of table with val inserted at the end
@@ -698,7 +707,8 @@ local createObjectMetatable
 		["?members"] = members,
 		["?bases"] = classMT.bases,
 		["?derived"] = classMT.derived,
-		["?info"] = info
+		["?info"] = info,
+		["?name"] = className
 	}
 
 	-- static variables
@@ -747,6 +757,9 @@ local createObjectMetatable
 	function class.enum()
 		return enumMembersGeneric(members, class)
 	end
+	function class.enumNoValues()
+		return enumMembersGeneric(members, class, false)
+	end
 	return setmetatable(class, classMT)
 end
 
@@ -776,6 +789,7 @@ end
 		["?isOfClassOrDerived"] = function(obj, className)
 			return isObjectOfClassOrDerived(obj, className)
 		end,
+		["?className"] = className,
 	}
 	-- allows syntax such as obj["?copy"]() (without explicit argument)
 	local function ooWrapper(obj)
@@ -828,7 +842,10 @@ end
 	end
 
 	function objMT:enum()
-		return enumMembersGeneric(classMT.members, self)
+		return enumMembersGeneric(classMT.members, self, true)
+	end
+	function objMT:enumNoValues()
+		return enumMembersGeneric(classMT.members, self, false)
 	end
 	return objMT
 end
@@ -843,6 +860,9 @@ do
 	mt.members = members
 	function global.enum() -- this can be called as global.enum(), because "enum" is a reserved keyword in C++
 		return enumMembersGeneric(members, global)
+	end
+	function global.enumNoValues()
+		return enumMembersGeneric(members, global, false)
 	end
 	local customIndexes = {
 		["?getMemberData"] = function(memberName)

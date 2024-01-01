@@ -94,6 +94,8 @@ std::vector<wxString> LuaTests::run()
             return std::get<LuaTable>(val);
         };
 
+    // TODO: also extended Nil test, once I implement appropriate behavior
+
     // "at" method tests
     int atIndex = 1;
     static const wxString atStr = "[LuaTable::at()] Test #%d failed";
@@ -134,7 +136,48 @@ std::vector<wxString> LuaTests::run()
     myassertf(!t5.att(t2).contains(t3), containsStr, containsIndex++);
     myassertf(!t5.att(t2).contains(t5), containsStr, containsIndex++);
 
-    // TODO: also extended Nil test, once I implement appropriate behavior
+    // fromLuaCode tests
+    int fromLuaCodeTestIndex = 1;
+    LuaTable t7 = LuaTable::fromLuaCode(Lua, "{a = 5, b = 6}");
+    myassertf(t7.at("a") == 5LL, "[LuaTable::fromLuaCode()] Test #%d failed, field 'a' is not equal to 5", fromLuaCodeTestIndex++);
+    myassertf(t7.at("b") == 6LL, "[LuaTable::fromLuaCode()] Test #%d failed, field 'b' is not equal to 6", fromLuaCodeTestIndex++);
+    LuaTable t8 = "{a = 5, b = 6}"_luaTable;
+    myassertf(t8.at("a") == 5LL, "[LuaTable::fromLuaCode()] Test #%d failed, field 'a' is not equal to 5", fromLuaCodeTestIndex++);
+    myassertf(t8.at("b") == 6LL, "[LuaTable::fromLuaCode()] Test #%d failed, field 'b' is not equal to 6", fromLuaCodeTestIndex++);
+
+    LuaWrapper w(Lua);
+    w.dostring(R"(
+		function dbl(x)
+            return x * 2
+		end
+
+        function appendStr(str)
+	        return str .. "abc"
+        end
+
+        exampleTable = {["t"] = 23, a = 4, [false] = 5}
+	)");
+    LuaTable t9 = R"(
+		{
+			["t"] = exampleTable.t,
+			a = exampleTable.a,
+			[false] = exampleTable[false],
+            d = dbl(15),
+            s = appendStr("def")
+		}
+)"_luaTable;
+    myassertf(t9.at("t") == 23LL, "[LuaTable::fromLuaCode()] Test #%d failed, field 't' is not equal to 23", fromLuaCodeTestIndex++);
+    myassertf(t9.at("a") == 4LL, "[LuaTable::fromLuaCode()] Test #%d failed, field 'a' is not equal to 4", fromLuaCodeTestIndex++);
+    myassertf(t9.at(false) == 5LL, "[LuaTable::fromLuaCode()] Test #%d failed, field 'false' is not equal to 5", fromLuaCodeTestIndex++);
+    myassertf(t9.at("d") == 30LL, "[LuaTable::fromLuaCode()] Test #%d failed, field 'd' is not equal to 30", fromLuaCodeTestIndex++);
+    myassertf(t9.at("s") == "defabc"s, "[LuaTable::fromLuaCode()] Test #%d failed, field 's' is not equal to 'defabc'", fromLuaCodeTestIndex++);
+
+    w.unsetGlobals({ "dbl", "appendStr", "exampleTable"}, true);
+
+    // getArrayPart tests
+    int getArrayPartIndex = 1;
+
+
     return util::container::mergeVectors({ myasserter.errors, testLuaWrapper() });
 }
 

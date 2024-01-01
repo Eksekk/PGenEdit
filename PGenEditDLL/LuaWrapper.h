@@ -17,6 +17,7 @@ public:
 
     LuaWrapper& pop(int n);
     LuaWrapper& pushvalue(int pos);
+    LuaWrapper& replace(int pos);
 
     LuaWrapper& getfield(int idx, const char* key);
     LuaWrapper& setfield(int idx, const char* key);
@@ -27,6 +28,10 @@ public:
     LuaWrapper& getglobal(const char* name);
     LuaWrapper& setglobal(const char* name);
     LuaWrapper& unsetGlobal(const char* name);
+    // unsets several globals at once, if needToExist is true, throws error if any of them doesn't exist
+    LuaWrapper& unsetGlobals(std::initializer_list<std::string> names, bool needToExist = false);
+    LuaWrapper& getmetatable(int index);
+    LuaWrapper& setmetatable(int index);
 
     LuaWrapper& settop(int index);
     int gettop();
@@ -83,3 +88,22 @@ public:
     void setLuaState(lua_State* val) { L = val; }
 };
 
+// RAII class for restoring stack position
+class LuaStackAutoRestore
+{
+    lua_State* L;
+    int top;
+public:
+    LuaStackAutoRestore(lua_State* L);
+	~LuaStackAutoRestore();
+};
+
+// a class that captures stack position in constructor and restores it only when requested
+class LuaStackTopBackup
+{
+	lua_State* L;
+	int top;
+public:
+	LuaStackTopBackup(lua_State* L);
+	void restore();
+};

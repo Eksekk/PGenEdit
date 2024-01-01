@@ -237,7 +237,7 @@ private:
 			}
 			if (!haveDefault)
 			{
-				luaError("Not enough parameters passed by lua function (expected {}, got {}), can't recover using default values", required.size(), nArgs);
+				//luaError("Not enough parameters passed by lua function (expected {}, got {}), can't recover using default values", required.size(), nArgs);
 				return false;
 			}
 		}

@@ -248,6 +248,20 @@ LuaTable::LuaTable(lua_State* L, int index)
     *this = fromLuaTable(L, index);
 }
 
+LuaTable::LuaTable(lua_State* L, const std::string& luaCode)
+{
+    LuaWrapper w(L);
+    if (!w.dostring("return " + luaCode))
+    {
+		lua::utils::luaError("Error in LuaTable::LuaTable() constructor from lua code: received error '{}'", w.tostring(-1));
+	}
+    else
+    {
+		*this = fromLuaTable(L);
+        w.pop(1);
+	}
+}
+
 void LuaTable::emplace(LuaTypeInCpp&& key, LuaTypeInCpp&& value)
 {
     tryToIntegerRef(key);
@@ -464,6 +478,12 @@ std::string LuaTable::dump(int depth) const
 	}
 }
 
+LuaTable LuaTable::fromLuaCode(lua_State* L, const std::string& code)
+{
+    LuaTable t(L, code);
+    return t;
+}
+
 bool operator==(const LuaTypeInCpp& a, const LuaTypeInCpp& b)
 {
     // cleanest way to have default operator for most types and custom behavior for some, without endless recursion, is this lambda way, I think
@@ -488,6 +508,13 @@ bool operator==(const LuaTypeInCpp& a, const LuaTypeInCpp& b)
             return false;
         }
     }, a, b); // generates lambda handler for each combination of types from variants, that is, usually size(a) * size(b) handlers
+}
+
+LuaTable operator""_luaTable(const char* text, size_t len)
+{
+	wxASSERT_MSG(Lua, "LuaTable operator""_luaTable() called before Lua is initialized");
+	LuaStackAutoRestore stackRestore(Lua);
+    return LuaTable(Lua, std::string(text, len));
 }
 
 RTTR_REGISTRATION
