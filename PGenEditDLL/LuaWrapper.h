@@ -74,6 +74,14 @@ public:
     bool loadstring(const std::string& str);
     bool dostring(const std::string& str);
 
+    // dumps lua stack
+    std::string dumpStack();
+    // calls debug.traceback()
+    std::string luaStackTrace();
+
+    // uses wxStackWalker to add C++ stack trace to lua stack trace
+    std::string cppStackTrace();
+
     // tries to get sequence of tables corresponding to given path separated with dots, uses provided table or global environment, if it's not provided or LUA_GLOBALSINDEX, for first part
     // returns true if successful and only adds to the stack requested object, otherwise returns false and stack is fully restored
     // if "create" is true, acts like "tget" function
@@ -96,6 +104,8 @@ class LuaStackAutoRestore
 public:
     LuaStackAutoRestore(lua_State* L);
 	~LuaStackAutoRestore();
+
+    int getTop() const { return top; }
 };
 
 // a class that captures stack position in constructor and restores it only when requested
@@ -106,4 +116,6 @@ class LuaStackTopBackup
 public:
 	LuaStackTopBackup(lua_State* L);
 	void restore();
+
+    int getTop() const { return top; }
 };

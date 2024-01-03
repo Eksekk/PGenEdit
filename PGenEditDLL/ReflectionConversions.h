@@ -861,9 +861,9 @@ public:
 				rttr::type firstKeyType = rttr::type::get<void*>(), firstValueType = rttr::type::get<void*>();
 				for (auto&& [key, val] : *tbl)
 				{
-					rttr::variant keyVar = convertLuaTypeInCppToVariant(key, firstKeyType.is_valid() ? firstKeyType : keyType);
+					rttr::variant keyVar = convertLuaTypeInCppToVariant(key, firstKeyType ? firstKeyType : keyType);
 					luaAssert(keyVar.is_valid(), "Couldn't convert lua type '{}' to rttr::variant", key);
-					if (!firstKeyType.is_valid())
+					if (!firstKeyType)
 					{
 						firstKeyType = keyVar.get_type();
 					}
@@ -880,9 +880,9 @@ public:
 					}
 					else
 					{
-						rttr::variant valVar = convertLuaTypeInCppToVariant(val, firstValueType.is_valid() ? firstValueType : valType);
+						rttr::variant valVar = convertLuaTypeInCppToVariant(val, firstValueType ? firstValueType : valType);
 						luaAssert(valVar.is_valid(), "Couldn't convert lua type '{}' to rttr::variant", val);
-						if (!firstValueType.is_valid())
+						if (!firstValueType)
 						{
 							firstValueType = valVar.get_type();
 						}
@@ -900,7 +900,7 @@ public:
 			else if (typ.is_class()) // must be registered
 			{
 				rttr::variant var = typ.create(); // !!! will return shared ptr
-				wxASSERT_MSG(var.is_valid(), std::format("Couldn't create instance of class '{}'", typ));
+				wxASSERT_MSG(var, std::format("Couldn't create instance of class '{}'", typ));
 				var = var.extract_wrapped_value(); // extract raw pointer
 				// FIXME: return instance of class, not pointer?
 				return var;

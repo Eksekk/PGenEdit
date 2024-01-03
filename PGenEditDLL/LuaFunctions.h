@@ -42,6 +42,10 @@ namespace lua
 	    // still need to write try-catch block **in first function on call stack called by lua** which calls luaL_error
 	    // note: exception object is automatically destroyed, even though lua might skip C++ code by using longjmp to signal error
 	    // [[noreturn]] doesn't need to be here BTW, exception object is still destroyed
+
+		// FIXME: this works only when the function is actually called by lua, not when it's called by MMExtension via mem.call()
+		// (stack that the hook callback uses is corrupted, because it's not cleaned up)
+		// (when function is called by lua, it receives fresh stack, and it's cleaned up after the function returns)
 	    template<typename... Args>
 	    [[noreturn]] void luaError(const std::string& msg, Args&&... args)
 	    {
@@ -60,6 +64,7 @@ namespace lua
 	
 	    // just found out there's lua_typename() function, oh well
 	    std::string luaTypeToString(lua_State* L, int idx);
+		std::string luaTypeAndValueToString(lua_State* L, int idx);
 	    std::string buildWantedLuaTypeString(lua_State* L, std::initializer_list<int> list);
 	    std::string getLuaTypeMismatchString(lua_State* L, std::initializer_list<int> wanted, int provided, int stackIndex);
 	    std::string getLuaTypeMismatchString(lua_State* L, int wanted, int provided, int stackIndex);

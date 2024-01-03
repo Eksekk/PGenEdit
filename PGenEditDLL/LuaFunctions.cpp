@@ -493,6 +493,11 @@ std::string lua::utils::luaTypeToString(lua_State* L, int idx)
 	return "";
 }
 
+std::string lua::utils::luaTypeAndValueToString(lua_State* L, int idx)
+{
+	return wxString::Format("%s (%s)", lua::utils::luaTypeToString(L, idx), lua_tostring(L, idx)).ToStdString();
+}
+
 std::string lua::utils::getLuaTypeMismatchString(lua_State* L, std::initializer_list<int> wanted, int provided, int stackIndex)
 {
 	return wxString::Format("Expected %s, got %s (stack index of parameter is %d)", lua::utils::buildWantedLuaTypeString(L, wanted), lua::utils::luaTypeToString(L, provided), stackIndex).ToStdString();
@@ -527,19 +532,17 @@ void lua::utils::luaExpectStackSize(lua_State* L, int expected)
 /// <returns>True if the table has the specified metafield, otherwise false.</returns>
 bool lua::utils::luaTableHasMetafield(lua_State* L, int index, const std::string& name)
 {
+	LuaStackAutoRestore stackRestore(L);
 	lua_getmetatable(L, index);
 	if (lua_isnil(L, -1))
 	{
-		lua_pop(L, 1);
 		return false;
 	}
 	lua_getfield(L, -1, name.c_str());
 	if (lua_isnil(L, -1))
 	{
-		lua_pop(L, 2);
 		return false;
 	}
-	lua_pop(L, 2);
 	return true;
 }
 

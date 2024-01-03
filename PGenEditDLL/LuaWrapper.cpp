@@ -2,6 +2,7 @@
 #include "LuaWrapper.h"
 #include "Utility.h"
 #include "LuaFunctions.h"
+#include <wx/stackwalk.h>
 
 LuaWrapper luaWrapper;
 
@@ -386,6 +387,64 @@ LuaWrapper& LuaWrapper::replace(int pos)
 {
     lua_replace(L, pos);
     return *this;
+}
+
+std::string LuaWrapper::dumpStack()
+{
+    std::string result;
+	int top = gettop();
+    for (int i = top; i >= 1; --i)
+    {
+		result += wxString::Format("%d: %s\n", i, lua::utils::luaTypeAndValueToString(L, i));
+	}
+	return result;
+}
+
+class MyStackWalker : public wxStackWalker
+{
+    std::string result;
+    bool skip = false;
+    virtual void OnStackFrame(const wxStackFrame& frame) override
+    {
+        if (skip || frame.GetModule().c_str() == "lua51.dll" || frame.GetModule().c_str() == "lua5.1.dll" || frame.GetModule().c_str() == "lua5.1" || frame.GetModule().c_str() == "lua51")
+        {
+            skip = true; // skip lua call and all before it
+			return;
+		}
+        std::string loc;
+        if (frame.HasSourceLocation())
+        {
+		    loc = std::format("[{}] {}({}:{}):", frame.GetModule(), frame.GetName(), frame.GetFileName(), frame.GetLine());
+		}
+        else
+        {
+            loc = std::format("[{}] {}:", frame.GetModule(), frame.GetName());
+        }
+		result += std::format("{} ({:p}):\t{}\n", frame.GetLevel(), frame.GetAddress(), loc);
+	}
+public:
+    std::string getOutput()
+    {
+        Walk();
+        skip = false;
+        std::string r;
+        r.swap(result);
+        return r;
+    }
+};
+
+std::string LuaWrapper::cppStackTrace()
+{
+    MyStackWalker walker;
+    return walker.getOutput();
+}
+
+std::string LuaWrapper::luaStackTrace()
+{
+    LuaStackAutoRestore restore(L);
+    wxASSERT(getPath("debug.traceback", LUA_GLOBALSINDEX));
+    call(0, 1);
+    return tostring(-1);
 }
 
 LuaStackAutoRestore::LuaStackAutoRestore(lua_State* L)

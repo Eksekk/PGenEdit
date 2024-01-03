@@ -1,8 +1,9 @@
 #include "pch.h"
+#include <wx/stackwalk.h>
 
 RTTR_REGISTRATION
 {
-//     using namespace rttr;
+     using namespace rttr;
 // registration::class_<wxWindowList>("wxWindowList")
 // .method("GetCount", &wxWindowList::GetCount)
 // .method("IsEmpty", &wxWindowList::IsEmpty)
@@ -19,4 +20,20 @@ RTTR_REGISTRATION
 //         .method("GetChildren", select_overload<wxWindowList&()>(&wxWindowBase::GetChildren))
 //         .method("GetChildren", &wxWindowBase::GetChildren);
 //  registerExtra<wxWindowBase>();
+
+registration::class_<wxStackFrame>("wxStackFrame")
+.method("GetAddress", &wxStackFrame::GetAddress)
+.method("GetModule", &wxStackFrame::GetModule)
+.method("GetLine", &wxStackFrame::GetLine)
+.method("GetParamCount", &wxStackFrame::GetParamCount)
+.method("GetParam", &wxStackFrame::GetParam)
+.method("GetLevel", &wxStackFrame::GetLevel)
+.method("GetFileName", &wxStackFrame::GetFileName)
+.method("GetOffset", &wxStackFrame::GetOffset)
+.method("HasSourceLocation", &wxStackFrame::HasSourceLocation);
+	registerExtra<wxStackFrame>();
+
+	registration::class_<wxStackWalker>("wxStackWalker")
+		.method("Walk", &wxStackWalker::Walk);
+	registerExtra<wxStackWalker>();
 }

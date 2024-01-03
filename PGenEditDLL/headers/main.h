@@ -381,6 +381,23 @@ namespace std
 			return format_to(ctx.out(), "{}", s);
 		}
 	};
+
+    // wxString
+    template<>
+    struct formatter<wxString>
+    {
+		template<typename ParseContext>
+        constexpr auto parse(ParseContext& ctx)
+        {
+			return ctx.begin();
+		}
+
+		template<typename FormatContext>
+        auto format(const wxString& p, FormatContext& ctx) const
+        {
+			return format_to(ctx.out(), "{}", p.ToStdString());
+		}
+	};
 }
 
 #endif // __MAIN_H__

@@ -26,6 +26,14 @@ local format = string.format
 
 -- minor style convention I adopted: functions in metatables should be qualified with __, for consistency with built-in metamethods, and also to disambiguate them from regular functions
 
+-- a version of assert that allows for specifying stack error level
+function assertl(val, msg, level)
+	if val == nil then
+		error(msg, (level or 1) + 1)
+	end
+	return val
+end
+
 pgenedit = pgenedit or {}
 tget(pgenedit, "debug").attemptTypeConversion = false -- if true, will attempt to convert parameters to correct type, if false, will throw an error
 
@@ -755,7 +763,7 @@ local createObjectMetatable
 	end
 	local class = {}
 	function class.enum()
-		return enumMembersGeneric(members, class)
+		return enumMembersGeneric(members, class, true)
 	end
 	function class.enumNoValues()
 		return enumMembersGeneric(members, class, false)
@@ -859,7 +867,7 @@ do
 	local members = api.getGlobalEnvironmentInfo()
 	mt.members = members
 	function global.enum() -- this can be called as global.enum(), because "enum" is a reserved keyword in C++
-		return enumMembersGeneric(members, global)
+		return enumMembersGeneric(members, global, true)
 	end
 	function global.enumNoValues()
 		return enumMembersGeneric(members, global, false)
@@ -885,6 +893,7 @@ do
 		elseif data.isCallable then
 			local f = funcWrapper(nil, key, data)
 			--rawset(t, key, f) -- commented out, because std::function fields might theoretically change their value
+			-- FIXME: uncomment it, because as of now, function call wrapper uses not "captured function address" to call it, but the field itself, so rawset should work
 			return f
 		else
 			return api.getGlobalField(key)

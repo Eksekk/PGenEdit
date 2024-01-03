@@ -54,6 +54,7 @@
 - Create "LuaFunction" class, using templates/reflection to call with variable arguments and return values (here is where RTTR and ability to use variable amount of arguments for parameters or return values, when interacting with lua, would be useful). Implementation tip - (https://stackoverflow.com/questions/16868129/how-to-implement-a-variadic-lua-function-in-c). Second implementation tip - store a real function somewhere in lua in a table, which should not be easily accessible to other code (registry subtable?), and instead of storing a function inside this class, store reference to this table (path for example).
 - implement containers for debug api system
 - complete fixing bugs for debug api system and add container tests/more static property tests
+- go through all code and make sure stack is properly restored in case of errors
 
 # Uncategorized
 - better callbacks: add way to remove them, using probably some kind of tokenindicating if it was correct type
