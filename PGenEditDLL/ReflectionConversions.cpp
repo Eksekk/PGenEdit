@@ -48,6 +48,8 @@ using ::lua::utils::isLuaType;
 // handles both userdata and table
 // userdata contains variant, which itself contains shared_ptr to object
 // table contains raw pointer to object
+
+// returns pointer to real object (not shared_ptr) represented by value at given stack index
 void* luaGetObjectPtr(lua_State* L, int index)
 {
 	void* ptr = nullptr;

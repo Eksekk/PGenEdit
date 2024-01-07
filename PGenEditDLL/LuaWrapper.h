@@ -10,8 +10,8 @@ class LuaWrapper // doesn't take ownership of the state, just makes access to it
     lua_State* L;
 public:
 
-    LuaWrapper();
-    LuaWrapper(lua_State* L);
+    explicit LuaWrapper();
+    explicit LuaWrapper(lua_State* L);
 
     int makeAbsoluteStackIndex(int index);
 
@@ -75,7 +75,8 @@ public:
     bool dostring(const std::string& str);
 
     // dumps lua stack
-    std::string dumpStack();
+    // second parameter is to allow using it while debugging, because MSVS doesn't support implicit constructor calls
+    std::string dumpStack(int max = 20, lua_State* L = nullptr);
     // calls debug.traceback()
     std::string luaStackTrace();
 
@@ -92,8 +93,19 @@ public:
     // gets the path (without last element) with getPath and then sets last element to value at provided stack index
     bool setPath(const std::string& path, int valueIndex, int firstElemIndex = LUA_GLOBALSINDEX);
 
+    // checks validity of stack index, throws error (exception) if it's invalid
+    void checkStackIndex(int index);
+
     lua_State* getLuaState() const { return L; }
     void setLuaState(lua_State* val) { L = val; }
+
+    // operator() which takes lua_State* as argument is used to return a new wrapper, which uses that state
+    // it's needed for debugging, because MSVS doesn't support implicit constructor calls
+    [[maybe_unused]] LuaWrapper operator()(lua_State* L) const { return LuaWrapper(L); }
+
+    // ugly hack to force code generation for operator()
+private:
+    static constexpr auto addr = &operator();
 };
 
 // RAII class for restoring stack position

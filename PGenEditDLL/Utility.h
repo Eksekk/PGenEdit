@@ -417,8 +417,9 @@ namespace util
 		static constexpr auto existsInVector = ::existsInVector<T>;
 		template<typename T>
 		static constexpr auto indexInVector = ::indexInVector<T>;
-		template<typename Container, typename Val>
-		static constexpr auto existsInContainer = ::existsInContainer<Container, Val>;
+// 		template<typename Container, typename Val>
+// 		static constexpr auto existsInContainer = ::existsInContainer<Container, Val>;
+		using ::existsInContainer;
 		template<typename Container, typename Val>
 		static constexpr auto indexInContainer = ::indexInContainer<Container, Val>;
 		template<typename Vector>

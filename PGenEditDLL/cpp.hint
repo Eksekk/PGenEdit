@@ -33,3 +33,9 @@ concept Any##name##Struct = SAME(T, mm6::codeName) || SAME(T, mm7::codeName) || 
 #define wxFAIL_MSG(msg)
 #define wxASSERT_MSG(cond, msg) wxASSERT_MSG_AT(cond, msg, __FILE__, __LINE__, __WXFUNCTION__)
 #define wxASSERT_MSG(cond, msg)
+#define MMDEF(_) _(index) _(newindex) _(gc) _(mode) _(eq) _(len) _(lt) _(le) _(concat) _(call) _(add) _(sub) _(mul) _(div) _(mod) _(pow) _(unm) _(metatable) _(tostring) MMDEF_FFI(_) MMDEF_PAIRS(_)
+#define LJ_NORET __attribute__((noreturn))
+#define LJ_NORET __declspec(noreturn)
+#define LJ_NORET
+#define LJ_NOINLINE __attribute__((noinline))
+#define LJ_NOINLINE __declspec(noinline)

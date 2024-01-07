@@ -22,43 +22,50 @@ LuaWrapper& LuaWrapper::pop(int n)
 
 LuaWrapper& LuaWrapper::pushvalue(int pos)
 {
+    checkStackIndex(pos);
     lua_pushvalue(L, pos);
     return *this;
 }
 
 LuaWrapper& LuaWrapper::getfield(int idx, const char* key)
 {
+    checkStackIndex(idx);
     lua_getfield(L, idx, key);
     return *this;
 }
 
 LuaWrapper& LuaWrapper::setfield(int idx, const char* key)
 {
+    checkStackIndex(idx);
     lua_setfield(L, idx, key);
     return *this;
 }
 
 LuaWrapper& LuaWrapper::gettable(int idx)
 {
+    checkStackIndex(idx);
     lua_gettable(L, idx);
     return *this;
 }
 
 LuaWrapper& LuaWrapper::settable(int idx)
 {
-    lua_settable(L, idx);
+	checkStackIndex(idx);
+	lua_settable(L, idx);
     return *this;
 }
 
 LuaWrapper& LuaWrapper::rawget(int idx)
 {
-    lua_rawget(L, idx);
+	checkStackIndex(idx);
+	lua_rawget(L, idx);
     return *this;
 }
 
 LuaWrapper& LuaWrapper::rawset(int idx)
 {
-    lua_rawset(L, idx);
+	checkStackIndex(idx);
+	lua_rawset(L, idx);
     return *this;
 }
 
@@ -93,6 +100,7 @@ bool LuaWrapper::getPath(const std::string& path, int firstElemIndex, bool lastM
 
 bool LuaWrapper::getPath(const std::vector<std::string>& parts, int firstElemIndex, bool lastMustBeTable /*= false*/, bool create /*= false*/)
 {
+    checkStackIndex(firstElemIndex);
     firstElemIndex = makeAbsoluteStackIndex(firstElemIndex);
     if (create)
     {
@@ -174,29 +182,34 @@ LuaWrapper& LuaWrapper::pushlightuserdata(void* p)
 
 std::string LuaWrapper::tostring(int index)
 {
-    size_t s;
+	checkStackIndex(index);
+	size_t s;
     const char* p = lua_tolstring(L, index, &s);
     return std::string(p, s);
 }
 
 lua_Number LuaWrapper::tonumber(int index)
 {
+    checkStackIndex(index);
     return lua_tonumber(L, index);
 }
 
 bool LuaWrapper::toboolean(int index)
 {
+	checkStackIndex(index);
     return lua_toboolean(L, index);
 }
 
 void* LuaWrapper::touserdata(int index)
 {
-    return lua_touserdata(L, index);
+	checkStackIndex(index);
+	return lua_touserdata(L, index);
 }
 
 lua_CFunction LuaWrapper::tocfunction(int index)
 {
-    return lua_tocfunction(L, index);
+	checkStackIndex(index);
+	return lua_tocfunction(L, index);
 }
 
 int LuaWrapper::checkstack(int extra)
@@ -207,6 +220,7 @@ int LuaWrapper::checkstack(int extra)
 
 LuaWrapper& LuaWrapper::concat(int n)
 {
+    checkStackIndex(-n);
     lua_concat(L, n);
     return *this;
 }
@@ -225,67 +239,85 @@ LuaWrapper& LuaWrapper::newtable()
 
 int LuaWrapper::pcall(int nargs, int nresults, int errfunc)
 {
+    if (errfunc)
+    {
+		checkStackIndex(errfunc);
+    }
+    checkStackIndex(-nargs - 1); // args + function
     return lua_pcall(L, nargs, nresults, errfunc);
 }
 
 LuaWrapper& LuaWrapper::call(int nargs, int nresults)
 {
+    checkStackIndex(-nargs - 1); // args + function
     lua_call(L, nargs, nresults);
     return *this;
 }
 
 int LuaWrapper::type(int index)
 {
+	checkStackIndex(index);
     return lua_type(L, index);
 }
 
 bool LuaWrapper::isNil(int index)
 {
-    return lua_isnil(L, index);
+	checkStackIndex(index);
+	return lua_isnil(L, index);
 }
 
 bool LuaWrapper::isNumber(int index)
 {
-    return lua_isnumber(L, index);
+	checkStackIndex(index);
+	return lua_isnumber(L, index);
 }
 
 bool LuaWrapper::isString(int index)
 {
-    return lua_isstring(L, index);
+	checkStackIndex(index);
+	return lua_isstring(L, index);
 }
 
 bool LuaWrapper::isBoolean(int index)
 {
-    return lua_isboolean(L, index);
+	checkStackIndex(index);
+	return lua_isboolean(L, index);
 }
 
 bool LuaWrapper::isTable(int index)
 {
-    return lua_istable(L, index);
+	checkStackIndex(index);
+	return lua_istable(L, index);
 }
 
 bool LuaWrapper::isFunction(int index)
 {
-    return lua_isfunction(L, index);
+	checkStackIndex(index);
+	return lua_isfunction(L, index);
 }
 
 bool LuaWrapper::isThread(int index)
 {
-    return lua_isthread(L, index);
+	checkStackIndex(index);
+	return lua_isthread(L, index);
 }
 
 bool LuaWrapper::isUserdata(int index)
 {
-    return lua_isuserdata(L, index);
+	checkStackIndex(index);
+	return lua_isuserdata(L, index);
 }
 
 bool LuaWrapper::isLightuserdata(int index)
 {
-    return lua_islightuserdata(L, index);
+	checkStackIndex(index);
+	return lua_islightuserdata(L, index);
 }
 
 bool LuaWrapper::setPath(const std::string& path, int valueIndex, int firstElemIndex)
 {
+    checkStackIndex(valueIndex);
+    checkStackIndex(firstElemIndex);
     auto parts = stringSplit(path, ".");
     valueIndex = makeAbsoluteStackIndex(valueIndex);
     firstElemIndex = makeAbsoluteStackIndex(firstElemIndex);
@@ -334,11 +366,13 @@ bool LuaWrapper::dostring(const std::string& str)
 
 LuaTable LuaWrapper::totable(int index)
 {
+    checkStackIndex(index);
     return LuaTable(L, index);
 }
 
 std::string LuaWrapper::typename_(int index)
 {
+    checkStackIndex(index);
     return lua_typename(L, index);
 }
 
@@ -351,6 +385,7 @@ LuaWrapper& LuaWrapper::unsetGlobal(const char* name)
 
 LuaWrapper& LuaWrapper::unsetGlobals(std::initializer_list<std::string> names, bool needToExist)
 {
+    LuaStackAutoRestore restore(L);
     for (const auto& name : names)
     {
         if (needToExist)
@@ -358,13 +393,8 @@ LuaWrapper& LuaWrapper::unsetGlobals(std::initializer_list<std::string> names, b
             getglobal(name.c_str());
             if (isNil(-1))
 			{
-				pop(1);
 				lua::utils::luaError("Global '{}' doesn't exist", name);
 			}
-            else
-            {
-                pop(1);
-            }
 		}
 		unsetGlobal(name.c_str());
 	}
@@ -373,29 +403,43 @@ LuaWrapper& LuaWrapper::unsetGlobals(std::initializer_list<std::string> names, b
 
 LuaWrapper& LuaWrapper::getmetatable(int index)
 {
+    checkStackIndex(index);
     lua_getmetatable(L, index);
     return *this;
 }
 
 LuaWrapper& LuaWrapper::setmetatable(int index)
 {
-    lua_setmetatable(L, index);
+	checkStackIndex(index);
+	lua_setmetatable(L, index);
     return *this;
 }
 
 LuaWrapper& LuaWrapper::replace(int pos)
 {
-    lua_replace(L, pos);
+	checkStackIndex(pos);
+	lua_replace(L, pos);
     return *this;
 }
 
-std::string LuaWrapper::dumpStack()
+std::string LuaWrapper::dumpStack(int max, lua_State* L)
 {
+    if (!L)
+    {
+        L = this->L;
+    }
     std::string result;
-	int top = gettop();
-    for (int i = top; i >= 1; --i)
+	int top = lua_gettop(L); // it's important to use raw lua api function here, because it allows to pass a different lua_State
+    for (int i = top; i >= 1 && i > top - max; --i)
     {
 		result += wxString::Format("%d: %s\n", i, lua::utils::luaTypeAndValueToString(L, i));
+	}
+    if (IsDebuggerPresent())
+	{
+        // correctly render newlines in debugger
+        OutputDebugStringA(wxString::Format("Lua stack dump:\n%s", result));
+        // don't output multiline "array view" of returned string
+        return "";
 	}
 	return result;
 }
@@ -406,7 +450,25 @@ class MyStackWalker : public wxStackWalker
     bool skip = false;
     virtual void OnStackFrame(const wxStackFrame& frame) override
     {
-        if (skip || frame.GetModule().c_str() == "lua51.dll" || frame.GetModule().c_str() == "lua5.1.dll" || frame.GetModule().c_str() == "lua5.1" || frame.GetModule().c_str() == "lua51")
+        static const std::array luaModuleNames{ "lua51.dll", "lua5.1.dll", "lua5.1", "lua51" };
+		// any module above must be loaded
+		static bool tested = false;
+        if (!tested) // only test once
+        {
+			tested = true;
+			bool found = false;
+			for (auto&& name : luaModuleNames)
+			{
+				if (GetModuleHandleA(name))
+				{
+					found = true;
+					break;
+				}
+			}
+			wxASSERT_MSG(found, "Lua module not found - is file version updated, but in-code name not updated?");
+        }
+		std::string mod = frame.GetModule().ToStdString();
+        if (skip || util::container::existsInContainer(luaModuleNames, mod))
         {
             skip = true; // skip lua call and all before it
 			return;
@@ -445,6 +507,20 @@ std::string LuaWrapper::luaStackTrace()
     wxASSERT(getPath("debug.traceback", LUA_GLOBALSINDEX));
     call(0, 1);
     return tostring(-1);
+}
+
+void LuaWrapper::checkStackIndex(int index)
+{
+    int abs = makeAbsoluteStackIndex(index);
+    static_assert(lua_upvalueindex(2) < lua_upvalueindex(1), "lua_upvalueindex(2) must be less than lua_upvalueindex(1)");
+    if (abs != LUA_REGISTRYINDEX && abs != LUA_GLOBALSINDEX && abs != LUA_ENVIRONINDEX && abs > lua_upvalueindex(1) && abs < 1)
+    {
+        lua::utils::luaError("Invalid stack index {}", index);
+    }
+    else if (abs > gettop())
+	{
+		lua::utils::luaError("Stack index {} is out of bounds for stack size {}", index, gettop());
+	}
 }
 
 LuaStackAutoRestore::LuaStackAutoRestore(lua_State* L)
