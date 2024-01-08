@@ -48,7 +48,7 @@ std::string lua::utils::convertLuaTypeInCppToString(const LuaTypeInCpp& type)
 }
 
 // converts value to lua value and pushes it on the stack
-void luaTypeInCppToStack(const LuaTypeInCpp& val, LuaWrapper& wrapper)
+void lua::utils::luaTypeInCppToStack(const LuaTypeInCpp& val, LuaWrapper& wrapper)
 {
     if (const _Nil* nil = std::get_if<_Nil>(&val))
     {
@@ -74,7 +74,13 @@ void luaTypeInCppToStack(const LuaTypeInCpp& val, LuaWrapper& wrapper)
     {
         tbl->pushToLuaStack(wrapper.getLuaState());
     }
+    else
+    {
+		wxFAIL_MSG("Invalid LuaTypeInCpp type");
+	}
 }
+
+using lua::utils::luaTypeInCppToStack;
 
 void LuaTable::pushToLuaStack(lua_State* L) const
 {
@@ -251,7 +257,7 @@ LuaTable::LuaTable(lua_State* L, int index)
 LuaTable::LuaTable(lua_State* L, const std::string& luaCode)
 {
     LuaWrapper w(L);
-    if (!w.dostring("return " + luaCode))
+    if (w.dostring("return " + luaCode) != LUA_OK)
     {
 		lua::utils::luaError("Error in LuaTable::LuaTable() constructor from lua code: received error '{}'", w.tostring(-1));
 	}
@@ -405,10 +411,10 @@ LuaTable LuaTable::constructFromValuesWithArray(const LuaTableValuesWithArray& v
     return constructFromValuesWithArray(std::move(values2));
 }
 
-std::vector<LuaTypeInCpp> LuaTable::getArrayPart() const
+std::vector<LuaTypeInCpp> LuaTable::getArrayPart(int firstIndex) const
 {
     std::vector<LuaTypeInCpp> arrayPart;
-    for (int i = 1; ; ++i)
+    for (int i = firstIndex; ; ++i)
     {
         LuaTypeInCpp key = i;
         if (values.contains(key))
@@ -482,6 +488,16 @@ LuaTable LuaTable::fromLuaCode(lua_State* L, const std::string& code)
 {
     LuaTable t(L, code);
     return t;
+}
+
+void LuaTable::pushArrayPartToLuaStack(lua_State* L, int firstIndex) const
+{
+    auto&& arr = getArrayPart(firstIndex);
+    LuaWrapper w(L);
+    for (const auto& val : arr)
+    {
+		luaTypeInCppToStack(val, w);
+    }
 }
 
 bool operator==(const LuaTypeInCpp& a, const LuaTypeInCpp& b)

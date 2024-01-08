@@ -443,7 +443,7 @@ void fillGameStaticPointersAndSizes()
 LuaTypeInCpp lua::utils::convertStackIndexToLuaTypeInCpp(lua_State* L, int stackIndex)
 {
 	LuaWrapper w(L);
-	switch (lua_type(L, stackIndex))
+	switch (w.type(stackIndex))
 	{
 	case LUA_TNIL:
 		return Nil;
@@ -456,7 +456,7 @@ LuaTypeInCpp lua::utils::convertStackIndexToLuaTypeInCpp(lua_State* L, int stack
 	case LUA_TTABLE:
 		return LuaTable(L, stackIndex);
 	default:
-		luaError("Unsupported lua type '{}'", lua_typename(L, stackIndex));
+		luaError("Unsupported lua type '{}'", w.typename_(stackIndex));
 		return Nil;
 	}
 }

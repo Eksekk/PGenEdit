@@ -1,9 +1,34 @@
 #pragma once
 #include "main.h"
 #include "LuaTable.h"
+#include "LuaFunctions.h"
 
 class LuaWrapper;
-extern LuaWrapper luaWrapper;
+extern LuaWrapper luaWrapper; // wrapper for global lua state (the one Grayface uses to setup his hooking system)
+
+// RAII class for restoring stack position
+class LuaStackAutoRestore
+{
+	lua_State* L;
+	int top;
+public:
+	LuaStackAutoRestore(lua_State* L);
+	~LuaStackAutoRestore();
+
+	int getTop() const { return top; }
+};
+
+// a class that captures stack position in constructor and restores it only when requested
+class LuaStackTopBackup
+{
+	lua_State* L;
+	int top;
+public:
+	LuaStackTopBackup(lua_State* L);
+	void restore();
+
+	int getTop() const { return top; }
+};
 
 class LuaWrapper // doesn't take ownership of the state, just makes access to it more convenient
 {
@@ -32,6 +57,7 @@ public:
     LuaWrapper& unsetGlobals(std::initializer_list<std::string> names, bool needToExist = false);
     LuaWrapper& getmetatable(int index);
     LuaWrapper& setmetatable(int index);
+    int getmetafield(int objIndex, const char* key);
 
     LuaWrapper& settop(int index);
     int gettop();
@@ -43,6 +69,17 @@ public:
     LuaWrapper& pushnil();
     LuaWrapper& pushcfunction(lua_CFunction func);
     LuaWrapper& pushlightuserdata(void* p);
+
+    void* newuserdata(size_t size);
+
+    // allocates new userdata, creates an object there via placement new, and leaves the userdata on stack, returning object pointer
+    // WARNING: don't call delete on returned memory, because it is managed by lua. Call destructor manually instead.
+    template<typename T, typename... Args>
+    T* newObjectAllocateNewUserdata(Args&&... args)
+    {
+        void* p = newuserdata(sizeof(T));
+		return new(p) T(std::forward<Args>(args)...);
+	}
 
     // internally uses tolstring
     std::string tostring(int index);
@@ -70,9 +107,10 @@ public:
     bool isThread(int index);
     bool isUserdata(int index);
     bool isLightuserdata(int index);
-    // return boolean if error occurred, error code, results?
-    bool loadstring(const std::string& str);
-    bool dostring(const std::string& str);
+    // returns error codes used by lua_load (in particular, for successfull load it returns LUA_OK)
+    int loadstring(const std::string& str);
+    // returns error codes used by lua_load (in particular, for successfull load it returns LUA_OK)
+    int dostring(const std::string& str);
 
     // dumps lua stack
     // second parameter is to allow using it while debugging, because MSVS doesn't support implicit constructor calls
@@ -93,6 +131,41 @@ public:
     // gets the path (without last element) with getPath and then sets last element to value at provided stack index
     bool setPath(const std::string& path, int valueIndex, int firstElemIndex = LUA_GLOBALSINDEX);
 
+private:
+    void checkAndTransformIndexes(std::vector<std::reference_wrapper<int>>& indexes);
+    void varargCallSetup(lua_State* L, int funcIndex, const std::vector<LuaTypeInCpp>& args)
+    {
+		checkStackIndex(funcIndex);
+		funcIndex = makeAbsoluteStackIndex(funcIndex);
+        // function needs to be just before arguments
+		if (funcIndex != gettop())
+		{
+			pushvalue(funcIndex); // push function reference to top
+		}
+		// push arguments
+		int top = gettop();
+		LuaTable::fromRange(args).pushArrayPartToLuaStack(L);
+		wxASSERT_MSG(gettop() - top == args.size(), "Number of arguments pushed to stack doesn't match number of arguments provided");
+    }
+
+    std::vector<LuaTypeInCpp> varargCallGetResults(lua_State* L, int resultsNum)
+    {
+		std::vector<LuaTypeInCpp> results;
+		for (int i = 0; i < resultsNum; ++i)
+		{
+			results.push_back(lua::utils::convertStackIndexToLuaTypeInCpp(L, -resultsNum + i));
+		}
+        return results;
+    }
+public:
+    // leaves function unchanged on stack, even if it's top element
+    // returns true if function was called successfully and results inside vector, otherwise returns false and first (and only) vector element contains error message/object (like pcall)
+    std::pair<bool, std::vector<LuaTypeInCpp>> varargPcall(int funcIndex, int resultsNum, const std::vector<LuaTypeInCpp>& args);
+
+    // leaves function unchanged on stack, even if it's top element
+    // returns vector of function results
+    std::vector<LuaTypeInCpp> varargCall(int funcIndex, int resultsNum, const std::vector<LuaTypeInCpp>& args);
+
     // checks validity of stack index, throws error (exception) if it's invalid
     void checkStackIndex(int index);
 
@@ -106,28 +179,4 @@ public:
     // ugly hack to force code generation for operator()
 private:
     static constexpr auto addr = &operator();
-};
-
-// RAII class for restoring stack position
-class LuaStackAutoRestore
-{
-    lua_State* L;
-    int top;
-public:
-    LuaStackAutoRestore(lua_State* L);
-	~LuaStackAutoRestore();
-
-    int getTop() const { return top; }
-};
-
-// a class that captures stack position in constructor and restores it only when requested
-class LuaStackTopBackup
-{
-	lua_State* L;
-	int top;
-public:
-	LuaStackTopBackup(lua_State* L);
-	void restore();
-
-    int getTop() const { return top; }
 };

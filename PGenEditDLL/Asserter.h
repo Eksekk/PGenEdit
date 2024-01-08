@@ -81,6 +81,10 @@ bool Asserter::operator()(const char* func, const char* file, int line, const wx
 	{
 		wxLogError("[%s] %s", category, str);
 	}
+	if (IsDebuggerPresent())
+	{
+		__debugbreak(); // if we're being debugged, break into debugger to inspect call stack and variables
+	}
 	errors.push_back(str);
 	return false;
 }

@@ -180,6 +180,11 @@ LuaWrapper& LuaWrapper::pushlightuserdata(void* p)
     return *this;
 }
 
+void* LuaWrapper::newuserdata(size_t size)
+{
+    return lua_newuserdata(L, size);
+}
+
 std::string LuaWrapper::tostring(int index)
 {
 	checkStackIndex(index);
@@ -354,14 +359,14 @@ int LuaWrapper::makeAbsoluteStackIndex(int index)
     return index >= 0 ? index : lua_gettop(L) + index + 1;
 }
 
-bool LuaWrapper::loadstring(const std::string& str)
+int LuaWrapper::loadstring(const std::string& str)
 {
-    return static_cast<bool>(luaL_loadstring(L, str.c_str()));
+    return luaL_loadstring(L, str.c_str());
 }
 
-bool LuaWrapper::dostring(const std::string& str)
+int LuaWrapper::dostring(const std::string& str)
 {
-    return static_cast<bool>(luaL_dostring(L, str.c_str()));
+    return luaL_dostring(L, str.c_str());
 }
 
 LuaTable LuaWrapper::totable(int index)
@@ -378,8 +383,8 @@ std::string LuaWrapper::typename_(int index)
 
 LuaWrapper& LuaWrapper::unsetGlobal(const char* name)
 {
-    lua_pushnil(L);
-	lua_setglobal(L, name);
+    pushnil();
+	setglobal(name);
 	return *this;
 }
 
@@ -521,6 +526,47 @@ void LuaWrapper::checkStackIndex(int index)
 	{
 		lua::utils::luaError("Stack index {} is out of bounds for stack size {}", index, gettop());
 	}
+}
+
+void LuaWrapper::checkAndTransformIndexes(std::vector<std::reference_wrapper<int>>& indexes)
+{
+    for (auto&& ref : indexes)
+    {
+        checkStackIndex(ref);
+		ref.get() = makeAbsoluteStackIndex(ref);
+    }
+}
+
+int LuaWrapper::getmetafield(int objIndex, const char* key)
+{
+    checkStackIndex(objIndex);
+    return luaL_getmetafield(L, objIndex, key);
+}
+
+std::pair<bool, std::vector<LuaTypeInCpp>> LuaWrapper::varargPcall(int funcIndex, int resultsNum, const std::vector<LuaTypeInCpp>& args)
+{
+	LuaStackAutoRestore stackAutoRestore(L);
+	// assume function is on the stack
+	varargCallSetup(L, funcIndex, args);
+	// call function
+	if (pcall(args.size(), resultsNum, 0) != LUA_OK)
+	{
+		// error occurred
+		return std::make_pair(false, varargCallGetResults(L, 1));
+	}
+	// get results
+	return std::make_pair(true, varargCallGetResults(L, resultsNum));
+}
+
+std::vector<LuaTypeInCpp> LuaWrapper::varargCall(int funcIndex, int resultsNum, const std::vector<LuaTypeInCpp>& args)
+{
+	LuaStackAutoRestore stackAutoRestore(L);
+	// assume function is on the stack
+	varargCallSetup(L, funcIndex, args);
+	// call function
+	call(args.size(), resultsNum);
+	// get results
+	return varargCallGetResults(L, resultsNum);
 }
 
 LuaStackAutoRestore::LuaStackAutoRestore(lua_State* L)

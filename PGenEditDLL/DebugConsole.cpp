@@ -9,7 +9,7 @@ std::pair<std::string, bool> DebugConsole::runLua(const std::string& str)
     int stack = luaWrapper.gettop();
     try
     {
-        success = luaWrapper.dostring(str);
+        success = luaWrapper.dostring(str) == LUA_OK;
         if (!success)
         {
             result = luaWrapper.tostring(-1);

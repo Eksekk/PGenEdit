@@ -2,7 +2,7 @@
 - Redo Asserter class to use own log sink and log messages instead of converting them to text and concatenating, reason: ability to click on each error in error message rather than big block of text
 - more test functions in Asserter like assertTrue, assertFalse, assertAnyThrow (from googletest) etc.
 - project parts requiring tests:
-    - luaWrapper
+    - luaWrapper (in particular, vararg call functions)
     - struct accessors
     - some low level functions
     - GUI classes

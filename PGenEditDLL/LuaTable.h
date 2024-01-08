@@ -30,6 +30,7 @@ using LuaTypeInCpp = std::variant<
     LuaTable
 >;
 using LuaValue = LuaTypeInCpp;
+class LuaWrapper;
 
 namespace lua::utils
 {
@@ -38,6 +39,7 @@ namespace lua::utils
     std::string convertLuaTypeInCppTypeToString(const LuaTypeInCpp& type);
     // this one returns value converted to string
     std::string convertLuaTypeInCppToString(const LuaTypeInCpp& type);
+    void luaTypeInCppToStack(const LuaTypeInCpp& val, LuaWrapper& wrapper);
 }
 
 // from stack overflow
@@ -58,7 +60,7 @@ bool operator!=(const LuaTypeInCpp& a, const LuaTypeInCpp& b);
 using LuaValuePair = std::pair<LuaTypeInCpp, LuaTypeInCpp>;
 
 using LuaTableValues = std::map<LuaTypeInCpp, LuaTypeInCpp>;
-using LuaTableValuesWithArray = std::set<std::variant<LuaTypeInCpp, LuaValuePair>>;
+using LuaTableValuesWithArray = std::set<std::variant<LuaTypeInCpp, LuaValuePair>>; // it's important that this is not unordered, because I want to iterate array part arguments in order
 using LuaTableValuesUPtr = std::unique_ptr<LuaTableValues>;
 struct LuaTable // TODO: storing array part and hashed part separately - will improve table to lua conversion time, but will require tricky code
 {
@@ -91,6 +93,19 @@ struct LuaTable // TODO: storing array part and hashed part separately - will im
     // creates table from lua code, like "{a = 1, b = 2}"
     LuaTable(lua_State* L, const std::string& luaCode);
 
+    // generic factory function from any contiguous range (vector, array, etc.)
+    // this can't be constructor, because otherwise it would be preferred for initializer_list constructors like in LuaTests.cpp
+    template<std::ranges::contiguous_range Range>
+    static LuaTable fromRange(Range&& range, int firstOutputIndex = 1)
+    {
+        LuaTable t;
+        for (int i = firstOutputIndex; auto&& val : range)
+        {
+            t[i++] = val;
+		}
+        return t;
+    }
+
     // unfortunately, can't make this a constructor, because it will be ambiguous with LuaTableValues when passed initializer_list
     // also accepts normal key-value pairs in addition to individual array elements
     static LuaTable constructFromValuesWithArray(LuaTableValuesWithArray&& values);
@@ -121,7 +136,11 @@ struct LuaTable // TODO: storing array part and hashed part separately - will im
     bool contains(const LuaTypeInCpp& type) const;
     // gets consecutive integer keys' values as a vector
     // stops on first missing index
-    std::vector<LuaTypeInCpp> getArrayPart() const;
+    // firstIndex is first numeric index to use
+    std::vector<LuaTypeInCpp> getArrayPart(int firstIndex = 1) const;
+
+    // pushes values in array part to lua stack, in order, firstIndex is first index of array part to use
+    void pushArrayPartToLuaStack(lua_State* L, int firstIndex = 1) const;
     std::string dump(int depth = -1) const;
 private:
     static void luaConvertTypeCommon(lua_State* L, LuaTypeInCpp& val, int stack);
