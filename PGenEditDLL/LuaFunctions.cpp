@@ -11,6 +11,9 @@
 // TODOOOO
 // put global functions related to lua in "lua" namespace
 
+// stored in lua registry
+const std::string pcallErrorHandlerFuncPath = "pgenedit.pcallErrorHandlerFunc";
+
 extern "C"
 {
 	lua_State* Lua = nullptr;
@@ -142,6 +145,10 @@ extern "C"
 		setupGameSaveHandler();
 		fillGameStaticPointersAndSizes();
 		luaL_openlib(Lua, "pgeneditDebugApi", pgeneditDebugApiReg, 0);
+
+		// put pcall error handler function into registry
+		luaWrapper.pushcfunction(pcallErrorFunc);
+		luaWrapper.setPath(pcallErrorHandlerFuncPath, -1, LUA_REGISTRYINDEX, true);
 	}
 
 	bool checkIsInGame()
@@ -546,6 +553,14 @@ bool lua::utils::luaTableHasMetafield(lua_State* L, int index, const std::string
 	return true;
 }
 
+bool lua::pushErrorHandlerFunction(lua_State* L)
+{
+	LuaWrapper w(L);
+	wxASSERT(w.getPath(pcallErrorHandlerFuncPath, LUA_REGISTRYINDEX));
+	wxASSERT_MSG(w.type(-1) == LUA_TFUNCTION, wxString::Format("Error handler function is not a function, but %s", w.typename_(-1)));
+	return true;
+}
+
 extern "C" static int saveGameHandler(lua_State * L)
 {
 	// TODO: autoupdate from save data checkbox?
@@ -588,6 +603,10 @@ void setupGameSaveHandler()
 void luaDeInit()
 {
 	removeGameSaveHandler();
+
+	// clean up registry
+	luaWrapper.pushnil();
+	luaWrapper.setPath("pgenedit", -1, LUA_REGISTRYINDEX);
 }
 
 // TODO (fun!): lua wrappers? like tget wrapper which you call like pgenedit_lua_tget(Lua, "pgenedit", "saveGameData"), or lua_call/lua_pcall wrapper to do smth like
@@ -630,4 +649,18 @@ void removeGameSaveHandler()
 	int type = lua_type(Lua, -1); // if removed successfully, returns function, otherwise nothing (nil)
 	wxASSERT_MSG(type == LUA_TFUNCTION, wxString::Format("Couldn't remove save game handler, received lua type %d", type));
 	lua_settop(Lua, stackPos);
+}
+
+extern "C" static int pcallErrorFunc(lua_State* L)
+{
+	LuaWrapper w(L);
+	// get error message
+	std::string msg = w.tostring(-1);
+	// remove error message from stack
+	w.pop(1);
+	// add stack trace
+	msg += "\n\n" + luaWrapper.luaStackTrace();
+	// push new error message
+	w.pushstring(msg);
+	return 1;
 }

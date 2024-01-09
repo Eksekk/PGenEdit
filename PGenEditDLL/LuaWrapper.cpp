@@ -319,7 +319,7 @@ bool LuaWrapper::isLightuserdata(int index)
 	return lua_islightuserdata(L, index);
 }
 
-bool LuaWrapper::setPath(const std::string& path, int valueIndex, int firstElemIndex)
+bool LuaWrapper::setPath(const std::string& path, int valueIndex, int firstElemIndex, bool create)
 {
     checkStackIndex(valueIndex);
     checkStackIndex(firstElemIndex);
@@ -335,7 +335,7 @@ bool LuaWrapper::setPath(const std::string& path, int valueIndex, int firstElemI
     else
     {
         auto firstParts = std::vector<std::string>(parts.begin(), parts.end() - 1);
-        if (!getPath(firstParts, firstElemIndex))
+        if (!getPath(firstParts, firstElemIndex, true, create))
         {
             return false;
         }
@@ -546,10 +546,14 @@ int LuaWrapper::getmetafield(int objIndex, const char* key)
 std::pair<bool, std::vector<LuaTypeInCpp>> LuaWrapper::varargPcall(int funcIndex, int resultsNum, const std::vector<LuaTypeInCpp>& args)
 {
 	LuaStackAutoRestore stackAutoRestore(L);
+    checkStackIndexAndMakeAbsolute(funcIndex);
+	wxASSERT(lua::pushErrorHandlerFunction(L));
+    int errorFuncIndex = gettop();
+    wxASSERT(errorFuncIndex > 0);
 	// assume function is on the stack
 	varargCallSetup(L, funcIndex, args);
 	// call function
-	if (pcall(args.size(), resultsNum, 0) != LUA_OK)
+	if (pcall(args.size(), resultsNum, errorFuncIndex) != LUA_OK)
 	{
 		// error occurred
 		return std::make_pair(false, varargCallGetResults(L, 1));
@@ -567,6 +571,19 @@ std::vector<LuaTypeInCpp> LuaWrapper::varargCall(int funcIndex, int resultsNum, 
 	call(args.size(), resultsNum);
 	// get results
 	return varargCallGetResults(L, resultsNum);
+}
+
+LuaWrapper& LuaWrapper::remove(int index)
+{
+    checkStackIndex(index);
+	lua_remove(L, index);
+	return *this;
+}
+
+void LuaWrapper::checkStackIndexAndMakeAbsolute(int& index)
+{
+	checkStackIndex(index);
+	index = makeAbsoluteStackIndex(index);
 }
 
 LuaStackAutoRestore::LuaStackAutoRestore(lua_State* L)

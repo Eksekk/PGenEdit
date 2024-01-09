@@ -39,3 +39,12 @@ concept Any##name##Struct = SAME(T, mm6::codeName) || SAME(T, mm7::codeName) || 
 #define LJ_NORET
 #define LJ_NOINLINE __attribute__((noinline))
 #define LJ_NOINLINE __declspec(noinline)
+#define LJ_ALIGN(n) __attribute__((aligned(n)))
+#define LJ_ALIGN(n) __declspec(align(n))
+#define LJ_ENDIAN_LOHI(lo, hi)
+#define MMENUM(name)
+#define LUA_TCDATA (LAST_TT+2)
+#define LJ_DATA
+#define LJ_AINLINE inline __attribute__((always_inline))
+#define LJ_AINLINE
+#define LJ_FUNC

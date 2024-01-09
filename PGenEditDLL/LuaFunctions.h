@@ -19,6 +19,9 @@ extern "C"
 bool detectIfIsMerge();
 void fillGameStaticPointersAndSizes();
 
+// will be stored in lua registry
+extern "C" static int pcallErrorFunc(lua_State* L);
+
 // custom exception, which will be thrown as part one of generating lua error from C++
 // using this, because it properly invokes destructors of objects
 // this exception should be caught by C++ function directly called by lua, and it should execute its own stack objects' destructors and generate lua error
@@ -36,6 +39,8 @@ public:
 
 namespace lua
 {
+	bool pushErrorHandlerFunction(lua_State* L);
+
     namespace utils
 	{
 		// creates "safe" lua error, that is not skipping C++ destructors

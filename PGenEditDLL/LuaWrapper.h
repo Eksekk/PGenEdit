@@ -39,6 +39,7 @@ public:
     explicit LuaWrapper(lua_State* L);
 
     int makeAbsoluteStackIndex(int index);
+    void checkStackIndexAndMakeAbsolute(int& index);
 
     LuaWrapper& pop(int n);
     LuaWrapper& pushvalue(int pos);
@@ -61,6 +62,7 @@ public:
 
     LuaWrapper& settop(int index);
     int gettop();
+    LuaWrapper& remove(int index);
 
     // internally uses pushlstring
     LuaWrapper& pushstring(const std::string& str);
@@ -129,7 +131,7 @@ public:
     bool getPath(const std::vector<std::string>& parts, int firstElemIndex = LUA_GLOBALSINDEX, bool lastMustBeTable = false, bool create = false);
 
     // gets the path (without last element) with getPath and then sets last element to value at provided stack index
-    bool setPath(const std::string& path, int valueIndex, int firstElemIndex = LUA_GLOBALSINDEX);
+    bool setPath(const std::string& path, int valueIndex, int firstElemIndex = LUA_GLOBALSINDEX, bool create = true);
 
 private:
     void checkAndTransformIndexes(std::vector<std::reference_wrapper<int>>& indexes);
