@@ -117,7 +117,9 @@ public:
 
 namespace lua::utils
 {
+	// this function just forwards the function call to LuaValue object, it exists for compatiblity reasons
 	std::string convertLuaTypeInCppTypeToString(const LuaTypeInCpp& type);
+	// this function just forwards the function call to LuaValue object, it exists for compatiblity reasons
 	std::string convertLuaTypeInCppToString(const LuaTypeInCpp& type);
 	void luaTypeInCppToStack(const LuaTypeInCpp& val, LuaWrapper& wrapper);
 }
