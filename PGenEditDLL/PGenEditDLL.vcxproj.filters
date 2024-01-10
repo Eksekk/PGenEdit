@@ -426,6 +426,9 @@
     <ClInclude Include="EditItemDialog.h">
       <Filter>Pliki nagłówkowe\Shared GUI\Item dialog</Filter>
     </ClInclude>
+    <ClInclude Include="LuaValue.h">
+      <Filter>Pliki nagłówkowe</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="sources\MainWindow.cpp">
@@ -721,6 +724,9 @@
     </ClCompile>
     <ClCompile Include="EditItemDialog.cpp">
       <Filter>Pliki źródłowe\Shared GUI\Item dialog</Filter>
+    </ClCompile>
+    <ClCompile Include="LuaValue.cpp">
+      <Filter>Pliki źródłowe</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

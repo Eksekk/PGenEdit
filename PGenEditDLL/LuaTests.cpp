@@ -5,6 +5,7 @@
 #include "LuaWrapper.h"
 #include "LuaFunctions.h"
 #include "GameStructAccessor.h"
+#include "LuaValue.h"
 
 std::vector<wxString> LuaTests::run()
 {

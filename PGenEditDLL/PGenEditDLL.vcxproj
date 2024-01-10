@@ -80,6 +80,7 @@
     <ClInclude Include="LuaFunctions.h" />
     <ClInclude Include="LuaTable.h" />
     <ClInclude Include="LuaTests.h" />
+    <ClInclude Include="LuaValue.h" />
     <ClInclude Include="LuaWrapper.h" />
     <ClInclude Include="MapStructAccessor.h" />
     <ClInclude Include="NotebookReplaceableTabs.h" />
@@ -168,6 +169,7 @@
     <ClCompile Include="LuaFunctions.cpp" />
     <ClCompile Include="LuaTable.cpp" />
     <ClCompile Include="LuaTests.cpp" />
+    <ClCompile Include="LuaValue.cpp" />
     <ClCompile Include="LuaWrapper.cpp" />
     <ClCompile Include="MapStructAccessor.cpp" />
     <ClCompile Include="NotebookReplaceableTabs.cpp" />

@@ -2,6 +2,7 @@
 #include "LuaWrapper.h"
 #include "Utility.h"
 #include "LuaFunctions.h"
+#include "LuaValue.h"
 
 // aliases for lua utility functions
 namespace // anonymous namespace makes it so that these aliases are only visible in this file

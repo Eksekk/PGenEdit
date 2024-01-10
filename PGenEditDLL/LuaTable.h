@@ -1,28 +1,8 @@
 #pragma once
 #include "main.h"
 
-struct _Nil {};
-extern _Nil Nil;
-
-inline bool operator==(const _Nil& lhs, const _Nil& rhs) // for std::unordered_map and other stuff, implements "there is only one Nil value"
-{
-    return true;
-}
-
-inline bool operator<(const _Nil& lhs, const _Nil& rhs) // for std::map
-{
-    return false;
-}
-
-static_assert(sizeof(lua_Number) == 8, "Unexpected lua_Number size");
-
-struct LuaTable;
-using LuaTableUPtr = std::unique_ptr<LuaTable>;
-
-class LuaTypeInCpp;
-// to correctly handle floating-point keys with integer value transformed into integers
-bool operator==(const LuaTypeInCpp& a, const LuaTypeInCpp& b);
-bool operator!=(const LuaTypeInCpp& a, const LuaTypeInCpp& b);
+class LuaValue;
+using LuaTypeInCpp = LuaValue;
 
 using LuaValuePair = std::pair<LuaTypeInCpp, LuaTypeInCpp>;
 
@@ -120,48 +100,6 @@ private:
 	RTTR_REGISTRATION_FRIEND
 };
 
-class LuaTypeInCpp : public std::variant<
-	_Nil,
-	// TODO: I wanted to allow to duplicate lua_Number as sqword_t (and maybe qword_t) to have full 64-bit range of numbers,
-	// but this will cause equality checking errors (different types, same real value) and will require some code to mitigate
-	// !!! also usual floating-point equality checking problems!
-	sqword_t,
-	lua_Number,
-	std::string,
-	bool,
-	LuaTable
->
-{
-public:
-    using base = std::variant<_Nil, sqword_t, lua_Number, std::string, bool, LuaTable>;
-	using base::variant;
-	using base::operator=;
-
-	bool isNil() const;
-	bool isInteger() const;
-	bool isNumber() const;
-	bool isNumberOrInteger() const;
-	bool isString() const;
-	bool isBool() const;
-	bool isTable() const;
-
-	// takes lua_type() return values
-	bool isType(int type) const;
-};
-using LuaValue = LuaTypeInCpp;
-
-class LuaWrapper;
-
-namespace lua::utils
-{
-    // it's like functions that return name of lua type, only that it takes LuaTypeInCpp instead of lua_State* and index
-    // returns name of type, not value
-    std::string convertLuaTypeInCppTypeToString(const LuaTypeInCpp& type);
-    // this one returns value converted to string
-    std::string convertLuaTypeInCppToString(const LuaTypeInCpp& type);
-    void luaTypeInCppToStack(const LuaTypeInCpp& val, LuaWrapper& wrapper);
-}
-
 // from stack overflow
 template<typename Float>
 bool essentiallyEqualFloats(Float a, Float b)
@@ -178,16 +116,6 @@ LuaTable operator ""_luaTable(const char* text, size_t len);
 
 namespace std
 {
-    // text formatters for nil and table
-    template<>
-    struct formatter<_Nil> : formatter<string_view>
-    {
-        template<typename FormatContext>
-        auto format(const _Nil& nil, FormatContext& ctx) const
-        {
-            return formatter<string_view>::format("<nil>", ctx);
-        }
-    };
     template<>
     struct formatter<LuaTable> : formatter<string_view>
     {
@@ -197,30 +125,10 @@ namespace std
             return formatter<string_view>::format(table.dump(), ctx);
         }
     };
-    template<>
-    struct formatter<LuaTypeInCpp> : formatter<string_view>
-    {
-        template<typename FormatContext>
-        auto format(const LuaTypeInCpp& type, FormatContext& ctx) const
-        {
-            std::string typ = lua::utils::convertLuaTypeInCppTypeToString(type), val = lua::utils::convertLuaTypeInCppToString(type);
-            return format_to(ctx.out(), "{} ({})", val, typ);
-        }
-    };
 }
 
-inline bool operator==(const LuaValuePair& lhs, const LuaValuePair& rhs)
-{
-    return lhs.first == rhs.first && lhs.second == rhs.second;
-}
-
-inline bool operator==(const LuaTable& lhs, const LuaTable& rhs)
-{
-    return lhs.values == rhs.values;
-}
-
-inline bool operator<(const LuaTable& lhs, const LuaTable& rhs)
-{
-    return lhs.values < rhs.values;
-}
+// this can't be inline, because LuaTypeInCpp is incomplete type at this point
+bool operator==(const LuaValuePair& lhs, const LuaValuePair& rhs);
+bool operator==(const LuaTable& lhs, const LuaTable& rhs);
+bool operator<(const LuaTable& lhs, const LuaTable& rhs);
 

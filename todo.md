@@ -3,6 +3,7 @@
 - more test functions in Asserter like assertTrue, assertFalse, assertAnyThrow (from googletest) etc.
 - project parts requiring tests:
     - luaWrapper (in particular, vararg call functions)
+    - LuaTypeInCpp/LuaValue
     - struct accessors
     - some low level functions
     - GUI classes
@@ -38,18 +39,14 @@
 - use event loop when opening main window to make editor/generator modal for easier programming and more intuitive design
 
 # Lua
-- big one: create a system for allowing getEventActivator for lua events with arbitrary number of arguments, using vector of LuaTypeInCpp as parameter and return value
+- big one: create a system for allowing getEventActivator for lua events with arbitrary number of arguments, using vector of LuaTypeInCpp as parameter and return value (for semantics as in lua, make so that lua events modifying tables passed by parameter in cpp, still modify the original table received)
+- ANOTHER BIG ONE: since with LuaJIT definitions we can tinker with lua_State* we are passed, we can get global state from it, then explicitly create new thread for pgenedit and use this as our "global" state to not cause problems to Grayface's hook function state we are initially passed; ALSO: I now know why Grayface used his lua_State as registry key - 1) because it is unique, and more importantly, 2) because it probably causes it to not be garbage collected and thus state remains valid
 - add all functions to lua wrapper, add method to pcall, using LuaTypeInCpp as return values and args
-- somehow change LuaTypeInCpp to be own class, where you can add methods etc.
-- add "is" method to LuaTypeInCpp
-- add "getOr" method to LuaTypeInCpp, which would get the value if it is correct type, otherwise return default value and maybe boolean 
 - make debug console fully functional (GUI class and ability to execute lua code)
 - create a function, which calls a C++ std::function for each key/value pair in a lua table (can be also from stack) - some kind of iterator for lua tables
 - for extra fun, do the above using C++ coroutines to implement a kind of "generator"
 - better error handling in lua wrapper
 - create lua scripts for getting all data from lua (for example, spell data is missing)
-- extend lua wrapper to allow calling functions with arbitrary number of arguments
-- create variadic versions of pcall and call for LuaWrapper, which take LuaTypeInCpp as arguments and return value, push arguments on stack, and call the function
 - overload appropriate LuaWrapper functions to accept LuaTypeInCpp as arguments
 - Create "LuaFunction" class, using templates/reflection to call with variable arguments and return values (here is where RTTR and ability to use variable amount of arguments for parameters or return values, when interacting with lua, would be useful). Implementation tip - (https://stackoverflow.com/questions/16868129/how-to-implement-a-variadic-lua-function-in-c). Second implementation tip - store a real function somewhere in lua in a table, which should not be easily accessible to other code (registry subtable?), and instead of storing a function inside this class, store reference to this table (path for example).
 - implement containers for debug api system

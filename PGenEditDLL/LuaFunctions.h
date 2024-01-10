@@ -2,6 +2,7 @@
 #include "main.h"
 #include "LuaTable.h"
 #include "Utility.h"
+#include "LuaValue.h"
 
 extern "C"
 {

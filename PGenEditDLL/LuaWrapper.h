@@ -2,6 +2,7 @@
 #include "main.h"
 #include "LuaTable.h"
 #include "LuaFunctions.h"
+#include "LuaValue.h"
 
 class LuaWrapper;
 extern LuaWrapper luaWrapper; // wrapper for global lua state (the one Grayface uses to setup his hooking system)
