@@ -440,35 +440,6 @@ void fillGameStaticPointersAndSizes()
 }
 
 /// <summary>
-/// Converts a Lua stack index to a corresponding C++ LuaTypeInCpp value.
-/// </summary>
-/// <param name="L">The Lua state pointer.</param>
-/// <param name="stackIndex">The index of the stack to convert.</param>
-/// <returns>
-/// The corresponding C++ LuaTypeInCpp value based on the Lua type at the specified stack index.
-/// </returns>
-LuaTypeInCpp lua::utils::convertStackIndexToLuaTypeInCpp(lua_State* L, int stackIndex)
-{
-	LuaWrapper w(L);
-	switch (w.type(stackIndex))
-	{
-	case LUA_TNIL:
-		return Nil;
-	case LUA_TBOOLEAN:
-		return w.toboolean(stackIndex);
-	case LUA_TSTRING:
-		return w.tostring(stackIndex);
-	case LUA_TNUMBER:
-		return w.tonumber(stackIndex);
-	case LUA_TTABLE:
-		return LuaTable(L, stackIndex);
-	default:
-		luaError("Unsupported lua type '{}'", w.typename_(stackIndex));
-		return Nil;
-	}
-}
-
-/// <summary>
 /// Converts the Lua type at the specified index to a string representation.
 /// </summary>
 /// <param name="L">The Lua state.</param>

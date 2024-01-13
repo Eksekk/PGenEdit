@@ -13,7 +13,7 @@ class LuaStackAutoRestore
 	lua_State* L;
 	int top;
 public:
-	LuaStackAutoRestore(lua_State* L);
+	explicit LuaStackAutoRestore(lua_State* L);
 	~LuaStackAutoRestore();
 
 	int getTop() const { return top; }
@@ -25,7 +25,7 @@ class LuaStackTopBackup
 	lua_State* L;
 	int top;
 public:
-	LuaStackTopBackup(lua_State* L);
+	explicit LuaStackTopBackup(lua_State* L);
 	void restore();
 
 	int getTop() const { return top; }

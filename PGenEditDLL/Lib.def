@@ -1,5 +1,5 @@
 LIBRARY PGENEDIT
-VERSION 0.2
+VERSION 0.3
 EXPORTS
 	displayControlPanel
 	displayEditorMainWindow
@@ -17,3 +17,4 @@ EXPORTS
 	setSkillData
 	unloadCleanup
 	setItemData
+	getWhichTestsWereRun

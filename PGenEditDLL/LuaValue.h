@@ -52,8 +52,20 @@ public:
 	bool isTable() const;
 
 	// these methods throw if type is not correct
+
+	// throws if type is not floating-point, even if it's an integer and can be converted to it
 	lua_Number& getNumber();
+	// throws if type is not floating-point, even if it's an integer and can be converted to it
 	const lua_Number& getNumber() const;
+	// throws if type is not integer, even if it's integer in floating-point form and can be converted to it
+	sqword_t& getInteger();
+	// throws if type is not integer, even if it's integer in floating-point form and can be converted to it
+	const sqword_t& getInteger() const;
+
+	// converts the value internally to floating-point if needed
+	lua_Number& getNumberAny();
+	// this one is different: it doesn't return const-reference, because I couldn't convert integer to number in const-qualified variant, and it's not needed anyways, because you can't modify const object, so no need for reference. Also, the number is a primitive type, and thus cheap to copy
+	lua_Number getNumberAny() const;
 	std::string& getString();
 	const std::string& getString() const;
 	bool& getBool();
@@ -70,8 +82,13 @@ public:
 	// these methods return pointer to value if type is correct, or nullptr otherwise
 	_Nil* getNilIf();
 	const _Nil* getNilIf() const;
+	sqword_t* getIntegerIf();
+	const sqword_t* getIntegerIf() const;
 	lua_Number* getNumberIf();
 	const lua_Number* getNumberIf() const;
+	lua_Number* getNumberAnyIf();
+	// NOTE: this DOESN'T work if number is integer
+	const lua_Number* getNumberAnyIf() const;
 	std::string* getStringIf();
 	const std::string* getStringIf() const;
 	bool* getBoolIf();
@@ -112,7 +129,9 @@ public:
 	bool toBoolInplace();
 	bool toTableInplace();
 
-	LuaValue(const rttr::variant& var);
+	explicit LuaValue(const rttr::variant& var);
+	// constructor from lua stack
+	LuaValue(lua_State* L, int index);
 };
 
 namespace lua::utils
@@ -122,6 +141,18 @@ namespace lua::utils
 	// this function just forwards the function call to LuaValue object, it exists for compatiblity reasons
 	std::string convertLuaTypeInCppToString(const LuaTypeInCpp& type);
 	void luaTypeInCppToStack(const LuaTypeInCpp& val, LuaWrapper& wrapper);
+
+
+
+	/// <summary>
+	/// Converts a Lua stack index to a corresponding C++ LuaTypeInCpp value.
+	/// </summary>
+	/// <param name="L">The Lua state pointer.</param>
+	/// <param name="stackIndex">The index of the stack to convert.</param>
+	/// <returns>
+	/// The corresponding C++ LuaTypeInCpp value based on the Lua type at the specified stack index.
+	/// </returns>
+	LuaTypeInCpp convertStackIndexToLuaTypeInCpp(lua_State* L, int stackIndex);
 }
 
 namespace std
@@ -143,8 +174,7 @@ namespace std
 		template<typename FormatContext>
 		auto format(const LuaTypeInCpp& type, FormatContext& ctx) const
 		{
-			std::string typ = lua::utils::convertLuaTypeInCppTypeToString(type), val = lua::utils::convertLuaTypeInCppToString(type);
-			return format_to(ctx.out(), "{} ({})", val, typ);
+			return format_to(ctx.out(), "{}", type.toString());
 		}
 	};
 }

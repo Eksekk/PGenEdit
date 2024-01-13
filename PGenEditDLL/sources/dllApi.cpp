@@ -455,4 +455,13 @@ extern "C"
         }
         return 1;
     }
+
+    std::unique_ptr<char> testsRun;
+
+    // FIXME: implement this, should return string with tests that were run (if gui tests were disabled, don't include it etc.)
+    DLL_EXPORT char* __stdcall getWhichTestsWereRun()
+    {
+
+    }
+
 }

@@ -5,6 +5,9 @@
 
 _Nil Nil;
 
+using ::lua::utils::luaError;
+using ::lua::utils::luaAssert;
+
 std::string lua::utils::convertLuaTypeInCppTypeToString(const LuaTypeInCpp& type)
 {
 	return type.typeToString();
@@ -18,34 +21,12 @@ std::string lua::utils::convertLuaTypeInCppToString(const LuaTypeInCpp& type)
 // converts value to lua value and pushes it on the stack
 void lua::utils::luaTypeInCppToStack(const LuaTypeInCpp& val, LuaWrapper& wrapper)
 {
-	if (const _Nil* nil = std::get_if<_Nil>(&val))
-	{
-		wrapper.pushnil();
-	}
-	else if (const sqword_t* num = std::get_if<sqword_t>(&val))
-	{
-		wrapper.pushnumber(*num);
-	}
-	else if (const lua_Number* num = std::get_if<lua_Number>(&val))
-	{
-		wrapper.pushnumber(*num);
-	}
-	else if (const std::string* str = std::get_if<std::string>(&val))
-	{
-		wrapper.pushstring(*str);
-	}
-	else if (const bool* b = std::get_if<bool>(&val))
-	{
-		wrapper.pushboolean(*b);
-	}
-	else if (const LuaTable* tbl = std::get_if<LuaTable>(&val))
-	{
-		tbl->pushToLuaStack(wrapper.getLuaState());
-	}
-	else
-	{
-		wxFAIL_MSG("Invalid LuaTypeInCpp type");
-	}
+	val.pushToLuaStack(wrapper);
+}
+
+LuaTypeInCpp lua::utils::convertStackIndexToLuaTypeInCpp(lua_State* L, int stackIndex)
+{
+	return LuaTypeInCpp(L, stackIndex);
 }
 
 bool operator==(const LuaTypeInCpp& a, const LuaTypeInCpp& b)
@@ -101,42 +82,126 @@ bool LuaValue::isTable() const
 
 lua_Number& LuaValue::getNumber()
 {
-	// TODO: insert return statement here
+	return const_cast<lua_Number&>(static_cast<const LuaValue&>(*this).getNumber());
 }
 
 const lua_Number& LuaValue::getNumber() const
 {
-	// TODO: insert return statement here
+	if (const lua_Number* num = std::get_if<lua_Number>(this))
+	{
+		return *num;
+	}
+	else
+	{
+		luaError("LuaValue is not a floating-point, it's {}", *this);
+	}
+}
+
+sqword_t& LuaValue::getInteger()
+{
+	return const_cast<sqword_t&>(static_cast<const LuaValue&>(*this).getInteger());
+}
+
+const sqword_t& LuaValue::getInteger() const
+{
+	if (const sqword_t* num = std::get_if<sqword_t>(this))
+	{
+		return *num;
+	}
+	else
+	{
+		luaError("LuaValue is not an integer, it's {}", *this);
+	}
+}
+
+lua_Number& LuaValue::getNumberAny()
+{
+	if (lua_Number* num = std::get_if<lua_Number>(this))
+	{
+		return *num;
+	}
+	else if (sqword_t* num = std::get_if<sqword_t>(this))
+	{
+		return emplace<lua_Number>(*num);
+	}
+	else
+	{
+		luaError("LuaValue is not a number, it's {}", *this);
+	}
+}
+
+lua_Number LuaValue::getNumberAny() const
+{
+	// big problem: in non-const getNumberAny(), we converted the variant to integer if it was lua_Number, but we can't so this here, because "this" is const-qualified
+	// could use const_cast, but it's not safe
+	// so, I changed above to work around this problem, so numbers are not converted to integers anymore
+	// but this is not a good solution, because it's not consistent with LuaTable, where we do convert to integers
+	// so, I need to think about this more
+
+	// DECIDED: since this is const version, this means that variant will be initialized only once. So, we can convert it to integer or floating-point in the constructor if needed, and return non-const-reference version as I chose here (because it won't get modified without UB, so no need for reference at all)
+	if (const lua_Number* num = std::get_if<lua_Number>(this))
+	{
+		return *num;
+	}
+	else if (const sqword_t* num = std::get_if<sqword_t>(this))
+	{
+		return *num;
+	}
+	else
+	{
+		luaError("LuaValue is not a number, it's {}", *this);
+	}
 }
 
 std::string& LuaValue::getString()
 {
-	// TODO: insert return statement here
+	return const_cast<std::string&>(static_cast<const LuaValue&>(*this).getString());
 }
 
 const std::string& LuaValue::getString() const
 {
-	// TODO: insert return statement here
+	if (const std::string* str = std::get_if<std::string>(this))
+	{
+		return *str;
+	}
+	else
+	{
+		luaError("LuaValue is not a string, it's {}", *this);
+	}
 }
 
 bool& LuaValue::getBool()
 {
-	// TODO: insert return statement here
+	return const_cast<bool&>(static_cast<const LuaValue&>(*this).getBool());
 }
 
 const bool& LuaValue::getBool() const
 {
-	// TODO: insert return statement here
+	if (const bool* b = std::get_if<bool>(this))
+	{
+		return *b;
+	}
+	else
+	{
+		luaError("LuaValue is not a boolean, it's {}", *this);
+	}
 }
 
 LuaTable& LuaValue::getTable()
 {
-	// TODO: insert return statement here
+	return const_cast<LuaTable&>(static_cast<const LuaValue&>(*this).getTable());
 }
 
 const LuaTable& LuaValue::getTable() const
 {
-	// TODO: insert return statement here
+	if (const LuaTable* tbl = std::get_if<LuaTable>(this))
+	{
+		return *tbl;
+	}
+	else
+	{
+		luaError("LuaValue is not a table, it's {}", *this);
+	}
 }
 
 lua_Number LuaValue::getNumberOr(lua_Number alt) const
@@ -201,12 +266,43 @@ const _Nil* LuaValue::getNilIf() const
 	return std::get_if<_Nil>(this);
 }
 
+sqword_t* LuaValue::getIntegerIf()
+{
+	return std::get_if<sqword_t>(this);
+}
+
+const sqword_t* LuaValue::getIntegerIf() const
+{
+	return std::get_if<sqword_t>(this);
+}
+
 lua_Number* LuaValue::getNumberIf()
 {
 	return std::get_if<lua_Number>(this);
 }
 
 const lua_Number* LuaValue::getNumberIf() const
+{
+	return std::get_if<lua_Number>(this);
+}
+
+lua_Number* LuaValue::getNumberAnyIf()
+{
+	if (lua_Number* num = std::get_if<lua_Number>(this))
+	{
+		return num;
+	}
+	else if (sqword_t* num = std::get_if<sqword_t>(this))
+	{
+		return &emplace<lua_Number>(*num);
+	}
+	else
+	{
+		return nullptr;
+	}
+}
+
+const lua_Number* LuaValue::getNumberAnyIf() const
 {
 	return std::get_if<lua_Number>(this);
 }
@@ -339,10 +435,40 @@ std::string LuaValue::toString() const
 
 void LuaValue::pushToLuaStack(lua_State* L) const
 {
+	LuaWrapper w(L);
+	pushToLuaStack(w);
 }
 
 void LuaValue::pushToLuaStack(LuaWrapper& w) const
 {
+	if (const _Nil* nil = getNilIf())
+	{
+		w.pushnil();
+	}
+	else if (const sqword_t* num = getIntegerIf())
+	{
+		w.pushnumber(*num);
+	}
+	else if (const lua_Number* num = getNumberIf())
+	{
+		w.pushnumber(*num);
+	}
+	else if (const std::string* str = getStringIf())
+	{
+		w.pushstring(*str);
+	}
+	else if (const bool* b = getBoolIf())
+	{
+		w.pushboolean(*b);
+	}
+	else if (const LuaTable* tbl = getTableIf())
+	{
+		tbl->pushToLuaStack(w.getLuaState());
+	}
+	else
+	{
+		wxFAIL_MSG("Invalid LuaTypeInCpp type");
+	}
 }
 
 lua_Number LuaValue::toNumber(bool& ok) const
@@ -387,4 +513,31 @@ bool LuaValue::toTableInplace()
 
 LuaValue::LuaValue(const rttr::variant& var)
 {
+}
+
+LuaValue::LuaValue(lua_State* L, int index)
+{
+	LuaWrapper w(L);
+	switch (w.type(index))
+	{
+	case LUA_TNIL:
+		*this = Nil;
+		break;
+	case LUA_TBOOLEAN:
+		*this = w.toboolean(index);
+		break;
+	case LUA_TSTRING:
+		*this = w.tostring(index);
+		break;
+	case LUA_TNUMBER:
+		*this = w.tonumber(index);
+		break;
+	case LUA_TTABLE:
+		*this = LuaTable(L, index);
+		break;
+	default:
+		luaError("Unsupported lua type '{}'", w.typename_(index));
+		*this = Nil;
+		break;
+	}
 }

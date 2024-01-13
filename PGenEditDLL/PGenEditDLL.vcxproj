@@ -77,6 +77,7 @@
     <ClInclude Include="ItemDialogBase.h" />
     <ClInclude Include="ItemStructAccessor.h" />
     <ClInclude Include="LodStructAccessor.h" />
+    <ClInclude Include="LuaFunction.h" />
     <ClInclude Include="LuaFunctions.h" />
     <ClInclude Include="LuaTable.h" />
     <ClInclude Include="LuaTests.h" />
@@ -166,6 +167,7 @@
     <ClCompile Include="ItemDialogBase.cpp" />
     <ClCompile Include="ItemStructAccessor.cpp" />
     <ClCompile Include="LodStructAccessor.cpp" />
+    <ClCompile Include="LuaFunction.cpp" />
     <ClCompile Include="LuaFunctions.cpp" />
     <ClCompile Include="LuaTable.cpp" />
     <ClCompile Include="LuaTests.cpp" />
