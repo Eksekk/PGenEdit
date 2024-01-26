@@ -299,3 +299,31 @@ std::pair<rttrOrig::constructor, bool> util::rttr::getMaybeWrappedConstructor(rt
 		return std::make_pair(ctor, false);
 	}
 }
+
+GUID util::guid::create()
+{
+	GUID g;
+	HRESULT ret = CoCreateGuid(&g);
+	if (FAILED(ret))
+	{
+		char buffer[500];
+		FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM, NULL, HRESULT_CODE(ret), 0, buffer, 500, NULL);
+		throw std::runtime_error("Failed to create GUID: " + std::string(buffer));
+	}
+	return g;
+}
+
+std::string util::guid::toString(const GUID& guid)
+{
+	char buffer[40];
+	sprintf_s(buffer, 40, "%08x-%04x-%04x-%02x%02x-%02x%02x%02x%02x%02x%02x",
+		guid.Data1, guid.Data2, guid.Data3,
+		guid.Data4[0], guid.Data4[1], guid.Data4[2], guid.Data4[3],
+		guid.Data4[4], guid.Data4[5], guid.Data4[6], guid.Data4[7]);
+	return std::string(buffer);
+}
+
+std::string util::guid::newGuidString()
+{
+	return toString(create());
+}

@@ -61,7 +61,9 @@ void* luaGetObjectPtr(lua_State* L, int index)
 			luaError("Couldn't get object - userdata is null");
 		}
 		rttr::variant* sharedPtrVar = reinterpret_cast<rttr::variant*>(ptr); // contains shared_ptr
+		luaAssert(sharedPtrVar->get_type().is_wrapper(), "Couldn't get object - userdata doesn't contain variant with shared_ptr inside");
 		rttr::variant rawPtrVar = sharedPtrVar->extract_wrapped_value(); // contains raw pointer
+		luaAssert(rawPtrVar.get_type().is_pointer(), "Couldn't get object - shared_ptr variant obtained from userdata doesn't contain pointer inside");
 		if (!rawPtrVar.convert(rttr::type::get<void*>()) || !rawPtrVar.is_type<void*>())
 		{
 			luaError("Couldn't get object - variant obtained from userdata can't be converted to pointer");

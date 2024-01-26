@@ -52,6 +52,7 @@
 - implement containers for debug api system
 - complete fixing bugs for debug api system and add container tests/more static property tests
 - go through all code and make sure stack is properly restored in case of errors
+- finish LuaFunction class, add LuaUserdata and LuaThread classes
 
 # Uncategorized
 - better callbacks: add way to remove them, using probably some kind of tokenindicating if it was correct type

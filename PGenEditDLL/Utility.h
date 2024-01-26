@@ -435,6 +435,13 @@ namespace util
 
 	}
 
+	namespace guid
+	{
+		GUID create();
+		std::string toString(const GUID& guid);
+		std::string newGuidString();
+	}
+
 	namespace misc
 	{
 		template<typename T>

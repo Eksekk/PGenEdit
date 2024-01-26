@@ -427,10 +427,13 @@
       <Filter>Pliki nagłówkowe\Shared GUI\Item dialog</Filter>
     </ClInclude>
     <ClInclude Include="LuaValue.h">
-      <Filter>Pliki nagłówkowe</Filter>
+      <Filter>Pliki nagłówkowe\Misc\Lua</Filter>
+    </ClInclude>
+    <ClInclude Include="LuaRegistryPersistableValue.h">
+      <Filter>Pliki nagłówkowe\Misc\Lua</Filter>
     </ClInclude>
     <ClInclude Include="LuaFunction.h">
-      <Filter>Pliki nagłówkowe</Filter>
+      <Filter>Pliki nagłówkowe\Misc\Lua</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -729,10 +732,13 @@
       <Filter>Pliki źródłowe\Shared GUI\Item dialog</Filter>
     </ClCompile>
     <ClCompile Include="LuaValue.cpp">
-      <Filter>Pliki źródłowe</Filter>
+      <Filter>Pliki źródłowe\Misc\Lua</Filter>
+    </ClCompile>
+    <ClCompile Include="LuaRegistryPersistableValue.cpp">
+      <Filter>Pliki źródłowe\Misc\Lua</Filter>
     </ClCompile>
     <ClCompile Include="LuaFunction.cpp">
-      <Filter>Pliki źródłowe</Filter>
+      <Filter>Pliki źródłowe\Misc\Lua</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

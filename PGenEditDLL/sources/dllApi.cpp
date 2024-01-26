@@ -461,7 +461,8 @@ extern "C"
     // FIXME: implement this, should return string with tests that were run (if gui tests were disabled, don't include it etc.)
     DLL_EXPORT char* __stdcall getWhichTestsWereRun()
     {
-
+        wxFAIL_MSG("Not implemented");
+        return nullptr;
     }
 
 }
