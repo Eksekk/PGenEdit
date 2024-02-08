@@ -121,13 +121,11 @@ public:
 	lua_Number toNumber(bool& ok) const;
 	std::string toString(bool& ok) const;
 	bool toBool(bool& ok) const;
-	LuaTable toTable(bool& ok) const;
 
 	// same as above, but converts the variant in-place, returning boolean indicating success
 	bool toNumberInplace();
 	bool toStringInplace();
 	bool toBoolInplace();
-	bool toTableInplace();
 
 	explicit LuaValue(const rttr::variant& var);
 	// constructor from lua stack

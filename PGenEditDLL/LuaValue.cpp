@@ -2,6 +2,7 @@
 #include "LuaValue.h"
 #include "LuaTable.h"
 #include "LuaWrapper.h"
+#include "ReflectionConversions.h"
 
 _Nil Nil;
 
@@ -473,46 +474,129 @@ void LuaValue::pushToLuaStack(LuaWrapper& w) const
 
 lua_Number LuaValue::toNumber(bool& ok) const
 {
-	return lua_Number();
+	if (const lua_Number* num = getNumberIf())
+	{
+		ok = true;
+		return *num;
+	}
+	else if (const sqword_t* num = getIntegerIf())
+	{
+		ok = true;
+		return *num;
+	}
+	else if (const std::string* str = getStringIf())
+	{
+		ok = true;
+		try
+		{
+			return std::stod(*str);
+		}
+		catch (const std::exception&)
+		{
+			ok = false;
+			return 0;
+		}
+	}
+	else
+	{
+		ok = false;
+		return 0;
+	}
 }
 
 std::string LuaValue::toString(bool& ok) const
 {
-	return std::string();
+	if (const std::string* str = getStringIf())
+	{
+		ok = true;
+		return *str;
+	}
+	else if (const lua_Number* num = getNumberIf())
+	{
+		ok = true;
+		return std::format("{}", *num);
+	}
+	else if (const sqword_t* num = getIntegerIf())
+	{
+		ok = true;
+		return std::format("{}", *num);
+	}
+	else if (const bool* b = getBoolIf())
+	{
+		ok = true;
+		return *b ? "true" : "false";
+	}
+	else
+	{
+		ok = false;
+		return "";
+	}
 }
 
 bool LuaValue::toBool(bool& ok) const
 {
-	return false;
-}
-
-LuaTable LuaValue::toTable(bool& ok) const
-{
-	return LuaTable();
+	// semantics like in lua: nil and false are false, everything else is true
+	if (getNilIf())
+	{
+		ok = true;
+		return false;
+	}
+	else if (const bool* b = getBoolIf())
+	{
+		ok = true;
+		return *b;
+	}
+	else
+	{
+		ok = true;
+		return true;
+	}	
 }
 
 bool LuaValue::toNumberInplace()
 {
-	return false;
+	bool ok;
+	lua_Number num = toNumber(ok);
+	if (ok)
+	{
+		*this = num;
+	}
+	return ok;
 }
 
 bool LuaValue::toStringInplace()
 {
-	return false;
+	bool ok;
+	std::string str = toString(ok);
+	if (ok)
+	{
+		*this = str;
+	}
+	return ok;
 }
 
 bool LuaValue::toBoolInplace()
 {
-	return false;
-}
-
-bool LuaValue::toTableInplace()
-{
-	return false;
+	bool ok;
+	bool b = toBool(ok);
+	if (ok)
+	{
+		*this = b;
+	}
+	return ok;
 }
 
 LuaValue::LuaValue(const rttr::variant& var)
 {
+	try 
+	{
+		*this = ReflectionConversions::convertVariantToLuaTypeInCpp(var);
+	}
+	catch (const std::exception& ex)
+	{
+		luaError("Failed to convert rttr::variant to LuaValue: {}", ex.what());
+		*this = Nil;
+	}
 }
 
 LuaValue::LuaValue(lua_State* L, int index)

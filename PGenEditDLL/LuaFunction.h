@@ -44,8 +44,11 @@ using LuaFunctionReturn = std::pair<bool, std::vector<LuaValue>>; // first is wh
 using LuaFunctionArgs = std::vector<LuaValue>; // arguments to pass to lua function
 class LuaFunction : public LuaRegistryPersistableValue
 {
+	static bool initPerformed;
 	lua_State* L;
-	std::string name; // optional
+	std::string name; // optional, for debugging and error message purposes
+
+	static void tryInitOnlyOnce();
 public:
 	LuaFunctionReturn operator()(const LuaFunctionArgs& args) const; // uses pcall by default
 	std::vector<LuaValue> callUnprotected(const LuaFunctionArgs& args) const; // uses call by default
@@ -57,7 +60,13 @@ public:
 	// ALTERNATIVE TO declaring functions with extern "C" to register them in lua, which can't be done with lambdas and anything other than raw function pointers, so it would be unsuitable for this class:
 	// use pushcclosure to push a single static C function multiple times, giving it a different upvalue each time (serving as marker of what to call), and then store that upvalue in this class and use that single function with upvalue to dispatch dynamically?
 
-	LuaFunction(lua_State* L, int index, const std::string& name = "<unknown>");
+	LuaFunction(lua_State* L, int index, const std::string& name = "<unknown>") : LuaRegistryPersistableValue(LUA_TFUNCTION), L(L), name(name)
+	{
+		/// more code......
+		
+		// IMPORTANT, needs to be in all constructors: need to initialize functions table in registry if initialization was not performed yet
+		tryInitOnlyOnce();
+	}
 	LuaFunction(const std::vector<LuaValue>& accessPath, int firstElemIndex = LUA_GLOBALSINDEX, const std::string& name = "<unknown>");
 	LuaFunction(const LuaFunction& other);
 
@@ -67,9 +76,10 @@ public:
 		using Signature = GetFunctionSignature<Callable>;
 		static_assert(requires { typename Signature::ReturnType; typename Signature::ArgsTuple; });
 		using Metadata = FunctionMetadata<Callable>;
-	}
+		tryInitOnlyOnce();
 
-	void luaFunctionInit();
+
+	}
 
 	void fetchFromRegistry();
 	void persistInRegistry() const;
