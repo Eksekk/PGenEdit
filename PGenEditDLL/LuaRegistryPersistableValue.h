@@ -37,7 +37,8 @@ private:
 	static void tryInitOnceFor(int type);
 protected:
 	// registry key is GUID represented as string
-	const std::string registryKey;
+	// using shared_ptr to allow proper behavior of copy constructor and assignment operator - copy also identity
+	const std::shared_ptr<const std::string> registryKey;
 
 public:
 	// names of registry subtable field (for functions "functions", for tables "tables", etc.)
@@ -52,6 +53,8 @@ public:
 	LuaRegistryPersistableValue(int luaType);
 	// derived classes NEED to call this copy constructor in their copy constructors
 	LuaRegistryPersistableValue(const LuaRegistryPersistableValue& other);
+	LuaRegistryPersistableValue& operator=(const LuaRegistryPersistableValue& other) = delete;
+	LuaRegistryPersistableValue(LuaRegistryPersistableValue&& other) = default;
 	virtual ~LuaRegistryPersistableValue();
 
 	virtual void updateFromRegistry(lua_State* L) = 0;

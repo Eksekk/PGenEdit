@@ -46,10 +46,11 @@ void LuaRegistryPersistableValue::tryInitOnceFor(int type)
 	}
 }
 
-LuaRegistryPersistableValue::LuaRegistryPersistableValue(int luaType) : registryKey(util::guid::newGuidString()), luaType(luaType)
+LuaRegistryPersistableValue::LuaRegistryPersistableValue(int luaType) : registryKey(new std::string(util::guid::newGuidString())), luaType(luaType)
 {
 	wxASSERT_MSG(util::container::existsInContainer(acceptableTypes, luaType), "LuaRegistryPersistableValue can only be used with LUA_TFUNCTION, LUA_TTABLE, LUA_TUSERDATA, LUA_TTHREAD");
 	tryInitOnceFor(luaType);
+	updateInRegistry(Lua); // insert into registry
 }
 
 LuaRegistryPersistableValue::LuaRegistryPersistableValue(const LuaRegistryPersistableValue& other) : registryKey(other.registryKey), luaType(other.luaType)
@@ -61,5 +62,24 @@ LuaRegistryPersistableValue::LuaRegistryPersistableValue(const LuaRegistryPersis
 
 LuaRegistryPersistableValue::~LuaRegistryPersistableValue()
 {
+	wxASSERT_MSG(registryKey.use_count() > 0, "Cannot have 0 usages when entering destructor");
+	if (registryKey.use_count() == 1) // will be deleted after this function ends, can clear from registry
+	{
+		LuaStackAutoRestore sr(Lua);
+		LuaWrapper w(Lua);
+		w.pushnil().setPath({ "pgenedit", registrySubtableKeyByLuaType.at(luaType), *registryKey }, LUA_REGISTRYINDEX);
+	}
+}
 
+void LuaRegistryPersistableValue::updateFromRegistry(lua_State* L)
+{
+}
+
+bool LuaRegistryPersistableValue::updateInRegistry(lua_State* L) const
+{
+	return false;
+}
+
+void LuaRegistryPersistableValue::pushFromRegistryToLuaStack(lua_State* L) const
+{
 }

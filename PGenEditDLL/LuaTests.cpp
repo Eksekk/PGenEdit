@@ -6,6 +6,7 @@
 #include "LuaFunctions.h"
 #include "GameStructAccessor.h"
 #include "LuaValue.h"
+#include "PersistableLuaTable.h"
 
 std::vector<wxString> LuaTests::run()
 {
@@ -199,14 +200,58 @@ std::vector<wxString> LuaTests::run()
     LuaTable t12 = LuaTable::constructFromValuesWithArray({ 2, "abc", 3, "def", false });
     testMultipleFields(t12, { {1, 2LL}, {2, "abc"s}, {3, 3LL}, {4, "def"s}, {5, false} });
     // few tables with scattered key-value pairs
-    LuaTable t13 = LuaTable::constructFromValuesWithArray({ false, false, LuaValuePair{"a"s, true}, LuaValuePair{3LL, 3LL}, "string"s, LuaValuePair{false, LuaTable()}, 5, 2, LuaValuePair{1, 1}, 5, LuaValuePair{6, "aaaaa"s}});
+    LuaTable t13 = LuaTable::constructFromValuesWithArray({ false, false, LuaValuePair{"a"s, true}, LuaValuePair{25LL, 3LL}, "string"s, LuaValuePair{false, LuaTable()}, 5, 2, LuaValuePair{111, 1}, 5, LuaValuePair{"cdg"s, "aaaaa"s}});
+    testMultipleFields(t13, { {1, false}, {2, false}, {"a"s, true}, {25LL, 3LL}, {3, "string"s}, {false, LuaTable()}, {4, 5LL}, {5, 2LL}, {111, 1LL}, {6, 5LL}, {"cdg"s, "aaaaa"s}});
+    LuaTable t14 = LuaTable::constructFromValuesWithArray({ false, false, false, LuaValuePair{false, false}, "a"s, "a"s, LuaValuePair{"a"s, "a"}, 5, 5, LuaValuePair{55, 5} });
+    testMultipleFields(t14, { {1, false}, {2, false}, {3, false}, {false, false}, {4, "a"s}, {5, "a"s}, {"a"s, "a"s}, {6, 5LL}, {7, 5LL}, {55, 5LL} });
 
 
     // getArrayPart tests
     int getArrayPartIndex = 1;
+    auto getArrayPartTest = [&](const LuaTableValuesWithArray& values)
+        {
+            LuaTable arr = LuaTable::constructFromValuesWithArray(values);
+            std::vector<LuaTypeInCpp> myArrayPart;
+            std::ranges::for_each(values, [&](const auto& var)
+                {
+                    if (std::holds_alternative<LuaValue>(var))
+                    {
+                        myArrayPart.push_back(std::get<LuaValue>(var));
+                    }
+                });
+            myassertf(arr.getArrayPart() == myArrayPart, "[LuaTable::getArrayPart()] Test #%d failed", getArrayPartIndex++);
+        };
 
-    LuaTable arr1 = LuaTable::constructFromValuesWithArray({1, 2, 3, 4, 5, 6, 7, 8, 9, 10});
+    getArrayPartTest({ 1, 2, 5, false });
+    getArrayPartTest({ "a"s, "b"s, "c"s, "d"s });
+    getArrayPartTest({ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 });
+    getArrayPartTest({ LuaValuePair{"a"s, "b"s}, 4, false, LuaTable(), LuaValuePair{LuaTable(), LuaTable()}, "striiiiiiiing"s, LuaValuePair{333333333, "sssss"s} });
+    getArrayPartTest({ 10, LuaValuePair{-1, -2}, 5, 2, "jhsdbfjsdhf"s, LuaValuePair{false, false} });
 
+    // PersistableLuaTable tests, in particular identity-preserving feature
+    int persistableLuaTableIndex = 1;
+    auto persistableLuaTableTest = [&](const LuaTable& t)
+		{
+            LuaStackAutoRestore sr(Lua);
+            LuaWrapper w(Lua);
+			PersistableLuaTable plu(t);
+			// some stack manipulations
+            plu.pushToLuaStack(Lua);
+            plu.updateInRegistry(Lua);
+            PersistableLuaTable plu2(t);
+            // different PLTs created from same table still shouldn't be shared, unless PLT's copy constructor is involved, and only then
+            myassertf(!w.rawequal(-1, -2), "[PersistableLuaTable] Test #%d failed, two tables with different identities are fully equal", persistableLuaTableIndex);
+            PersistableLuaTable plu3(t), plu4(plu3);
+            plu3.pushToLuaStack(Lua);
+            plu4.pushToLuaStack(Lua);
+            myassertf(w.rawequal(-1, -2), "[PersistableLuaTable] Test #%d failed, two tables with same identities are not fully equal", persistableLuaTableIndex);
+            wxASSERT(!t.contains(555)); // so I don't accidentally overwrite with test value
+            plu[555] = 21212LL;
+            plu.updateFromRegistry(Lua);
+            myassertf(!t.contains(555), "[PersistableLuaTable] Test #%d failed, table modifications are visible after restoration from registry", persistableLuaTableIndex);
+
+			++persistableLuaTableIndex;
+		};
 
     return util::container::mergeVectors({ myasserter.errors, testLuaWrapper() });
 }

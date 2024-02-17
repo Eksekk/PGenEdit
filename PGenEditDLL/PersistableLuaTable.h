@@ -21,6 +21,17 @@ public:
 
 	bool compareContentsAndIdentity(lua_State* L, const PersistableLuaTable& other) const;
 
+	// inherit constructors
+	using LuaTable::LuaTable;
+
+	// for now delete until I do proper implementation
+	PersistableLuaTable(const PersistableLuaTable& other);
+	PersistableLuaTable& operator=(const PersistableLuaTable& other) = delete;
+	PersistableLuaTable(PersistableLuaTable&& other);
+
+	PersistableLuaTable();
+	PersistableLuaTable(const LuaTable& t); // copies content and generates new identity
+
 	RTTR_REGISTRATION_FRIEND
 };
 
