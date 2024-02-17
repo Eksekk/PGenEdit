@@ -56,5 +56,6 @@ public:
 
 	virtual void updateFromRegistry(lua_State* L) = 0;
 	virtual bool updateInRegistry(lua_State* L) const = 0;
+	virtual void pushFromRegistryToLuaStack(lua_State* L) const = 0;
 };
 

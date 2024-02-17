@@ -14,6 +14,7 @@ class LuaStackAutoRestore
 	int top;
 public:
 	explicit LuaStackAutoRestore(lua_State* L);
+    explicit LuaStackAutoRestore(const LuaWrapper& w);
 	~LuaStackAutoRestore();
 
 	int getTop() const { return top; }
@@ -26,6 +27,7 @@ class LuaStackTopBackup
 	int top;
 public:
 	explicit LuaStackTopBackup(lua_State* L);
+    explicit LuaStackTopBackup(const LuaWrapper& w);
 	void restore();
 
 	int getTop() const { return top; }
@@ -59,11 +61,15 @@ public:
     LuaWrapper& unsetGlobals(std::initializer_list<std::string> names, bool needToExist = false);
     LuaWrapper& getmetatable(int index);
     LuaWrapper& setmetatable(int index);
+    LuaWrapper& setmetatableArg(int index, const LuaTable& metatable);
     int getmetafield(int objIndex, const char* key);
 
     LuaWrapper& settop(int index);
     int gettop();
     LuaWrapper& remove(int index);
+
+    bool equal(int idx1, int idx2);
+    bool rawequal(int idx1, int idx2);
 
     // internally uses pushlstring
     LuaWrapper& pushstring(const std::string& str);
@@ -133,6 +139,7 @@ public:
 
     // gets the path (without last element) with getPath and then sets last element to value at provided stack index
     bool setPath(const std::string& path, int valueIndex, int firstElemIndex = LUA_GLOBALSINDEX, bool create = true);
+	bool setPath(const std::vector<std::string>& parts, int valueIndex, int firstElemIndex = LUA_GLOBALSINDEX, bool create = true);
 
 private:
     void checkAndTransformIndexes(std::vector<std::reference_wrapper<int>>& indexes);

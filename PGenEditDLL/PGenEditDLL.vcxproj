@@ -87,6 +87,7 @@
     <ClInclude Include="MapStructAccessor.h" />
     <ClInclude Include="NotebookReplaceableTabs.h" />
     <ClInclude Include="PartyStructAccessor.h" />
+    <ClInclude Include="PersistableLuaTable.h" />
     <ClInclude Include="PlayerClass.h" />
     <ClInclude Include="headers\GuiApplication.h" />
     <ClInclude Include="headers\Enum_const.h" />
@@ -178,6 +179,7 @@
     <ClCompile Include="MapStructAccessor.cpp" />
     <ClCompile Include="NotebookReplaceableTabs.cpp" />
     <ClCompile Include="PartyStructAccessor.cpp" />
+    <ClCompile Include="PersistableLuaTable.cpp" />
     <ClCompile Include="PlayerClass.cpp" />
     <ClCompile Include="PlayerResistance.cpp" />
     <ClCompile Include="PlayerSpell.cpp" />

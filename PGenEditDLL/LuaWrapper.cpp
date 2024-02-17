@@ -95,7 +95,7 @@ int LuaWrapper::gettop()
 bool LuaWrapper::getPath(const std::string& path, int firstElemIndex, bool lastMustBeTable, bool create)
 {
     auto parts = stringSplit(path, ".");
-    return getPath(parts,firstElemIndex, lastMustBeTable, create);
+    return getPath(parts, firstElemIndex, lastMustBeTable, create);
 }
 
 bool LuaWrapper::getPath(const std::vector<std::string>& parts, int firstElemIndex, bool lastMustBeTable /*= false*/, bool create /*= false*/)
@@ -321,30 +321,35 @@ bool LuaWrapper::isLightuserdata(int index)
 
 bool LuaWrapper::setPath(const std::string& path, int valueIndex, int firstElemIndex, bool create)
 {
-    checkStackIndex(valueIndex);
-    checkStackIndex(firstElemIndex);
-    auto parts = stringSplit(path, ".");
-    valueIndex = makeAbsoluteStackIndex(valueIndex);
-    firstElemIndex = makeAbsoluteStackIndex(firstElemIndex);
-    if (parts.size() == 1)
-    {
-        pushstring(path.data());
-        pushvalue(valueIndex);
-        lua_settable(L, firstElemIndex);
-    }
-    else
-    {
-        auto firstParts = std::vector<std::string>(parts.begin(), parts.end() - 1);
-        if (!getPath(firstParts, firstElemIndex, true, create))
-        {
-            return false;
-        }
-        lua_pushstring(L, parts.back().data());
-        pushvalue(valueIndex);
-        lua_settable(L, -3);
-        lua_pop(L, 1);
-    }
-    return true;
+	auto parts = stringSplit(path, ".");
+    return setPath(parts, valueIndex, firstElemIndex, create);
+}
+
+bool LuaWrapper::setPath(const std::vector<std::string>& parts, int valueIndex, int firstElemIndex /*= LUA_GLOBALSINDEX*/, bool create /*= true*/)
+{
+	checkStackIndex(valueIndex);
+	checkStackIndex(firstElemIndex);
+	valueIndex = makeAbsoluteStackIndex(valueIndex);
+	firstElemIndex = makeAbsoluteStackIndex(firstElemIndex);
+	if (parts.size() == 1)
+	{
+		pushstring(parts.at(0));
+		pushvalue(valueIndex);
+		lua_settable(L, firstElemIndex);
+	}
+	else
+	{
+		auto firstParts = std::vector<std::string>(parts.begin(), parts.end() - 1);
+		if (!getPath(firstParts, firstElemIndex, true, create))
+		{
+			return false;
+		}
+		lua_pushstring(L, parts.back().data());
+		pushvalue(valueIndex);
+		lua_settable(L, -3);
+		lua_pop(L, 1);
+	}
+	return true;
 }
 
 int LuaWrapper::makeAbsoluteStackIndex(int index)
@@ -580,16 +585,43 @@ LuaWrapper& LuaWrapper::remove(int index)
 	return *this;
 }
 
+bool LuaWrapper::equal(int idx1, int idx2)
+{
+    checkStackIndex(idx1);
+    checkStackIndex(idx2);
+    return static_cast<bool>(lua_equal(L, idx1, idx2));
+}
+
+bool LuaWrapper::rawequal(int idx1, int idx2)
+{
+    checkStackIndex(idx1);
+    checkStackIndex(idx2);
+    return static_cast<bool>(lua_rawequal(L, idx1, idx2));
+}
+
 void LuaWrapper::checkStackIndexAndMakeAbsolute(int& index)
 {
 	checkStackIndex(index);
 	index = makeAbsoluteStackIndex(index);
 }
 
+LuaWrapper& LuaWrapper::setmetatableArg(int index, const LuaTable& metatable)
+{
+    checkStackIndexAndMakeAbsolute(index);
+	metatable.pushToLuaStack(L);
+	setmetatable(index);
+	return *this;
+}
+
 LuaStackAutoRestore::LuaStackAutoRestore(lua_State* L)
 {
     this->L = L;
 	top = lua_gettop(L);
+}
+
+LuaStackAutoRestore::LuaStackAutoRestore(const LuaWrapper& w) : LuaStackAutoRestore(w.getLuaState())
+{
+
 }
 
 LuaStackAutoRestore::~LuaStackAutoRestore()
@@ -601,6 +633,11 @@ LuaStackTopBackup::LuaStackTopBackup(lua_State* L)
 {
 	this->L = L;
 	top = lua_gettop(L);
+}
+
+LuaStackTopBackup::LuaStackTopBackup(const LuaWrapper& w) : LuaStackTopBackup(w.getLuaState())
+{
+
 }
 
 void LuaStackTopBackup::restore()

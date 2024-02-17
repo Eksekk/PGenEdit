@@ -7,23 +7,25 @@ using LuaTypeInCpp = LuaValue;
 using LuaValuePair = std::pair<LuaTypeInCpp, LuaTypeInCpp>;
 
 using LuaTableValues = std::map<LuaTypeInCpp, LuaTypeInCpp>;
-using LuaTableValuesWithArray = std::set<std::variant<LuaTypeInCpp, LuaValuePair>>; // it's important that this is not unordered, because I want to iterate array part arguments in order
+using LuaTableValuesWithArray = std::vector<std::variant<LuaTypeInCpp, LuaValuePair>>; // it's important that this is not unordered, because I want to iterate array part arguments in order
 using LuaTableValuesUPtr = std::unique_ptr<LuaTableValues>;
 struct LuaTable // TODO: storing array part and hashed part separately - will improve table to lua conversion time, but will require tricky code
 {
+protected:
 	// only values as unique_ptr doesn't work
 	// values and table as unique_ptrs don't work with std::unordered_map
 	// values and table as unique_ptrs work with std::map
 	LuaTableValues values;
+public:
 	// !!!!! IMPORTANT
 	// when C function registered in lua is called, it receives lua_State* as first argument, and it's apparently state with entirely different stack
 	// which means, pushes to global "Lua" state won't change the state that the function received, so it's as if nothing was pushed
 	// solution: always take state as argument
 	// not using default argument here with value of "Lua" global, because I would obviously forget to pass the correct state when using inside C functions registered in lua
-	void pushToLuaStack(lua_State* L) const; // converts this structure into lua table on top of the stack
-	// TODO: a version updating lua table at specified index
+	virtual void pushToLuaStack(lua_State* L) const; // converts this structure into lua table on top of the stack
 	// converts table at specified stack index into this value
 	static LuaTable fromLuaTable(lua_State* L, int index = -1);
+	virtual void updateFromLuaTableOnStack(lua_State* L, int index = -1); // updates this structure from lua table at specified stack index
 
 	using iterator = typename LuaTableValues::iterator;
 	using const_iterator = typename LuaTableValues::const_iterator;
@@ -55,11 +57,11 @@ struct LuaTable // TODO: storing array part and hashed part separately - will im
 
 	// unfortunately, can't make this a constructor, because it will be ambiguous with LuaTableValues when passed initializer_list
 	// also accepts normal key-value pairs in addition to individual array elements
+	// FIXME: investigate if this actually assigns array indexes in order, and is not based on element comparisons (for example in case of integer array, 1 could be before 2 even if it's {2, 1}, because 1 is less than 2)
 	static LuaTable constructFromValuesWithArray(LuaTableValuesWithArray&& values);
 	// also accepts normal key-value pairs in addition to individual array elements
 	static LuaTable constructFromValuesWithArray(const LuaTableValuesWithArray& values);
 
-	// 
 	static LuaTable fromLuaCode(lua_State* L, const std::string& code);
 	LuaTable() = default;
 	LuaTable(const LuaTable& other) = default;
@@ -97,6 +99,9 @@ private:
 	static LuaTableValues tryToIntegerFull(const LuaTableValues& values);
 	static LuaTableValues tryToIntegerFull(LuaTableValues&& values);
 
+	friend bool operator==(const LuaTable& lhs, const LuaTable& rhs);
+	friend bool operator<(const LuaTable& lhs, const LuaTable& rhs);
+
 	RTTR_REGISTRATION_FRIEND
 };
 
@@ -129,6 +134,4 @@ namespace std
 
 // this can't be inline, because LuaTypeInCpp is incomplete type at this point
 bool operator==(const LuaValuePair& lhs, const LuaValuePair& rhs);
-bool operator==(const LuaTable& lhs, const LuaTable& rhs);
-bool operator<(const LuaTable& lhs, const LuaTable& rhs);
 

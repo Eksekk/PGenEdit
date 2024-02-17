@@ -76,6 +76,7 @@ public:
 		using Signature = GetFunctionSignature<Callable>;
 		static_assert(requires { typename Signature::ReturnType; typename Signature::ArgsTuple; });
 		using Metadata = FunctionMetadata<Callable>;
+		
 		tryInitOnlyOnce();
 
 

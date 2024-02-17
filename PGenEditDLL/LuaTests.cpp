@@ -175,8 +175,37 @@ std::vector<wxString> LuaTests::run()
 
     w.unsetGlobals({ "dbl", "appendStr", "exampleTable"}, true);
 
+    // constructFromValuesWithArray tests
+    int constructFromValuesWithArrayIndex = 1;
+    auto testMultipleFields = [&](const LuaTable& t, const std::vector<LuaValuePair>& vals)
+        {
+            for (const auto& [index, value] : vals)
+            {
+                if (!t.contains(index))
+                {
+                    myfailf("[LuaTable::constructFromValuesWithArray()] Test #%d failed, field %s is not present", constructFromValuesWithArrayIndex, index.valueToString());
+                }
+                else if (t.at(index) != value)
+                {
+                    myfailf("[LuaTable::constructFromValuesWithArray()] Test #%d failed, field %s is not equal to %s", constructFromValuesWithArrayIndex, index.valueToString(), value.toString());
+                }
+            }
+            ++constructFromValuesWithArrayIndex;
+        };
+    LuaTable t10 = LuaTable::constructFromValuesWithArray({ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 });
+    testMultipleFields(t10, { {1, 1LL}, {10, 10LL} });
+    LuaTable t11 = LuaTable::constructFromValuesWithArray({ 5, 4, 3, 2, 1 });
+    testMultipleFields(t11, { {1, 5LL}, {5, 1LL} });
+    LuaTable t12 = LuaTable::constructFromValuesWithArray({ 2, "abc", 3, "def", false });
+    testMultipleFields(t12, { {1, 2LL}, {2, "abc"s}, {3, 3LL}, {4, "def"s}, {5, false} });
+    // few tables with scattered key-value pairs
+    LuaTable t13 = LuaTable::constructFromValuesWithArray({ false, false, LuaValuePair{"a"s, true}, LuaValuePair{3LL, 3LL}, "string"s, LuaValuePair{false, LuaTable()}, 5, 2, LuaValuePair{1, 1}, 5, LuaValuePair{6, "aaaaa"s}});
+
+
     // getArrayPart tests
     int getArrayPartIndex = 1;
+
+    LuaTable arr1 = LuaTable::constructFromValuesWithArray({1, 2, 3, 4, 5, 6, 7, 8, 9, 10});
 
 
     return util::container::mergeVectors({ myasserter.errors, testLuaWrapper() });

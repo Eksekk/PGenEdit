@@ -21,9 +21,6 @@ using LuaTableUPtr = std::unique_ptr<LuaTable>;
 
 class LuaValue;
 using LuaTypeInCpp = LuaValue;
-// to correctly handle floating-point keys with integer value transformed into integers
-bool operator==(const LuaTypeInCpp& a, const LuaTypeInCpp& b);
-bool operator!=(const LuaTypeInCpp& a, const LuaTypeInCpp& b);
 
 class LuaWrapper;
 
@@ -130,6 +127,10 @@ public:
 	explicit LuaValue(const rttr::variant& var);
 	// constructor from lua stack
 	LuaValue(lua_State* L, int index);
+
+	// to correctly handle floating-point keys with integer value transformed into integers
+	friend bool operator==(const LuaTypeInCpp& a, const LuaTypeInCpp& b);
+	friend bool operator!=(const LuaTypeInCpp& a, const LuaTypeInCpp& b);
 };
 
 namespace lua::utils

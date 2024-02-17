@@ -28,10 +28,11 @@ void LuaRegistryPersistableValue::initFor(int type)
 	w.getPath({ "pgenedit", registrySubtableKeyByLuaType.at(type) }, LUA_REGISTRYINDEX, true, true);
 
 	// need weak values for functions table to not prevent garbage collection of functions
-	w.createtable(0, 0);
-	w.pushstring("v");
-	w.setfield(-2, "__mode");
-	w.setmetatable(-2);
+	w.setmetatableArg(-2, LuaTable{ {{"__mode", "v"}}});
+// 	w.createtable(0, 0);
+// 	w.pushstring("v");
+// 	w.setfield(-2, "__mode");
+// 	w.setmetatable(-2);
 
 	initPerformedFor[type] = true;
 }

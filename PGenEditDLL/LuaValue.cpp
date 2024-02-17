@@ -56,6 +56,11 @@ bool operator==(const LuaTypeInCpp& a, const LuaTypeInCpp& b)
 		}, a, b); // generates lambda handler for each combination of types from variants, that is, usually size(a) * size(b) handlers
 }
 
+bool operator!=(const LuaTypeInCpp& a, const LuaTypeInCpp& b)
+{
+	return !(a == b);
+}
+
 bool LuaValue::isNil() const
 {
 	return std::holds_alternative<_Nil>(*this);

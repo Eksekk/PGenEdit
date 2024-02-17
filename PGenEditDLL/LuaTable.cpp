@@ -424,6 +424,11 @@ void LuaTable::pushArrayPartToLuaStack(lua_State* L, int firstIndex) const
     }
 }
 
+void LuaTable::updateFromLuaTableOnStack(lua_State* L, int index /*= -1*/)
+{
+    *this = LuaTable(L, index);
+}
+
 LuaTable operator""_luaTable(const char* text, size_t len)
 {
 	wxASSERT_MSG(Lua, "LuaTable operator""_luaTable() called before Lua is initialized");
