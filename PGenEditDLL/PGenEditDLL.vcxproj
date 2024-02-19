@@ -23,6 +23,7 @@
     <ClInclude Include="AlignmentRadioBox.h" />
     <ClInclude Include="Asserter.h" />
     <ClInclude Include="AutoBackup.h" />
+    <ClInclude Include="AwardBit.h" />
     <ClInclude Include="CallEvents.h" />
     <ClInclude Include="ClassInfoPanel.h" />
     <ClInclude Include="ClassSettingsTab.h" />
@@ -43,6 +44,7 @@
     <ClInclude Include="EditorSkillValueChooser.h" />
     <ClInclude Include="EditorStatisticsPanel.h" />
     <ClInclude Include="GameData.h" />
+    <ClInclude Include="GameQuest.h" />
     <ClInclude Include="GameStructAccessor.h" />
     <ClInclude Include="GameTime.h" />
     <ClInclude Include="GeneralPanel.h" />
@@ -115,12 +117,14 @@
     <ClInclude Include="PlayerPrimaryStat.h" />
     <ClInclude Include="PrimaryStatWidget.h" />
     <ClInclude Include="Profiler.h" />
+    <ClInclude Include="QuestBit.h" />
     <ClInclude Include="Reflection.h" />
     <ClInclude Include="ReflectionConversions.h" />
     <ClInclude Include="ReflectionTests.h" />
     <ClInclude Include="ResistanceWidget.h" />
     <ClInclude Include="SaveGameData.h" />
     <ClInclude Include="SpecificClassChooserPanel.h" />
+    <ClInclude Include="StatusBit.h" />
     <ClInclude Include="StructAccessor.h" />
     <ClInclude Include="Tests.h" />
     <ClInclude Include="CommandManager.h" />
@@ -132,6 +136,7 @@
     <ClCompile Include="AlignmentRadioBox.cpp" />
     <ClCompile Include="Asserter.cpp" />
     <ClCompile Include="AutoBackup.cpp" />
+    <ClCompile Include="AwardBit.cpp" />
     <ClCompile Include="CallEvents.cpp" />
     <ClCompile Include="ClassGenerationData.cpp" />
     <ClCompile Include="ClassInfoPanel.cpp" />
@@ -152,6 +157,7 @@
     <ClCompile Include="EditorSkillValueChooser.cpp" />
     <ClCompile Include="EditorStatisticsPanel.cpp" />
     <ClCompile Include="GameData.cpp" />
+    <ClCompile Include="GameQuest.cpp" />
     <ClCompile Include="GameStructAccessor.cpp" />
     <ClCompile Include="GameTime.cpp" />
     <ClCompile Include="GeneralPanel.cpp" />
@@ -191,6 +197,7 @@
     <ClCompile Include="PlayerPrimaryStat.cpp" />
     <ClCompile Include="PrimaryStatWidget.cpp" />
     <ClCompile Include="Profiler.cpp" />
+    <ClCompile Include="QuestBit.cpp" />
     <ClCompile Include="Reflection.cpp" />
     <ClCompile Include="ReflectionConversions.cpp" />
     <ClCompile Include="ReflectionTests.cpp" />
@@ -227,6 +234,7 @@
     <ClCompile Include="sources\structs\Monster.cpp" />
     <ClCompile Include="sources\structs\Player.cpp" />
     <ClCompile Include="SpecificClassChooserPanel.cpp" />
+    <ClCompile Include="StatusBit.cpp" />
     <ClCompile Include="StructAccessor.cpp" />
     <ClCompile Include="Tests.cpp" />
     <ClCompile Include="CommandManager.cpp" />

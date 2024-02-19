@@ -5,7 +5,8 @@
 void PersistableLuaTable::pushToLuaStack(lua_State* L) const
 {
     // WARNING: if updateInRegistry method is called, this will cause infinite recursion
-    return LuaTable::pushToLuaStack(L);
+    //return LuaTable::pushToLuaStack(L);
+    return pushFromRegistryToLuaStack(L);
 }
 
 void PersistableLuaTable::updateFromRegistry(lua_State* L)
@@ -18,8 +19,15 @@ void PersistableLuaTable::updateFromRegistry(lua_State* L)
 bool PersistableLuaTable::updateInRegistry(lua_State* L) const
 {
     LuaStackAutoRestore sr(L);
+    // FIXME: need to decide how pushToLuaStack override should work, and also make this function:
+    // 1. push table with original identity to stack
+    // 2. update it with values from current object's values
+    // 3. push updated table to registry
+    throw std::logic_error("Not implemented");
+    pushFromRegistryToLuaStack(L);
+    LuaTable content(L, -1);
     pushToLuaStack(L); // WARNING: if pushToLuaStack calls this method, this will cause infinite recursion
-    return LuaWrapper(L).setPath({LuaRegistryPersistableValue::registrySubtableKeyTables, *registryKey}, LUA_REGISTRYINDEX);
+    return LuaWrapper(L).setPath({LuaRegistryPersistableValue::registrySubtableKeyTables, *registryKey}, -1, LUA_REGISTRYINDEX);
 }
 
 void PersistableLuaTable::pushFromRegistryToLuaStack(lua_State* L) const

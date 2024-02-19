@@ -67,7 +67,7 @@ LuaRegistryPersistableValue::~LuaRegistryPersistableValue()
 	{
 		LuaStackAutoRestore sr(Lua);
 		LuaWrapper w(Lua);
-		w.pushnil().setPath({ "pgenedit", registrySubtableKeyByLuaType.at(luaType), *registryKey }, LUA_REGISTRYINDEX);
+		w.pushnil().setPath({ "pgenedit", registrySubtableKeyByLuaType.at(luaType), *registryKey }, -1, LUA_REGISTRYINDEX);
 	}
 }
 

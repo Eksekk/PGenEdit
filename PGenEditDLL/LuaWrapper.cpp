@@ -130,7 +130,10 @@ bool LuaWrapper::getPath(const std::vector<std::string>& parts, int firstElemInd
         ++n;
         if ((lastMustBeTable || i != parts.size() - 1) && lua_type(L, -1) != LUA_TTABLE) // last part can be any value
         {
-            wxLogError(format, n - 1, part, lua::utils::luaTypeToString(L, -1), "table");
+            //wxLogError(format, n - 1, part, lua::utils::luaTypeToString(L, -1), "table");
+            wxString error = wxString::Format(format, n - 1, part, lua::utils::luaTypeToString(L, -1), "table");
+            error += wxString::Format("\n\nC++ stack trace: %s\n\nLua stack trace: %s", cppStackTrace(), luaStackTrace());
+            wxLogError(error);
             lua_pop(L, n);
             return false;
         }
