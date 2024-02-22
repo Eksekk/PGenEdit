@@ -16,7 +16,6 @@
 # Misc
 
 # GUI
-- inventory control - handle item position
 
 # Code
 - Auto convert structure parameters in hookFunction and hookReplaceCall to their addresses
@@ -67,7 +66,6 @@
 - analyze base classes for GUI classes (like PlayerPanelBase), to see, if their interface should be changed
 - handle json serialization and deserialization for all classes (using RTTR when appropriate?)
 - create some tests for the above
-- find use cases for RTTR and use it
 - test GameTime and TimeChooserCtrl classes
 - document all classes and methods (using doxygen)
 - find a way to make all classes in the project have the same interface for serialization and deserialization

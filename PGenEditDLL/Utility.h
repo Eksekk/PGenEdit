@@ -420,10 +420,12 @@ namespace util
 // 		template<typename Container, typename Val>
 // 		static constexpr auto existsInContainer = ::existsInContainer<Container, Val>;
 		using ::existsInContainer;
-		template<typename Container, typename Val>
-		static constexpr auto indexInContainer = ::indexInContainer<Container, Val>;
-		template<typename Vector>
-		static constexpr auto compileTimeMergeVectors = ::compileTimeMergeVectors<Vector>;
+		//template<typename Container, typename Val>
+		//static constexpr auto indexInContainer = ::indexInContainer<Container, Val>;
+		using ::indexInContainer;
+		//template<typename Vector>
+		//static constexpr auto compileTimeMergeVectors = ::compileTimeMergeVectors<Vector>;
+		using ::compileTimeMergeVectors;
 		// 		template<typename T, size_t S>
 		// 		static constexpr std::string(*toString)(const std::array<T, S>& container, const std::string& separator) = ::containerToString<T, S>;
 		// template<template<typename, typename, typename...> typename Container, typename T, typename... Extra>

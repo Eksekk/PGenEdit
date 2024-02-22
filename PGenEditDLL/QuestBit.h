@@ -35,6 +35,7 @@ struct QuestBitTypeData
 
 class QuestBit
 {
+	const int id;
 	// a list of quests this bit is related to
 	std::vector<GameQuest*> relatedToQuests;
 	std::string description;
@@ -43,6 +44,6 @@ class QuestBit
 	// a list of quest bits that this bit depends on and can't be set until they are set
 	std::vector<QuestBit*> parentQuestBits;
 	// a list of types of this bit along with some data (for example, for FIND_ITEM it will contain id of item to be found)
-	std::vector<QuestBitTypeData> types;
+	const std::vector<QuestBitTypeData> types;
 };
 

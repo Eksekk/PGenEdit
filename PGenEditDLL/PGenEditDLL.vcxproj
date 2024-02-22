@@ -48,6 +48,7 @@
     <ClInclude Include="GameStructAccessor.h" />
     <ClInclude Include="GameTime.h" />
     <ClInclude Include="GeneralPanel.h" />
+    <ClInclude Include="GenerateItemDialog.h" />
     <ClInclude Include="GeneratorGuiBase.h" />
     <ClInclude Include="GuaranteedClassDialog.h" />
     <ClInclude Include="ClassGenerationData.h" />
@@ -161,6 +162,7 @@
     <ClCompile Include="GameStructAccessor.cpp" />
     <ClCompile Include="GameTime.cpp" />
     <ClCompile Include="GeneralPanel.cpp" />
+    <ClCompile Include="GenerateItemDialog.cpp" />
     <ClCompile Include="GeneratorGuiBase.cpp" />
     <ClCompile Include="GuaranteedClassDialog.cpp" />
     <ClCompile Include="GuiTestHelper.cpp" />
