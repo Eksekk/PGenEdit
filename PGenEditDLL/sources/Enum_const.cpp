@@ -40,6 +40,16 @@ int nextFreeCustomId()
 	return id++;
 }
 
+bool checkValidValue(const std::vector<uint64_t>& values, uint64_t value, CheckValueCallback callback)
+{
+	CallbackCheckResult result = callback(value);
+	if (result == CallbackCheckResult::NO_CHANGE)
+	{
+		return std::find(values.begin(), values.end(), value) != values.end();
+	}
+	return result == CallbackCheckResult::VALID;
+}
+
 void checkStatValidity(int stat)
 {
     wxASSERT_MSG(existsInVector(STATS_ALL, stat), wxString::Format("Stat %d doesn't exist in game version %d", stat, MMVER));
@@ -50,7 +60,7 @@ void checkDamageTypeValidity(int dmgType)
     wxASSERT_MSG(existsInVector(ALL_DAMAGE, (int64_t)dmgType), wxString::Format("Damage type %d doesn't exist in game version %d", dmgType, MMVER));
 }
 
-int
+int64_t
 STAT_MIGHT = INVALID_ID,
 STAT_INTELLECT = INVALID_ID,
 STAT_PERSONALITY = INVALID_ID,
@@ -106,7 +116,7 @@ STAT_DARK_ELF = INVALID_ID,
 STAT_VAMPIRE = INVALID_ID,
 STAT_DRAGON = INVALID_ID;
 
-int
+int64_t
 STAT_LIGHT_RESISTANCE = INVALID_ID,
 STAT_DARK_RESISTANCE = INVALID_ID,
 STAT_RANGED_ATTACK_BONUS = INVALID_ID,
@@ -472,23 +482,41 @@ void makeEnums()
         spells = mmv(makeEnumSpells_6, makeEnumSpells_7, makeEnumSpells_8);
 
     stats();
+    callbackStatsInitialize();
     skills();
+    callbackSkillsInitialize();
     damage();
+    callbackDamageInitialize();
     itemSlot();
+    callbackItemSlotInitialize();
     partyBuff();
+    callbackPartyBuffInitialize();
     monsterBits();
+    callbackMonsterBitsInitialize();
     monsterBuff();
+    callbackMonsterBuffInitialize();
     monsterBonus();
+    callbackMonsterBonusInitialize();
     monsterKind();
+    callbackMonsterKindInitialize();
     itemType();
+    callbackItemTypeInitialize();
     houseType();
+    callbackHouseTypeInitialize();
     houseScreens();
+    callbackHouseScreensInitialize();
     facetBits();
+    callbackFacetBitsInitialize();
     faceAnimation();
+    callbackFaceAnimationInitialize();
     condition();
+    callbackConditionInitialize();
     chestBits();
+    callbackChestBitsInitialize();
     aistate();
+    callbackAIStateInitialize();
     spells();
+    callbackSpellsInitialize();
 
 	if (MMVER == 6)
 	{

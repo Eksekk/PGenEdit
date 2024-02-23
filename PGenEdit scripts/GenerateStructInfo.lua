@@ -2012,6 +2012,18 @@ local GENERATED_CONST_SOURCE_NAME = "generatedConsts.cpp"
 local consts, header, source = {}, {}, {}
 local reinitConsts
 do
+	--[[
+		enum class CallbackCheckResult
+	{
+		VALID, // value is valid
+		INVALID, // value is invalid
+		NO_CHANGE // depends on default processing, whether value is valid or not
+	};
+	
+	// callbacks that allow additional processing while checking if certain value is valid for current game version
+	CallbackCheckResult callbackCheckStatValidity(int stat);
+	]]
+	
 	local headerBaseStart = {
 		"#pragma once",
 		"#include \"pch.h\"",
@@ -2025,7 +2037,7 @@ do
 		format("#include \"%s\"", GENERATED_CONST_HEADER_NAME),
 		"",
 		"namespace const\n",
-		"{"
+		"{",
 	}
 
 	function reinitConsts()
@@ -2040,6 +2052,14 @@ local headerBaseEnd = {
 local sourceBaseEnd = {
 	"}"
 }
+
+-- changes name like "MonsterKind" to "Monster kind"
+local function processConstName(name)
+	return name:gsub("([a-z])([A-Z0-9])", function(lower, upper)
+		return lower .. " " .. upper:lower()
+	end)
+end
+
 reinitConsts()
 function processConst(name)
 	if not consts[6] then
@@ -2100,6 +2120,8 @@ function processConst(name)
 	local vector = format("std::vector<int64_t> %s", vectorName)
 	local mapName = formatName(name, "ENUM_TO_STRING")
 	local map = format("std::map<int64_t, std::string> %s", mapName)
+	local invertedMapName = formatName(name, "STRING_TO_ENUM")
+	local invertedMap = format("std::map<std::string, int64_t> %s", invertedMapName)
 	local forwardDecl = {"\textern int64_t"}
 	for i, k in ipairs(allKeys) do
 		table.insert(forwardDecl, "\t\t" .. formatName(k) .. (i == #allKeys and ";" or ","))
@@ -2108,6 +2130,7 @@ function processConst(name)
 		"",
 		"\textern " .. vector .. ";",
 		"\textern " .. map .. ";",
+		"\textern " .. invertedMap .. ";",
 		""
 	})
 	
@@ -2133,31 +2156,47 @@ function processConst(name)
 	end
 	multipleInsert(source, #source + 1, {
 		"",
-		vector .. ";",
-		map .. ";",
+		format("\t%s;", vector),
+		format("\t%s;", map),
 		""
 	})
 	
 	for _, gameVer in ipairs{6, 7, 8} do
 		table.insert(source, string.format("\tvoid makeEnum%s_%d()", name, gameVer))
-		table.insert(source, "{")
+		table.insert(source, "\t{")
 		local vectorVals = {}
 		local mapVals = {}
 		for v, k in sortpairs(table.invert(consts[gameVer][name])) do
 			table.insert(source, string.format("\t\t%s = %d;", formatName(k), v))
 			table.insert(vectorVals, formatName(k))
-			mapVals[#mapVals+1] = format("{%s, %q}", formatName(k), k)
+			mapVals[#mapVals+1] = format("{%s, %q}", formatName(k), processConstName(k))
 		end
 		multipleInsert(source, #source + 1, {
 			"",
 			format("\t\t%s = { %s };", vectorName, table.concat(vectorVals, ", ")),
 			"",
 			format("\t\t%s = { %s };", mapName, table.concat(mapVals, ", ")),
-			"\t}",
 			"",
+			format("\t\t%s = invertMap(%s);", invertedMapName, mapName),
+			"",
+			format("\t\tcallback%sInitialize();", name),
+			"",
+			"\t}",
+			""
 		})
 	end
-	table.insert(source, "")
+
+	-- check value validity
+	local funcName = "check" .. name .. "Validity"
+	local callbackName = "callbackCheck" .. name .. "Validity"
+
+	multipleInsert(source, #source + 1, {
+		"bool " .. funcName .. "(int64_t value)",
+		"{",
+		"\treturn checkValidValue(" .. vectorName .. ", value, " .. callbackName .. ");",
+		"}",
+		""
+	})
 end
 
 local function processConstFinish()
@@ -2165,4 +2204,13 @@ local function processConstFinish()
 	multipleInsert(source, #source + 1, sourceBaseEnd)
 end
 
-local constsToProcess = {"Stats", "Skills", "Damage", "ItemType", "ItemSlot", "PlayerBuff", "PartyBuff", "MonsterBits", "MonsterBuff", "MonsterBonus", "MonsterKind", "HouseType", "HouseScreens", "FacetBits", "FaceAnimation", "Condition", "ChestB
+local constsToProcess = {"Stats", "Skills", "Damage", "ItemType", "ItemSlot", "PlayerBuff", "PartyBuff", "MonsterBits", "MonsterBuff", "MonsterBonus", "MonsterKind", "HouseType", "HouseScreens", "FacetBits", "FaceAnimation", "Condition", "ChestBits", "AIState", "Spells"}
+function writeConsts()
+	for _, const in ipairs(constsToProcess) do
+		processConst(const)
+	end
+	processConstFinish()
+	io.save("constHeader.h", table.concat(header, "\n"))
+	io.save("constSource.cpp", table.concat(source, "\n"))
+	reinitConsts()
+end

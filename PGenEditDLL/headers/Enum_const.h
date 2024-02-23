@@ -151,29 +151,60 @@ void setFieldSizes_8();
 // could be better (static checking), but like I said I don't like template verbosity
 
 // callbacks that allow to do additional processing after generated code runs (for example, to add custom values)
-void callbackStats();
-void callbackSkills();
-void callbackDamage();
-void callbackItemType();
-void callbackItemSlot();
-void callbackPlayerBuff();
-void callbackPartyBuff();
-void callbackMonsterBits();
-void callbackMonsterBuff();
-void callbackMonsterBonus();
-void callbackMonsterKind();
-void callbackHouseType();
-void callbackHouseScreens();
-void callbackFacetBits();
-void callbackFaceAnimation();
-void callbackCondition();
-void callbackChestBits();
-void callbackAIState();
-void callbackSpells();
+void callbackStatsInitialize();
+void callbackSkillsInitialize();
+void callbackDamageInitialize();
+void callbackItemTypeInitialize();
+void callbackItemSlotInitialize();
+void callbackPlayerBuffInitialize();
+void callbackPartyBuffInitialize();
+void callbackMonsterBitsInitialize();
+void callbackMonsterBuffInitialize();
+void callbackMonsterBonusInitialize();
+void callbackMonsterKindInitialize();
+void callbackHouseTypeInitialize();
+void callbackHouseScreensInitialize();
+void callbackFacetBitsInitialize();
+void callbackFaceAnimationInitialize();
+void callbackConditionInitialize();
+void callbackChestBitsInitialize();
+void callbackAIStateInitialize();
+void callbackSpellsInitialize();
+
+enum class CallbackCheckResult
+{
+	VALID, // value is valid
+	INVALID, // value is invalid
+	NO_CHANGE // depends on default processing, whether value is valid or not
+};
+
+// callbacks that allow additional processing while checking if certain value is valid for current game version
+CallbackCheckResult callbackCheckStatValidity(int stat);
+CallbackCheckResult callbackCheckSkillValidity(int skill);
+CallbackCheckResult callbackCheckDamageTypeValidity(int dmg);
+CallbackCheckResult callbackCheckItemTypeValidity(int type);
+CallbackCheckResult callbackCheckItemSlotValidity(int slot);
+CallbackCheckResult callbackCheckPlayerBuffValidity(int buff);
+CallbackCheckResult callbackCheckPartyBuffValidity(int buff);
+CallbackCheckResult callbackCheckMonsterBitsValidity(int bits);
+CallbackCheckResult callbackCheckMonsterBuffValidity(int buff);
+CallbackCheckResult callbackCheckMonsterBonusValidity(int bonus);
+CallbackCheckResult callbackCheckMonsterKindValidity(int kind);
+CallbackCheckResult callbackCheckHouseTypeValidity(int type);
+CallbackCheckResult callbackCheckHouseScreensValidity(int screen);
+CallbackCheckResult callbackCheckFacetBitsValidity(int bits);
+CallbackCheckResult callbackCheckFaceAnimationValidity(int anim);
+CallbackCheckResult callbackCheckConditionValidity(int cond);
+CallbackCheckResult callbackCheckChestBitsValidity(int bits);
+CallbackCheckResult callbackCheckAIStateValidity(int state);
+CallbackCheckResult callbackCheckSpellValidity(int spell);
+
+using CheckValueCallback = CallbackCheckResult(*)(uint64_t);
+bool checkValidValue(const std::vector<uint64_t>& values, uint64_t value, CheckValueCallback callback);
 
 
 // MY ADDITIONS
-extern int
+extern int64_t
 STAT_LIGHT_RESISTANCE,
 STAT_DARK_RESISTANCE,
 STAT_RANGED_ATTACK_BONUS,
@@ -188,7 +219,7 @@ STAT_AGE;
 
 // THIS CODE IS AUTOMATICALLY GENERATED, unless marked otherwise
 
-extern int
+extern int64_t
 STAT_MIGHT,
 STAT_INTELLECT,
 STAT_PERSONALITY,
