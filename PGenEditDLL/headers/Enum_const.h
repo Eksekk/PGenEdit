@@ -179,25 +179,25 @@ enum class CallbackCheckResult
 };
 
 // callbacks that allow additional processing while checking if certain value is valid for current game version
-CallbackCheckResult callbackCheckStatValidity(int stat);
-CallbackCheckResult callbackCheckSkillValidity(int skill);
-CallbackCheckResult callbackCheckDamageTypeValidity(int dmg);
-CallbackCheckResult callbackCheckItemTypeValidity(int type);
-CallbackCheckResult callbackCheckItemSlotValidity(int slot);
-CallbackCheckResult callbackCheckPlayerBuffValidity(int buff);
-CallbackCheckResult callbackCheckPartyBuffValidity(int buff);
-CallbackCheckResult callbackCheckMonsterBitsValidity(int bits);
-CallbackCheckResult callbackCheckMonsterBuffValidity(int buff);
-CallbackCheckResult callbackCheckMonsterBonusValidity(int bonus);
-CallbackCheckResult callbackCheckMonsterKindValidity(int kind);
-CallbackCheckResult callbackCheckHouseTypeValidity(int type);
-CallbackCheckResult callbackCheckHouseScreensValidity(int screen);
-CallbackCheckResult callbackCheckFacetBitsValidity(int bits);
-CallbackCheckResult callbackCheckFaceAnimationValidity(int anim);
-CallbackCheckResult callbackCheckConditionValidity(int cond);
-CallbackCheckResult callbackCheckChestBitsValidity(int bits);
-CallbackCheckResult callbackCheckAIStateValidity(int state);
-CallbackCheckResult callbackCheckSpellValidity(int spell);
+CallbackCheckResult callbackCheckStatValidity(int64_t stat);
+CallbackCheckResult callbackCheckSkillValidity(int64_t skill);
+CallbackCheckResult callbackCheckDamageTypeValidity(int64_t dmg);
+CallbackCheckResult callbackCheckItemTypeValidity(int64_t type);
+CallbackCheckResult callbackCheckItemSlotValidity(int64_t slot);
+CallbackCheckResult callbackCheckPlayerBuffValidity(int64_t buff);
+CallbackCheckResult callbackCheckPartyBuffValidity(int64_t buff);
+CallbackCheckResult callbackCheckMonsterBitsValidity(int64_t bits);
+CallbackCheckResult callbackCheckMonsterBuffValidity(int64_t buff);
+CallbackCheckResult callbackCheckMonsterBonusValidity(int64_t bonus);
+CallbackCheckResult callbackCheckMonsterKindValidity(int64_t kind);
+CallbackCheckResult callbackCheckHouseTypeValidity(int64_t type);
+CallbackCheckResult callbackCheckHouseScreensValidity(int64_t screen);
+CallbackCheckResult callbackCheckFacetBitsValidity(int64_t bits);
+CallbackCheckResult callbackCheckFaceAnimationValidity(int64_t anim);
+CallbackCheckResult callbackCheckConditionValidity(int64_t cond);
+CallbackCheckResult callbackCheckChestBitsValidity(int64_t bits);
+CallbackCheckResult callbackCheckAIStateValidity(int64_t state);
+CallbackCheckResult callbackCheckSpellValidity(int64_t spell);
 
 using CheckValueCallback = CallbackCheckResult(*)(uint64_t);
 bool checkValidValue(const std::vector<uint64_t>& values, uint64_t value, CheckValueCallback callback);
@@ -280,16 +280,16 @@ extern void makeEnumStats_7();
 extern void makeEnumStats_8();
 extern void makeEnums();
 
-extern std::vector<int> STATS_PRIMARY;
-extern std::vector<int> STATS_RESISTANCES;
-extern std::vector<int> STATS_MELEE_RANGED;
-extern std::vector<int> STATS_MM67_BONUSES;
-extern std::vector<int> STATS_SKILLS;
-extern std::vector<int> STATS_OTHER;
-extern std::vector<int> STATS_ALL;
+extern std::vector<int64_t> STATS_PRIMARY;
+extern std::vector<int64_t> STATS_RESISTANCES;
+extern std::vector<int64_t> STATS_MELEE_RANGED;
+extern std::vector<int64_t> STATS_MM67_BONUSES;
+extern std::vector<int64_t> STATS_SKILLS;
+extern std::vector<int64_t> STATS_OTHER;
+extern std::vector<int64_t> STATS_ALL;
 
-void checkStatValidity(int stat);
-void checkDamageTypeValidity(int dmg);
+void checkStatValidity(int64_t stat);
+void checkDamageTypeValidity(int64_t dmg);
 extern int64_t
 SKILL_STAFF,
 SKILL_SWORD,

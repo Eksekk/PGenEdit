@@ -114,11 +114,19 @@ int indexInVector(const std::vector<T>& vec, const T& val)
 	return -1;
 }
 
+// HACK: I created this explicit specialization to deal with the case where T is int64_t, because otherwise the above function would be ambiguous (this happens for example when searching for integer value in all valid skill ids, because they're int64_t as of now)
+// could have changed all function signatures to accept int64_t instead of int, or convert inside function and use the converted value, but it's much more effort and pollutes the code
+// so, this handles that exact case and I don't need to do anything else
+int indexInVector(const std::vector<int64_t>& vec, const int& val);
+
 template<typename T>
 bool existsInVector(const std::vector<T>& vec, const T& val)
 {
 	return indexInVector(vec, val) != -1;
 }
+
+// HACK: see above indexInVector specialization for more details
+bool existsInVector(const std::vector<int64_t>& vec, const int& val);
 
 template<typename Container, typename Val>
 	requires std::random_access_iterator<typename Container::iterator> // index usually makes sense only in random access containers

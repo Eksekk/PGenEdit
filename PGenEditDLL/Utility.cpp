@@ -69,6 +69,16 @@ void jsonEnsureIsArray(Json& json)
     json = !json.is_array() ? Json::array() : json;
 }
 
+int indexInVector(const std::vector<int64_t>& vec, const int& val)
+{
+	return indexInVector<int64_t>(vec, (int64_t)val);
+}
+
+bool existsInVector(const std::vector<int64_t>& vec, const int& val)
+{
+	return existsInVector<int64_t>(vec, (int64_t)val);
+}
+
 std::string stringReplace(const std::string& str, const std::string& replaceWhat, const std::string& replacement, bool plain /*= true*/)
 {
 	std::string newStr;

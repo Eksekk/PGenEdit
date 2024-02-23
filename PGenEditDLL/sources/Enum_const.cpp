@@ -40,6 +40,177 @@ int nextFreeCustomId()
 	return id++;
 }
 
+void callbackStatsInitialize()
+{
+}
+
+void callbackSkillsInitialize()
+{
+}
+
+void callbackDamageInitialize()
+{
+}
+
+void callbackItemTypeInitialize()
+{
+}
+
+void callbackItemSlotInitialize()
+{
+}
+
+void callbackPlayerBuffInitialize()
+{
+}
+
+void callbackPartyBuffInitialize()
+{
+}
+
+void callbackMonsterBitsInitialize()
+{
+}
+
+void callbackMonsterBuffInitialize()
+{
+}
+
+void callbackMonsterBonusInitialize()
+{
+}
+
+void callbackMonsterKindInitialize()
+{
+}
+
+void callbackHouseTypeInitialize()
+{
+}
+
+void callbackHouseScreensInitialize()
+{
+}
+
+void callbackFacetBitsInitialize()
+{
+}
+
+void callbackFaceAnimationInitialize()
+{
+}
+
+void callbackConditionInitialize()
+{
+}
+
+void callbackChestBitsInitialize()
+{
+}
+
+void callbackAIStateInitialize()
+{
+}
+
+void callbackSpellsInitialize()
+{
+}
+
+CallbackCheckResult callbackCheckStatValidity(int64_t stat)
+{
+	return CallbackCheckResult::NO_CHANGE;
+}
+
+CallbackCheckResult callbackCheckSkillValidity(int64_t skill)
+{
+	return CallbackCheckResult::NO_CHANGE;
+}
+
+CallbackCheckResult callbackCheckDamageTypeValidity(int64_t dmg)
+{
+	return CallbackCheckResult::NO_CHANGE;
+}
+
+CallbackCheckResult callbackCheckItemTypeValidity(int64_t type)
+{
+	return CallbackCheckResult::NO_CHANGE;
+}
+
+CallbackCheckResult callbackCheckItemSlotValidity(int64_t slot)
+{
+	return CallbackCheckResult::NO_CHANGE;
+}
+
+CallbackCheckResult callbackCheckPlayerBuffValidity(int64_t buff)
+{
+	return CallbackCheckResult::NO_CHANGE;
+}
+
+CallbackCheckResult callbackCheckPartyBuffValidity(int64_t buff)
+{
+	return CallbackCheckResult::NO_CHANGE;
+}
+
+CallbackCheckResult callbackCheckMonsterBitsValidity(int64_t bits)
+{
+	return CallbackCheckResult::NO_CHANGE;
+}
+
+CallbackCheckResult callbackCheckMonsterBuffValidity(int64_t buff)
+{
+	return CallbackCheckResult::NO_CHANGE;
+}
+
+CallbackCheckResult callbackCheckMonsterBonusValidity(int64_t bonus)
+{
+	return CallbackCheckResult::NO_CHANGE;
+}
+
+CallbackCheckResult callbackCheckMonsterKindValidity(int64_t kind)
+{
+	return CallbackCheckResult::NO_CHANGE;
+}
+
+CallbackCheckResult callbackCheckHouseTypeValidity(int64_t type)
+{
+	return CallbackCheckResult::NO_CHANGE;
+}
+
+CallbackCheckResult callbackCheckHouseScreensValidity(int64_t screen)
+{
+	return CallbackCheckResult::NO_CHANGE;
+}
+
+CallbackCheckResult callbackCheckFacetBitsValidity(int64_t bits)
+{
+	return CallbackCheckResult::NO_CHANGE;
+}
+
+CallbackCheckResult callbackCheckFaceAnimationValidity(int64_t anim)
+{
+	return CallbackCheckResult::NO_CHANGE;
+}
+
+CallbackCheckResult callbackCheckConditionValidity(int64_t cond)
+{
+	return CallbackCheckResult::NO_CHANGE;
+}
+
+CallbackCheckResult callbackCheckChestBitsValidity(int64_t bits)
+{
+	return CallbackCheckResult::NO_CHANGE;
+}
+
+CallbackCheckResult callbackCheckAIStateValidity(int64_t state)
+{
+	return CallbackCheckResult::NO_CHANGE;
+}
+
+CallbackCheckResult callbackCheckSpellValidity(int64_t spell)
+{
+	return CallbackCheckResult::NO_CHANGE;
+}
+
 bool checkValidValue(const std::vector<uint64_t>& values, uint64_t value, CheckValueCallback callback)
 {
 	CallbackCheckResult result = callback(value);
@@ -50,12 +221,12 @@ bool checkValidValue(const std::vector<uint64_t>& values, uint64_t value, CheckV
 	return result == CallbackCheckResult::VALID;
 }
 
-void checkStatValidity(int stat)
+void checkStatValidity(int64_t stat)
 {
     wxASSERT_MSG(existsInVector(STATS_ALL, stat), wxString::Format("Stat %d doesn't exist in game version %d", stat, MMVER));
 }
 
-void checkDamageTypeValidity(int dmgType)
+void checkDamageTypeValidity(int64_t dmgType)
 {
     wxASSERT_MSG(existsInVector(ALL_DAMAGE, (int64_t)dmgType), wxString::Format("Damage type %d doesn't exist in game version %d", dmgType, MMVER));
 }
@@ -282,13 +453,13 @@ void makeEnumStats_8()
 	STAT_AGE = nextFreeCustomId();
 }
 
-std::vector<int> STATS_PRIMARY;
-std::vector<int> STATS_RESISTANCES;
-std::vector<int> STATS_MELEE_RANGED;
-std::vector<int> STATS_SKILLS;
-std::vector<int> STATS_MM67_BONUSES;
-std::vector<int> STATS_OTHER;
-std::vector<int> STATS_ALL;
+std::vector<int64_t> STATS_PRIMARY;
+std::vector<int64_t> STATS_RESISTANCES;
+std::vector<int64_t> STATS_MELEE_RANGED;
+std::vector<int64_t> STATS_SKILLS;
+std::vector<int64_t> STATS_MM67_BONUSES;
+std::vector<int64_t> STATS_OTHER;
+std::vector<int64_t> STATS_ALL;
 
 int64_t
 SKILL_STAFF = INVALID_ID,
