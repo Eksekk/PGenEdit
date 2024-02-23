@@ -35,3 +35,7 @@ That way we don't need to deal with item index while ingame, and during one edit
 - sometimes, waiting a bit longer (up to 10-15 seconds) will give better results - copilot can generate a ton of repetitive code
 - for doing repetitive code, it's good to write first few cases on your own, so that it knows what to do. Ideally, the cases should include all possible options (like, if you want to do something with all signed/unsigned integer types of different bit width, writing first two signed and first unsigned will be enough)
 - copilot can generate code, which is not correct, but can be easily fixed
+
+# Refactoring const generation
+- put every value and metadata (like enum to string) in namespace "const"
+- somehow add ability to manually add your custom values (in other file) and have their values assigned as usual - callbacks?

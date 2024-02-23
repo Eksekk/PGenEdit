@@ -150,6 +150,42 @@ void setFieldSizes_8();
 // and since all accesses will be in one place, it's easy to add checks for invalid values
 // could be better (static checking), but like I said I don't like template verbosity
 
+// callbacks that allow to do additional processing after generated code runs (for example, to add custom values)
+void callbackStats();
+void callbackSkills();
+void callbackDamage();
+void callbackItemType();
+void callbackItemSlot();
+void callbackPlayerBuff();
+void callbackPartyBuff();
+void callbackMonsterBits();
+void callbackMonsterBuff();
+void callbackMonsterBonus();
+void callbackMonsterKind();
+void callbackHouseType();
+void callbackHouseScreens();
+void callbackFacetBits();
+void callbackFaceAnimation();
+void callbackCondition();
+void callbackChestBits();
+void callbackAIState();
+void callbackSpells();
+
+
+// MY ADDITIONS
+extern int
+STAT_LIGHT_RESISTANCE,
+STAT_DARK_RESISTANCE,
+STAT_RANGED_ATTACK_BONUS,
+STAT_RANGED_DAMAGE_BONUS,
+STAT_MELEE_ATTACK_BONUS,
+STAT_MELEE_DAMAGE_BONUS,
+STAT_HIT_POINTS_BONUS,
+STAT_SPELL_POINTS_BONUS,
+STAT_AGE;
+
+// ~~MY ADDITIONS~~
+
 // THIS CODE IS AUTOMATICALLY GENERATED, unless marked otherwise
 
 extern int
@@ -207,19 +243,6 @@ STAT_LEARNING,
 STAT_DARK_ELF,
 STAT_VAMPIRE,
 STAT_DRAGON;
-// MY ADDITIONS
-extern int
-STAT_LIGHT_RESISTANCE,
-STAT_DARK_RESISTANCE,
-STAT_RANGED_ATTACK_BONUS,
-STAT_RANGED_DAMAGE_BONUS,
-STAT_MELEE_ATTACK_BONUS,
-STAT_MELEE_DAMAGE_BONUS,
-STAT_HIT_POINTS_BONUS,
-STAT_SPELL_POINTS_BONUS,
-STAT_AGE;
-
-// ~~MY ADDITIONS~~
 
 extern void makeEnumStats_6();
 extern void makeEnumStats_7();

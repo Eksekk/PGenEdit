@@ -1940,6 +1940,7 @@ do
 				end
 				local moduleOffset = getModuleOffset(def.p, singleName or structName, fname)
 				local str = (singleName or structName) .. (isMethod and "::" or ".") .. fname
+				-- this argument counting method is not 100% correct, but close enough
 				local argCount = math.max(#def, def.must) - (isMethod and 1 or 0)
 				local sig = data.info and data.info.Sig
 				if sig then
@@ -2004,7 +2005,42 @@ local namePrefixes = {["Stats"] = "STAT", ["Skills"] = "SKILL", ["Damage"] = "DM
 	MonsterBits = "MON_BIT", MonsterBuff = "MON_BUFF", MonsterBonus = "MON_BONUS", MonsterKind = "MON_KIND", ItemType = "ITEM_TYPE", HouseType = "HOUSE_TYPE",
 	HouseScreens = "HOUSE_SCREENS", FacetBits = "FACET_BIT", FaceAnimation = "PLAYER_FACE_ANIMATION", Condition = "PLAYER_CONDITION", ChestBits = "CHEST_BIT",
 	AIState = "MON_AI_STATE", Spells = "SPELL"}
+
+local GENERATED_CONST_HEADER_NAME = "generatedConsts.h"
+local GENERATED_CONST_SOURCE_NAME = "generatedConsts.cpp"
+
 local consts, header, source = {}, {}, {}
+local reinitConsts
+do
+	local headerBaseStart = {
+		"#pragma once",
+		"#include \"pch.h\"",
+		"#include \"main.h\"",
+		"",
+		"namespace const",
+		"{"
+	}
+	local sourceBaseStart = {
+		"#include \"pch.h\"",
+		format("#include \"%s\"", GENERATED_CONST_HEADER_NAME),
+		"",
+		"namespace const\n",
+		"{"
+	}
+
+	function reinitConsts()
+		consts = {}
+		header, source = table.copy(headerBaseStart), table.copy(sourceBaseStart)
+	end
+end
+
+local headerBaseEnd = {
+	"}"
+}
+local sourceBaseEnd = {
+	"}"
+}
+reinitConsts()
 function processConst(name)
 	if not consts[6] then
 		consts[Game.Version] = const
@@ -2037,6 +2073,13 @@ function processConst(name)
 	local prefix = namePrefixes[name]
 	
 	-- header
+
+	-- const name
+	multipleInsert(header, #header + 1, {
+		"",
+		format("\t// %s //", name),
+		""
+	})
 	
 	local allKeys = {}
 	for i, const in pairs(consts) do
@@ -2057,29 +2100,36 @@ function processConst(name)
 	local vector = format("std::vector<int64_t> %s", vectorName)
 	local mapName = formatName(name, "ENUM_TO_STRING")
 	local map = format("std::map<int64_t, std::string> %s", mapName)
-	local forwardDecl = {"extern int64_t"}
+	local forwardDecl = {"\textern int64_t"}
 	for i, k in ipairs(allKeys) do
-		table.insert(forwardDecl, "\t" .. formatName(k) .. (i == #allKeys and ";" or ","))
+		table.insert(forwardDecl, "\t\t" .. formatName(k) .. (i == #allKeys and ";" or ","))
 	end
 	multipleInsert(forwardDecl, #forwardDecl + 1, {
 		"",
-		"extern " .. vector .. ";",
-		"extern " .. map .. ";",
+		"\textern " .. vector .. ";",
+		"\textern " .. map .. ";",
 		""
 	})
 	
 	for _, i in ipairs{6, 7, 8} do
-		table.insert(forwardDecl, string.format("extern void makeEnum%s_%d();", name, i))
+		table.insert(forwardDecl, string.format("\textern void makeEnum%s_%d();", name, i))
 	end
 	multipleInsert(header, #header + 1, forwardDecl)
 	table.insert(header, "")
 	
 	-- source
+
+	-- const name
+	multipleInsert(source, #source + 1, {
+		"",
+		format("\t// %s //", name),
+		""
+	})
 	
-	source[#source + 1] = "int64_t "
+	source[#source + 1] = "\tint64_t "
 	local last = allKeys[#allKeys]
 	for _, k in ipairs(allKeys) do
-		table.insert(source, string.format("\t%s = INVALID_ID%s", formatName(k), k == last and ";" or ","))
+		table.insert(source, string.format("\t\t%s = INVALID_ID%s", formatName(k), k == last and ";" or ","))
 	end
 	multipleInsert(source, #source + 1, {
 		"",
@@ -2089,33 +2139,30 @@ function processConst(name)
 	})
 	
 	for _, gameVer in ipairs{6, 7, 8} do
-		table.insert(source, string.format("void makeEnum%s_%d()", name, gameVer))
+		table.insert(source, string.format("\tvoid makeEnum%s_%d()", name, gameVer))
 		table.insert(source, "{")
 		local vectorVals = {}
 		local mapVals = {}
 		for v, k in sortpairs(table.invert(consts[gameVer][name])) do
-			table.insert(source, string.format("\t%s = %d;", formatName(k), v))
+			table.insert(source, string.format("\t\t%s = %d;", formatName(k), v))
 			table.insert(vectorVals, formatName(k))
 			mapVals[#mapVals+1] = format("{%s, %q}", formatName(k), k)
 		end
 		multipleInsert(source, #source + 1, {
 			"",
-			format("\t%s = { %s };", vectorName, table.concat(vectorVals, ", ")),
+			format("\t\t%s = { %s };", vectorName, table.concat(vectorVals, ", ")),
 			"",
-			format("\t%s = { %s };", mapName, table.concat(mapVals, ", ")),
-			"}",
+			format("\t\t%s = { %s };", mapName, table.concat(mapVals, ", ")),
+			"\t}",
 			"",
 		})
 	end
 	table.insert(source, "")
 end
 
-local constsToProcess = {"Stats", "Skills", "Damage", "ItemType", "ItemSlot", "PlayerBuff", "PartyBuff", "MonsterBits", "MonsterBuff", "MonsterBonus", "MonsterKind", "HouseType", "HouseScreens", "FacetBits", "FaceAnimation", "Condition", "ChestBits", "AIState", "Spells"}
-function writeConsts()
-	for _, const in ipairs(constsToProcess) do
-		processConst(const)
-	end
-	io.save("constHeader.h", table.concat(header, "\n"))
-	io.save("constSource.cpp", table.concat(source, "\n"))
-	header, source = {}, {}
+local function processConstFinish()
+	multipleInsert(header, #header + 1, headerBaseEnd)
+	multipleInsert(source, #source + 1, sourceBaseEnd)
 end
+
+local constsToProcess = {"Stats", "Skills", "Damage", "ItemType", "ItemSlot", "PlayerBuff", "PartyBuff", "MonsterBits", "MonsterBuff", "MonsterBonus", "MonsterKind", "HouseType", "HouseScreens", "FacetBits", "FaceAnimation", "Condition", "ChestB

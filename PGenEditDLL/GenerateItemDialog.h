@@ -1,4 +1,6 @@
 #pragma once
+
+// TODO: add count field!
 class GenerateItemDialog : public wxDialog
 {
 private:
