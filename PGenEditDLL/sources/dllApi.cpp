@@ -114,19 +114,19 @@ extern "C"
                         MAX_PLAYERS = 4;
                         MAX_MASTERY = Mastery::MASTERY_MASTER;
                         setFieldSizes_6();
-						makeEnums();
+						consts::detail::makeEnums();
                         break;
                     case 0x45:
                         MMVER = 7;
                         MAX_PLAYERS = 4;
 						setFieldSizes_7();
-                        makeEnums();
+                        consts::detail::makeEnums();
                         break;
                     case 0x53:
                         MMVER = 8;
                         MAX_PLAYERS = 5;
                         setFieldSizes_8();
-                        makeEnums();
+                        consts::detail::makeEnums();
                         break;
                     default:
                         MessageBoxA(0, "This is not a supported Might and Magic game", "MMExtension Error", MB_ICONERROR);

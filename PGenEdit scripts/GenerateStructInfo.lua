@@ -2102,6 +2102,8 @@ function processConst(name)
 		format("\t// %s //", name),
 		""
 	})
+
+	local checkFunctionName = "check" .. name .. "Validity"
 	
 	local allKeys = {}
 	for i, const in pairs(consts) do
@@ -2112,13 +2114,13 @@ function processConst(name)
 			end
 		end
 	end
-	local function formatName(name, pr)
+	local function formatName(name, pr, suf)
 		pr = pr or prefix
 		name = name:gsub("([a-z])([A-Z0-9])", "%1_%2"):gsub("'", ""):gsub(" ", "_")
-		name = pr .. "_" .. name:upper()
+		name = (pr:len() > 0 and (pr .. "_") or "") .. name:upper() .. (suf and ("_" .. suf) or "")
 		return name
 	end
-	local vectorName = formatName(name, "ALL")
+	local vectorName = formatName(name, "", "ALL")
 	local vector = format("std::vector<int64_t> %s", vectorName)
 	local mapName = formatName(name, "ENUM_TO_STRING")
 	local map = format("std::map<int64_t, std::string> %s", mapName)
@@ -2133,6 +2135,8 @@ function processConst(name)
 		"\textern " .. vector .. ";",
 		"\textern " .. map .. ";",
 		"\textern " .. invertedMap .. ";",
+		"",
+		format("\tbool %s(int64_t value);", checkFunctionName),
 		""
 	})
 	
@@ -2160,6 +2164,7 @@ function processConst(name)
 		"",
 		format("\t%s;", vector),
 		format("\t%s;", map),
+		format("\t%s;", invertedMap),
 		""
 	})
 	
@@ -2181,7 +2186,7 @@ function processConst(name)
 			"",
 			format("\t\t%s = invertMap(%s);", invertedMapName, mapName),
 			"",
-			format("\t\tcallback%sInitialize();", name),
+			format("\t\tdetail::callback%sInitialize();", name), -- "detail" namespace
 			"",
 			"\t}",
 			""
@@ -2189,13 +2194,12 @@ function processConst(name)
 	end
 
 	-- check value validity
-	local funcName = "check" .. name .. "Validity"
 	local callbackName = "callbackCheck" .. name .. "Validity"
 
 	multipleInsert(source, #source + 1, {
-		"bool " .. funcName .. "(int64_t value)",
+		"bool " .. checkFunctionName .. "(int64_t value)",
 		"{",
-		"\treturn checkValidValue(" .. vectorName .. ", value, " .. callbackName .. ");",
+		format("\treturn detail::checkValidValue(%s, value, %s%s);", vectorName, "detail::", callbackName),
 		"}",
 		""
 	})

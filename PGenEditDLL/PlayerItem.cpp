@@ -5,6 +5,8 @@
 #include "ItemStructAccessor.h"
 #include "Utility.h"
 
+using namespace consts; // TODO: remove this
+
 PlayerItem::PlayerItem() : number(INVALID_ID), power(1), cost(1), isArtifact(false), image(nullptr), inventoryWidth(1), inventoryHeight(1),
     itemTypeActual(0), itemTypeGenerator(ItemType::OTHER_EQUIPPABLE), skill(nullptr), value(0)
 {

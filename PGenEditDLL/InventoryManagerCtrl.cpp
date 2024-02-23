@@ -159,7 +159,7 @@ void InventoryItemTableViewModel::GetValue(wxVariant& variant, const wxDataViewI
         variant = itemData->name;
         break;
     case COLUMN_INDEX_TYPE:
-        variant = ENUM_TO_STRING_ITEM_TYPE.at(itemData->itemTypeActual);
+        variant = consts::ENUM_TO_STRING_ITEM_TYPE.at(itemData->itemTypeActual);
         break;
     case COLUMN_INDEX_SKILL: // skill name
     {

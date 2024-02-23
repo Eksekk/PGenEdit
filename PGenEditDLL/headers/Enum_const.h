@@ -150,81 +150,86 @@ void setFieldSizes_8();
 // and since all accesses will be in one place, it's easy to add checks for invalid values
 // could be better (static checking), but like I said I don't like template verbosity
 
-// callbacks that allow to do additional processing after generated code runs (for example, to add custom values)
-void callbackStatsInitialize();
-void callbackSkillsInitialize();
-void callbackDamageInitialize();
-void callbackItemTypeInitialize();
-void callbackItemSlotInitialize();
-void callbackPlayerBuffInitialize();
-void callbackPartyBuffInitialize();
-void callbackMonsterBitsInitialize();
-void callbackMonsterBuffInitialize();
-void callbackMonsterBonusInitialize();
-void callbackMonsterKindInitialize();
-void callbackHouseTypeInitialize();
-void callbackHouseScreensInitialize();
-void callbackFacetBitsInitialize();
-void callbackFaceAnimationInitialize();
-void callbackConditionInitialize();
-void callbackChestBitsInitialize();
-void callbackAIStateInitialize();
-void callbackSpellsInitialize();
-
-enum class CallbackCheckResult
+namespace consts
 {
-	VALID, // value is valid
-	INVALID, // value is invalid
-	NO_CHANGE // depends on default processing, whether value is valid or not
-};
+	// MY ADDITIONS
+	extern int64_t
+		STAT_LIGHT_RESISTANCE,
+		STAT_DARK_RESISTANCE,
+		STAT_RANGED_ATTACK_BONUS,
+		STAT_RANGED_DAMAGE_BONUS,
+		STAT_MELEE_ATTACK_BONUS,
+		STAT_MELEE_DAMAGE_BONUS,
+		STAT_HIT_POINTS_BONUS,
+		STAT_SPELL_POINTS_BONUS,
+		STAT_AGE;
 
-// callbacks that allow additional processing while checking if certain value is valid for current game version
-CallbackCheckResult callbackCheckStatsValidity(int64_t stat);
-CallbackCheckResult callbackCheckSkillsValidity(int64_t skill);
-CallbackCheckResult callbackCheckDamageValidity(int64_t dmg);
-CallbackCheckResult callbackCheckItemTypeValidity(int64_t type);
-CallbackCheckResult callbackCheckItemSlotValidity(int64_t slot);
-CallbackCheckResult callbackCheckPlayerBuffValidity(int64_t buff);
-CallbackCheckResult callbackCheckPartyBuffValidity(int64_t buff);
-CallbackCheckResult callbackCheckMonsterBitsValidity(int64_t bits);
-CallbackCheckResult callbackCheckMonsterBuffValidity(int64_t buff);
-CallbackCheckResult callbackCheckMonsterBonusValidity(int64_t bonus);
-CallbackCheckResult callbackCheckMonsterKindValidity(int64_t kind);
-CallbackCheckResult callbackCheckHouseTypeValidity(int64_t type);
-CallbackCheckResult callbackCheckHouseScreensValidity(int64_t screen);
-CallbackCheckResult callbackCheckFacetBitsValidity(int64_t bits);
-CallbackCheckResult callbackCheckFaceAnimationValidity(int64_t anim);
-CallbackCheckResult callbackCheckConditionValidity(int64_t cond);
-CallbackCheckResult callbackCheckChestBitsValidity(int64_t bits);
-CallbackCheckResult callbackCheckAIStateValidity(int64_t state);
-CallbackCheckResult callbackCheckSpellsValidity(int64_t spell);
+	extern std::vector<int64_t> STATS_PRIMARY;
+	extern std::vector<int64_t> STATS_RESISTANCES;
+	extern std::vector<int64_t> STATS_MELEE_RANGED;
+	extern std::vector<int64_t> STATS_SKILLS;
+	extern std::vector<int64_t> STATS_MM67_BONUSES;
+	extern std::vector<int64_t> STATS_OTHER;
 
-using CheckValueCallback = CallbackCheckResult(*)(int64_t);
-bool checkValidValue(const std::vector<int64_t>& values, uint64_t value, CheckValueCallback callback);
+	// ~~MY ADDITIONS~~
+	
+	namespace detail
+	{
+		void makeEnums();
 
+		// callbacks that allow to do additional processing after generated code runs (for example, to add custom values)
+		void callbackStatsInitialize();
+		void callbackSkillsInitialize();
+		void callbackDamageInitialize();
+		void callbackItemTypeInitialize();
+		void callbackItemSlotInitialize();
+		void callbackPlayerBuffInitialize();
+		void callbackPartyBuffInitialize();
+		void callbackMonsterBitsInitialize();
+		void callbackMonsterBuffInitialize();
+		void callbackMonsterBonusInitialize();
+		void callbackMonsterKindInitialize();
+		void callbackHouseTypeInitialize();
+		void callbackHouseScreensInitialize();
+		void callbackFacetBitsInitialize();
+		void callbackFaceAnimationInitialize();
+		void callbackConditionInitialize();
+		void callbackChestBitsInitialize();
+		void callbackAIStateInitialize();
+		void callbackSpellsInitialize();
 
-// MY ADDITIONS
-extern int64_t
-STAT_LIGHT_RESISTANCE,
-STAT_DARK_RESISTANCE,
-STAT_RANGED_ATTACK_BONUS,
-STAT_RANGED_DAMAGE_BONUS,
-STAT_MELEE_ATTACK_BONUS,
-STAT_MELEE_DAMAGE_BONUS,
-STAT_HIT_POINTS_BONUS,
-STAT_SPELL_POINTS_BONUS,
-STAT_AGE;
+		enum class CallbackCheckResult
+		{
+			VALID, // value is valid
+			INVALID, // value is invalid
+			NO_CHANGE // depends on default processing, whether value is valid or not
+		};
 
+		// callbacks that allow additional processing while checking if certain value is valid for current game version
+		CallbackCheckResult callbackCheckStatsValidity(int64_t stat);
+		CallbackCheckResult callbackCheckSkillsValidity(int64_t skill);
+		CallbackCheckResult callbackCheckDamageValidity(int64_t dmg);
+		CallbackCheckResult callbackCheckItemTypeValidity(int64_t type);
+		CallbackCheckResult callbackCheckItemSlotValidity(int64_t slot);
+		CallbackCheckResult callbackCheckPlayerBuffValidity(int64_t buff);
+		CallbackCheckResult callbackCheckPartyBuffValidity(int64_t buff);
+		CallbackCheckResult callbackCheckMonsterBitsValidity(int64_t bits);
+		CallbackCheckResult callbackCheckMonsterBuffValidity(int64_t buff);
+		CallbackCheckResult callbackCheckMonsterBonusValidity(int64_t bonus);
+		CallbackCheckResult callbackCheckMonsterKindValidity(int64_t kind);
+		CallbackCheckResult callbackCheckHouseTypeValidity(int64_t type);
+		CallbackCheckResult callbackCheckHouseScreensValidity(int64_t screen);
+		CallbackCheckResult callbackCheckFacetBitsValidity(int64_t bits);
+		CallbackCheckResult callbackCheckFaceAnimationValidity(int64_t anim);
+		CallbackCheckResult callbackCheckConditionValidity(int64_t cond);
+		CallbackCheckResult callbackCheckChestBitsValidity(int64_t bits);
+		CallbackCheckResult callbackCheckAIStateValidity(int64_t state);
+		CallbackCheckResult callbackCheckSpellsValidity(int64_t spell);
 
-extern std::vector<int64_t> STATS_PRIMARY;
-extern std::vector<int64_t> STATS_RESISTANCES;
-extern std::vector<int64_t> STATS_MELEE_RANGED;
-extern std::vector<int64_t> STATS_SKILLS;
-extern std::vector<int64_t> STATS_MM67_BONUSES;
-extern std::vector<int64_t> STATS_OTHER;
+		using CheckValueCallback = CallbackCheckResult(*)(int64_t);
+		bool checkValidValue(const std::vector<int64_t>& values, uint64_t value, CheckValueCallback callback);
+	}
+}
 
-// ~~MY ADDITIONS~~
-
-// THIS CODE IS AUTOMATICALLY GENERATED, unless marked otherwise
-
+// THIS CODE IS AUTOMATICALLY GENERATED
 #include "constDefinitionsAutoGenerated.h"

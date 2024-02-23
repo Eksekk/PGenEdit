@@ -533,7 +533,7 @@ int TemplatedPlayerStructAccessor<Player>::getSkillPoints()
 template<typename Player>
 void TemplatedPlayerStructAccessor<Player>::setStatBase(int stat, int value)
 {
-	checkStatValidity(stat);
+	consts::checkStatsValidity(stat);
 	Player* pl = getPlayerToAffect();
 	if (existsInVector(STATS_PRIMARY, stat) || existsInVector(STATS_RESISTANCES, stat) || stat == STAT_LEVEL)
 	{
@@ -555,7 +555,7 @@ void TemplatedPlayerStructAccessor<Player>::setStatBase(int stat, int value)
 template<typename Player>
 int TemplatedPlayerStructAccessor<Player>::getStatBonus(int stat)
 {
-	checkStatValidity(stat);
+	consts::checkStatsValidity(stat);
 	Player* pl = getPlayerToAffect();
 	if constexpr (!SAME(Player, mm8::Player))
 	{
@@ -587,7 +587,7 @@ int TemplatedPlayerStructAccessor<Player>::getStatBonus(int stat)
 template<typename Player>
 void TemplatedPlayerStructAccessor<Player>::setStatBonus(int stat, int value)
 {
-	checkStatValidity(stat);
+	consts::checkStatsValidity(stat);
 	Player* pl = getPlayerToAffect();
 	if constexpr (!SAME(Player, mm8::Player))
 	{
@@ -802,7 +802,7 @@ void TemplatedPlayerStructAccessor<Player>::_initMaps()
 template<typename Player>
 int TemplatedPlayerStructAccessor<Player>::getStatBase(int stat)
 {
-	checkStatValidity(stat);
+	consts::checkStatsValidity(stat);
 	Player* pl = getPlayerToAffect();
 	// TODO why these getBaseAccuracy() etc. methods exist?
 	if (existsInVector(STATS_PRIMARY, stat) || existsInVector(STATS_RESISTANCES, stat) || stat == STAT_LEVEL)

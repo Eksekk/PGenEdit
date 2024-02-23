@@ -14,6 +14,8 @@
 #include "SaveGameData.h"
 #include "Enum_const.h"
 
+using namespace consts; // TODO: remove
+
 //, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize(723, 817),
 //	long style = wxTAB_TRAVERSAL | wxHSCROLL | wxVSCROLL, const wxString& name = wxEmptyString)
 EditorStatisticsPanel::EditorStatisticsPanel(wxWindow* parent, int playerIndex, int rosterIndex) : EditorPlayerPanel(playerIndex, rosterIndex), wxScrolledWindow(parent)
