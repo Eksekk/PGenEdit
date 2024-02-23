@@ -33,7 +33,6 @@ end
 local FORMAT_MESSAGE_FROM_SYSTEM = 0x00001000
 function M.loadDll()
 	if offsets.MMVersion ~= 7 then return end
-	do return end
 	if not M.dll then
 		M.dll = mem.LoadDll("PGenEdit.dll")
 		if not M.dll then
