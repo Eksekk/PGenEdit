@@ -12,6 +12,7 @@
 #include "Profiler.h"
 #include "HookParams.h"
 #include "SaveGameData.h"
+#include "Enum_const.h"
 
 //, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize(723, 817),
 //	long style = wxTAB_TRAVERSAL | wxHSCROLL | wxVSCROLL, const wxString& name = wxEmptyString)
@@ -416,7 +417,7 @@ void EditorStatisticsPanel::createStatisticsAdjuster()
 	resistancesSizer->Add(resistancesSpellEffectLabel, wxGBPosition(1, 3), wxGBSpan(1, 1), wxALL | wxALIGN_CENTER_HORIZONTAL, 5);
 
 	row = 2;
-	for (int i : STATS_RESISTANCES)
+	for (int i : consts::STATS_RESISTANCES)
 	{
 		auto& resPtr = GameData::resistances.at(i);
 		resistanceWidgetToResIdMap.emplace(i, std::make_unique<ResistanceWidget>(this, resistancesSizer, row++, resPtr.get(), playerIndex));

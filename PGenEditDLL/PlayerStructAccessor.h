@@ -5,6 +5,8 @@
 #include "InventoryCtrl.h"
 #include "StructAccessor.h"
 
+using namespace consts; // TODO: tmp, remove this
+
 extern const bool MALE, FEMALE;
 
 extern const int PLAYER_ACTIVE, PLAYER_RANDOM;

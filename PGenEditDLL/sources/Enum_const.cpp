@@ -32,6 +32,17 @@ const std::unordered_map<std::string, int> alignmentStringToId = { {"neutral", A
 const std::unordered_map<int, std::string> plTypeEnumIdToString = invertMap(plTypeEnumStringToId);
 const std::unordered_map<int, std::string> alignmentIdToString = invertMap(alignmentStringToId);
 
+int64_t
+STAT_LIGHT_RESISTANCE = INVALID_ID,
+STAT_DARK_RESISTANCE = INVALID_ID,
+STAT_RANGED_ATTACK_BONUS = INVALID_ID,
+STAT_RANGED_DAMAGE_BONUS = INVALID_ID,
+STAT_MELEE_ATTACK_BONUS = INVALID_ID,
+STAT_MELEE_DAMAGE_BONUS = INVALID_ID,
+STAT_HIT_POINTS_BONUS = INVALID_ID,
+STAT_SPELL_POINTS_BONUS = INVALID_ID,
+STAT_AGE = INVALID_ID;
+
 // GAME ENUMS
 
 int nextFreeCustomId()
@@ -44,14 +55,33 @@ void callbackStatsInitialize()
 {
 	if (MMVER == 6)
 	{
+		STAT_RANGED_ATTACK_BONUS = nextFreeCustomId();
+		STAT_RANGED_DAMAGE_BONUS = nextFreeCustomId();
+		STAT_MELEE_ATTACK_BONUS = nextFreeCustomId();
+		STAT_MELEE_DAMAGE_BONUS = nextFreeCustomId();
+		STAT_HIT_POINTS_BONUS = nextFreeCustomId();
+		STAT_SPELL_POINTS_BONUS = nextFreeCustomId();
+		STAT_AGE = nextFreeCustomId();
+
 		STATS_RESISTANCES.insert(STATS_RESISTANCES.end(), { STAT_FIRE_RESISTANCE, STAT_COLD_RESISTANCE, STAT_ELEC_RESISTANCE, STAT_POISON_RESISTANCE, STAT_MAGIC_RESISTANCE });
 	}
 	else if (MMVER == 7)
 	{
-
+		STAT_LIGHT_RESISTANCE = nextFreeCustomId();
+		STAT_DARK_RESISTANCE = nextFreeCustomId();
+		STAT_RANGED_ATTACK_BONUS = nextFreeCustomId();
+		STAT_RANGED_DAMAGE_BONUS = nextFreeCustomId();
+		STAT_MELEE_ATTACK_BONUS = nextFreeCustomId();
+		STAT_MELEE_DAMAGE_BONUS = nextFreeCustomId();
+		STAT_HIT_POINTS_BONUS = nextFreeCustomId();
+		STAT_SPELL_POINTS_BONUS = nextFreeCustomId();
+		STAT_AGE = nextFreeCustomId();
 	}
 	else if (MMVER == 8)
 	{
+		STAT_LIGHT_RESISTANCE = nextFreeCustomId();
+		STAT_DARK_RESISTANCE = nextFreeCustomId();
+		STAT_AGE = nextFreeCustomId();
 		STATS_SKILLS.insert(STATS_SKILLS.end(), { STAT_DRAGON, STAT_DARK_ELF, STAT_VAMPIRE });
 	}
 	else
@@ -168,17 +198,17 @@ void callbackSpellsInitialize()
 {
 }
 
-CallbackCheckResult callbackCheckStatValidity(int64_t stat)
+CallbackCheckResult callbackCheckStatsValidity(int64_t stat)
 {
 	return CallbackCheckResult::NO_CHANGE;
 }
 
-CallbackCheckResult callbackCheckSkillValidity(int64_t skill)
+CallbackCheckResult callbackCheckSkillsValidity(int64_t skill)
 {
 	return CallbackCheckResult::NO_CHANGE;
 }
 
-CallbackCheckResult callbackCheckDamageTypeValidity(int64_t dmg)
+CallbackCheckResult callbackCheckDamageValidity(int64_t dmg)
 {
 	return CallbackCheckResult::NO_CHANGE;
 }
@@ -258,12 +288,12 @@ CallbackCheckResult callbackCheckAIStateValidity(int64_t state)
 	return CallbackCheckResult::NO_CHANGE;
 }
 
-CallbackCheckResult callbackCheckSpellValidity(int64_t spell)
+CallbackCheckResult callbackCheckSpellsValidity(int64_t spell)
 {
 	return CallbackCheckResult::NO_CHANGE;
 }
 
-bool checkValidValue(const std::vector<uint64_t>& values, uint64_t value, CheckValueCallback callback)
+bool checkValidValue(const std::vector<int64_t>& values, uint64_t value, CheckValueCallback callback)
 {
 	CallbackCheckResult result = callback(value);
 	if (result == CallbackCheckResult::NO_CHANGE)
@@ -271,16 +301,6 @@ bool checkValidValue(const std::vector<uint64_t>& values, uint64_t value, CheckV
 		return std::find(values.begin(), values.end(), value) != values.end();
 	}
 	return result == CallbackCheckResult::VALID;
-}
-
-void checkStatValidity(int64_t stat)
-{
-    wxASSERT_MSG(existsInVector(STATS_ALL, stat), wxString::Format("Stat %d doesn't exist in game version %d", stat, MMVER));
-}
-
-void checkDamageTypeValidity(int64_t dmgType)
-{
-    wxASSERT_MSG(existsInVector(ALL_DAMAGE, (int64_t)dmgType), wxString::Format("Damage type %d doesn't exist in game version %d", dmgType, MMVER));
 }
 
 int64_t
@@ -339,17 +359,6 @@ STAT_DARK_ELF = INVALID_ID,
 STAT_VAMPIRE = INVALID_ID,
 STAT_DRAGON = INVALID_ID;
 
-int64_t
-STAT_LIGHT_RESISTANCE = INVALID_ID,
-STAT_DARK_RESISTANCE = INVALID_ID,
-STAT_RANGED_ATTACK_BONUS = INVALID_ID,
-STAT_RANGED_DAMAGE_BONUS = INVALID_ID,
-STAT_MELEE_ATTACK_BONUS = INVALID_ID,
-STAT_MELEE_DAMAGE_BONUS = INVALID_ID,
-STAT_HIT_POINTS_BONUS = INVALID_ID,
-STAT_SPELL_POINTS_BONUS = INVALID_ID,
-STAT_AGE = INVALID_ID;
-
 void makeEnumStats_6()
 {
 	STAT_MIGHT = 0;
@@ -376,14 +385,6 @@ void makeEnumStats_6()
 	STAT_RANGED_DAMAGE_MIN = 21;
 	STAT_RANGED_DAMAGE_MAX = 22;
 	STAT_MAGIC_RESISTANCE = 23;
-
-	STAT_RANGED_ATTACK_BONUS = nextFreeCustomId();
-	STAT_RANGED_DAMAGE_BONUS = nextFreeCustomId();
-	STAT_MELEE_ATTACK_BONUS = nextFreeCustomId();
-	STAT_MELEE_DAMAGE_BONUS = nextFreeCustomId();
-	STAT_HIT_POINTS_BONUS = nextFreeCustomId();
-	STAT_SPELL_POINTS_BONUS = nextFreeCustomId();
-	STAT_AGE = nextFreeCustomId();
 }
 
 void makeEnumStats_7()
@@ -435,16 +436,6 @@ void makeEnumStats_7()
 	STAT_BOW = 44;
 	STAT_SHIELD = 45;
 	STAT_LEARNING = 46;
-
-	STAT_LIGHT_RESISTANCE = nextFreeCustomId();
-	STAT_DARK_RESISTANCE = nextFreeCustomId();
-	STAT_RANGED_ATTACK_BONUS = nextFreeCustomId();
-	STAT_RANGED_DAMAGE_BONUS = nextFreeCustomId();
-	STAT_MELEE_ATTACK_BONUS = nextFreeCustomId();
-	STAT_MELEE_DAMAGE_BONUS = nextFreeCustomId();
-	STAT_HIT_POINTS_BONUS = nextFreeCustomId();
-	STAT_SPELL_POINTS_BONUS = nextFreeCustomId();
-	STAT_AGE = nextFreeCustomId();
 }
 
 void makeEnumStats_8()
@@ -499,10 +490,6 @@ void makeEnumStats_8()
 	STAT_DARK_ELF = 47;
 	STAT_VAMPIRE = 48;
 	STAT_DRAGON = 49;
-
-	STAT_LIGHT_RESISTANCE = nextFreeCustomId();
-	STAT_DARK_RESISTANCE = nextFreeCustomId();
-	STAT_AGE = nextFreeCustomId();
 }
 
 std::vector<int64_t> STATS_PRIMARY;
