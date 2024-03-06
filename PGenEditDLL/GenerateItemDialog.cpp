@@ -1,6 +1,27 @@
 #include "pch.h"
 #include "GenerateItemDialog.h"
 #include "Utility.h"
+#include "ItemStructAccessor.h"
+
+namespace
+{
+	enum class GenerateReturn
+	{
+		CANCEL,
+		GENERATE
+	};
+}
+
+void GenerateItemDialog::onGenerateClick(wxCommandEvent& event)
+{
+	EndModal(static_cast<int>(GenerateReturn::GENERATE));
+}
+
+void GenerateItemDialog::onCloseClick(wxCommandEvent& event)
+{
+	EndModal(static_cast<int>(GenerateReturn::CANCEL));
+	// TODO: persist
+}
 
 void GenerateItemDialog::persistToJson(Json& json) const
 {
@@ -18,14 +39,49 @@ void GenerateItemDialog::restoreFromJson(const Json& json)
 		wxLogWarning("Invalid item strength %d", strength);
 		strength = 1;
 	}
-	choiceItemStrength->SetSelection(json["itemStrength"]);
-	choiceItemType->SetSelection(json["itemType"]);
+	choiceItemStrength->SetSelection(strength);
+	int type = json["itemType"];
+	if (!util::container::existsInContainer(consts::ITEM_TYPE_ALL, type) || !choiceIndexToItemTypeIdMap.contains(type) || type == consts::ITEM_TYPE_ANY)
+	{
+		wxLogWarning("Invalid item type %d", type);
+		type = consts::ITEM_TYPE_ARMOR;
+	}
+	choiceItemType->SetSelection(choiceIndexToItemTypeIdMap.at(type));
 	checkboxAlwaysEnchant->SetValue(json["alwaysEnchant"]);
 }
 
-mm7::Item GenerateItemDialog::generate(bool close)
+std::optional<mm7::Item> GenerateItemDialog::generate()
 {
-	return mm7::Item();
+	GenerateReturn ret = static_cast<GenerateReturn>(ShowModal());
+	if (ret == GenerateReturn::CANCEL)
+	{
+		return std::nullopt;
+	}
+	else if (ret != GenerateReturn::GENERATE)
+	{
+		wxLogError("Invalid return value %d", ret);
+		return std::nullopt;
+	}
+	int strength;
+	wxString strengthVal = choiceItemStrength->GetString(choiceItemStrength->GetSelection());
+	if (!strengthVal.ToInt(&strength))
+	{
+		wxLogError("Invalid non-integer item strength %s", strengthVal);
+		strength = 1;
+	}
+	int sel = choiceItemType->GetSelection();
+	int type;
+	if (!util::container::existsInContainer(consts::ITEM_TYPE_ALL, sel) || !itemTypeIdToChoiceIndexMap.contains(sel))
+	{
+		wxLogError("Invalid selection %d", sel);
+		type = consts::ITEM_TYPE_ARMOR;
+	}
+	else
+	{
+		type = itemTypeIdToChoiceIndexMap.at(sel);
+	}
+	auto item = ItemStructAccessor::generateRandomItem(strength, type, checkboxAlwaysEnchant->GetValue());
+	return item;
 }
 
 GenerateItemDialog::GenerateItemDialog(wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style) : wxDialog(parent, id, title, pos, size, style)
@@ -45,9 +101,14 @@ GenerateItemDialog::GenerateItemDialog(wxWindow* parent, wxWindowID id, const wx
 	labelItemType->Wrap(-1);
 	sizerItemType->Add(labelItemType, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
-	wxString choiceItemTypeChoices[] = { _("Armor"), _("Weapon"), _("Wand"), _("Misc"), _("Amulet") };
-	int choiceItemTypeNChoices = sizeof(choiceItemTypeChoices) / sizeof(wxString);
-	choiceItemType = new wxChoice(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, choiceItemTypeNChoices, choiceItemTypeChoices, 0);
+
+	choiceItemType = new wxChoice(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, 0);
+	for (int type: util::container::sorted(consts::ITEM_TYPE_ALL))
+	{
+		choiceItemType->Append(consts::ENUM_TO_STRING_ITEM_TYPE.at(type));
+		itemTypeIdToChoiceIndexMap[choiceItemType->GetCount() - 1] = type;
+	}
+	choiceIndexToItemTypeIdMap = util::container::invertMap(itemTypeIdToChoiceIndexMap);
 	choiceItemType->SetSelection(0);
 	sizerItemType->Add(choiceItemType, 0, wxALL, 5);
 
@@ -61,8 +122,8 @@ GenerateItemDialog::GenerateItemDialog(wxWindow* parent, wxWindowID id, const wx
 	labelItemStrength->Wrap(-1);
 	sizerItemStrength->Add(labelItemStrength, 0, wxALL | wxALIGN_CENTER_VERTICAL, 5);
 
-	wxArrayString choiceItemStrengthChoices;
-	choiceItemStrength = new wxChoice(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, choiceItemStrengthChoices, 0);
+	static const wxString choiceItemStrengthChoices[] = {"1", "2", "3", "4", "5", "6", "7"};
+	choiceItemStrength = new wxChoice(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, 7, choiceItemStrengthChoices, 0);
 	choiceItemStrength->SetSelection(0);
 	sizerItemStrength->Add(choiceItemStrength, 0, wxALL, 5);
 
@@ -96,6 +157,8 @@ GenerateItemDialog::GenerateItemDialog(wxWindow* parent, wxWindowID id, const wx
 	sizerMain->Fit(this);
 
 	this->Centre(wxBOTH);
+
+	// TODO: unpersist
 }
 
 GenerateItemDialog::~GenerateItemDialog()

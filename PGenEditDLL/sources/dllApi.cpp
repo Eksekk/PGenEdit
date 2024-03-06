@@ -21,6 +21,7 @@
 #include <ItemStructAccessor.h>
 #include <LodStructAccessor.h>
 #include <MapStructAccessor.h>
+#include <MapChestStructAccessor.h>
 #include "LuaWrapper.h"
 #include <Hook.h>
 #include "dllApi.h"
@@ -194,6 +195,7 @@ extern "C"
             itemAccessor = new ItemStructAccessor_6;
             lodAccessor = new LodStructAccessor_6;
             mapAccessor = new MapStructAccessor_6;
+            chestAccessor = new MapChestStructAccessor_6;
             playerSize = sizeof(mm6::Player);
             playerStart = offsetof(mm6::GameParty, playersArray);
             playerCount = 4;
@@ -209,6 +211,7 @@ extern "C"
             itemAccessor = new ItemStructAccessor_7;
             lodAccessor = new LodStructAccessor_7;
             mapAccessor = new MapStructAccessor_7;
+            chestAccessor = new MapChestStructAccessor_7;
             playerSize = sizeof(mm7::Player);
             playerStart = offsetof(mm7::GameParty, playersArray);
             playerCount = 4;
@@ -226,6 +229,7 @@ extern "C"
             itemAccessor = new ItemStructAccessor_8;
             lodAccessor = new LodStructAccessor_8;
             mapAccessor = new MapStructAccessor_8;
+            chestAccessor = new MapChestStructAccessor_8;
             playerSize = sizeof(mm8::Player);
             playerStart = offsetof(mm8::GameParty, playersArray);
             playerCount = 50;
@@ -352,6 +356,7 @@ extern "C"
         delete itemAccessor;
         delete lodAccessor;
         delete mapAccessor;
+        delete chestAccessor;
         removeHooks();
         wxLog::FlushActive();
         wxEntryCleanup();

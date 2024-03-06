@@ -29,7 +29,7 @@ public:
     template<typename Function>
     static void forEachLodBitmapDo(Function func, BitmapsLodType type)
     {
-        StructAccessorGenericFor::versionBasedAccessorDispatch(
+        StructAccessorGenericFor::versionBasedStaticAccessorDispatch(
             // just "TemplatedLodStructAccessor<mm6::Lod>::forEachLodBitmapDo" doesn't work
             // I now know why - it's template function, so just function name doesn't exist
             TemplatedLodStructAccessor<mm6::Lod>::template forEachLodBitmapDo<Function>,
@@ -41,7 +41,7 @@ public:
     template<typename Function>
     static auto forLodBitmapRangeDo(Function func, BitmapsLodType type)
     {
-        StructAccessorGenericFor::versionBasedAccessorDispatch(
+        StructAccessorGenericFor::versionBasedStaticAccessorDispatch(
             TemplatedLodStructAccessor<mm6::Lod>::template forLodBitmapRangeDo<Function>,
             TemplatedLodStructAccessor<mm7::Lod>::template forLodBitmapRangeDo<Function>,
             TemplatedLodStructAccessor<mm8::Lod>::template forLodBitmapRangeDo<Function>,
@@ -51,7 +51,7 @@ public:
     template<typename Function>
     static auto forLodBitmapIndexesDo(Function func, BitmapsLodType type, const std::vector<int>& indexes, bool sort = false)
     {
-        StructAccessorGenericFor::versionBasedAccessorDispatch(
+        StructAccessorGenericFor::versionBasedStaticAccessorDispatch(
             TemplatedLodStructAccessor<mm6::Lod>::template forLodBitmapIndexesDo<Function>,
             TemplatedLodStructAccessor<mm7::Lod>::template forLodBitmapIndexesDo<Function>,
             TemplatedLodStructAccessor<mm8::Lod>::template forLodBitmapIndexesDo<Function>,

@@ -6,10 +6,11 @@
 #include "CreateItemDialog.h"
 #include "PlayerItem.h"
 #include "GameData.h"
+#include "GenerateItemDialog.h"
 
 void InventoryManagerCtrl::onAddPress(wxCommandEvent& event)
 {
-    addItem();
+    addItemAdvanced();
 }
 
 void InventoryManagerCtrl::onDeletePress(wxCommandEvent& event)
@@ -46,7 +47,7 @@ void InventoryManagerCtrl::onRestorePress(wxCommandEvent& event)
     }
 }
 
-void InventoryManagerCtrl::addItem()
+void InventoryManagerCtrl::addItemAdvanced()
 {
     CreateItemDialog dialog(this);
     std::optional<mm7::Item> item = dialog.getNewItemModal();
@@ -55,6 +56,16 @@ void InventoryManagerCtrl::addItem()
     {
         auto* elem = inventoryCtrl->addItem(item.value());
         tableItems->GetModel()->ItemAdded(wxDataViewItem(nullptr), wxDataViewItem(reinterpret_cast<void*>(elem)));
+    }
+}
+
+void InventoryManagerCtrl::addItemSimple()
+{
+    GenerateItemDialog dialog(this);
+    std::optional<mm7::Item> item = dialog.generate();
+    if (item.has_value())
+    {
+        inventoryCtrl->addNewItem(item.value());
     }
 }
 

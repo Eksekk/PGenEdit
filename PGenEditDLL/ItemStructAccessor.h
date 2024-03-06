@@ -103,6 +103,8 @@ public:
         return StructAccessorGenericFor::genericForSingleArrayIndexExecute<Function, mm6::StdItemsTxtItem, mm7::StdItemsTxtItem, mm8::StdItemsTxtItem>(data.ptr(), index, std::forward<Function>(func));
     }
 
+    static mm7::Item generateRandomItem(int strength, int type, bool alwaysEnchant = false);
+
     // pure virtual function forEachItemDo(void* items, Callback callback)
     // template instantiations override it to cast to game version item type and execute callback
     // callback (usually polymorphic lambda) receives correct type

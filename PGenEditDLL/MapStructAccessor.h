@@ -3,6 +3,7 @@
 #include "StructAccessor.h"
 #include "LuaFunctions.h"
 #include "ItemStructAccessor.h"
+#include "MapChestStructAccessor.h"
 
 template<typename Map>
 class TemplatedMapStructAccessor;
@@ -102,6 +103,8 @@ public:
     virtual ArrayData getMapChestsArrayData() = 0;
     virtual ArrayData getMapMonstersArrayData() = 0;
 
+    virtual std::optional<ItemInInventoryData> addItemToChest(int chestIndex, const mm7::Item& item) = 0;
+
 	PGENEDIT_FOR_EACH_DEF(MapMonster)
     //PGENEDIT_FOR_EACH_STATIC_ARRAY_DEF(MapMonster)
     PGENEDIT_FOR_EACH_STATIC_ARRAY_DECL(MapMonster, TemplatedMapStructAccessor)
@@ -163,7 +166,30 @@ public:
     ArrayData getMapMonstersArrayData() override
     {
         return ArrayData(map->monsters);
+	}
+
+	void* getChestIndexPtr(int n)
+	{
+		return getMapChestsArrayData().nthElementPtr(n);
+	}
+
+private:
+    inline void checkMapChestIndex(int index)
+    {
+        if (index < 0 || index > 19)
+        {
+            wxFAIL_MSG(wxString::Format("Invalid map chest index %d", index));
+        }
     }
+
+	std::optional<ItemInInventoryData> addItemToChest(int chestIndex, const mm7::Item& item) override
+	{
+        checkMapChestIndex(chestIndex);
+        void* old = chestAccessor->getCurrentChestPtr();
+        auto ret = chestAccessor->forChest(getChestIndexPtr(chestIndex))->addItemToInventory(item);
+        (void)chestAccessor->forChest(old);
+        return ret;
+	}
 };
 
 INSTANTIATE_ACCESSOR_TEMPLATES_MM_GAMES(MapStructAccessor, GameMap);

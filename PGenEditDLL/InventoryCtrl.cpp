@@ -450,12 +450,54 @@ ItemStoreElement* InventoryCtrl::chooseItemWithMouse(bool allowNone)
     return nullptr;
 }
 
+// location is used here to tell where item should be placed after adding it
 ItemStoreElement* InventoryCtrl::addItem(const mm7::Item& item, const ItemLocationType& origin, const ItemLocationType& location, InventoryPosition pos)
 {
     auto elem = std::make_unique<ItemStoreElement>(item, origin, location, pos);
     ItemStoreElement* ptr = elem.get();
-    elements.insert(std::move(elem));
+    auto newLoc = location;
+    if (ItemRefMapChest* ref = std::get_if<ItemRefMapChest>(&newLoc))
+	{
+		// add to chest
+        auto inventoryDataOpt = mapAccessor->addItemToChest(ref->chestId, item);
+        if (!inventoryDataOpt.has_value())
+		{
+			wxMessageBox("Couldn't add item to chest", "Error", wxICON_ERROR);
+			ref->itemArrayIndex = -1;
+            return nullptr;
+		}
+		else
+		{
+			ref->itemArrayIndex = inventoryDataOpt.value().itemsArrayIndex;
+			elements.insert(std::move(elem));
+		}
+	}
+	else if (ItemRefPlayerInventory* ref = std::get_if<ItemRefPlayerInventory>(&newLoc))
+	{
+		// add to player
+		auto inventoryDataOpt = playerAccessor->forPlayerRosterId(ref->rosterIndex)->addItemToInventory(item);
+        if (!inventoryDataOpt.has_value())
+        {
+            wxMessageBox("Couldn't add item to inventory", "Error", wxICON_ERROR);
+            ref->itemArrayIndex = -1;
+            return nullptr;
+        }
+        else
+        {
+			ref->itemArrayIndex = inventoryDataOpt.value().itemsArrayIndex;
+            elements.insert(std::move(elem));
+        }
+	}
+	else
+	{
+		wxFAIL;
+	}
     return ptr;
+}
+
+ItemStoreElement* InventoryCtrl::addNewItem(const mm7::Item& item, InventoryPosition pos /*= { -1, -1 }*/)
+{
+    return addItem(item, ItemRefStored{}, ItemRefStored{}, pos);
 }
 
 bool InventoryCtrl::removeItem(ItemStoreElement&& item)
@@ -689,6 +731,17 @@ bool ItemRefMapChest::unpersist(const Json& json)
     return true;
 }
 
+void* ItemRefMapChest::getItemsPtr() const
+{
+	auto current = mapAccessor->getName();
+	if (current != mapName)
+	{
+		wxLogFatalError("ItemRefMapChest::getItemsPtr: operating on maps other than current one is not supported yet (current: %s, requested: %s)", current, mapName);
+	}
+	//return mapAccessor->
+	return nullptr;
+}
+
 bool ItemRefPlayerInventory::persist(Json& json) const
 {
     jsonEnsureIsObject(json);
@@ -703,6 +756,11 @@ bool ItemRefPlayerInventory::unpersist(const Json& json)
     rosterIndex = json["rosterIndex"];
     itemArrayIndex = json["itemArrayIndex"];
     return true;
+}
+
+void* ItemRefPlayerInventory::getItemsPtr() const
+{
+	throw std::logic_error("ItemRefPlayerInventory::getItemsPtr: not implemented");
 }
 
 bool ItemRefStored::persist(Json& json) const

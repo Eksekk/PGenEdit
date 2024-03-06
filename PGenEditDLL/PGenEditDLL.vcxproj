@@ -88,6 +88,7 @@
     <ClInclude Include="LuaTests.h" />
     <ClInclude Include="LuaValue.h" />
     <ClInclude Include="LuaWrapper.h" />
+    <ClInclude Include="MapChestStructAccessor.h" />
     <ClInclude Include="MapStructAccessor.h" />
     <ClInclude Include="NotebookReplaceableTabs.h" />
     <ClInclude Include="PartyStructAccessor.h" />
@@ -186,6 +187,7 @@
     <ClCompile Include="LuaTests.cpp" />
     <ClCompile Include="LuaValue.cpp" />
     <ClCompile Include="LuaWrapper.cpp" />
+    <ClCompile Include="MapChestStructAccessor.cpp" />
     <ClCompile Include="MapStructAccessor.cpp" />
     <ClCompile Include="NotebookReplaceableTabs.cpp" />
     <ClCompile Include="PartyStructAccessor.cpp" />
@@ -353,6 +355,7 @@
       <SupportJustMyCode>true</SupportJustMyCode>
       <CallingConvention>Cdecl</CallingConvention>
       <ForcedIncludeFiles>%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ShowIncludes>false</ShowIncludes>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>

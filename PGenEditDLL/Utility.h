@@ -1,6 +1,7 @@
 #pragma once
 #include "main.h"
 #include "PlayerSkill.h"
+
 extern int MMVER;
 
 // string functions
@@ -150,6 +151,15 @@ bool existsInContainer(const Container& container, const Val& val)
 	return indexInContainer(container, val) != -1;
 }
 
+// returns a new vector with the sorted elements of the original vector
+template<typename Container>
+Container sorted(const Container& c, std::function<bool(typename Container::value_type, typename Container::value_type)> comp = std::less<typename Container::value_type>())
+{
+	Container out = c;
+	std::sort(out.begin(), out.end(), comp);
+	return out;
+}
+
 template<typename Vector>
 Vector mergeVectors(std::initializer_list<Vector> list)
 {
@@ -210,9 +220,49 @@ constexpr Vector compileTimeMergeVectors(std::initializer_list<Vector> list)
 	return out;
 }
 
+struct InventoryPosition
+{
+	int x, y;
+	inline bool isInvalid() const
+	{
+		return x == -1 || y == -1;
+	}
+	inline bool isValid() const
+	{
+		return !isInvalid();
+	}
+	static inline InventoryPosition invalid()
+	{
+		return { -1, -1 };
+	}
+};
+
 struct BaseBonus
 {
 	int base, bonus;
+};
+
+struct ItemInInventoryData
+{
+	InventoryPosition pos;
+	int itemsArrayIndex;
+
+	ItemInInventoryData(InventoryPosition pos, int itemsArrayIndex)
+		: pos(pos), itemsArrayIndex(itemsArrayIndex)
+	{
+	}
+};
+
+struct ItemInInventoryDataWithItem
+{
+	InventoryPosition pos;
+	int itemsArrayIndex;
+	mm7::Item item;
+
+	ItemInInventoryDataWithItem(InventoryPosition pos, int itemsArrayIndex, const mm7::Item& item)
+		: pos(pos), itemsArrayIndex(itemsArrayIndex), item(item)
+	{
+	}
 };
 
 struct Bounds
@@ -401,8 +451,7 @@ namespace util
 		using ::convertAndConcat;
 		static constexpr std::vector<std::string>(*split)(const std::string& text, const std::string& delimiter, bool ignoreCase) = stringSplit;
 		static constexpr std::vector<std::string>(*splitChar)(const std::string& text, char delimiter, bool ignoreCase) = stringSplit;
-		template<typename... Args>
-		static constexpr auto containerToString = ::containerToString<Args...>;
+		using ::containerToString;
 	}
 
 	namespace wx
@@ -419,12 +468,15 @@ namespace util
 	namespace container
 	{
 		using ::mergeVectors;
-		template<template<typename, typename, typename...> typename Map, typename Key, typename Value, typename... Extra>
-		static constexpr auto invertMap = ::invertMap<Map, Key, Value, Extra...>;
-		template<typename T>
-		static constexpr auto existsInVector = ::existsInVector<T>;
-		template<typename T>
-		static constexpr auto indexInVector = ::indexInVector<T>;
+// 		template<template<typename, typename, typename...> typename Map, typename Key, typename Value, typename... Extra>
+// 		static constexpr auto invertMap = ::invertMap<Map, Key, Value, Extra...>;
+		using ::invertMap;
+// 		template<typename T>
+// 		static constexpr auto existsInVector = ::existsInVector<T>
+		using ::existsInVector;
+// 		template<typename T>
+// 		static constexpr auto indexInVector = ::indexInVector<T>;
+		using ::indexInVector;
 // 		template<typename Container, typename Val>
 // 		static constexpr auto existsInContainer = ::existsInContainer<Container, Val>;
 		using ::existsInContainer;
@@ -440,8 +492,10 @@ namespace util
 		// 		static constexpr std::string(*toString)(const Container<T, Extra...>& container, const std::string& separator) = ::containerToString<Container, T, Extra...>;
 
 				// "overload templated function pointers" (the above doesn't work)
-		template<typename... Args>
-		static constexpr auto toString = ::containerToString<Args...>;
+// 		template<typename... Args>
+// 		static constexpr auto toString = ::containerToString<Args...>;
+		using ::containerToString;
+		using ::sorted;
 
 	}
 

@@ -10,8 +10,11 @@
     - all classes in game data (PlayerSkill, PlayerStat etc.)
     - lua event system
     - debug console
-    - all classes and most functions in utility
+    - all classes and most functions in utility!!! This is the basic stuff and should work flawlessly
     - GameTime
+
+# Crucial functionality
+- implement operating on all game maps in memory, not just current one
 
 # Misc
 

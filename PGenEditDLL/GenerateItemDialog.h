@@ -4,7 +4,11 @@
 class GenerateItemDialog : public wxDialog
 {
 private:
+	std::unordered_map<int, int> itemTypeIdToChoiceIndexMap;
+	std::unordered_map<int, int> choiceIndexToItemTypeIdMap;
 
+	void onGenerateClick(wxCommandEvent& event);
+	void onCloseClick(wxCommandEvent& event);
 protected:
 	wxStaticText* labelItemType;
 	wxChoice* choiceItemType;
@@ -20,7 +24,7 @@ public:
 	void persistToJson(Json& json) const;
 	void restoreFromJson(const Json& json);
 
-	mm7::Item generate(bool close = true);
+	std::optional<mm7::Item> generate();
 
 	GenerateItemDialog(wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = _("Generate random item"), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize(-1, -1), long style = wxDEFAULT_DIALOG_STYLE);
 

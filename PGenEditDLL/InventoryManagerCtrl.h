@@ -23,7 +23,8 @@ class InventoryManagerCtrl : public wxPanel
     void onStorePress(wxCommandEvent& event);
     void onRestorePress(wxCommandEvent& event);
 
-    void addItem();
+    void addItemAdvanced();
+    void addItemSimple();
     mm7::Item modifyItem(const mm7::Item& item);
 
 public:

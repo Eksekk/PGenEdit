@@ -39,3 +39,7 @@ That way we don't need to deal with item index while ingame, and during one edit
 # Refactoring const generation
 - put every value and metadata (like enum to string) in namespace "const"
 - somehow add ability to manually add your custom values (in other file) and have their values assigned as usual - callbacks?
+
+# Deployment
+- provide DLLs of all dependencies to not have problems with licensing
+- provide FASM license text file

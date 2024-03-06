@@ -1,7 +1,7 @@
 #pragma once
 #include "main.h"
-#include "InventoryCtrl.h"
 #include "GameData.h"
+#include "Utility.h"
 
 namespace accessorDetail
 {
@@ -54,8 +54,9 @@ namespace accessorDetail
         return InventoryPosition::invalid();
     }
 
+    // this one doesn't need entity or item types to match, because it uses only "number" field of item and doesn't depend on its specific format/size
     template<typename EntityTypeT, typename ItemTypeT>
-        requires EntityItemTypesMatch<EntityTypeT, ItemTypeT>
+        //requires EntityItemTypesMatch<EntityTypeT, ItemTypeT>
     bool canItemBePlacedAtInventoryPosition(const EntityTypeT* entity, const ItemTypeT* item, int inventoryWidth, int inventoryHeight, int newX, int newY)
     {
         auto& playerItem = GameData::items.at(item->number);
@@ -144,5 +145,42 @@ namespace accessorDetail
         }
         return false;
     }
+
+    // returns whether item was successfully inserted or not (due to lack of space)
+    template<typename EntityTypeT>
+    std::optional<ItemInInventoryData> addItemToInventory(EntityTypeT* entity, const mm7::Item& item, int inventoryWidth, int inventoryHeight)
+	{
+		auto& playerItem = GameData::items.at(item.number);
+		for (int y = 0; y <= inventoryHeight - playerItem->inventoryHeight; ++y)
+		{
+			for (int x = 0; x <= inventoryWidth - playerItem->inventoryWidth; ++x)
+			{
+				if (canItemBePlacedAtInventoryPosition(entity, &item, inventoryWidth, inventoryHeight, x, y))
+				{
+                    // find free slot in Items[] array
+                    int itemsArrayIndex = 1;
+                    while (entity->items[itemsArrayIndex].number != 0)
+                    {
+                        ++itemsArrayIndex;
+                    }
+					int inventoryArrayIndexToUse = y * inventoryWidth + x;
+					entity->inventory[inventoryArrayIndexToUse] = itemsArrayIndex; // set first cell (Items[] index) of new position
+					for (int yOffset = 0; yOffset < playerItem->inventoryHeight; ++yOffset)
+					{
+						for (int xOffset = 0; xOffset < playerItem->inventoryWidth; ++xOffset)
+						{
+							if (!xOffset && !yOffset)
+							{
+								continue; // first cell
+							}
+							entity->inventory[x + xOffset + (y + yOffset) * inventoryWidth] = -(inventoryArrayIndexToUse + 1); // set new cell (uses Inventory[] index)
+						}
+					}
+                    return ItemInInventoryData({ x, y }, itemsArrayIndex);
+				}
+			}
+		}
+		return std::nullopt;
+	}
 
 } // namespace accessorDetail

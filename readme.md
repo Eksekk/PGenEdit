@@ -20,11 +20,10 @@ most common tasks will be very beneficial.
 
 For generator I plan to also include Lua api (the program is a DLL and so integrates perfectly with the game, including
 MMExt's lua environment) to allow using it programmatically, and possibly randomizing randomization parameters :) And you'll be
-able to edit some stuff in lua files (I use them for game-specific data at the moment, but it will also be needed for that api,
-and mods like Merge which relocate game data structures to remove their limits), mainly to change the characteristics of specific
+able to edit some stuff in lua files, mainly to change the characteristics of specific
 gameplay elements (say, how appropriate it is for knight to have high bodybuilding, or how valuable is Splitter in terms of
 "item points").
 
-Hope you find the stuff useful!!
+Hope you will find the stuff useful once it is released!!
 
 Eksekk

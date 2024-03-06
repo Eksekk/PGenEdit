@@ -1,6 +1,7 @@
 #pragma once
 #include "main.h"
 #include "Utility.h"
+#include "MapStructAccessor.h"
 
 extern const std::string ITEM_LOC_STORED, ITEM_LOC_CHEST, ITEM_LOC_PLAYER;
 class PlayerItem;
@@ -14,6 +15,8 @@ struct ItemRefMapChest
 
     bool persist(Json& json) const;
     bool unpersist(const Json& json);
+
+    void* getItemsPtr() const;
 };
 
 struct ItemRefPlayerInventory
@@ -23,6 +26,8 @@ struct ItemRefPlayerInventory
 
     bool persist(Json& json) const;
     bool unpersist(const Json& json);
+
+    void* getItemsPtr() const;
 };
 
 struct ItemRefStored
@@ -34,23 +39,6 @@ struct ItemRefStored
 static bool operator==(const ItemRefMapChest& lhs, const ItemRefMapChest& rhs);
 static bool operator==(const ItemRefPlayerInventory& lhs, const ItemRefPlayerInventory& rhs);
 static bool operator==(const ItemRefStored& lhs, const ItemRefStored& rhs);
-
-struct InventoryPosition
-{
-    int x, y;
-    inline bool isInvalid()
-    {
-        return x == -1 || y == -1;
-    }
-    inline bool isValid()
-    {
-        return !isInvalid();
-    }
-    static inline InventoryPosition invalid()
-    {
-        return { -1, -1 };
-    }
-};
 
 using ItemLocationType = std::variant<ItemRefStored, ItemRefMapChest, ItemRefPlayerInventory>;
 using InventoryType = std::variant<ItemRefMapChest, ItemRefPlayerInventory>;
@@ -176,6 +164,7 @@ public:
     ItemStoreElement* getMouseoverItem(); // pointer to allow null value (no item at mouse position) | FIXME: vector reallocation will cause problems if code holds valid pointer for long
     ItemStoreElement* chooseItemWithMouse(bool allowNone = true); // enters item selecting mode, after clicking returns clicked item
     ItemStoreElement* addItem(const mm7::Item& item, const ItemLocationType& origin = ItemRefStored{}, const ItemLocationType& location = ItemRefStored{}, InventoryPosition pos = { -1, -1 });
+    ItemStoreElement* addNewItem(const mm7::Item& item, InventoryPosition pos = { -1, -1 });
     bool removeItem(ItemStoreElement&& item);
     bool modifyItem(const ItemStoreElement& itemToModify, ItemStoreElement&& newItem);
     bool setHighlightForItem(const ItemStoreElement& item, bool highlight = true);

@@ -109,6 +109,7 @@ struct ArrayData
 private:
     std::variant<int, int*, uint32_t, uint32_t*> countVariant;
     void* myPtr;
+    size_t myItemSize;
 public:
 
     ArrayData() = delete;
@@ -118,6 +119,7 @@ public:
     {
         myPtr = arr.data();
         countVariant = (int)Count;
+        myItemSize = sizeof(T);
     }
 
     template<typename T>
@@ -125,6 +127,7 @@ public:
     {
         myPtr = data;
         countVariant = count;
+        myItemSize = sizeof(T);
     }
 
     template<typename T>
@@ -132,6 +135,7 @@ public:
     {
         myPtr = data;
         countVariant = count;
+        myItemSize = sizeof(T);
     }
 
     template<typename T>
@@ -139,14 +143,16 @@ public:
     {
         myPtr = data;
         countVariant = count;
-    }
+        myItemSize = sizeof(T);
+	}
 
     template<typename T>
     ArrayData(T* data, uint32_t* count)
     {
         myPtr = data;
         countVariant = count;
-    }
+        myItemSize = sizeof(T);
+	}
 
     inline void* ptr() const
     {
@@ -177,6 +183,17 @@ public:
             return 1;
         }
     }
+
+    size_t itemSize() const
+	{
+		return myItemSize;
+	}
+
+    void* nthElementPtr(int index) const
+	{
+        checkIndex(index);
+		return static_cast<char*>(myPtr) + index * myItemSize;
+	}
 
     inline void checkIndex(int index) const
     {
@@ -286,8 +303,12 @@ public:
 class StructAccessorGenericFor
 {
 protected:
+	// dispatches function based on MMVER
+    // this needs to be used in cases where we want to allow function to be used from superclass and overridden in derived, and have it take parameters from derived class
+    // since all "forEach" functions take callback as a parameter, they are template functions and thus cannot be virtual
+    // so, this just dynamically dispatches to derived class
 	template<typename Function6, typename Function7, typename Function8, typename... Args>
-	static auto versionBasedAccessorDispatch(Function6&& func6, Function7&& func7, Function8&& func8, Args&&... args)
+	static auto versionBasedStaticAccessorDispatch(Function6&& func6, Function7&& func7, Function8&& func8, Args&&... args)
 	{
 		if (MMVER == 6)
 		{
@@ -307,6 +328,29 @@ protected:
 		}
 		return decltype(func6(std::forward<Args>(args)...))(); // default-constructed return value, compiler will make sure all three returned types match
 	}
+
+    template<typename... Args, typename Class6, typename Class7, typename Class8, typename ReturnType>
+    static auto versionBasedAccessorDispatch(ReturnType Class6::*func6, ReturnType Class7::* func7, ReturnType Class8::* func8, Args&&... args)
+	{
+		if (MMVER == 6)
+		{
+			return (static_cast<Class6*>(this)->*func6)(std::forward<Args>(args)...);
+		}
+		else if (MMVER == 7)
+		{
+			return (static_cast<Class7*>(this)->*func6)(std::forward<Args>(args)...);;
+		}
+		else if (MMVER == 8)
+		{
+			return (static_cast<Class8*>(this)->*func6)(std::forward<Args>(args)...);;
+		}
+		else
+		{
+			wxFAIL_MSG(wxString::Format("Invalid MM version (%d)", MMVER));
+		}
+		return decltype((static_cast<Class6*>(this)->*func6)(std::forward<Args>(args)...))(); // default-constructed return value, compiler will make sure all three returned types match
+	}
+
     // executes a function for any game version's struct over each array item
     template<typename Function, typename Type6, typename Type7, typename Type8>
     static auto genericForEachDo(void* ptr, int count, Function&& func, int first = 0)

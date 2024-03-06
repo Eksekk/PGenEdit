@@ -4,6 +4,7 @@
 #include "Utility.h" // BaseBonus
 #include "InventoryCtrl.h"
 #include "StructAccessor.h"
+#include "accessorCommonCode.h"
 
 using namespace consts; // TODO: tmp, remove this
 
@@ -241,9 +242,10 @@ public:
 		}
 	}
 
-	[[nodiscard]] virtual InventoryPosition getItemInventoryPosition(const void* ptr) = 0;
-	virtual bool moveItemToInventoryPosition(const void* ptr, InventoryPosition pos) = 0;
-	virtual bool moveItemToInventoryPosition(const void* ptr, int x, int y) = 0;
+	[[nodiscard]] virtual InventoryPosition getItemInventoryPosition(const void* itemsArrayEntryPtr) = 0;
+	virtual bool moveItemToInventoryPosition(const void* itemsArrayEntryPtr, InventoryPosition pos) = 0;
+	virtual bool moveItemToInventoryPosition(const void* itemsArrayEntryPtr, int x, int y) = 0;
+	virtual std::optional<ItemInInventoryData> addItemToInventory(const mm7::Item& item) = 0;
 private:
 	PGENEDIT_GENERIC_METHODS_DEF(Player);
 };
@@ -382,10 +384,18 @@ public:
 
 	virtual int getRosterIndexFromPartyIndex(int idx) override;
 
-    [[nodiscard]] virtual InventoryPosition getItemInventoryPosition(const void* ptr) override;
-    virtual bool moveItemToInventoryPosition(const void* ptr, InventoryPosition pos) override;
-    virtual bool moveItemToInventoryPosition(const void* ptr, int x, int y) override;
+    [[nodiscard]] virtual InventoryPosition getItemInventoryPosition(const void* itemsArrayEntryPtr) override;
+    virtual bool moveItemToInventoryPosition(const void* itemsArrayEntryPtr, InventoryPosition pos) override;
+    virtual bool moveItemToInventoryPosition(const void* itemsArrayEntryPtr, int x, int y) override;
+
+	virtual std::optional<ItemInInventoryData> addItemToInventory(const mm7::Item& item) override;
 };
+
+template<typename Player>
+std::optional<ItemInInventoryData> TemplatedPlayerStructAccessor<Player>::addItemToInventory(const mm7::Item& item)
+{
+	return accessorDetail::addItemToInventory(getPlayerToAffect(), item, INVENTORY_WIDTH_PLAYER, INVENTORY_HEIGHT_PLAYER);
+}
 
 template<typename Player>
 size_t TemplatedPlayerStructAccessor<Player>::getItemsSize()
