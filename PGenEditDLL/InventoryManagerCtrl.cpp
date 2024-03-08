@@ -8,9 +8,14 @@
 #include "GameData.h"
 #include "GenerateItemDialog.h"
 
-void InventoryManagerCtrl::onAddPress(wxCommandEvent& event)
+void InventoryManagerCtrl::onAddAdvancedPress(wxCommandEvent& event)
 {
     addItemAdvanced();
+}
+
+void InventoryManagerCtrl::onAddSimplePress(wxCommandEvent& event)
+{
+    addItemSimple();
 }
 
 void InventoryManagerCtrl::onDeletePress(wxCommandEvent& event)
@@ -65,7 +70,8 @@ void InventoryManagerCtrl::addItemSimple()
     std::optional<mm7::Item> item = dialog.generate();
     if (item.has_value())
     {
-        inventoryCtrl->addNewItem(item.value());
+        ItemStoreElement* elem = inventoryCtrl->addNewItem(item.value(), ItemRefStored{});
+        tableItems->GetModel()->ItemAdded(wxDataViewItem(nullptr), wxDataViewItem(reinterpret_cast<void*>(elem)));
     }
 }
 
@@ -89,10 +95,14 @@ InventoryManagerCtrl::InventoryManagerCtrl(wxWindow* parent, int CELLS_ROW, int 
 
     wxBoxSizer* buttonsSizer;
     buttonsSizer = new wxBoxSizer(wxVERTICAL);
+    
+    addSimpleButton = new wxButton(this, wxID_ANY, _("Add (simple)"), wxDefaultPosition, wxSize(100, 30), 0);
+    addSimpleButton->Bind(wxEVT_BUTTON, &InventoryManagerCtrl::onAddSimplePress, this);
+    buttonsSizer->Add(addSimpleButton, 0, wxALL | wxALIGN_CENTER_HORIZONTAL, 5);
 
-    addButton = new wxButton(this, wxID_ANY, _("Add"), wxDefaultPosition, wxSize(100, 30), 0);
-    addButton->Bind(wxEVT_BUTTON, &InventoryManagerCtrl::onAddPress, this);
-    buttonsSizer->Add(addButton, 0, wxALL | wxALIGN_CENTER_HORIZONTAL, 5);
+    addAdvancedButton = new wxButton(this, wxID_ANY, _("Add (advanced)"), wxDefaultPosition, wxSize(100, 30), 0);
+    addAdvancedButton->Bind(wxEVT_BUTTON, &InventoryManagerCtrl::onAddAdvancedPress, this);
+    buttonsSizer->Add(addAdvancedButton, 0, wxALL | wxALIGN_CENTER_HORIZONTAL, 5);
 
     deleteButton = new wxButton(this, wxID_ANY, _("Delete"), wxDefaultPosition, wxSize(100, 30), 0);
     deleteButton->Bind(wxEVT_BUTTON, &InventoryManagerCtrl::onDeletePress, this);
@@ -229,11 +239,8 @@ unsigned int InventoryItemTableViewModel::GetChildren(const wxDataViewItem& data
         int n = 0;
         for (const auto& elem : inventoryManagerCtrl.inventoryCtrl->getElements())
         {
-            if (std::holds_alternative<ItemRefPlayerInventory>(elem->location) || std::holds_alternative<ItemRefMapChest>(elem->location))
-            {
-                children.Add(wxDataViewItem(elem.get()));
-                ++n;
-            }
+			children.Add(wxDataViewItem(elem.get()));
+			++n;
         }
         return n;
     }

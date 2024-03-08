@@ -17,10 +17,15 @@ void GenerateItemDialog::onGenerateClick(wxCommandEvent& event)
 	EndModal(static_cast<int>(GenerateReturn::GENERATE));
 }
 
-void GenerateItemDialog::onCloseClick(wxCommandEvent& event)
+void GenerateItemDialog::onCloseButtonClick(wxCommandEvent& event)
 {
 	EndModal(static_cast<int>(GenerateReturn::CANCEL));
 	// TODO: persist
+}
+
+void GenerateItemDialog::onClose(wxCloseEvent& event)
+{
+	EndModal(static_cast<int>(GenerateReturn::CANCEL));
 }
 
 void GenerateItemDialog::persistToJson(Json& json) const
@@ -144,8 +149,10 @@ GenerateItemDialog::GenerateItemDialog(wxWindow* parent, wxWindowID id, const wx
 
 	sizerDialogButtons = new wxStdDialogButtonSizer();
 	sizerDialogButtonsOK = new wxButton(this, wxID_OK);
+	sizerDialogButtonsOK->Bind(wxEVT_BUTTON, &GenerateItemDialog::onGenerateClick, this, wxID_OK);
 	sizerDialogButtons->AddButton(sizerDialogButtonsOK);
 	sizerDialogButtonsCancel = new wxButton(this, wxID_CANCEL);
+	sizerDialogButtonsCancel->Bind(wxEVT_BUTTON, &GenerateItemDialog::onCloseButtonClick, this, wxID_CANCEL);
 	sizerDialogButtons->AddButton(sizerDialogButtonsCancel);
 	sizerDialogButtons->Realize();
 
@@ -157,6 +164,8 @@ GenerateItemDialog::GenerateItemDialog(wxWindow* parent, wxWindowID id, const wx
 	sizerMain->Fit(this);
 
 	this->Centre(wxBOTH);
+
+	this->Bind(wxEVT_CLOSE_WINDOW, &GenerateItemDialog::onClose, this);
 
 	// TODO: unpersist
 }

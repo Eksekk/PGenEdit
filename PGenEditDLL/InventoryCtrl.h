@@ -164,7 +164,7 @@ public:
     ItemStoreElement* getMouseoverItem(); // pointer to allow null value (no item at mouse position) | FIXME: vector reallocation will cause problems if code holds valid pointer for long
     ItemStoreElement* chooseItemWithMouse(bool allowNone = true); // enters item selecting mode, after clicking returns clicked item
     ItemStoreElement* addItem(const mm7::Item& item, const ItemLocationType& origin = ItemRefStored{}, const ItemLocationType& location = ItemRefStored{}, InventoryPosition pos = { -1, -1 });
-    ItemStoreElement* addNewItem(const mm7::Item& item, InventoryPosition pos = { -1, -1 });
+    ItemStoreElement* addNewItem(const mm7::Item& item, const ItemLocationType& loc, InventoryPosition pos = { -1, -1 });
     bool removeItem(ItemStoreElement&& item);
     bool modifyItem(const ItemStoreElement& itemToModify, ItemStoreElement&& newItem);
     bool setHighlightForItem(const ItemStoreElement& item, bool highlight = true);

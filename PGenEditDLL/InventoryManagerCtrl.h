@@ -10,14 +10,16 @@ class InventoryItemTableViewModel;
 
 class InventoryManagerCtrl : public wxPanel
 {
-    wxButton* addButton;
+    wxButton* addAdvancedButton;
+    wxButton* addSimpleButton;
     wxButton* deleteButton;
     wxButton* modifyButton;
     wxButton* storeButton;
     wxButton* restoreButton;
     wxDataViewCtrl* tableItems;
 
-    void onAddPress(wxCommandEvent& event);
+    void onAddAdvancedPress(wxCommandEvent& event);
+    void onAddSimplePress(wxCommandEvent& event);
     void onDeletePress(wxCommandEvent& event);
     void onModifyPress(wxCommandEvent& event);
     void onStorePress(wxCommandEvent& event);

@@ -490,14 +490,14 @@ ItemStoreElement* InventoryCtrl::addItem(const mm7::Item& item, const ItemLocati
 	}
 	else
 	{
-		wxFAIL;
+		elements.insert(std::move(elem));
 	}
     return ptr;
 }
 
-ItemStoreElement* InventoryCtrl::addNewItem(const mm7::Item& item, InventoryPosition pos /*= { -1, -1 }*/)
+ItemStoreElement* InventoryCtrl::addNewItem(const mm7::Item& item, const ItemLocationType& loc, InventoryPosition pos /*= { -1, -1 }*/)
 {
-    return addItem(item, ItemRefStored{}, ItemRefStored{}, pos);
+    return addItem(item, ItemRefStored{}, loc, pos);
 }
 
 bool InventoryCtrl::removeItem(ItemStoreElement&& item)

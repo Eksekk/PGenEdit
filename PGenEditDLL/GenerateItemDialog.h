@@ -8,7 +8,8 @@ private:
 	std::unordered_map<int, int> choiceIndexToItemTypeIdMap;
 
 	void onGenerateClick(wxCommandEvent& event);
-	void onCloseClick(wxCommandEvent& event);
+	void onCloseButtonClick(wxCommandEvent& event);
+	void onClose(wxCloseEvent& event);
 protected:
 	wxStaticText* labelItemType;
 	wxChoice* choiceItemType;
