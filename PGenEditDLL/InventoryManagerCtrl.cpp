@@ -132,21 +132,21 @@ InventoryManagerCtrl::InventoryManagerCtrl(wxWindow* parent, int CELLS_ROW, int 
 
     itemsMainSizer->Add(inventoryAndActionsSizer, 0, wxEXPAND, 5);
 
-    auto renderer = [] { return new wxDataViewTextRenderer("string", wxDATAVIEW_CELL_INERT, wxALIGN_LEFT); };
+    auto renderer = [] (const std::string& type = "string") { return new wxDataViewTextRenderer(type, wxDATAVIEW_CELL_INERT, wxALIGN_LEFT); };
 
     tableItems = new wxDataViewCtrl(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, 0);
-    tableItems->AppendColumn(new wxDataViewColumn("#", renderer(), InventoryItemTableViewModel::COLUMN_INDEX_ID));
+    tableItems->AppendColumn(new wxDataViewColumn("#", renderer("long"), InventoryItemTableViewModel::COLUMN_INDEX_ID));
     tableItems->AppendColumn(new wxDataViewColumn("Name", renderer(), InventoryItemTableViewModel::COLUMN_INDEX_NAME));
     tableItems->AppendColumn(new wxDataViewColumn("Type", renderer(), InventoryItemTableViewModel::COLUMN_INDEX_TYPE));
     tableItems->AppendColumn(new wxDataViewColumn("Skill", renderer(), InventoryItemTableViewModel::COLUMN_INDEX_SKILL));
     tableItems->AppendColumn(new wxDataViewColumn("Stats", renderer(), InventoryItemTableViewModel::COLUMN_INDEX_STATS));
     tableItems->AppendColumn(new wxDataViewColumn("Bonus", renderer(), InventoryItemTableViewModel::COLUMN_INDEX_BONUS));
     tableItems->AppendColumn(new wxDataViewColumn("Condition", renderer(), InventoryItemTableViewModel::COLUMN_INDEX_CONDITION));
-    tableItems->AppendColumn(new wxDataViewColumn("Value", renderer(), InventoryItemTableViewModel::COLUMN_INDEX_VALUE));
+    tableItems->AppendColumn(new wxDataViewColumn("Value", renderer("long"), InventoryItemTableViewModel::COLUMN_INDEX_VALUE));
 
     tableItems->AssociateModel(new InventoryItemTableViewModel(*this));
-    
-    itemsMainSizer->Add(tableItems, 0, wxALL | wxEXPAND, 5);
+    tableItems->SetMinSize(wxSize(800, 400)); // FIXME: table is somehow not expanded vertically, this works, but won't show all items
+    itemsMainSizer->Add(tableItems, 1, wxALL | wxEXPAND, 5);
 
     Fit();
     this->Layout();
@@ -177,23 +177,23 @@ void InventoryItemTableViewModel::GetValue(wxVariant& variant, const wxDataViewI
         variant = (long)itemData->id;
         break;
     case COLUMN_INDEX_NAME:
-        variant = itemData->name;
+        variant = wxString(itemData->name);
         break;
     case COLUMN_INDEX_TYPE:
-        variant = consts::ENUM_TO_STRING_ITEM_TYPE.at(itemData->itemTypeActual);
+        variant = wxString(consts::ENUM_TO_STRING_ITEM_TYPE.at(itemData->itemTypeActual));
         break;
     case COLUMN_INDEX_SKILL: // skill name
     {
-        variant = itemData->getSkillString();
+        variant = wxString(itemData->getSkillString());
         break;
     }
     case COLUMN_INDEX_STATS: // stats (+5 AC etc.)
-        variant = itemData->getStatsString();
+        variant = wxString(itemData->getStatsString());
         break;
     case COLUMN_INDEX_BONUS: // Bonus (complex string like +5 might)
     {
         auto opt = PlayerItem::getEnchantmentsString(item);
-        variant = opt.value_or(""); // TODO
+        variant = wxString(opt.value_or("")); // TODO
         break;
     }
     case COLUMN_INDEX_CONDITION: // condition (broken etc.)
@@ -204,7 +204,7 @@ void InventoryItemTableViewModel::GetValue(wxVariant& variant, const wxDataViewI
             v.push_back(item.hardened ? "Hardened" : "Not hardened");
             v.push_back(item.stolen ? "Stolen" : "Not stolen");
         }
-        variant = stringConcat(v, "; ");
+        variant = wxString(stringConcat(v, "; "));
         break;
 
     }
