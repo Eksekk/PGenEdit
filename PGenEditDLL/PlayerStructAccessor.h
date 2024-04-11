@@ -245,6 +245,7 @@ public:
 	[[nodiscard]] virtual InventoryPosition getItemInventoryPosition(const void* itemsArrayEntryPtr) = 0;
 	virtual bool moveItemToInventoryPosition(const void* itemsArrayEntryPtr, InventoryPosition pos) = 0;
 	virtual bool moveItemToInventoryPosition(const void* itemsArrayEntryPtr, int x, int y) = 0;
+	virtual bool moveItemToInventoryPosition(int itemsArrayIndex, InventoryPosition pos) = 0;
 	virtual std::optional<ItemInInventoryData> addItemToInventory(const mm7::Item& item) = 0;
 private:
 	PGENEDIT_GENERIC_METHODS_DEF(Player);
@@ -387,6 +388,7 @@ public:
     [[nodiscard]] virtual InventoryPosition getItemInventoryPosition(const void* itemsArrayEntryPtr) override;
     virtual bool moveItemToInventoryPosition(const void* itemsArrayEntryPtr, InventoryPosition pos) override;
     virtual bool moveItemToInventoryPosition(const void* itemsArrayEntryPtr, int x, int y) override;
+	virtual bool moveItemToInventoryPosition(int itemsArrayIndex, InventoryPosition pos) override;
 
 	virtual std::optional<ItemInInventoryData> addItemToInventory(const mm7::Item& item) override;
 };

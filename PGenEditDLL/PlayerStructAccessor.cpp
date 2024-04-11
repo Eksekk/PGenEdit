@@ -649,6 +649,13 @@ bool TemplatedPlayerStructAccessor<Player>::moveItemToInventoryPosition(const vo
 }
 
 template<typename Player>
+bool TemplatedPlayerStructAccessor<Player>::moveItemToInventoryPosition(int itemsArrayIndex, InventoryPosition pos)
+{
+	void* itemPtr = reinterpret_cast<PlayerItemType*>(this->getItemsPtr()) + itemsArrayIndex;
+	return moveItemToInventoryPosition(itemPtr, pos);
+}
+
+template<typename Player>
 bool TemplatedPlayerStructAccessor<Player>::moveItemToInventoryPosition(const void* ptr, InventoryPosition pos)
 {
 	return moveItemToInventoryPosition(ptr, pos.x, pos.y);

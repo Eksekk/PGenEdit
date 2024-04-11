@@ -25,25 +25,26 @@ ItemStructAccessor::~ItemStructAccessor()
 mm7::Item ItemStructAccessor::generateRandomItem(int strength, int type, bool alwaysEnchant /*= false*/)
 {
     // return call(mmv(0x448790, 0x45664C, 0x453ECC), 1, pItems, assertnum(strength, 2), assertnum(type or 0, 2), self, alwaysEnchant and 1 or 0)
+    void* itemsBlockStart = (char*)gameAccessor->getItemsTxtArrayData().ptr() - 4; // 4 less than real items txt address
     if (MMVER == 6)
     {
         mm6::Item item;
         memset(&item, 0, sizeof(item));
-        callMemoryAddress(0x448790, 1, gameAccessor->getItemsTxtArrayData().ptr(), strength, type, &item);
+        callMemoryAddress(0x448790, 1, itemsBlockStart, strength, type, &item);
         return itemAccessor->forItem(&item)->convertToMM7Item();
     }
     else if (MMVER == 7)
 	{
 		mm7::Item item;
 		memset(&item, 0, sizeof(item));
-		callMemoryAddress(0x45664C, 1, gameAccessor->getItemsTxtArrayData().ptr(), strength, type, &item);
+		callMemoryAddress(0x45664C, 1, itemsBlockStart, strength, type, &item);
 		return item;
 	}
 	else if (MMVER == 8)
 	{
 		mm8::Item item;
 		memset(&item, 0, sizeof(item));
-		callMemoryAddress(0x453ECC, 1, gameAccessor->getItemsTxtArrayData().ptr(), strength, type, &item, alwaysEnchant ? 1 : 0);
+		callMemoryAddress(0x453ECC, 1, itemsBlockStart, strength, type, &item, alwaysEnchant ? 1 : 0);
 		return itemAccessor->forItem(&item)->convertToMM7Item();
 	}
 	else

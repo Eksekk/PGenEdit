@@ -15,6 +15,12 @@ const int InventoryCtrl::CELL_HEIGHT = 40; // TODO
 const int InventoryCtrl::CELL_WIDTH = 40; // TODO
 const std::string InventoryCtrl::JSON_KEY_INVENTORY = "inventory";
 
+wxDEFINE_EVENT(EVT_INVENTORY_ITEM_DELETED, wxCommandEvent);
+wxDEFINE_EVENT(EVT_INVENTORY_ITEM_ADDED, wxCommandEvent);
+wxDEFINE_EVENT(EVT_INVENTORY_ITEMS_ADDED, wxCommandEvent);
+wxDEFINE_EVENT(EVT_INVENTORY_ITEMS_DELETED, wxCommandEvent);
+wxDEFINE_EVENT(EVT_INVENTORY_ALL_ITEMS_CHANGED, wxCommandEvent);
+
 wxSize InventoryCtrl::DoGetBestClientSize() const
 {
     return wxSize(CELLS_ROW * CELL_WIDTH, CELLS_COL * CELL_HEIGHT);
@@ -317,10 +323,17 @@ bool InventoryCtrl::drawItemAt(wxPaintDC& dc, const ItemStoreElement& elem, int 
 
 bool InventoryCtrl::reloadReferencedItems()
 {
+    // COME BACK LATER, BREAKS CODE
+    // delete all player inventory / map chest items, and readd them, if possible on old positions
     for (auto itr = elements.begin(); itr != elements.end(); )
     {
-        if (std::holds_alternative<ItemRefStored>((*itr)->origin))
-        {
+        if (!std::holds_alternative<ItemRefStored>((*itr)->origin))
+		{
+            // !!! IMPORTANT: first run event, THEN delete, because otherwise unique_ptr would delete the item before event is run
+// 			wxCommandEvent event(EVT_INVENTORY_ITEM_DELETED);
+// 			event.SetEventObject(this);
+// 			event.SetClientData(itr->get());
+// 			ProcessWindowEvent(event);
             itr = elements.erase(itr);
         }
         else
@@ -339,13 +352,13 @@ bool InventoryCtrl::reloadReferencedItems()
             if (convertedItem.number != 0)
             {
                 ItemRefMapChest origin(*ref);
-                origin.itemArrayIndex = arrayIndex;
+                origin.itemsArrayIndex = arrayIndex;
                 // for make_unique need to explicitly specify InventoryPosition type, since it doesn't know that it's not an initializer list
                 auto elem = std::make_unique<ItemStoreElement>(convertedItem, origin, ItemRefStored{}, InventoryPosition{ -1, -1 });
                 // try at old position first
                 auto pos = playerAccessor->getItemInventoryPosition(itemPtr);
                 // this needs to return true, each item should fit, since stored items are not in inventory
-                moveStoredItemToInventory(*elem, pos);
+                moveStoredItemToInventory(*elem, pos, false);
                 elements.insert(std::move(elem));
             }
             ++arrayIndex;
@@ -364,11 +377,12 @@ bool InventoryCtrl::reloadReferencedItems()
             mm7::Item convertedItem = itemAccessor->forItem(item)->convertToMM7Item();
             if (convertedItem.number != 0)
             {
+                // FIXME: need to separate moveStoredItemInInventory into two functions: one which changes this control's state, and other which changes player's inventory. Here we need to call it, but don't want to move items in player inventory since they're already here, and we're just loading them into the control.
                 ItemRefPlayerInventory origin(*ref);
-                origin.itemArrayIndex = arrayIndex;
+                origin.itemsArrayIndex = arrayIndex;
                 auto elem = std::make_unique<ItemStoreElement>(convertedItem, origin, ItemRefStored{}, InventoryPosition{ -1, -1 });
                 auto pos = playerAccessor->getItemInventoryPosition(item);
-                wxASSERT(moveStoredItemToInventory(*elem, pos));
+                wxASSERT(moveStoredItemToInventory(*elem, pos, false));
                 elements.insert(std::move(elem));
             }
             ++arrayIndex;
@@ -381,6 +395,9 @@ bool InventoryCtrl::reloadReferencedItems()
     {
         wxFAIL;
     }
+    wxCommandEvent allChangedEvent(EVT_INVENTORY_ALL_ITEMS_CHANGED);
+    allChangedEvent.SetEventObject(this);
+    ProcessWindowEvent(allChangedEvent);
     return false;
 }
 
@@ -392,10 +409,14 @@ void InventoryCtrl::onRightclick(wxMouseEvent& event)
 {
 }
 
-bool InventoryCtrl::moveStoredItemToInventory(ItemStoreElement& item, InventoryPosition pos)
+bool InventoryCtrl::moveStoredItemToInventory(ItemStoreElement& item, InventoryPosition pos, bool affectGameInventory)
 {
+    // TODO: safeguard against restoring items already drawn on the control here or during button press? or both?
     wxASSERT_MSG(std::holds_alternative<ItemRefStored>(item.location), "Expected item in storage");
     auto visitor = [&](const auto& ref) {item.location = ref; }; // needed because inventoryType doesn't have stored item ref alternative
+
+    // compute real position, trying first to place item at given position, then at any free position
+    // and update control's own state
     item.pos = findFreePositionForItem(item);
     bool ret = false;
     if (pos.x != -1 || item.pos.x != -1)
@@ -427,8 +448,40 @@ bool InventoryCtrl::moveStoredItemToInventory(ItemStoreElement& item, InventoryP
             ret = true;
         }
     }
-    // move only when items panel is destroyed
-    //if (!playerAccessor->moveItemToInventoryPosition();
+    // actually move the item to player's/chest's inventory
+    if (!affectGameInventory)
+    {
+        return true;
+    }
+    if (std::holds_alternative<ItemRefPlayerInventory>(inventoryType))
+    {
+        std::optional<ItemInInventoryData> inventoryDataOpt = playerAccessor->forPlayerRosterId(std::get<ItemRefPlayerInventory>(inventoryType).rosterIndex)->addItemToInventory(item.getItem());
+        if (inventoryDataOpt.has_value())
+        {
+			std::get<ItemRefPlayerInventory>(item.location).itemsArrayIndex = inventoryDataOpt.value().itemsArrayIndex;
+            if (!playerAccessor->moveItemToInventoryPosition(inventoryDataOpt.value().itemsArrayIndex, item.pos))
+            {
+				wxMessageBox("Couldn't move item to inventory", "Error", wxICON_ERROR);
+				return false;
+			}
+        }
+        else
+        {
+			wxMessageBox("Couldn't add item to inventory", "Error", wxICON_ERROR);
+			return false;
+		}
+    }
+    else if (std::holds_alternative<ItemRefMapChest>(inventoryType))
+    {
+		std::optional<ItemInInventoryData> inventoryDataOpt = mapAccessor->addItemToChest(std::get<ItemRefMapChest>(inventoryType).chestId, item.getItem());
+        if (inventoryDataOpt.has_value())
+        {
+            std::get<ItemRefMapChest>(item.location).itemsArrayIndex = inventoryDataOpt.value().itemsArrayIndex;
+            throw new std::logic_error("Not implemented");
+// 			if (!chestAccessor->moveItemToInventoryPosition(std::get<ItemRefMapChest>(inventoryType).chestId, inventoryDataOpt.value().itemsArrayIndex, item.pos))
+// 			{ }
+        }
+    }
     return ret;
 }
 
@@ -437,6 +490,7 @@ bool InventoryCtrl::moveInventoryItemToStore(ItemStoreElement& item)
     wxASSERT_MSG(std::holds_alternative<ItemRefPlayerInventory>(item.location) || std::holds_alternative<ItemRefMapChest>(item.location), "Expected item in player's or chest's inventory");
     item.pos = { -1, -1 };
     item.location = ItemRefStored{};
+    throw new std::logic_error("Not implemented (boolean to affect game inventory is missing)");
     return true;
 }
 
@@ -463,12 +517,12 @@ ItemStoreElement* InventoryCtrl::addItem(const mm7::Item& item, const ItemLocati
         if (!inventoryDataOpt.has_value())
 		{
 			wxMessageBox("Couldn't add item to chest", "Error", wxICON_ERROR);
-			ref->itemArrayIndex = -1;
+			ref->itemsArrayIndex = -1;
             return nullptr;
 		}
 		else
 		{
-			ref->itemArrayIndex = inventoryDataOpt.value().itemsArrayIndex;
+			ref->itemsArrayIndex = inventoryDataOpt.value().itemsArrayIndex;
 			elements.insert(std::move(elem));
 		}
 	}
@@ -479,12 +533,12 @@ ItemStoreElement* InventoryCtrl::addItem(const mm7::Item& item, const ItemLocati
         if (!inventoryDataOpt.has_value())
         {
             wxMessageBox("Couldn't add item to inventory", "Error", wxICON_ERROR);
-            ref->itemArrayIndex = -1;
+            ref->itemsArrayIndex = -1;
             return nullptr;
         }
         else
         {
-			ref->itemArrayIndex = inventoryDataOpt.value().itemsArrayIndex;
+			ref->itemsArrayIndex = inventoryDataOpt.value().itemsArrayIndex;
             elements.insert(std::move(elem));
         }
 	}
@@ -547,6 +601,11 @@ InventoryPosition InventoryCtrl::findFreePositionForItem(const ItemStoreElement&
             const PlayerItem* const data = existing->getItemData();
             if (data)
             {
+                if (existing->pos.isInvalid())
+                {
+                    // not stored in inventory, skip
+                    continue;
+                }
                 int startx = existing->pos.x, starty = existing->pos.y, w = data->inventoryWidth, h = data->inventoryHeight;
                 wxASSERT_MSG(startx + w <= CELLS_ROW && starty + h <= CELLS_COL,
                     wxString::Format("Detected invalid item at row %d col %d (width %d, height %d)", starty, startx, w, h));
@@ -718,7 +777,7 @@ bool ItemRefMapChest::persist(Json& json) const
         {"type", ITEM_LOC_CHEST},
         {"mapName", mapLower},
         {"chestId", chestId},
-        {"itemArrayIndex", itemArrayIndex}
+        {"itemsArrayIndex", itemsArrayIndex}
     };
     return true;
 }
@@ -727,7 +786,7 @@ bool ItemRefMapChest::unpersist(const Json& json)
 {
     mapName = json["mapName"];
     chestId = json["chestId"];
-    itemArrayIndex = json["itemArrayIndex"];
+    itemsArrayIndex = json["itemsArrayIndex"];
     return true;
 }
 
@@ -747,14 +806,14 @@ bool ItemRefPlayerInventory::persist(Json& json) const
     jsonEnsureIsObject(json);
     json["type"] = ITEM_LOC_PLAYER;
     json["rosterIndex"] = rosterIndex;
-    json["itemArrayIndex"] = itemArrayIndex;
+    json["itemsArrayIndex"] = itemsArrayIndex;
     return true;
 }
 
 bool ItemRefPlayerInventory::unpersist(const Json& json)
 {
     rosterIndex = json["rosterIndex"];
-    itemArrayIndex = json["itemArrayIndex"];
+    itemsArrayIndex = json["itemsArrayIndex"];
     return true;
 }
 
@@ -777,12 +836,12 @@ bool ItemRefStored::unpersist(const Json& json)
 
 bool operator==(const ItemRefMapChest& lhs, const ItemRefMapChest& rhs)
 {
-    return lhs.chestId == rhs.chestId && stringToLower(lhs.mapName) == stringToLower(rhs.mapName) && lhs.itemArrayIndex == rhs.itemArrayIndex;
+    return lhs.chestId == rhs.chestId && stringToLower(lhs.mapName) == stringToLower(rhs.mapName) && lhs.itemsArrayIndex == rhs.itemsArrayIndex;
 }
 
 bool operator==(const ItemRefPlayerInventory& lhs, const ItemRefPlayerInventory& rhs)
 {
-    return lhs.rosterIndex == rhs.rosterIndex && lhs.itemArrayIndex == rhs.itemArrayIndex;
+    return lhs.rosterIndex == rhs.rosterIndex && lhs.itemsArrayIndex == rhs.itemsArrayIndex;
 }
 
 bool operator==(const ItemRefStored& lhs, const ItemRefStored& rhs)

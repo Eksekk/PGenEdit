@@ -25,6 +25,11 @@ class InventoryManagerCtrl : public wxPanel
     void onStorePress(wxCommandEvent& event);
     void onRestorePress(wxCommandEvent& event);
 
+    // item was deleted by the control itself due to various reasons, not by manager
+    void onItemDeleted(wxCommandEvent& event);
+    // all items might have changed/been added/been removed, rebuild the item table
+    void onAllItemsChanged(wxCommandEvent& event);
+
     void addItemAdvanced();
     void addItemSimple();
     mm7::Item modifyItem(const mm7::Item& item);

@@ -76,11 +76,11 @@ namespace accessorDetail
                 auto& whatCellContains = entity->inventory[inventoryIndex];
                 if (whatCellContains != 0)
                 {
-                    int itemIndex = whatCellContains > 0 ? whatCellContains : entity->inventory[-(whatCellContains + 1)];
-                    wxFAIL_MSG(wxString::Format(
-                        "Inventory cell (x: %d, y: %d) is occupied by another item (index in 'Items' array: %d)",
-                        x, y, itemIndex
-                    ));
+//                     int itemIndex = whatCellContains > 0 ? whatCellContains : entity->inventory[-(whatCellContains + 1)];
+//                     wxFAIL_MSG(wxString::Format(
+//                         "Inventory cell (x: %d, y: %d) is occupied by another item (index in 'Items' array: %d)",
+//                         x, y, itemIndex
+//                     ));
                     return false;
                 }
             }

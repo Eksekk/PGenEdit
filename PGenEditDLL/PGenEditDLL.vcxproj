@@ -91,6 +91,7 @@
     <ClInclude Include="MapChestStructAccessor.h" />
     <ClInclude Include="MapStructAccessor.h" />
     <ClInclude Include="NotebookReplaceableTabs.h" />
+    <ClInclude Include="offsets.h" />
     <ClInclude Include="PartyStructAccessor.h" />
     <ClInclude Include="PersistableLuaTable.h" />
     <ClInclude Include="PlayerClass.h" />

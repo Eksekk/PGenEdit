@@ -12,7 +12,7 @@ EditorItemsPanel::EditorItemsPanel(wxWindow* parent, int CELLS_ROW, int CELLS_CO
     wxBoxSizer* sizer = new wxBoxSizer(wxVERTICAL);
     SetSizer(sizer);
     inventoryManagerCtrl = new InventoryManagerCtrl(this, CELLS_ROW, CELLS_COL, std::forward<InventoryType>(inventoryType));
-    sizer->Add(inventoryManagerCtrl, wxSizerFlags(0).Expand().Border(wxALL, 5));
+    sizer->Add(inventoryManagerCtrl, wxSizerFlags(1).Expand().Border(wxALL, 5));
 
     Layout();
     Thaw();

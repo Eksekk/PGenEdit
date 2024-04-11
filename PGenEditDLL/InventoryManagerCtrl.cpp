@@ -52,6 +52,16 @@ void InventoryManagerCtrl::onRestorePress(wxCommandEvent& event)
     }
 }
 
+void InventoryManagerCtrl::onItemDeleted(wxCommandEvent& event)
+{
+    tableItems->GetModel()->ItemDeleted(wxDataViewItem(nullptr), wxDataViewItem(reinterpret_cast<void*>(event.GetClientData())));
+}
+
+void InventoryManagerCtrl::onAllItemsChanged(wxCommandEvent& event)
+{
+    tableItems->GetModel()->Cleared();
+}
+
 void InventoryManagerCtrl::addItemAdvanced()
 {
     CreateItemDialog dialog(this);
@@ -85,6 +95,8 @@ mm7::Item InventoryManagerCtrl::modifyItem(const mm7::Item& item)
 InventoryManagerCtrl::InventoryManagerCtrl(wxWindow* parent, int CELLS_ROW, int CELLS_COL, InventoryType&& inventoryType)
     : wxPanel(parent), inventoryCtrl(new InventoryCtrl(this, CELLS_ROW, CELLS_COL, std::forward<InventoryType>(inventoryType)))
 {
+    inventoryCtrl->Bind(EVT_INVENTORY_ITEM_DELETED, &InventoryManagerCtrl::onItemDeleted, this);
+    inventoryCtrl->Bind(EVT_INVENTORY_ALL_ITEMS_CHANGED, &InventoryManagerCtrl::onAllItemsChanged, this);
     wxBoxSizer* itemsMainSizer = new wxBoxSizer(wxVERTICAL);
     this->SetSizer(itemsMainSizer);
 
@@ -145,7 +157,7 @@ InventoryManagerCtrl::InventoryManagerCtrl(wxWindow* parent, int CELLS_ROW, int 
     tableItems->AppendColumn(new wxDataViewColumn("Value", renderer("long"), InventoryItemTableViewModel::COLUMN_INDEX_VALUE));
 
     tableItems->AssociateModel(new InventoryItemTableViewModel(*this));
-    tableItems->SetMinSize(wxSize(800, 400)); // FIXME: table is somehow not expanded vertically, this works, but won't show all items
+    //tableItems->SetMinSize(wxSize(800, 400)); // FIXME: table is somehow not expanded vertically, this works, but won't show all items
     itemsMainSizer->Add(tableItems, 1, wxALL | wxEXPAND, 5);
 
     Fit();

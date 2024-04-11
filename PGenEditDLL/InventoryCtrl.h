@@ -7,11 +7,18 @@ extern const std::string ITEM_LOC_STORED, ITEM_LOC_CHEST, ITEM_LOC_PLAYER;
 class PlayerItem;
 class wxDataViewModel;
 
+// FIXME!!!: call these at the appropriate time
+wxDECLARE_EVENT(EVT_INVENTORY_ITEM_DELETED, wxCommandEvent);
+wxDECLARE_EVENT(EVT_INVENTORY_ITEM_ADDED, wxCommandEvent);
+wxDECLARE_EVENT(EVT_INVENTORY_ITEMS_ADDED, wxCommandEvent);
+wxDECLARE_EVENT(EVT_INVENTORY_ITEMS_DELETED, wxCommandEvent);
+wxDECLARE_EVENT(EVT_INVENTORY_ALL_ITEMS_CHANGED, wxCommandEvent);
+
 struct ItemRefMapChest
 {
     std::string mapName;
     int chestId;
-    int itemArrayIndex;
+    int itemsArrayIndex;
 
     bool persist(Json& json) const;
     bool unpersist(const Json& json);
@@ -22,7 +29,7 @@ struct ItemRefMapChest
 struct ItemRefPlayerInventory
 {
     int rosterIndex;
-    int itemArrayIndex;
+    int itemsArrayIndex;
 
     bool persist(Json& json) const;
     bool unpersist(const Json& json);
@@ -159,7 +166,7 @@ public:
     // delete all player inventory / map chest items, and readd them, if possible on old positions
     bool reloadReferencedItems();
 
-    bool moveStoredItemToInventory(ItemStoreElement& item, InventoryPosition pos = { -1, -1 }); // MODIFIES original inventory (chest's or player's)
+    bool moveStoredItemToInventory(ItemStoreElement& item, InventoryPosition pos = { -1, -1 }, bool affectGameInventory = true);
     bool moveInventoryItemToStore(ItemStoreElement& item); // same as above
     ItemStoreElement* getMouseoverItem(); // pointer to allow null value (no item at mouse position) | FIXME: vector reallocation will cause problems if code holds valid pointer for long
     ItemStoreElement* chooseItemWithMouse(bool allowNone = true); // enters item selecting mode, after clicking returns clicked item
