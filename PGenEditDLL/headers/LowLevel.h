@@ -118,6 +118,7 @@ struct HookData
     template<int cc, typename... Args>
     std::tuple<Args...> getParams();
 };
+#pragma pack(pop)
 
 // retrieves parameters from HookData object, casts them to appropriate types and stores result in tuple
 template<int index, int cc, typename... Args>
@@ -162,7 +163,6 @@ std::tuple<Args...> HookData::getParams()
     getParams<cc, Args...>(ret);
     return ret;
 }
-#pragma pack(pop)
 
 typedef int(__stdcall* HookFuncPtr)(HookData*);
 typedef std::function<int(HookData*)> HookFunc; // any function callable with HookData parameter and returning int is hook function

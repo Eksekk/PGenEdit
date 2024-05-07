@@ -8,6 +8,7 @@
 #include "SaveGameData.h"
 #include "PlayerItem.h"
 #include "wx/dataview.h"
+#include "MapChestStructAccessor.h"
 
 const std::string ITEM_LOC_STORED = "stored", ITEM_LOC_CHEST = "chest", ITEM_LOC_PLAYER = "player";
 
@@ -448,6 +449,7 @@ bool InventoryCtrl::moveStoredItemToInventory(ItemStoreElement& item, InventoryP
             ret = true;
         }
     }
+    // FIXME: the above can run and below can fail, leaving control in inconsistent state
     // actually move the item to player's/chest's inventory
     if (!affectGameInventory)
     {
@@ -478,8 +480,8 @@ bool InventoryCtrl::moveStoredItemToInventory(ItemStoreElement& item, InventoryP
         {
             std::get<ItemRefMapChest>(item.location).itemsArrayIndex = inventoryDataOpt.value().itemsArrayIndex;
             throw new std::logic_error("Not implemented");
-// 			if (!chestAccessor->moveItemToInventoryPosition(std::get<ItemRefMapChest>(inventoryType).chestId, inventoryDataOpt.value().itemsArrayIndex, item.pos))
-// 			{ }
+			if (!chestAccessor->forMapChestIndex(std::get<ItemRefMapChest>(inventoryType).chestId)->moveItemToInventoryPosition(inventoryDataOpt.value().itemsArrayIndex, item.pos))
+			{ }
         }
     }
     return ret;

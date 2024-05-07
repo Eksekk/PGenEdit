@@ -21,6 +21,7 @@ public:
 		chest = ptr;
 		return this;
 	}
+	MapChestStructAccessor* forMapChestIndex(int index);
 	inline void* getCurrentChestPtr()
 	{
 		return chest;
@@ -32,6 +33,7 @@ public:
 	virtual InventoryPosition getItemInventoryPosition(void* itemsArrayEntryPtr) = 0;
 	virtual bool moveItemToInventoryPosition(void* itemsArrayEntryPtr, const InventoryPosition& position) = 0;
 	virtual bool moveItemToInventoryPosition(void* itemsArrayEntryPtr, int x, int y) = 0;
+	virtual bool moveItemToInventoryPosition(int itemsArrayIndex, const InventoryPosition& position) = 0;
 	virtual std::optional<ItemInInventoryData> addItemToInventory(const mm7::Item& item) = 0;
 
 	template<typename Function> auto forEachItemDo(Function&& func, int first = 0)
@@ -96,11 +98,17 @@ public:
 	// Inherited via MapChestStructAccessor
 	bool moveItemToInventoryPosition(void* itemsArrayEntryPtr, const InventoryPosition& position) override
 	{
+		throw std::runtime_error("Not implemented");
 		return false;
 	}
 	bool moveItemToInventoryPosition(void* itemsArrayEntryPtr, int x, int y) override
 	{
+		throw std::runtime_error("Not implemented");
 		return false;
+	}
+	bool moveItemToInventoryPosition(int itemsArrayIndex, const InventoryPosition& position) override
+	{
+		return moveItemToInventoryPosition(&getChestToAffect()->items[itemsArrayIndex], position);
 	}
 	std::optional<ItemInInventoryData> addItemToInventory(const mm7::Item& item) override
 	{

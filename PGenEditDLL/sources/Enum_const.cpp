@@ -69,41 +69,41 @@ namespace consts
 				spells = mmv(makeEnumSpells_6, makeEnumSpells_7, makeEnumSpells_8);
 
 			stats();
-			callbackStatsInitialize();
+			//callbackStatsInitialize();
 			skills();
-			callbackSkillsInitialize();
+			//callbackSkillsInitialize();
 			damage();
-			callbackDamageInitialize();
+			//callbackDamageInitialize();
 			itemSlot();
-			callbackItemSlotInitialize();
+			//callbackItemSlotInitialize();
 			partyBuff();
-			callbackPartyBuffInitialize();
+			//callbackPartyBuffInitialize();
 			monsterBits();
-			callbackMonsterBitsInitialize();
+			//callbackMonsterBitsInitialize();
 			monsterBuff();
-			callbackMonsterBuffInitialize();
+			//callbackMonsterBuffInitialize();
 			monsterBonus();
-			callbackMonsterBonusInitialize();
+			//callbackMonsterBonusInitialize();
 			monsterKind();
-			callbackMonsterKindInitialize();
+			//callbackMonsterKindInitialize();
 			itemType();
-			callbackItemTypeInitialize();
+			//callbackItemTypeInitialize();
 			houseType();
-			callbackHouseTypeInitialize();
+			//callbackHouseTypeInitialize();
 			houseScreens();
-			callbackHouseScreensInitialize();
+			//callbackHouseScreensInitialize();
 			facetBits();
-			callbackFacetBitsInitialize();
+			//callbackFacetBitsInitialize();
 			faceAnimation();
-			callbackFaceAnimationInitialize();
+			//callbackFaceAnimationInitialize();
 			condition();
-			callbackConditionInitialize();
+			//callbackConditionInitialize();
 			chestBits();
-			callbackChestBitsInitialize();
+			//callbackChestBitsInitialize();
 			aistate();
-			callbackAIStateInitialize();
+			//callbackAIStateInitialize();
 			spells();
-			callbackSpellsInitialize();
+			//callbackSpellsInitialize();
 		}
 
 		// GAME ENUMS
@@ -193,7 +193,7 @@ namespace consts
 		{
 			if (MMVER == 6)
 			{
-				STATS_RESISTANCES.insert(STATS_RESISTANCES.end(), { STAT_FIRE_RESISTANCE, STAT_COLD_RESISTANCE, STAT_ELEC_RESISTANCE, STAT_POISON_RESISTANCE, STAT_MAGIC_RESISTANCE });
+				
 			}
 		}
 
