@@ -21,6 +21,7 @@
 #include "MainWindow.h"
 #include "GuiTestHelper.h"
 #include "NotebookReplaceableTabs.h"
+#include "PrimaryStatWidget.h"
 
 std::vector<wxString> GUI_tests::testAlignmentRadioBox()
 {
@@ -336,16 +337,89 @@ std::vector<wxString> GUI_tests::testEditorStatisticsPanel()
 	GuiTestHelper helper(*panel, sim, myasserter);
 	wxASSERT(win->IsShown() && win->IsVisible());
 
+	// tests to check that modifying fields changes actual value in player struct
 	struct Test
 	{
 		wxSpinCtrl* baseValue;
-		std::variant<std::monostate, int, wxSpinCtrl*> colorThreshold;
+		//std::variant<std::monostate, int, wxSpinCtrl*> colorThreshold;
+		std::variant<uint8_t Player::*, uint16_t Player::*, uint32_t Player::*, uint64_t Player::*, int8_t Player::*, int16_t Player::*, int32_t Player::*, int64_t Player::*> member;
 	};
 
+	auto& statWidgets = panel->primaryStatWidgetToStatIdMap;
+	auto& resWidgets = panel->resistanceWidgetToResIdMap;
 	std::vector<Test> tests
 	({
-		Test{panel->extraAcValue, 5}
+		// might, intellect, personality, endurance, speed, accuracy, luck, fire res, air res, water res, earth res, spirit res, mind res, body res, light res, dark res (all with bonus field too)
+
+		Test{.baseValue = statWidgets[consts::STAT_MIGHT]->base, .member = &Player::mightBase},
+		Test{.baseValue = statWidgets[consts::STAT_MIGHT]->bonus, .member = &Player::mightBonus},
+		Test{.baseValue = statWidgets[consts::STAT_INTELLECT]->base, .member = &Player::intellectBase},
+		Test{.baseValue = statWidgets[consts::STAT_INTELLECT]->bonus, .member = &Player::intellectBonus},
+		Test{.baseValue = statWidgets[consts::STAT_PERSONALITY]->base, .member = &Player::personalityBase},
+		Test{.baseValue = statWidgets[consts::STAT_PERSONALITY]->bonus, .member = &Player::personalityBonus},
+		Test{.baseValue = statWidgets[consts::STAT_ENDURANCE]->base, .member = &Player::enduranceBase},
+		Test{.baseValue = statWidgets[consts::STAT_ENDURANCE]->bonus, .member = &Player::enduranceBonus},
+		Test{.baseValue = statWidgets[consts::STAT_SPEED]->base, .member = &Player::speedBase},
+		Test{.baseValue = statWidgets[consts::STAT_SPEED]->bonus, .member = &Player::speedBonus},
+		Test{.baseValue = statWidgets[consts::STAT_ACCURACY]->base, .member = &Player::accuracyBase},
+		Test{.baseValue = statWidgets[consts::STAT_ACCURACY]->bonus, .member = &Player::accuracyBonus},
+		Test{.baseValue = statWidgets[consts::STAT_LUCK]->base, .member = &Player::luckBase},
+		Test{.baseValue = statWidgets[consts::STAT_LUCK]->bonus, .member = &Player::luckBonus},
 	});
+
+	if constexpr (SAME(Player, mm6::Player))
+	{
+		tests.insert(tests.end(), std::move(std::initializer_list<Test>{
+			Test{.baseValue = resWidgets[consts::DMG_FIRE]->base, .member = &Player::fireResistanceBase },
+			Test{.baseValue = resWidgets[consts::DMG_FIRE]->bonus, .member = &Player::fireResistanceBonus },
+			Test{.baseValue = resWidgets[consts::DMG_ELEC]->base, .member = &Player::elecResistanceBase },
+			Test{.baseValue = resWidgets[consts::DMG_ELEC]->bonus, .member = &Player::elecResistanceBonus },
+			Test{.baseValue = resWidgets[consts::DMG_COLD]->base, .member = &Player::coldResistanceBase },
+			Test{.baseValue = resWidgets[consts::DMG_COLD]->bonus, .member = &Player::coldResistanceBonus },
+			Test{.baseValue = resWidgets[consts::DMG_POISON]->base, .member = &Player::poisonResistanceBase },
+			Test{.baseValue = resWidgets[consts::DMG_POISON]->bonus, .member = &Player::poisonResistanceBonus },
+			Test{.baseValue = resWidgets[consts::DMG_MAGIC]->base, .member = &Player::magicResistanceBase },
+			Test{.baseValue = resWidgets[consts::DMG_MAGIC]->bonus, .member = &Player::magicResistanceBonus },
+			}));
+	}
+	else
+	{
+		tests.insert(tests.end(), std::move(std::initializer_list<Test>{
+			Test{.baseValue = resWidgets[consts::DMG_FIRE]->base, .member = &Player::fireResistanceBase },
+			Test{.baseValue = resWidgets[consts::DMG_FIRE]->bonus, .member = &Player::fireResistanceBonus },
+			Test{.baseValue = resWidgets[consts::DMG_AIR]->base, .member = &Player::airResistanceBase },
+			Test{.baseValue = resWidgets[consts::DMG_AIR]->bonus, .member = &Player::airResistanceBonus },
+			Test{.baseValue = resWidgets[consts::DMG_WATER]->base, .member = &Player::waterResistanceBase },
+			Test{.baseValue = resWidgets[consts::DMG_WATER]->bonus, .member = &Player::waterResistanceBonus },
+			Test{.baseValue = resWidgets[consts::DMG_EARTH]->base, .member = &Player::earthResistanceBase },
+			Test{.baseValue = resWidgets[consts::DMG_EARTH]->bonus, .member = &Player::earthResistanceBonus },
+			Test{.baseValue = resWidgets[consts::DMG_SPIRIT]->base, .member = &Player::spiritResistanceBase },
+			Test{.baseValue = resWidgets[consts::DMG_SPIRIT]->bonus, .member = &Player::spiritResistanceBonus },
+			Test{.baseValue = resWidgets[consts::DMG_MIND]->base, .member = &Player::mindResistanceBase },
+			Test{.baseValue = resWidgets[consts::DMG_MIND]->bonus, .member = &Player::mindResistanceBonus },
+			Test{.baseValue = resWidgets[consts::DMG_BODY]->base, .member = &Player::bodyResistanceBase },
+			Test{.baseValue = resWidgets[consts::DMG_BODY]->bonus, .member = &Player::bodyResistanceBonus },
+			Test{.baseValue = resWidgets[consts::DMG_LIGHT]->base, .member = &Player::lightResistanceBase },
+			Test{.baseValue = resWidgets[consts::DMG_LIGHT]->bonus, .member = &Player::lightResistanceBonus },
+			Test{.baseValue = resWidgets[consts::DMG_DARK]->base, .member = &Player::darkResistanceBase },
+			Test{.baseValue = resWidgets[consts::DMG_DARK]->bonus, .member = &Player::darkResistanceBonus },
+		}));
+	}
+
+	// mm6/7 bonuses
+	if constexpr (SAME(Player, mm6::Player) || SAME(Player, mm7::Player))
+	{
+		auto& extraStats = panel->statExtraToStatIdSpinCtrlMap;
+		// melee/ranged attack/damage bonus, full sp bonus, full hp bonus
+		tests.insert(tests.end(), std::move(std::initializer_list<Test>{
+			Test{.baseValue = extraStats.at(consts::STAT_MELEE_ATTACK_BONUS), .member = &Player::meleeAttackBonus },
+			Test{.baseValue = extraStats.at(consts::STAT_MELEE_DAMAGE_BONUS), .member = &Player::meleeDamageBonus },
+			Test{.baseValue = extraStats.at(consts::STAT_RANGED_ATTACK_BONUS), .member = &Player::rangedAttackBonus },
+			Test{.baseValue = extraStats.at(consts::STAT_RANGED_DAMAGE_BONUS), .member = &Player::rangedDamageBonus },
+			Test{.baseValue = extraStats.at(consts::STAT_HIT_POINTS_BONUS), .member = &Player::fullHPBonus },
+			Test{.baseValue = extraStats.at(consts::STAT_SPELL_POINTS_BONUS), .member = &Player::fullSPBonus },
+			}));
+	}
 
 	// current hp/sp - set/get, text color changing (threshold - full hp)
 

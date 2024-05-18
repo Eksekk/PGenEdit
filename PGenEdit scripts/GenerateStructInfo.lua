@@ -2,6 +2,7 @@ function reload()
 	dofile(debug.getinfo(1, "S").source:sub(2))
 end
 r = reload
+reload2 = makeCurrentScriptReloader()
 local format = string.format
 local mmver = offsets.MMVersion
 local function mm78(...)

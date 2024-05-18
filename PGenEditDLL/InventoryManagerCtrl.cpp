@@ -249,9 +249,16 @@ unsigned int InventoryItemTableViewModel::GetChildren(const wxDataViewItem& data
     if (!dataItem.IsOk()) // get top level items
     {
         int n = 0;
-        for (const auto& elem : inventoryManagerCtrl.inventoryCtrl->getElements())
+        // sort by id in table to prevent rows shuffling around randomly (TODO: by more fields if there are multiple items with same id)
+        // can't sort unordered set (elements container)
+        const auto& elems = inventoryManagerCtrl.inventoryCtrl->getElements();
+        std::vector<ItemStoreElement*> v;
+        v.reserve(elems.size());
+        std::ranges::transform(elems, std::back_inserter(v), [](const std::unique_ptr<ItemStoreElement>& ptr) { return ptr.get(); });
+        const auto& sorted = util::container::sorted(v, [](const ItemStoreElement* a, const ItemStoreElement* b) { return a->getItem().number < b->getItem().number; });
+        for (const auto& elem : sorted)
         {
-			children.Add(wxDataViewItem(elem.get()));
+			children.Add(wxDataViewItem(elem));
 			++n;
         }
         return n;

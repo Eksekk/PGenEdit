@@ -153,7 +153,7 @@ bool existsInContainer(const Container& container, const Val& val)
 
 // returns a new vector with the sorted elements of the original vector
 template<typename Container>
-Container sorted(const Container& c, std::function<bool(typename Container::value_type, typename Container::value_type)> comp = std::less<typename Container::value_type>())
+Container sorted(const Container& c, std::function<bool(const typename Container::value_type&, const typename Container::value_type&)> comp = std::less<typename Container::value_type>())
 {
 	Container out = c;
 	std::sort(out.begin(), out.end(), comp);
@@ -456,7 +456,7 @@ namespace util
 
 	namespace wx
 	{
-		static constexpr auto redBlackGreenTextThreshold = ::redBlackGreenTextThreshold;
+		using ::redBlackGreenTextThreshold;
 	}
 
 	namespace json

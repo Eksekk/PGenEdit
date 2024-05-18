@@ -372,3 +372,6 @@ JSON/
 
 # VSCode
 .vscode/
+
+# wxWidgets build files
+PGenEditDLL/wxWidgets-3.2.1/build/msw

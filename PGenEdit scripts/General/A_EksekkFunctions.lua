@@ -686,3 +686,11 @@ function monsterStandSpriteName(id)
 		end
 	end
 end
+
+-- this function is intended to have call result assigned to variable at chunk global level (to capture main chunk function source path)
+function makeCurrentScriptReloader()
+	local f = debug.getinfo(2, "S").source:sub(2)
+	return function()
+		dofile(f)
+	end
+end

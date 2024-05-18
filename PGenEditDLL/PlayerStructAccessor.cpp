@@ -809,6 +809,7 @@ void TemplatedPlayerStructAccessor<Player>::_initMaps()
 template<typename Player>
 int TemplatedPlayerStructAccessor<Player>::getStatBase(int stat)
 {
+	// FIXME: for some stats (like primary ones) there is function to retrieve real value from player, currently I'm accessing field directly, so that will skip some bonuses, like from items
 	consts::checkStatsValidity(stat);
 	Player* pl = getPlayerToAffect();
 	// TODO why these getBaseAccuracy() etc. methods exist?

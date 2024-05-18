@@ -41,6 +41,7 @@ void PrimaryStatWidget::onBaseChange(wxCommandEvent& event)
 void PrimaryStatWidget::onBonusChange(wxCommandEvent& event)
 {
 	playerAccessor->forPlayer(playerIndex)->setStatBonus(statId, bonus->GetValue());
+	util::wx::redBlackGreenTextThreshold(bonus, bonus->GetValue(), 0);
 	wxCommandEvent event2(PRIMARY_STAT_BONUS, bonus->GetId());
 	event2.SetEventObject(this);
 	ProcessEvent(event2);

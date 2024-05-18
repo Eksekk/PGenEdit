@@ -109,6 +109,7 @@ protected:
 	std::unordered_map<int, std::unique_ptr<PrimaryStatWidget>> primaryStatWidgetToStatIdMap;
 	std::unordered_map<int, std::unique_ptr<ResistanceWidget>> resistanceWidgetToResIdMap;
 	std::unordered_map<wxSpinCtrl*, int> statIdToStatExtraSpinCtrlMap;
+	std::unordered_map<int, wxSpinCtrl*> statExtraToStatIdSpinCtrlMap;
 
 	void onExtraStatsPaneClick(wxCollapsiblePaneEvent& event);
 	void onStatExtraChange(wxCommandEvent& event);

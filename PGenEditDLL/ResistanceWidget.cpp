@@ -37,6 +37,7 @@ void ResistanceWidget::onBaseChange(wxCommandEvent& event)
 void ResistanceWidget::onBonusChange(wxCommandEvent& event)
 {
 	playerAccessor->forPlayer(playerIndex)->setStatBonus(resId, bonus->GetValue());
+	redBlackGreenTextThreshold(bonus, bonus->GetValue(), 0);
 	wxCommandEvent event2(RESISTANCE_BONUS, bonus->GetId());
 	event2.SetEventObject(this);
 	ProcessEvent(event2);

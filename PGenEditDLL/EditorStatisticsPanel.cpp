@@ -270,12 +270,18 @@ void EditorStatisticsPanel::createImmediateStatSettings()
 	recoveryDelayMultiplierValue->SetDigits(2);
 	recoveryDelayMultiplierValue->Bind(wxEVT_SPINCTRL, &EditorStatisticsPanel::onRecoveryDelayMultiplierChange, this);
 	mainRecoveryDelaySizer->Add(recoveryDelayMultiplierValue, 0, wxALL, 5);
-
+	// unpersist from hook data
+	recoveryDelayMultiplierValue->SetValue(HookParams::recoveryMultiplier[rosterIndex]);
 
 	mainRecoveryDelaySizer->Add(30, 0, 0, wxEXPAND, 5);
 	noRecoveryCheckbox = new wxCheckBox(recoveryDelaySizer->GetStaticBox(), wxID_ANY, "No recovery");
 	noRecoveryCheckbox->Bind(wxEVT_CHECKBOX, &EditorStatisticsPanel::onNoRecoveryCheck, this);
+	// FIXME: changing checked state programmatically doesn't send event to enable/disable recovery multiplier
+	wxCommandEvent evt(wxEVT_COMMAND_CHECKBOX_CLICKED);
+	evt.SetEventObject(noRecoveryCheckbox);
+	ProcessWindowEvent(evt);
     mainRecoveryDelaySizer->Add(noRecoveryCheckbox, 0, wxALL, 5);
+	noRecoveryCheckbox->SetValue(HookParams::noRecoveryEnabled[rosterIndex]);
 
 	recoverFullyButton = new wxButton(recoveryDelaySizer->GetStaticBox(), wxID_ANY, _("Recover fully right now"));
 	recoverFullyButton->Bind(wxEVT_BUTTON, &EditorStatisticsPanel::onRecoverFullyPress, this);
@@ -290,11 +296,13 @@ void EditorStatisticsPanel::createImmediateStatSettings()
 	reduceBuffSpellRecoveryCheckbox = new wxCheckBox(recoveryDelaySizer->GetStaticBox(), wxID_ANY, _("Heavily reduce recovery after casting buffs"));
 	buffRecoveryDelaySizer->Add(reduceBuffSpellRecoveryCheckbox, 0, wxALL, 5);
 	reduceBuffSpellRecoveryCheckbox->Bind(wxEVT_CHECKBOX, &EditorStatisticsPanel::onReduceBuffSpellRecoveryCheck, this);
+	reduceBuffSpellRecoveryCheckbox->SetValue(HookParams::buffSpellRecoveryReduced[rosterIndex]);
 
 	outOfCombatCheckbox = new wxCheckBox(recoveryDelaySizer->GetStaticBox(), wxID_ANY, _("Only out of combat"));
 	outOfCombatCheckbox->SetValue(true);
 	outOfCombatCheckbox->SetToolTip(_("Green \"enemy detector\""));
 	outOfCombatCheckbox->Bind(wxEVT_CHECKBOX, &EditorStatisticsPanel::onReduceBuffRecoveryOutOfCombatCheck, this);
+	outOfCombatCheckbox->SetValue(HookParams::buffSpellRecoveryReducedOnlyOutOfCombat[rosterIndex]);
 	buffRecoveryDelaySizer->Add(outOfCombatCheckbox, 0, wxALL, 5);
 
 	recoveryDelaySizer->Add(buffRecoveryDelaySizer, 1, wxEXPAND, 5);
@@ -440,7 +448,7 @@ void EditorStatisticsPanel::createStatisticsAdjuster()
 	statExtrasSizer->SetFlexibleDirection(wxBOTH);
 	statExtrasSizer->SetNonFlexibleGrowMode(wxFLEX_GROWMODE_SPECIFIED);
 
-	const std::array<std::pair<const char*, int>, 7> extraStats{{
+	const std::array<std::pair<const char*, int>, 6> extraStats{{
 		{"Extra max HP", STAT_HIT_POINTS_BONUS}, {"Extra max SP", STAT_SPELL_POINTS_BONUS}, {"Extra melee attack", STAT_MELEE_ATTACK_BONUS},
 		{"Extra melee damage", STAT_MELEE_DAMAGE_BONUS}, {"Extra ranged attack", STAT_RANGED_ATTACK_BONUS}, {"Extra ranged damage", STAT_RANGED_DAMAGE_BONUS}
 	}};
@@ -462,6 +470,7 @@ void EditorStatisticsPanel::createStatisticsAdjuster()
 		}
 		statIdToStatExtraSpinCtrlMap[stat.value] = statId;
 	}
+	statExtraToStatIdSpinCtrlMap = invertMap(statIdToStatExtraSpinCtrlMap);
 
 	extraStatsPane->GetPane()->SetSizer(statExtrasSizer);
 	extraStatsPane->GetPane()->Layout();
@@ -738,6 +747,7 @@ void EditorStatisticsPanel::onStatExtraChange(wxCommandEvent& event)
 	wxSpinCtrl* ctrl = /*static*/dynamic_cast<wxSpinCtrl*>(event.GetEventObject());
 	int statId = statIdToStatExtraSpinCtrlMap.at(ctrl);
 	playerAccessor->forPlayer(playerIndex)->setStatBonus(statId, ctrl->GetValue());
+	redBlackGreenTextThreshold(ctrl, ctrl->GetValue(), 0);
 }
 void EditorStatisticsPanel::onExtraAcValueChange(wxCommandEvent& event)
 {

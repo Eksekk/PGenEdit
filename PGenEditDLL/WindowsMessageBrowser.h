@@ -1,5 +1,8 @@
 #pragma once
+#include "main.h"
 #include "WindowMessageNumberNameMappings.h"
+class WindowsMessageBrowser;
+extern WindowsMessageBrowser windowsMessageBrowser;
 // a class which runs through all messages for given thread and prints useful debugging information, such as window name, message name, parameters etc.
 // will be used to fix a problem where closing my windows causes game to minimize itself, even if minimize button was not clicked
 // NOTE: it might be enough to use MMExtension's functions which are called before showing any non-game window and after hiding all of them
@@ -21,5 +24,8 @@ class WindowsMessageBrowser
 			return getMatchingMessageNames(msg);
 		}
 	};
+
+	std::vector<MessageData> getMessagesForCurrentThread();
+	std::vector<MessageData> getMessagesForWindowOfCurrentThread(HWND windowHandle);
 };
 

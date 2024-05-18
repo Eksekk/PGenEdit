@@ -129,6 +129,7 @@ std::string stringReplace(const std::string& str, const std::string& replaceWhat
 }
 
 // wxWidgets functions
+// sets font color of passed window to red/black/green, depending on current value and threshold
 void redBlackGreenTextThreshold(wxWindow* win, int value, int threshold)
 {
     if (value < threshold)
@@ -137,7 +138,7 @@ void redBlackGreenTextThreshold(wxWindow* win, int value, int threshold)
     }
     else if (value > threshold)
     {
-        win->SetOwnForegroundColour(*wxGREEN);
+		win->SetOwnForegroundColour(wxColour(0x00b02f)); // different color, because default green is too bright and hard to read
     }
     else
     {
