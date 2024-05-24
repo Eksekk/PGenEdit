@@ -114,7 +114,7 @@ std::vector<wxString> GUI_tests::testEditorSkillsPanel()
 	playerAccessor->setSkill(5, SkillValue{ 4, 2 });
 	panel->updateFromPlayerData();
 	panel->spentSkillPointsValue->GetValue().ToInt(&val);
-	myassert(val == 9);
+	myassert(val == joinSkill(SkillValue{4, 2}));
 
 	std::vector<PlayerSkill*> doNotGenerateSkills;
 	for (auto& [id, skill] : GameData::skills)
@@ -337,7 +337,7 @@ std::vector<wxString> GUI_tests::testEditorStatisticsPanel()
 	GuiTestHelper helper(*panel, sim, myasserter);
 	wxASSERT(win->IsShown() && win->IsVisible());
 
-	// tests to check that modifying fields changes actual value in player struct
+	// tests to check that modifying fields changes actual memberValue in player struct
 	struct Test
 	{
 		wxSpinCtrl* baseValue;
@@ -419,6 +419,16 @@ std::vector<wxString> GUI_tests::testEditorStatisticsPanel()
 			Test{.baseValue = extraStats.at(consts::STAT_HIT_POINTS_BONUS), .member = &Player::fullHPBonus },
 			Test{.baseValue = extraStats.at(consts::STAT_SPELL_POINTS_BONUS), .member = &Player::fullSPBonus },
 			}));
+	}
+
+	for (const Test& test : tests)
+	{
+		helper.autoText(test.baseValue, "123");
+		long long memberValue;
+		std::visit([&memberValue, &pl](auto&& arg) { memberValue = pl->*arg; }, test.member);
+		myassertf(memberValue == 123, std::format("First comparison in wxSpinCtrl failed - member is {}, control value is {}", memberValue, test.baseValue->GetValue()));
+		helper.autoText(test.baseValue, "0");
+		myassert(memberValue == 0, test.baseValue->GetLabel());
 	}
 
 	// current hp/sp - set/get, text color changing (threshold - full hp)

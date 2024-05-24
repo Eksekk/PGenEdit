@@ -83,7 +83,7 @@ bool Asserter::operator()(const char* func, const char* file, int line, const wx
 	}
 	if (IsDebuggerPresent())
 	{
-		__debugbreak(); // if we're being debugged, break into debugger to inspect call stack and variables
+		//__debugbreak(); // if we're being debugged, break into debugger to inspect call stack and variables
 	}
 	errors.push_back(str);
 	return false;

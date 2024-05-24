@@ -368,10 +368,13 @@ FodyWeavers.xsd
 **/.history/*
 
 # Don't know what it is, but probably unneeded
-JSON/
+/JSON/ # slash means it matches only directory at top level, not any directory in the repository
 
 # VSCode
 .vscode/
 
 # wxWidgets build files
-PGenEditDLL/wxWidgets-3.2.1/build/msw
+PGenEditDLL/wxWidgets-3.2.1/build/msw/vc_mswuddll/
+PGenEditDLL/wxWidgets-3.2.1/build/msw/vc_mswud/
+PGenEditDLL/wxWidgets-3.2.1/lib/vc_dll/
+PGenEditDLL/wxWidgets-3.2.1/build/msw/JSON/

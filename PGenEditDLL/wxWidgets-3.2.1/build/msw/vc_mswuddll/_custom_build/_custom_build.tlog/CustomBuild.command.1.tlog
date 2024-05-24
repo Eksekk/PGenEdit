@@ -1,4 +1,0 @@
-^C:\WXWIDGETS-3.2.1\INCLUDE\WX\MSW\SETUP.H
-copy "C:\wxWidgets-3.2.1\include\wx\msw\setup.h" ..\..\lib\vc_dll\mswud\wx\setup.h
-^C:\WXWIDGETS-3.2.1\INCLUDE\WX\MSW\GENRCDEFS.H
-cl /EP /nologo "C:\wxWidgets-3.2.1\include\wx\msw\genrcdefs.h" > "..\..\lib\vc_dll\mswud\wx\msw\rcdefs.h"

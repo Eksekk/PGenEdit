@@ -3,6 +3,7 @@
 #include <wx/uiaction.h>
 #include "Asserter.h"
 #include "GuiApplication.h"
+#include <wx/spinctrl.h>
 
 void GuiTestHelper::scrollIntoView(wxWindow* window)
 {
@@ -19,7 +20,7 @@ wxWindow* GuiTestHelper::getNearestFocusableSibling(wxWindow* origin)
 	wxWindow* s = origin;
 	while ((s = s->GetPrevSibling()) != nullptr)
 	{
-		if (s->AcceptsFocus())
+		if (s->AcceptsFocus() && s->CanAcceptFocus())
 		{
 			end = true;
 			break;
@@ -30,7 +31,7 @@ wxWindow* GuiTestHelper::getNearestFocusableSibling(wxWindow* origin)
 		s = origin;
 		while ((s = s->GetNextSibling()) != nullptr)
 		{
-			if (s->AcceptsFocus())
+			if (s->AcceptsFocus() && s->CanAcceptFocus())
 			{
 				end = true;
 				break;
@@ -57,15 +58,87 @@ void GuiTestHelper::autoClick(wxWindow* window)
 	dispatchWindowMessages();
 }
 
+template<typename T>
+concept hasClear = requires(T * t) { t->Clear(); };
+
+template<typename T>
+concept hasSetValueText = requires(T * t) { t->SetValue(""); };
+
+template<typename T>
+concept hasSetValueInteger = requires(T * t) { t->SetValue(0); };
+
+// template<typename T>
+// 	requires hasClear<T>
+// void tryClearTextFor(T* t)
+// {
+// 	if (t)
+// 	{
+// 		t.Clear();
+// 	}
+// }
+
+template<typename T>
+	requires hasSetValueText<T>
+void tryClearTextFor(T* t)
+{
+	if (t)
+	{
+		t->SetValue("");
+
+		// manually send events for supported control types, because windows messages are sent, but they apparently don't trigger internal value change and old value is kept after adding text via ui action simulator
+		if constexpr (SAME(T, wxSpinCtrl))
+		{
+			wxCommandEvent event(wxEVT_SPINCTRL, t->GetId());
+			event.SetEventObject(t);
+			t->ProcessWindowEvent(event);
+		}
+		else if constexpr (SAME(T, wxTextCtrl))
+		{
+			wxCommandEvent event(wxEVT_TEXT);
+			event.SetEventObject(t);
+			t->ProcessWindowEvent(event);
+		}
+		else if constexpr (SAME(T, wxComboBox))
+		{
+			wxCommandEvent event(wxEVT_COMBOBOX);
+			event.SetEventObject(t);
+			t->ProcessWindowEvent(event);
+		}
+		else
+		{
+			COMPILE_TIME_CONSTEXPR_IF_ERROR();
+		}
+	}
+}
+
+// template<typename T>
+// 	requires hasSetValueInteger<T>
+// void tryClearTextFor(T* t)
+// {
+// 	if (t)
+// 	{
+// 		t->SetValue(0);
+// 	}
+// }
+
 void GuiTestHelper::autoText(wxWindow* target, const wxString& text)
 {
 	scrollIntoView(target);
 	target->SetFocus();
+	// I don't know how to better do trying to clear value of different types without making this a template function, which might be inconvenient
+	tryClearTextFor(dynamic_cast<wxTextCtrl*>(target));
+	tryClearTextFor(dynamic_cast<wxComboBox*>(target));
+	tryClearTextFor(dynamic_cast<wxSpinCtrl*>(target));
+
+	// NO MESSAGES TO PROCESS HERE
+	wxYield();
 	dispatchWindowMessages();
+	target->SetFocus();
+	wxASSERT(target->HasFocus());
 	wxASSERT_MSG(sim.Text(text), text);
-	getNearestFocusableSibling(target)->SetFocus();
 	dispatchWindowMessages();
 	wxYield();
+	getNearestFocusableSibling(target)->SetFocus();
 }
 
 // NOT WORKING
