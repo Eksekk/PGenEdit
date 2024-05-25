@@ -115,6 +115,9 @@
     <Filter Include="Pliki nagłówkowe\Misc\Reflection">
       <UniqueIdentifier>{d2124ad4-855a-471d-ac9b-60e51a73dcce}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Pliki nagłówkowe\JSON">
+      <UniqueIdentifier>{f404b626-bd93-49a9-a459-5e931fb6e373}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="headers\Structs.h">
@@ -461,6 +464,9 @@
     </ClInclude>
     <ClInclude Include="offsets.h">
       <Filter>Pliki nagłówkowe\Misc\Low level</Filter>
+    </ClInclude>
+    <ClInclude Include="json\json.hpp">
+      <Filter>Pliki nagłówkowe\JSON</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

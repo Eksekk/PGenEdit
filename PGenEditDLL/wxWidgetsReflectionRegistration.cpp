@@ -1,6 +1,8 @@
 #include "pch.h"
 #include <wx/stackwalk.h>
 
+// note: a bit of registration code is in dllApi.cpp to allow showing log console via lua
+
 RTTR_REGISTRATION
 {
      using namespace rttr;

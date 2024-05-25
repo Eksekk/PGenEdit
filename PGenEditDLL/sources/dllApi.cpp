@@ -31,6 +31,9 @@ bool initialized = false;
 extern void setMaxSkillLevel();
 extern void setupHooks();
 
+// defining this here to allow to show the frame by lua via C++ reflection
+static wxLogWindow* windowLogger = nullptr;
+
 std::vector<SimpleCallback> postInitCallbacks;
 void addPostInitCallback(SimpleCallback callback)
 {
@@ -255,6 +258,10 @@ extern "C"
 		app = &wxGetApp();
 		app->CallOnInit(); // create gui
 
+        // also log messages in the frame (not shown by default)
+        windowLogger = new wxLogWindow(nullptr, "PGenEditDLL log", false, true);
+		wxLog::SetActiveTarget(windowLogger);
+
         // need to create after wxwidgets is initialized
 		mainUpdateTimer = new wxTimer;
         mainUpdateTimer->Bind(wxEVT_TIMER, runUpdateTimerCallbacks);
@@ -470,4 +477,12 @@ extern "C"
         return nullptr;
     }
 
+}
+
+RTTR_REGISTRATION
+{
+    using namespace rttr;
+    registration::property("windowLogger", &windowLogger);
+    registration::class_<wxLogWindow>("wxLogWindow")
+        .method("Show", &wxLogWindow::Show)(parameter_names("bShow"), default_arguments(true));
 }

@@ -63,8 +63,10 @@ template<typename... Args>
 bool Asserter::operator()(const char* func, const char* file, int line, const wxString& rawErrorMsg, Args&&... args)
 {
 	// condition checking done in macro - avoiding unnecessary string constructions
+
+	// extract only file name from full path
 	std::string file2 = file;
-	size_t index = file2.rfind('/');
+	size_t index = file2.rfind('\\');
 	if (index != std::string::npos)
 	{
 		file2 = file2.substr(index + 1);

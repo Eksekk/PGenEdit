@@ -113,8 +113,10 @@ std::vector<wxString> GUI_tests::testEditorSkillsPanel()
 
 	playerAccessor->setSkill(5, SkillValue{ 4, 2 });
 	panel->updateFromPlayerData();
-	panel->spentSkillPointsValue->GetValue().ToInt(&val);
+	val = panel->widgetToSkillMap[&GameData::skills.at(5)]->getValue().total();
 	myassert(val == joinSkill(SkillValue{4, 2}));
+	
+	// FIXME: test "spent skill points" field
 
 	std::vector<PlayerSkill*> doNotGenerateSkills;
 	for (auto& [id, skill] : GameData::skills)
@@ -146,10 +148,11 @@ std::vector<wxString> GUI_tests::testEditorSkillsPanel()
 		// level
 		PlayerSkill* skill = &GameData::skills.at(i);
 		auto* widget = panel->widgetToSkillMap.at(skill);
+		helper.autoSelect(widget->skillMastery, "Novice");
 		helper.autoText(widget->skillLevel, "23");
-		myassert(playerAccessor->getSkill(skill) == (SkillValue{ 23, 1 }), i);
+		myassert(playerAccessor->getSkill(skill) == (SkillValue{ 23, 1 }), playerAccessor->getSkill(skill).toString(), i);
 		helper.autoText(widget->skillLevel, "4");
-		myassert(playerAccessor->getSkill(skill) == (SkillValue{ 4, 1 }), i);
+		myassert(playerAccessor->getSkill(skill) == (SkillValue{ 4, 1 }), playerAccessor->getSkill(skill).toString(), i);
 		helper.autoClick(widget->skillLevel);
 
 		// mastery choice
@@ -174,10 +177,15 @@ std::vector<wxString> GUI_tests::testEditorSkillsPanel()
 					 container->SetSelection(0);
 			 }
 		 **/
+		(void)widget->skillMastery->GetString(0); // dummy call so breakpoint with action can print the value
 		helper.autoSelect(widget->skillMastery, "Master");
-		myassert(playerAccessor->getSkill(skill) == (SkillValue{ 1, 3 }), i - 2);
+		(void)widget->skillMastery->GetString(widget->skillMastery->GetSelection()).ToStdString(wxGet_wxConvLibc());
+		window->Refresh();
+		myassert(playerAccessor->getSkill(skill) == (SkillValue{ 1, 3 }), playerAccessor->getSkill(skill).toString(), i - 2);
+		// SELECTING "None" doesn't work, any other works, why?????
 		helper.autoSelect(widget->skillMastery, "None");
-		myassert(playerAccessor->getSkill(skill) == (SkillValue{ 0, 0 }), i - 2);
+		window->Refresh();
+		myassert(playerAccessor->getSkill(skill) == (SkillValue{ 0, 0 }), playerAccessor->getSkill(skill).toString(), i - 2);
 	}
 
 	// class constraints
@@ -195,6 +203,7 @@ std::vector<wxString> GUI_tests::testEditorSkillsPanel()
 	helper.autoClick(panel->classConstraintsNone);
 
 	// affect armor/weapons/...
+	// TODO: make these really test if checkboxes affect what skills are affected, rather than simply checking values in vector
 	helper.autoClick(panel->affectArmorCheckbox);
 	helper.autoClick(panel->affectWeaponsCheckbox);
 	helper.autoClick(panel->affectMiscCheckbox);
@@ -226,7 +235,7 @@ std::vector<wxString> GUI_tests::testEditorSkillsPanel()
 
 	// only already learned - skip (not using variable to keep track of it)
 
-	eWindow->destroyPlayerWindow(index);
+	//eWindow->destroyPlayerWindow(index);
 	return myasserter.errors;
 }
 

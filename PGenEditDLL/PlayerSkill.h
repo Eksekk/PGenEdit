@@ -5,6 +5,7 @@
 struct SkillValue
 {
 	int level, mastery;
+	int total() const;
 
 	bool operator==(const SkillValue& other) const;
 	bool operator!=(const SkillValue& other) const;

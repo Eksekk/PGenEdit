@@ -29,6 +29,11 @@ bool SkillValue::operator!=(const SkillValue& other) const
 	return !operator==(other);
 }
 
+int SkillValue::total() const
+{
+	return joinSkill(*this);
+}
+
 bool SkillValue::isZero() const
 {
 	return level == 0 || mastery == MASTERY_NONE;

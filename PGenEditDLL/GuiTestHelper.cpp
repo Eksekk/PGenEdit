@@ -88,9 +88,10 @@ void tryClearTextFor(T* t)
 		// manually send events for supported control types, because windows messages are sent, but they apparently don't trigger internal value change and old value is kept after adding text via ui action simulator
 		if constexpr (SAME(T, wxSpinCtrl))
 		{
-			wxCommandEvent event(wxEVT_SPINCTRL, t->GetId());
-			event.SetEventObject(t);
-			t->ProcessWindowEvent(event);
+			// DISABLED, because: when wxSpinCtrl text is cleared, it's empty. However, once wxWidgets gets "value changed" event, the text will reset to "0", which will break entering text here via ui action simulator (different value than intended)
+// 			wxCommandEvent event(wxEVT_SPINCTRL, t->GetId());
+// 			event.SetEventObject(t);
+// 			t->ProcessWindowEvent(event);
 		}
 		else if constexpr (SAME(T, wxTextCtrl))
 		{
@@ -126,11 +127,12 @@ void GuiTestHelper::autoText(wxWindow* target, const wxString& text)
 	scrollIntoView(target);
 	target->SetFocus();
 	// I don't know how to better do trying to clear value of different types without making this a template function, which might be inconvenient
+
 	tryClearTextFor(dynamic_cast<wxTextCtrl*>(target));
 	tryClearTextFor(dynamic_cast<wxComboBox*>(target));
 	tryClearTextFor(dynamic_cast<wxSpinCtrl*>(target));
 
-	// NO MESSAGES TO PROCESS HERE
+	// note: I don't really get why order of these calls is the right one, would really like to, but it's too hard, considering I don't really use event loops and messages to wxwidgets are sent to dispatch by mm7.exe
 	wxYield();
 	dispatchWindowMessages();
 	target->SetFocus();
@@ -154,12 +156,16 @@ void GuiTestHelper::autoSelect(wxChoice* target, const wxString& text)
 	// IMPORTANT
 	// I conditionally revert selection to old with skill choosers, and simulator first sets selection to 0, then increments it
 	// with reverting that won't work
-	target->SetSelection(0);
+
+	// NOTE: I apparently needed this for something or put for testing, but this one actually breaks selecting very first item in combo box
+	//target->SetSelection(0);
+	wxASSERT(target->CanAcceptFocus() && target->IsFocusable());
+	target->SetFocus();
 	wxASSERT_MSG(sim.Select(text), text);
+	wxYield();
+	dispatchWindowMessages();
 	wxEventLoop::SetActive(nullptr);
 	getNearestFocusableSibling(target)->SetFocus();
-	dispatchWindowMessages();
-	wxYield();
 }
 
 void GuiTestHelper::dispatchWindowMessages()

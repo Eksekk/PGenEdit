@@ -80,6 +80,7 @@
     <ClInclude Include="InventoryManagerCtrl.h" />
     <ClInclude Include="ItemDialogBase.h" />
     <ClInclude Include="ItemStructAccessor.h" />
+    <ClInclude Include="json\json.hpp" />
     <ClInclude Include="LodStructAccessor.h" />
     <ClInclude Include="LuaFunction.h" />
     <ClInclude Include="LuaFunctions.h" />
