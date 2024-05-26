@@ -295,11 +295,10 @@ std::vector<wxString> GUI_tests::testGui()
 // 	myassert(!eWindow->IsShown());
 // 	eWindow->Show(wasVisiblePreviously);
 
-	Player* player = new Player;
-	memset(player, 0, sizeof(Player));
 	int index = std::min(1, std::max(CURRENT_PARTY_SIZE - 1, 0));
-	AutoBackup b(playersInParty[index]);
-	playersInParty[index] = player;
+	Player* player = reinterpret_cast<Player*>(playersInParty[index]);
+	AutoBackup b(*player);
+	memset(player, 0, sizeof(Player));
 
 	auto oldName = playerAccessor->forPlayer(index)->getName();
 	playerAccessor->setName("abcd");
@@ -322,8 +321,6 @@ std::vector<wxString> GUI_tests::testGui()
 
 	auto playerWindow = eWindow->playerWindows[index];
 
-	delete player;
-
 	return mergeVectors({ myasserter.errors, testAlignmentRadioBox(), testEditorSkillsPanel<Player, Game>(), testEditorStatisticsPanel<Player, Game>() });
 }
 
@@ -338,12 +335,21 @@ std::vector<wxString> GUI_tests::testEditorStatisticsPanel()
 	(void)playerAccessor->forPlayer(index);
 	auto eWindow = wxGetApp().editorMainWindow;
 	Asserter myasserter("Statistics panel");
-    EditorPlayerWindow* win = eWindow->createPlayerWindow(index);
-    win->tabs->SetSelection(PlayerWindowPanelType::STATISTICS_PANEL_INDEX);
-    EditorStatisticsPanel* panel = dynamic_cast<EditorStatisticsPanel*>(win->tabs->GetCurrentPage());
-    win->Show();
 	wxUIActionSimulator sim;
+	EditorPlayerWindow* win = eWindow->createPlayerWindow(index);
+	win->tabs->SetSelection(PlayerWindowPanelType::STATISTICS_PANEL_INDEX);
+	
+	// need to use event hack here, because gui test helper only accepts scrolled windows as of now, and I'm too lazy to convert it to accept any window
+	// could of course directly create new panel and execute replacePageAt with it, but it would introduce unnecessary coupling between this test and panel instantiation (it belongs currently to EditorPlayerWindow, and constructor takes few arguments)
+	// could also extract panel-creating bits of code into functions, but idk how that would work with extra code which is in tab-changing event handler, and also I would need to make these methods private and friend GUI_tests, which would introduce unnecessary method clutter into the class
+// 	wxBookCtrlEvent evt(wxEVT_BOOKCTRL_PAGE_CHANGED, win->tabs->GetId(), PlayerWindowPanelType::STATISTICS_PANEL_INDEX, win->tabs->GetSelection());
+// 	evt.SetEventObject(win->tabs);
+// 	win->tabs->ProcessWindowEvent(evt);
+	EditorStatisticsPanel* panel = dynamic_cast<EditorStatisticsPanel*>(win->tabs->GetCurrentPage());
+	wxASSERT(panel);
 	GuiTestHelper helper(*panel, sim, myasserter);
+    //win->tabs->SetSelection(PlayerWindowPanelType::STATISTICS_PANEL_INDEX);
+    win->Show();
 	wxASSERT(win->IsShown() && win->IsVisible());
 
 	// tests to check that modifying fields changes actual memberValue in player struct
@@ -376,42 +382,43 @@ std::vector<wxString> GUI_tests::testEditorStatisticsPanel()
 		Test{.baseValue = statWidgets[consts::STAT_LUCK]->bonus, .member = &Player::luckBonus},
 	});
 
+	// IMPORTANT: use stat ids here, not damage type ids; I chose the first option everywhere, maybe could change it, but for now it stays
 	if constexpr (SAME(Player, mm6::Player))
 	{
 		tests.insert(tests.end(), std::move(std::initializer_list<Test>{
-			Test{.baseValue = resWidgets[consts::DMG_FIRE]->base, .member = &Player::fireResistanceBase },
-			Test{.baseValue = resWidgets[consts::DMG_FIRE]->bonus, .member = &Player::fireResistanceBonus },
-			Test{.baseValue = resWidgets[consts::DMG_ELEC]->base, .member = &Player::elecResistanceBase },
-			Test{.baseValue = resWidgets[consts::DMG_ELEC]->bonus, .member = &Player::elecResistanceBonus },
-			Test{.baseValue = resWidgets[consts::DMG_COLD]->base, .member = &Player::coldResistanceBase },
-			Test{.baseValue = resWidgets[consts::DMG_COLD]->bonus, .member = &Player::coldResistanceBonus },
-			Test{.baseValue = resWidgets[consts::DMG_POISON]->base, .member = &Player::poisonResistanceBase },
-			Test{.baseValue = resWidgets[consts::DMG_POISON]->bonus, .member = &Player::poisonResistanceBonus },
-			Test{.baseValue = resWidgets[consts::DMG_MAGIC]->base, .member = &Player::magicResistanceBase },
-			Test{.baseValue = resWidgets[consts::DMG_MAGIC]->bonus, .member = &Player::magicResistanceBonus },
+			Test{.baseValue = resWidgets[consts::STAT_FIRE_RESISTANCE]->base, .member = &Player::fireResistanceBase },
+			Test{.baseValue = resWidgets[consts::STAT_FIRE_RESISTANCE]->bonus, .member = &Player::fireResistanceBonus },
+			Test{.baseValue = resWidgets[consts::STAT_ELEC_RESISTANCE]->base, .member = &Player::elecResistanceBase },
+			Test{.baseValue = resWidgets[consts::STAT_ELEC_RESISTANCE]->bonus, .member = &Player::elecResistanceBonus },
+			Test{.baseValue = resWidgets[consts::STAT_COLD_RESISTANCE]->base, .member = &Player::coldResistanceBase },
+			Test{.baseValue = resWidgets[consts::STAT_COLD_RESISTANCE]->bonus, .member = &Player::coldResistanceBonus },
+			Test{.baseValue = resWidgets[consts::STAT_POISON_RESISTANCE]->base, .member = &Player::poisonResistanceBase },
+			Test{.baseValue = resWidgets[consts::STAT_POISON_RESISTANCE]->bonus, .member = &Player::poisonResistanceBonus },
+			Test{.baseValue = resWidgets[consts::STAT_MAGIC_RESISTANCE]->base, .member = &Player::magicResistanceBase },
+			Test{.baseValue = resWidgets[consts::STAT_MAGIC_RESISTANCE]->bonus, .member = &Player::magicResistanceBonus },
 			}));
 	}
 	else
 	{
 		tests.insert(tests.end(), std::move(std::initializer_list<Test>{
-			Test{.baseValue = resWidgets[consts::DMG_FIRE]->base, .member = &Player::fireResistanceBase },
-			Test{.baseValue = resWidgets[consts::DMG_FIRE]->bonus, .member = &Player::fireResistanceBonus },
-			Test{.baseValue = resWidgets[consts::DMG_AIR]->base, .member = &Player::airResistanceBase },
-			Test{.baseValue = resWidgets[consts::DMG_AIR]->bonus, .member = &Player::airResistanceBonus },
-			Test{.baseValue = resWidgets[consts::DMG_WATER]->base, .member = &Player::waterResistanceBase },
-			Test{.baseValue = resWidgets[consts::DMG_WATER]->bonus, .member = &Player::waterResistanceBonus },
-			Test{.baseValue = resWidgets[consts::DMG_EARTH]->base, .member = &Player::earthResistanceBase },
-			Test{.baseValue = resWidgets[consts::DMG_EARTH]->bonus, .member = &Player::earthResistanceBonus },
-			Test{.baseValue = resWidgets[consts::DMG_SPIRIT]->base, .member = &Player::spiritResistanceBase },
-			Test{.baseValue = resWidgets[consts::DMG_SPIRIT]->bonus, .member = &Player::spiritResistanceBonus },
-			Test{.baseValue = resWidgets[consts::DMG_MIND]->base, .member = &Player::mindResistanceBase },
-			Test{.baseValue = resWidgets[consts::DMG_MIND]->bonus, .member = &Player::mindResistanceBonus },
-			Test{.baseValue = resWidgets[consts::DMG_BODY]->base, .member = &Player::bodyResistanceBase },
-			Test{.baseValue = resWidgets[consts::DMG_BODY]->bonus, .member = &Player::bodyResistanceBonus },
-			Test{.baseValue = resWidgets[consts::DMG_LIGHT]->base, .member = &Player::lightResistanceBase },
-			Test{.baseValue = resWidgets[consts::DMG_LIGHT]->bonus, .member = &Player::lightResistanceBonus },
-			Test{.baseValue = resWidgets[consts::DMG_DARK]->base, .member = &Player::darkResistanceBase },
-			Test{.baseValue = resWidgets[consts::DMG_DARK]->bonus, .member = &Player::darkResistanceBonus },
+			Test{.baseValue = resWidgets[consts::STAT_FIRE_RESISTANCE]->base, .member = &Player::fireResistanceBase },
+			Test{.baseValue = resWidgets[consts::STAT_FIRE_RESISTANCE]->bonus, .member = &Player::fireResistanceBonus },
+			Test{.baseValue = resWidgets[consts::STAT_AIR_RESISTANCE]->base, .member = &Player::airResistanceBase },
+			Test{.baseValue = resWidgets[consts::STAT_AIR_RESISTANCE]->bonus, .member = &Player::airResistanceBonus },
+			Test{.baseValue = resWidgets[consts::STAT_WATER_RESISTANCE]->base, .member = &Player::waterResistanceBase },
+			Test{.baseValue = resWidgets[consts::STAT_WATER_RESISTANCE]->bonus, .member = &Player::waterResistanceBonus },
+			Test{.baseValue = resWidgets[consts::STAT_EARTH_RESISTANCE]->base, .member = &Player::earthResistanceBase },
+			Test{.baseValue = resWidgets[consts::STAT_EARTH_RESISTANCE]->bonus, .member = &Player::earthResistanceBonus },
+			Test{.baseValue = resWidgets[consts::STAT_SPIRIT_RESISTANCE]->base, .member = &Player::spiritResistanceBase },
+			Test{.baseValue = resWidgets[consts::STAT_SPIRIT_RESISTANCE]->bonus, .member = &Player::spiritResistanceBonus },
+			Test{.baseValue = resWidgets[consts::STAT_MIND_RESISTANCE]->base, .member = &Player::mindResistanceBase },
+			Test{.baseValue = resWidgets[consts::STAT_MIND_RESISTANCE]->bonus, .member = &Player::mindResistanceBonus },
+			Test{.baseValue = resWidgets[consts::STAT_BODY_RESISTANCE]->base, .member = &Player::bodyResistanceBase },
+			Test{.baseValue = resWidgets[consts::STAT_BODY_RESISTANCE]->bonus, .member = &Player::bodyResistanceBonus },
+			Test{.baseValue = resWidgets[consts::STAT_LIGHT_RESISTANCE]->base, .member = &Player::lightResistanceBase },
+			Test{.baseValue = resWidgets[consts::STAT_LIGHT_RESISTANCE]->bonus, .member = &Player::lightResistanceBonus },
+			Test{.baseValue = resWidgets[consts::STAT_DARK_RESISTANCE]->base, .member = &Player::darkResistanceBase },
+			Test{.baseValue = resWidgets[consts::STAT_DARK_RESISTANCE]->bonus, .member = &Player::darkResistanceBonus },
 		}));
 	}
 

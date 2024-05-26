@@ -107,6 +107,7 @@ protected:
 		wxSpinCtrl* value;
 	};
 	std::unordered_map<int, std::unique_ptr<PrimaryStatWidget>> primaryStatWidgetToStatIdMap;
+	// NOTE: indexed by stat ids, not by damage type ids
 	std::unordered_map<int, std::unique_ptr<ResistanceWidget>> resistanceWidgetToResIdMap;
 	std::unordered_map<wxSpinCtrl*, int> statIdToStatExtraSpinCtrlMap;
 	std::unordered_map<int, wxSpinCtrl*> statExtraToStatIdSpinCtrlMap;

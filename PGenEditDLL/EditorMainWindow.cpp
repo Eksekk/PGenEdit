@@ -162,6 +162,10 @@ void EditorMainWindow::setupMenusAndStatusBar()
 EditorPlayerWindow* EditorMainWindow::createPlayerWindow(int index)
 {
 	wxASSERT(index < MAX_PLAYERS);
+	if (playerWindows[index]) // already created
+	{
+		return playerWindows[index];
+	}
 	playerWindows[index] = new EditorPlayerWindow(this, index, playerAccessor->forPlayer(index)->getRosterIndex());
 	return playerWindows[index];
 }

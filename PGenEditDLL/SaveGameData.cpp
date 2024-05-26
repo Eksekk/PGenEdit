@@ -14,6 +14,11 @@ SaveGameData saveGameData;
 static const std::string JSON_KEY_EDITOR = "editorJson", JSON_KEY_GENERATOR = "generator", JSON_KEY_PLAYERS = "playersJson", JSON_KEY_PLAYER_WINDOW = "window", JSON_KEY_PLAYER_PANELS = "panelsJson";
 static const std::string JSON_KEY_INVENTORY_CONTROLS = "inventoryControls", JSON_KEY_MAP_CHESTS = "mapChests";
 
+std::string dumpJson(const Json& json)
+{
+	return json.dump(4);
+}
+
 bool SaveGameData::saveEditorPlayerPanelData(const EditorPlayerPanel& panel)
 {
     // {"editorJson": {"playersJson": {"1": {<...window data...>, "panelsJson": {...}}}}}
