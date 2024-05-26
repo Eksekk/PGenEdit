@@ -191,6 +191,7 @@ namespace consts
 		void callbackMonsterKindInitialize();
 		void callbackHouseTypeInitialize();
 		void callbackHouseScreensInitialize();
+		void callbackScreensInitialize();
 		void callbackFacetBitsInitialize();
 		void callbackFaceAnimationInitialize();
 		void callbackConditionInitialize();
@@ -219,6 +220,7 @@ namespace consts
 		CallbackCheckResult callbackCheckMonsterKindValidity(int64_t kind);
 		CallbackCheckResult callbackCheckHouseTypeValidity(int64_t type);
 		CallbackCheckResult callbackCheckHouseScreensValidity(int64_t screen);
+		CallbackCheckResult callbackCheckScreensValidity(int64_t screen);
 		CallbackCheckResult callbackCheckFacetBitsValidity(int64_t bits);
 		CallbackCheckResult callbackCheckFaceAnimationValidity(int64_t anim);
 		CallbackCheckResult callbackCheckConditionValidity(int64_t cond);

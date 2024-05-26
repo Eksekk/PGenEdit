@@ -320,6 +320,7 @@
     <EnableMicrosoftCodeAnalysis>true</EnableMicrosoftCodeAnalysis>
     <ExternalIncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);json</ExternalIncludePath>
     <GenerateManifest>true</GenerateManifest>
+    <LinkIncremental>false</LinkIncremental>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <IncludePath>headers;headers\structs;.;.\wxWidgets-3.2.1\include;.\openresty-luajit\src;.\Zydis\include;.\Zydis\dependencies\zycore\include;.\pfr\include;.\rttr\src\rttr</IncludePath>

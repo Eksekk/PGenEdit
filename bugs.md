@@ -1,5 +1,5 @@
 # Testing
-* wxChoice doesn't react to mouse clicks during testing
+* EditorStatisticsPanel tests fail
 
 # Misc
 * Very long loading time for editor windows

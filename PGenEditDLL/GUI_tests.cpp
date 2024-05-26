@@ -444,6 +444,7 @@ std::vector<wxString> GUI_tests::testEditorStatisticsPanel()
 		std::visit([&memberValue, &pl](auto&& arg) { memberValue = pl->*arg; }, test.member);
 		myassertf(memberValue == 123, std::format("First comparison in wxSpinCtrl failed - member is {}, control value is {}", memberValue, test.baseValue->GetValue()));
 		helper.autoText(test.baseValue, "0");
+		std::visit([&memberValue, &pl](auto&& arg) { memberValue = pl->*arg; }, test.member);
 		myassert(memberValue == 0, test.baseValue->GetLabel());
 	}
 

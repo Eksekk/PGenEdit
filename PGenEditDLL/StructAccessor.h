@@ -10,6 +10,20 @@
 
 // declaration will contain virtual and = 0, definition will contain override
 
+// macro used as argument to BOOST_PP_SEQ_FOR_EACH
+// data is (code, templateParam)
+#define PGENEDIT_CONSTEXPR(r, data, elem) \
+if constexpr (SAME(mm##elem::BOOST_PP_SEQ_ELEM(1, data), BOOST_PP_SEQ_ELEM(1, data))) \
+{ \
+    BOOST_PP_SEQ_ELEM(0, data) \
+} \
+
+// generates inside of getter/setter function, which exists only in specific games
+#define PGENEDIT_CONSTEXPR_BY_GAME(code, games, templateParam) \
+    BOOST_PP_SEQ_FOR_EACH(PGENEDIT_CONSTEXPR, (code)(templateParam), games) \
+    wxLogFatalError("[%s] Invalid game version", __FUNCTION__);\
+    throw std::exception("dummy"); // to make compiler allow not all paths returning value, won't be thrown anyway, because of wxLogFatalError
+
 #define PGENEDIT_GETTER_DECL(type, fieldName, getterNamePart) \
 	[[nodiscard]] virtual type get##getterNamePart() = 0;\
 	[[nodiscard]] virtual void* get##getterNamePart##Ptr () = 0;

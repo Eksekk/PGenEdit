@@ -430,6 +430,11 @@ extern "C"
 
     DLL_EXPORT int __stdcall runTests()
     {
+        if (gameAccessor->getCurrentScreen() != consts::SCREEN_GAME)
+        {
+			wxMessageBox("You need to be in game to run tests", "Error", wxOK | wxICON_ERROR);
+			return 0;
+        }
         try
         {
             std::vector<wxString> errors;

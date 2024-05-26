@@ -2003,7 +2003,7 @@ end
 
 -- "ENUM" GENERATOR
 local namePrefixes = {["Stats"] = "STAT", ["Skills"] = "SKILL", ["Damage"] = "DMG", ItemSlot = "ITEM_SLOT", PlayerBuff = "PLAYER_BUFF", PartyBuff = "PARTY_BUFF",
-	MonsterBits = "MON_BIT", MonsterBuff = "MON_BUFF", MonsterBonus = "MON_BONUS", MonsterKind = "MON_KIND", ItemType = "ITEM_TYPE", HouseType = "HOUSE_TYPE",
+	MonsterBits = "MON_BIT", MonsterBuff = "MON_BUFF", MonsterBonus = "MON_BONUS", MonsterKind = "MON_KIND", ItemType = "ITEM_TYPE", HouseType = "HOUSE_TYPE", Screens = "SCREEN",
 	HouseScreens = "HOUSE_SCREENS", FacetBits = "FACET_BIT", FaceAnimation = "PLAYER_FACE_ANIMATION", Condition = "PLAYER_CONDITION", ChestBits = "CHEST_BIT",
 	AIState = "MON_AI_STATE", Spells = "SPELL"}
 
@@ -2094,6 +2094,9 @@ function processConst(name)
 		end
 	end
 	local prefix = namePrefixes[name]
+	if not prefix then
+		error("Name prefix for " .. name .. " is not defined")
+	end
 	
 	-- header
 
@@ -2211,7 +2214,7 @@ local function processConstFinish()
 	multipleInsert(source, #source + 1, sourceBaseEnd)
 end
 
-local constsToProcess = {"Stats", "Skills", "Damage", "ItemType", "ItemSlot", "PlayerBuff", "PartyBuff", "MonsterBits", "MonsterBuff", "MonsterBonus", "MonsterKind", "HouseType", "HouseScreens", "FacetBits", "FaceAnimation", "Condition", "ChestBits", "AIState", "Spells"}
+local constsToProcess = {"Stats", "Skills", "Damage", "ItemType", "ItemSlot", "PlayerBuff", "PartyBuff", "MonsterBits", "MonsterBuff", "MonsterBonus", "MonsterKind", "HouseType", "HouseScreens", "Screens", "FacetBits", "FaceAnimation", "Condition", "ChestBits", "AIState", "Spells"}
 function writeConsts()
 	for _, const in ipairs(constsToProcess) do
 		processConst(const)

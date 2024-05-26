@@ -63,7 +63,8 @@ namespace consts
 				monsterBits = mmv(makeEnumMonsterBits_6, makeEnumMonsterBits_7, makeEnumMonsterBits_8), monsterBuff = mmv(makeEnumMonsterBuff_6, makeEnumMonsterBuff_7, makeEnumMonsterBuff_8),
 				monsterBonus = mmv(makeEnumMonsterBonus_6, makeEnumMonsterBonus_7, makeEnumMonsterBonus_8), monsterKind = mmv(makeEnumMonsterKind_6, makeEnumMonsterKind_7, makeEnumMonsterKind_8),
 				itemType = mmv(makeEnumItemType_6, makeEnumItemType_7, makeEnumItemType_8), houseType = mmv(makeEnumHouseType_6, makeEnumHouseType_7, makeEnumHouseType_8),
-				houseScreens = mmv(makeEnumHouseScreens_6, makeEnumHouseScreens_7, makeEnumHouseScreens_8), facetBits = mmv(makeEnumFacetBits_6, makeEnumFacetBits_7, makeEnumFacetBits_8),
+				houseScreens = mmv(makeEnumHouseScreens_6, makeEnumHouseScreens_7, makeEnumHouseScreens_8), screens = mmv(makeEnumScreens_6, makeEnumScreens_7, makeEnumScreens_8),
+				facetBits = mmv(makeEnumFacetBits_6, makeEnumFacetBits_7, makeEnumFacetBits_8),
 				faceAnimation = mmv(makeEnumFaceAnimation_6, makeEnumFaceAnimation_7, makeEnumFaceAnimation_8), condition = mmv(makeEnumCondition_6, makeEnumCondition_7, makeEnumCondition_8),
 				chestBits = mmv(makeEnumChestBits_6, makeEnumChestBits_7, makeEnumChestBits_8), aistate = mmv(makeEnumAIState_6, makeEnumAIState_7, makeEnumAIState_8),
 				spells = mmv(makeEnumSpells_6, makeEnumSpells_7, makeEnumSpells_8);
@@ -92,6 +93,7 @@ namespace consts
 			//callbackHouseTypeInitialize();
 			houseScreens();
 			//callbackHouseScreensInitialize();
+			screens();
 			facetBits();
 			//callbackFacetBitsInitialize();
 			faceAnimation();
@@ -237,6 +239,11 @@ namespace consts
 		{
 		}
 
+		void callbackScreensInitialize()
+		{
+
+		}
+
 		void callbackFacetBitsInitialize()
 		{
 		}
@@ -322,6 +329,11 @@ namespace consts
 		}
 
 		CallbackCheckResult callbackCheckHouseScreensValidity(int64_t screen)
+		{
+			return CallbackCheckResult::NO_CHANGE;
+		}
+
+		CallbackCheckResult callbackCheckScreensValidity(int64_t screen)
 		{
 			return CallbackCheckResult::NO_CHANGE;
 		}

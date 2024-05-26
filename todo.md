@@ -20,6 +20,9 @@
 
 # GUI
 
+# Required improvements to avoid bugs before they happen
+- somehow make a common class for all accessors which contains pointer to operate on (or use some template magic), then create RAII class which will set data pointer when created, and restore it when destroyed, so that any forPlayer(), forChest() etc. calls during the function or functions it calls won't have effect on player pointer when function is exited, and functions called by main function don't change the pointer for main function (currently it is assumed that setting forPlayer() etc. once at the beginning of the function will work, but it may not at any code change)
+
 # Code
 - Auto convert structure parameters in hookFunction and hookReplaceCall to their addresses
 - Json persisting methods boolean return values should indicate actual error in all cases, not empty data or error
