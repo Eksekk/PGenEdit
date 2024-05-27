@@ -10,13 +10,18 @@
 
 // declaration will contain virtual and = 0, definition will contain override
 
-// macro used as argument to BOOST_PP_SEQ_FOR_EACH
+// macro used as argument to BOOST_PP_SEQ_FOR_EACH, generates single "if constexpr" matching specific game based on passed struct type
 // data is (code, templateParam)
-#define PGENEDIT_CONSTEXPR(r, data, elem) \
+
+#define PG_test(x) x
+#define PGENEDIT_CONSTEXPR2(r, data, elem) \
 if constexpr (SAME(mm##elem::BOOST_PP_SEQ_ELEM(1, data), BOOST_PP_SEQ_ELEM(1, data))) \
 { \
     BOOST_PP_SEQ_ELEM(0, data) \
-} \
+}
+
+// indirection needed to allow "data" (which is boost macro invocation) to expand before pasting
+#define PGENEDIT_CONSTEXPR(r, data, elem) PGENEDIT_CONSTEXPR2(r, data, elem)
 
 // generates inside of getter/setter function, which exists only in specific games
 #define PGENEDIT_CONSTEXPR_BY_GAME(code, games, templateParam) \
@@ -24,25 +29,103 @@ if constexpr (SAME(mm##elem::BOOST_PP_SEQ_ELEM(1, data), BOOST_PP_SEQ_ELEM(1, da
     wxLogFatalError("[%s] Invalid game version", __FUNCTION__);\
     throw std::exception("dummy"); // to make compiler allow not all paths returning value, won't be thrown anyway, because of wxLogFatalError
 
+// test
+// using Player = mm6::Player;
+// void f()
+// {
+//     PGENEDIT_CONSTEXPR_BY_GAME(test; , (6)(7)(8), Player)
+// }
+
 #define PGENEDIT_GETTER_DECL(type, fieldName, getterNamePart) \
 	[[nodiscard]] virtual type get##getterNamePart() = 0;\
 	[[nodiscard]] virtual void* get##getterNamePart##Ptr () = 0;
+/*
 #define PGENEDIT_GETTER_DEF(prefix, type, fieldName, getterNamePart) \
 	[[nodiscard]] type get##getterNamePart() override { return prefix fieldName; } \
 	\
+	[[nodiscard]] void* get##getterNamePart##Ptr () override { return & prefix fieldName; }*/
+
+// returns correct getter/setter definition macro based on number of arguments (the one with less calls the one with more, passing all games)
+#define PGENEDIT_GET_MACRO_GETTER_SETTER_DEF(_1, _2, _3, _4, _5, NAME, ...) NAME
+#define PGENEDIT_GET_MACRO_GETTER_SETTER_DEF_6(_1, _2, _3, _4, _5, _6, NAME, ...) NAME
+
+#define PGENEDIT_GETTER_DEF_SOME(prefix, type, fieldName, getterNamePart, templateParam, games) \
+	[[nodiscard]] type get##getterNamePart() override { PGENEDIT_CONSTEXPR_BY_GAME(return prefix fieldName;, games, templateParam) } \
+	\
 	[[nodiscard]] void* get##getterNamePart##Ptr () override { return & prefix fieldName; }
+#define PGENEDIT_GETTER_DEF_ALL(prefix, type, fieldName, getterNamePart, templateParam) PGENEDIT_GETTER_DEF_SOME(prefix, type, fieldName, getterNamePart, templateParam, (6)(7)(8))
+
+// prefix, type, fieldName, getterNamePart
+#define PGENEDIT_GETTER_DEF(...) PGENEDIT_GET_MACRO_GETTER_SETTER_DEF_6(__VA_ARGS__, PGENEDIT_GETTER_DEF_SOME, PGENEDIT_GETTER_DEF_ALL)(__VA_ARGS__)
+
+/*
+using Player = mm6::Player;
+class c
+{
+	PGENEDIT_GETTER_DEF(pref, Player, fi, get)
+};*/
+
+//PGENEDIT_GET_MACRO_GETTER_SETTER_DEF(pr, tp, fi, gam, g, PGENEDIT_GETTER_DEF_ALL, PGENEDIT_GETTER_DEF_SOME)
+
+// setters
+
 #define PGENEDIT_SETTER_DECL(type, fieldName, setterNamePart) \
 	virtual void set##setterNamePart(type value) = 0;
-#define PGENEDIT_SETTER_DEF(prefix, type, fieldName, setterNamePart) \
-	void set##setterNamePart(type value) override { prefix fieldName = value; }
+#define PGENEDIT_SETTER_DEF_SOME(prefix, type, fieldName, setterNamePart, games) \
+	void set##setterNamePart(type value) override { PGENEDIT_CONSTEXPR_BY_GAME(prefix fieldName = value;, games) }
+#define PGENEDIT_SETTER_DEF_ALL(prefix, type, fieldName, setterNamePart) PGENEDIT_SETTER_DEF_SOME(prefix, type, fieldName, setterNamePart, (6)(7)(8))
+#define PGENEDIT_SETTER_DEF(...) PGENEDIT_GET_MACRO_GETTER_SETTER_DEF(__VA_ARGS__, PGENEDIT_SETTER_DEF_ALL, PGENEDIT_SETTER_DEF_SOME)(__VA_ARGS__)
 
 #define PGENEDIT_GETTER_SETTER_DECL(type, fieldName, accessorNamePart) \
 	PGENEDIT_GETTER_DECL(type, fieldName, accessorNamePart) \
 	PGENEDIT_SETTER_DECL(type, fieldName, accessorNamePart)
 
-#define PGENEDIT_GETTER_SETTER_DEF(prefix, type, fieldName, accessorNamePart) \
-	PGENEDIT_GETTER_DEF(prefix, type, fieldName, accessorNamePart) \
-	PGENEDIT_SETTER_DEF(prefix, type, fieldName, accessorNamePart)
+#define PGENEDIT_GETTER_SETTER_DEF_SOME(prefix, type, fieldName, accessorNamePart, games, templateParam) \
+	PGENEDIT_GETTER_DEF(prefix, type, fieldName, accessorNamePart, templateParam, games) \
+	PGENEDIT_SETTER_DEF(prefix, type, fieldName, accessorNamePart, templateParam, games)
+#define PGENEDIT_GETTER_SETTER_DEF_ALL(prefix, type, fieldName, accessorNamePart, templateParam) PGENEDIT_GETTER_SETTER_DEF_SOME(prefix, type, fieldName, accessorNamePart, templateParam, (6)(7)(8))
+
+/*
+using Player = mm6::Player;
+class G
+{
+    Player player;
+	PGENEDIT_GETTER_SETTER_DEF_SOME( , Player, player, Player, (5)(6))
+};*/
+
+#define PGENEDIT_GET_MACRO_GETTER_SETTER_DEF_6(_1, _2, _3, _4, _5, _6, NAME, ...) NAME
+
+// 5 = some, 4 = all
+// prefix, type, fieldName, accessorNamePart
+#define PGENEDIT_GETTER_SETTER_DEF(...) PGENEDIT_GET_MACRO_GETTER_SETTER_DEF_6(__VA_ARGS__, PGENEDIT_GETTER_SETTER_DEF_SOME, PGENEDIT_GETTER_SETTER_DEF_ALL)(__VA_ARGS__)
+
+// pass a list of tuples containing 3 elements each: type, field name, accessor name part to some macro, which will iterate over them and generate getter/setter methods
+// example: PGENEDIT_GETTER_SETTER_METHODS_DEF((int, gold, Gold), (int, food, Food))
+#define PGENEDIT_GETTER_SETTER_METHODS_DEF(prefix, ...) \
+    BOOST_PP_ASSERT_MSG(BOOST_PP_NOT(BOOST_PP_IS_BEGIN_PARENS(prefix)), "First argument for accessor definitions should be prefix to access the field, not tuple")\
+	BOOST_PP_SEQ_FOR_EACH(PGENEDIT_GETTER_SETTER_METHODS_MACRO_DEF, prefix, BOOST_PP_VARIADIC_TO_SEQ(__VA_ARGS__)) // makes a sequence of tuples
+#define PGENEDIT_GETTER_SETTER_METHODS_MACRO_DEF(r, data, tup) \
+	PGENEDIT_GETTER_SETTER_DEF(data, BOOST_PP_TUPLE_ENUM(tup))
+
+#define PGENEDIT_GETTER_SETTER_METHODS_DECL(...) \
+	BOOST_PP_SEQ_FOR_EACH(PGENEDIT_GETTER_SETTER_METHODS_MACRO_DECL, 0, BOOST_PP_VARIADIC_TO_SEQ(__VA_ARGS__))
+#define PGENEDIT_GETTER_SETTER_METHODS_MACRO_DECL(r, data, tup) \
+	PGENEDIT_GETTER_SETTER_DECL(BOOST_PP_TUPLE_ENUM(tup))
+
+class base
+{
+    virtual int getGold() = 0;
+	virtual void setGold(int value) = 0;
+    virtual int getFood() = 0;
+	virtual void setFood(int value) = 0;
+};
+using Player = mm7::Player;
+class x : base
+{
+	PGENEDIT_GETTER_SETTER_METHODS_DEF(test->, (int, gold, Gold, Player), (int, food, Food, Player, (7)(8)))
+};
+
+
 
 // arrays need special handling
 // since amount of array items is not known at compile time, we need to pass it as a parameter
@@ -87,20 +170,6 @@ if constexpr (SAME(mm##elem::BOOST_PP_SEQ_ELEM(1, data), BOOST_PP_SEQ_ELEM(1, da
 	PGENEDIT_ARRAY_GETTER_DEF(prefix, type, fieldName, accessorNamePart) \
 	PGENEDIT_ARRAY_SETTER_DEF(prefix, type, fieldName, accessorNamePart)
 
-// pass a list of tuples containing 3 elements each: type, field name, accessor name part to some macro, which will iterate over them and generate getter/setter methods
-// example: PGENEDIT_GETTER_SETTER_METHODS_DEF((int, gold, Gold), (int, food, Food))
-#define PGENEDIT_GETTER_SETTER_METHODS_DEF(prefix, ...) \
-    BOOST_PP_ASSERT_MSG(BOOST_PP_NOT(BOOST_PP_IS_BEGIN_PARENS(prefix)), "First argument for accessor definitions should be prefix to access the field, not tuple")\
-	BOOST_PP_SEQ_FOR_EACH(PGENEDIT_GETTER_SETTER_METHODS_MACRO_DEF, prefix, BOOST_PP_VARIADIC_TO_SEQ(__VA_ARGS__))
-#define PGENEDIT_GETTER_SETTER_METHODS_MACRO_DEF(r, data, seq) \
-	PGENEDIT_GETTER_SETTER_DEF(data, BOOST_PP_TUPLE_ELEM(0, seq), BOOST_PP_TUPLE_ELEM(1, seq), BOOST_PP_TUPLE_ELEM(2, seq))
-
-#define PGENEDIT_GETTER_SETTER_METHODS_DECL(...) \
-	BOOST_PP_SEQ_FOR_EACH(PGENEDIT_GETTER_SETTER_METHODS_MACRO_DECL, _, BOOST_PP_VARIADIC_TO_SEQ(__VA_ARGS__))
-#define PGENEDIT_GETTER_SETTER_METHODS_MACRO_DECL(r, data, seq) \
-	PGENEDIT_GETTER_SETTER_DECL(BOOST_PP_TUPLE_ELEM(0, seq), BOOST_PP_TUPLE_ELEM(1, seq), BOOST_PP_TUPLE_ELEM(2, seq))
-
-// now the same, but for arrays
 // prefix, type, field name, accessor name part
 #define PGENEDIT_ARRAY_GETTER_SETTER_METHODS_DEF(prefix, ...) \
 	BOOST_PP_ASSERT_MSG(BOOST_PP_NOT(BOOST_PP_IS_BEGIN_PARENS(prefix)), "First argument for accessor definitions should be prefix to access the field, not tuple")\
