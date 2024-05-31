@@ -12,7 +12,9 @@ extern GameStructAccessor* gameAccessor;
 // and we need to choose the widest type for each field
 // for now I only want to handle primitives and single-level arrays of primitives (no arrays here, only below)
 // the define below is of form (type, fieldName, accessorNamePart)
-#define PGENEDIT_GETTERS_SETTERS (char**, autonoteTxt, AutonoteTxt, Player),(int32_t, currentScreen, CurrentScreen, Player)//,(int32_t*, autonoteCategory, AutonoteCategory)
+#define PGENEDIT_GETTERS_SETTERS (char**, autonoteTxt, AutonoteTxt, Game),(int32_t, currentScreen, CurrentScreen, Game),(int32_t, mainMenuCode, MainMenuCode, Game),(bool, inQuestionDialog, InQuestionDialog, Game, (8))
+
+//,(int32_t*, autonoteCategory, AutonoteCategory)
 class GameStructAccessor : StructAccessorGenericFor
 {
 public:

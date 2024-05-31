@@ -32,6 +32,7 @@ if constexpr (SAME(mm##elem::BOOST_PP_SEQ_ELEM(1, data), BOOST_PP_SEQ_ELEM(1, da
 
 
 // NOTE: it's VERY IMPORTANT to iterate directly over list here, because upper in "macro call stack" I use BOOST_PP_SEQ_FOR_EACH, and apparently same macro can't be used twice in "expansion sequence"
+// also: it seems MSVS can't show tooltip of expansion of macro that contains iteration over list, so first use sequence, then at the end list to show as much of expansion as possible and be able to expand inline
 #define PGENEDIT_GEN_CONSTEXPR2(code, games, templateParam, ...) \
 	BOOST_PP_LIST_FOR_EACH(PGENEDIT_CONSTEXPR, (code)(templateParam), BOOST_PP_TUPLE_TO_LIST(games))
 
@@ -47,16 +48,16 @@ if constexpr (SAME(mm##elem::BOOST_PP_SEQ_ELEM(1, data), BOOST_PP_SEQ_ELEM(1, da
 
 // test
 //using Player = mm6::Player;
-void f()
-{
-    //BOOST_PP_TUPLE_TO_LIST(BOOST_PP_SEQ_TO_TUPLE((6)(7)(8)))
-    //PGENEDIT_CONSTEXPR_BY_GAME(return prefix fieldName; , (6)(7)(8), Player)
-}
-using Player = mm7::Player;
+// void f()
+// {
+//     BOOST_PP_TUPLE_TO_LIST(BOOST_PP_SEQ_TO_TUPLE((6)(7)(8)))
+//     PGENEDIT_CONSTEXPR_BY_GAME(return prefix fieldName; , (6)(7)(8), Player)
+// }
+//using Player = mm7::Player;
 
-#define PGENEDIT_GETTER_DECL(type, fieldName, getterNamePart, templateParam) \
+#define PGENEDIT_GETTER_DECL(type, fieldName, getterNamePart, templateParam, ...) \
 	[[nodiscard]] virtual type get##getterNamePart() = 0;\
-	[[nodiscard]] virtual void* get##getterNamePart##Ptr () = 0;
+	[[nodiscard]] virtual void* get##getterNamePart##Ptr() = 0;
 /*
 #define PGENEDIT_GETTER_DEF(prefix, type, fieldName, getterNamePart) \
 	[[nodiscard]] type get##getterNamePart() override { return prefix fieldName; } \
@@ -69,8 +70,8 @@ using Player = mm7::Player;
 
 #define PGENEDIT_GETTER_DEF_SOME(prefix, type, fieldName, getterNamePart, templateParam, games) \
 	[[nodiscard]] type get##getterNamePart() override { PGENEDIT_CONSTEXPR_BY_GAME(return prefix fieldName;, games, templateParam) } \
-	\
-	[[nodiscard]] void* get##getterNamePart##Ptr () override { return & prefix fieldName; }
+\
+	[[nodiscard]] void* get##getterNamePart##Ptr () override { PGENEDIT_CONSTEXPR_BY_GAME(return & prefix fieldName;, games, templateParam) }
 #define PGENEDIT_GETTER_DEF_ALL(prefix, type, fieldName, getterNamePart, templateParam) PGENEDIT_GETTER_DEF_SOME(prefix, type, fieldName, getterNamePart, templateParam, (6, 7, 8))
 
 //PGENEDIT_GETTER_DEF_SOME(, int, gold, Gold, Player, (6)(7)(8))
@@ -78,16 +79,16 @@ using Player = mm7::Player;
 // prefix, type, fieldName, accessorNamePart, templateParam, games
 #define PGENEDIT_GETTER_DEF(...) PGENEDIT_GET_MACRO_GETTER_SETTER_DEF_6(__VA_ARGS__, PGENEDIT_GETTER_DEF_SOME, PGENEDIT_GETTER_DEF_ALL)(__VA_ARGS__)
 //using Player = mm6::Player;
-class c
-{
-	//PGENEDIT_GETTER_DEF(pref, Player, fi, get, Player, (6))
-};
+// class c
+// {
+// 	   PGENEDIT_GETTER_DEF(pref, Player, fi, get, Player, (6))
+// };
 
 //PGENEDIT_GET_MACRO_GETTER_SETTER_DEF(pr, tp, fi, gam, g, PGENEDIT_GETTER_DEF_ALL, PGENEDIT_GETTER_DEF_SOME)
 
 // setters
 
-#define PGENEDIT_SETTER_DECL(type, fieldName, setterNamePart, templateParam) \
+#define PGENEDIT_SETTER_DECL(type, fieldName, setterNamePart, templateParam, ...) \
 	virtual void set##setterNamePart(type value) = 0;
 
 #define PGENEDIT_SETTER_DEF_SOME(prefix, type, fieldName, setterNamePart, templateParam, games) \
@@ -98,10 +99,15 @@ class c
 // prefix, type, fieldName, accessorNamePart, templateParam, [games]
 #define PGENEDIT_SETTER_DEF(...) PGENEDIT_GET_MACRO_GETTER_SETTER_DEF_6(__VA_ARGS__, PGENEDIT_SETTER_DEF_SOME, PGENEDIT_SETTER_DEF_ALL)(__VA_ARGS__)
 
-// this macro and all "beneath it" take dummy templateParam parameter, which isn't really used in declaration, but it simplifies macro usage
-#define PGENEDIT_GETTER_SETTER_DECL(type, fieldName, accessorNamePart, templateParam) \
-	PGENEDIT_GETTER_DECL(type, fieldName, accessorNamePart, templateParam) \
-	PGENEDIT_SETTER_DECL(type, fieldName, accessorNamePart, templateParam)
+// this macro and all "beneath it" take dummy templateParam and games parameters, which aren't really used in declaration, but it simplifies macro usage
+#define PGENEDIT_GETTER_SETTER_DECL_SOME(type, fieldName, accessorNamePart, templateParam, games) \
+	PGENEDIT_GETTER_DECL(type, fieldName, accessorNamePart, templateParam, games) \
+	PGENEDIT_SETTER_DECL(type, fieldName, accessorNamePart, templateParam, games)
+
+#define PGENEDIT_GETTER_SETTER_DECL_ALL(type, fieldName, accessorNamePart, templateParam) PGENEDIT_GETTER_SETTER_DECL_SOME(type, fieldName, accessorNamePart, templateParam, (6, 7, 8))
+
+#define PGENEDIT_GET_MACRO_GETTER_SETTER_DEF_5(_1, _2, _3, _4, _5, NAME, ...) NAME
+#define PGENEDIT_GETTER_SETTER_DECL(...) PGENEDIT_GET_MACRO_GETTER_SETTER_DEF_5(__VA_ARGS__, PGENEDIT_GETTER_SETTER_DECL_SOME, PGENEDIT_GETTER_SETTER_DECL_ALL)(__VA_ARGS__)
 
 #define PGENEDIT_GETTER_SETTER_DEF_SOME(prefix, type, fieldName, accessorNamePart, templateParam, games, ...) \
 	PGENEDIT_GETTER_DEF(prefix, type, fieldName, accessorNamePart, templateParam, games) \
@@ -133,10 +139,13 @@ class G
 #define PGENEDIT_GETTER_SETTER_METHODS_MACRO_DEF(r, data, tup, ...) \
 	PGENEDIT_GETTER_SETTER_DEF(data, BOOST_PP_TUPLE_ENUM(BOOST_PP_TUPLE_SIZE(tup), tup))
 
+// args: varargs(tuple(type, field name, accessor name part, template argument, [tuple of games]))
 #define PGENEDIT_GETTER_SETTER_METHODS_DECL(...) \
-	BOOST_PP_LIST_FOR_EACH(PGENEDIT_GETTER_SETTER_METHODS_MACRO_DECL, 0, BOOST_PP_VARIADIC_TO_LIST(__VA_ARGS__))
-#define PGENEDIT_GETTER_SETTER_METHODS_MACRO_DECL(r, data, tup) \ \
-    BOOST_PP_ASSERT_MSG(0, BOOST_PP_TUPLE_ENUM(BOOST_PP_TUPLE_SIZE(tup), tup)) \
+	BOOST_PP_SEQ_FOR_EACH(PGENEDIT_GETTER_SETTER_METHODS_MACRO_DECL, 0, BOOST_PP_VARIADIC_TO_SEQ(__VA_ARGS__)) // makes a sequence of tuples
+
+// data = dummy, tup = tuple(type, field name, accessor name part, template argument, [tuple of games])
+#define PGENEDIT_GETTER_SETTER_METHODS_MACRO_DECL(r, data, tup) \
+   /* BOOST_PP_ASSERT_MSG(0, BOOST_PP_TUPLE_ENUM(BOOST_PP_TUPLE_SIZE(tup), tup))*/ \
 	PGENEDIT_GETTER_SETTER_DECL(BOOST_PP_TUPLE_ENUM(BOOST_PP_TUPLE_SIZE(tup), tup))
 
 // arrays
@@ -145,6 +154,7 @@ class G
 	BOOST_PP_ASSERT_MSG(BOOST_PP_NOT(BOOST_PP_IS_BEGIN_PARENS(prefix)), "First argument for accessor definitions should be prefix to access the field, not tuple")\
 	BOOST_PP_SEQ_FOR_EACH(PGENEDIT_ARRAY_GETTER_SETTER_METHODS_MACRO_DEF, prefix, BOOST_PP_VARIADIC_TO_SEQ(__VA_ARGS__))
 
+/*
 class base
 {
     virtual int getGold() = 0;
@@ -160,7 +170,7 @@ class x : base
     mm7::GameParty* getParty();
     void* p;
 	PGENEDIT_GETTER_SETTER_METHODS_DEF(getParty()->, (int, gold, Gold, Player), (int, food, Food, Player, (7, 8)))
-};
+};*/
 
 
 

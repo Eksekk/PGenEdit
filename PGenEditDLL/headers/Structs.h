@@ -216,6 +216,7 @@ GEN_DEF(Weather);
 // base definitions, incl. structure template taking any game type
 #define GEN_DEF_CURRENT(...) GET_MACRO(__VA_ARGS__, GEN_DEF_2, GEN_DEF_1)(__VA_ARGS__)
 GEN_STRUCT_DEFS;
+#undef GEN_DEF_2 // to silence compiler warnings
 #define GEN_DEF_2(name, codeName) using name = mm6::codeName;
 
 template<>
@@ -225,6 +226,7 @@ struct GameVersionStructs<6>
 	GEN_STRUCT_DEFS;
 };
 
+#undef GEN_DEF_2 // to silence compiler warnings
 #define GEN_DEF_2(name, codeName) using name = mm7::codeName;
 
 template<>
@@ -234,6 +236,7 @@ struct GameVersionStructs<7>
     GEN_STRUCT_DEFS;
 };
 
+#undef GEN_DEF_2 // to silence compiler warnings
 #define GEN_DEF_2(name, codeName) using name = mm8::codeName;
 
 template<>
