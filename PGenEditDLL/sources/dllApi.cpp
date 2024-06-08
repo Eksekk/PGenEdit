@@ -183,7 +183,7 @@ extern "C"
         {
             fasmDll = LoadLibraryA(".\\ExeMods\\MMExtension\\fasm.dll");
         }
-        else
+        if (!fasmDll)
         {
             wxLogFatalError("FASM dll not found");
         }

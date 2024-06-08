@@ -12,8 +12,8 @@ class TemplatedItemStructAccessor;
 class ItemStructAccessor : public StructAccessorGenericFor
 {
 protected:
-    void* itemPtr;
-    int index;
+    void* itemPtr = nullptr;
+    int index = -1;
 
 public:
     ItemStructAccessor* forItem(void* item);
