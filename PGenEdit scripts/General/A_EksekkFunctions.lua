@@ -1,5 +1,7 @@
 local format = string.format
 
+--local i = 0; for k, v in pairs(vars.mawbags[0][1]) do if type(v) == "table" then i = i + 1 end end; print(i)
+
 function universalEnum(t, array, unlimitedElementAmount)
 	local meta = type(t) == "table" and getmetatable(t)
 	local c = {}
@@ -358,6 +360,9 @@ function mergeArraysShallowCopy(t1, t2, inplace) -- handles duplicate keys
 end
 
 function getUpvalue(f, name, ...)
+	if type(f) == "number" then
+		f = debug.getinfo(f + 1, "f").func
+	end
 	local n, v = debug.findupvalue(f, name)
 	if select("#", ...) > 0 then
 		return getUpvalue(v, ...)
@@ -367,12 +372,18 @@ function getUpvalue(f, name, ...)
 end
 
 function upvalueDump(f) -- dump() doesn't work
+	if type(f) == "number" then
+		f = debug.getinfo(f + 1, "f").func
+	end
 	for k, v in debug.upvalues(f) do
 		print(k, v)
 	end
 end
 
 function getUpvalueByValue(f, val)
+	if type(f) == "number" then
+		f = debug.getinfo(f + 1, "f").func
+	end
 	for k, v in debug.upvalues(f) do
 		if v == val then
 			return k, v
@@ -381,6 +392,9 @@ function getUpvalueByValue(f, val)
 end
 
 function setUpvalue(f, name, val)
+	if type(f) == "number" then
+		f = debug.getinfo(f + 1, "f").func
+	end
 	local i, oldVal = debug.findupvalue(f, name)
 	assert(i, format("Provided function has no upvalue named %q", name))
 	debug.setupvalue(f, i, val)

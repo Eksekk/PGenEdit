@@ -318,7 +318,7 @@ private:
 		const bool isGlobal = !meth.get_declaring_type().is_valid(); // global methods don't have declaring type
 		const std::string formatString = inst.is_valid() ? "instance method '{}'"
 			: (isGlobal ? "global function '{}'" : "static class method '{}'");
-		const std::string funcName = std::vformat(formatString, std::make_format_args(meth.get_name()));
+		const std::string funcName = std::vformat(formatString, std::make_format_args(static_cast<const rttr::string_view&>(meth.get_name()))); // make_format_args doesn't accept non-reference types apparently
 		if (args.size() > params.size())
 		{
 			luaError("Too many parameters passed to {} (expected at most {}, got {})", funcName, params.size(), args.size());

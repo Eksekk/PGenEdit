@@ -278,7 +278,7 @@ std::vector<wxString> LuaTests::testLuaWrapper()
     static const std::string valueMismatchStr = "Value mismatch: expected {}, got {}";
     auto formatTypeMismatchStr = [&](int desiredType, int actualType) -> std::string
         {
-			return std::vformat(typeMismatchStr, std::make_format_args(w.typename_(desiredType), w.typename_(actualType)));
+			return std::vformat(typeMismatchStr, std::make_format_args(static_cast<const std::string&>(w.typename_(desiredType)), static_cast<const std::string&>(w.typename_(actualType))));
 		};
     auto formatValueMismatchStr = [&](const auto& desiredValue, const auto& actualValue) -> std::string
         {

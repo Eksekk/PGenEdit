@@ -55,7 +55,12 @@ namespace lua
 	    template<typename... Args>
 	    [[noreturn]] void luaError(const std::string& msg, Args&&... args)
 	    {
-	        throw LuaErrorException(std::vformat(msg, std::make_format_args(std::forward<Args>(args)...)));
+	        //throw LuaErrorException(std::vformat(msg, std::make_format_args(std::forward<Args>(args)...)));
+			
+			// I don't get why, but make_format_args above with perfect forwarding suddenly started to cause compilation errors (2024.07.04)
+			// since make_format_args seems to take only references, it can't take lvalues, which occasionally are passed to luaError
+			// casting everything to const reference should be safe
+	        throw LuaErrorException(std::vformat(msg, std::make_format_args(static_cast<const Args&>(args)...)));
 	    }
 	
 		// throws error if condition is false
