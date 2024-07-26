@@ -80,7 +80,7 @@ define
 	(char*, skillDesExpert, SkillDesExpert, Game),\
 	(char*, skillDesMaster, SkillDesMaster, Game),\
 	/*(char*, skillDesGM, SkillDesGM, Game),*/ /* doesn't exist in MM6, and array accessors don't yet have support for only some game versions */\
-	(char*, classDescriptions, ClassDescriptions, Game)
+	(char*, classDescriptions, ClassDescriptions, Game)\
 
 
 //,(int32_t*, autonoteCategory, AutonoteCategory)

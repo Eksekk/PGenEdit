@@ -41,8 +41,9 @@ if constexpr (SAME(mm##elem::BOOST_PP_SEQ_ELEM(1, data), BOOST_PP_SEQ_ELEM(1, da
 
 // generates inside of getter/setter function, which exists only in specific games
 // "code" is code placed inside each if constexpr, games is tuple of game versions this code works in, templateParam is template parameter for class to use as if constexpr test
-#define PGENEDIT_CONSTEXPR_BY_GAME(code, games, templateParam) \
-    PGENEDIT_GEN_CONSTEXPR(code, games, templateParam) \
+// using varargs here to handle commas in passed code
+#define PGENEDIT_CONSTEXPR_BY_GAME(.../*code, games, templateParam*/) \
+    PGENEDIT_GEN_CONSTEXPR(__VA_ARGS__) \
     wxLogFatalError("[%s] Invalid game version", __FUNCTION__);\
     throw std::exception("dummy"); // to make compiler allow not all paths returning value, won't be thrown anyway, because of wxLogFatalError
 
@@ -145,56 +146,70 @@ class x : base
 // to handle various sizes, we will use std::vector with assertion that its size is equal to the size of array
 // PGENEDIT_ARRAY_GETTER_SETTER_DECL((std::array<int, 6>), test, Test, 6, 7, 8) // pass amount of elements for each game version
 
-// only supports primitive types for now
+// only supports primitive types for now, structs would need to be handled differently (return some generic wrapper, or use std::variant, or return struct accessor with returned "element" selected to act on)
 
 #define PGENEDIT_ARRAY_GETTER_DECL(type, fieldName, accessorNamePart) \
 	[[nodiscard]] virtual std::vector<type> get##accessorNamePart() = 0;\
     [[nodiscard]] virtual void* get##accessorNamePart##Ptr () = 0;\
 	[[nodiscard]] virtual int get##accessorNamePart##Size() = 0;
-#define PGENEDIT_ARRAY_GETTER_DEF(prefix, type, fieldName, accessorNamePart) \
+#define PGENEDIT_ARRAY_GETTER_DEF(prefix, type, fieldName, accessorNamePart, templateParam, games) \
 	[[nodiscard]] std::vector<type> get##accessorNamePart() override { \
+        PGENEDIT_CONSTEXPR_BY_GAME( \
 		std::vector<type> result; \
 		result.reserve(prefix fieldName.size()); \
 		std::copy(prefix fieldName.begin(), prefix fieldName.end(), std::back_inserter(result));\
-		return result; \
+		return result;, games, templateParam) \
 	}\
     \
     [[nodiscard]] void* get##accessorNamePart##Ptr () override { \
-		return reinterpret_cast<void*>(prefix fieldName.data()); \
+        PGENEDIT_CONSTEXPR_BY_GAME( \
+		return reinterpret_cast<void*>(prefix fieldName.data());, games, templateParam) \
 	}\
     \
     [[nodiscard]] int get##accessorNamePart##Size() override { \
-		return prefix fieldName.size(); \
+        PGENEDIT_CONSTEXPR_BY_GAME( \
+        return prefix fieldName.size();, games, templateParam) \
 	}
 #define PGENEDIT_ARRAY_SETTER_DECL(type, fieldName, accessorNamePart) \
 	virtual void set##accessorNamePart(const std::vector<type>& value) = 0;
-#define PGENEDIT_ARRAY_SETTER_DEF(prefix, type, fieldName, accessorNamePart) \
+#define PGENEDIT_ARRAY_SETTER_DEF(prefix, type, fieldName, accessorNamePart, templateParam, games) \
 	void set##accessorNamePart(const std::vector<type>& value) override { \
-		wxASSERT_MSG(value.size() == prefix fieldName.size(), wxString::Format(\
-            "Invalid number of array elements for %s %s (expected %d, got %d)", #type, #fieldName,\
+        PGENEDIT_CONSTEXPR_BY_GAME(BOOST_PP_ASSERT_MSG(value.size() == prefix fieldName.size(), wxString::Format(\
+			"Invalid number of array elements for %s %s (expected %d, got %d)", #type, #fieldName,\
 			prefix fieldName.size(), value.size())); \
-		std::copy(value.begin(), value.end(), prefix fieldName.begin()); \
+		std::copy(value.begin(), value.end(), prefix fieldName.begin());, games, templateParam) \
 	}
-#define PGENEDIT_ARRAY_GETTER_SETTER_DECL(type, fieldName, accessorNamePart) \
-	PGENEDIT_ARRAY_GETTER_DECL(type, fieldName, accessorNamePart) \
-	PGENEDIT_ARRAY_SETTER_DECL(type, fieldName, accessorNamePart)
+#define PGENEDIT_ARRAY_GETTER_SETTER_DECL_5(type, fieldName, accessorNamePart, templateParam, games) \
+	PGENEDIT_ARRAY_GETTER_DECL(type, fieldName, accessorNamePart, templateParam, games) \
+	PGENEDIT_ARRAY_SETTER_DECL(type, fieldName, accessorNamePart, templateParam, games)
 
-#define PGENEDIT_ARRAY_GETTER_SETTER_DEF(prefix, type, fieldName, accessorNamePart) \
-	PGENEDIT_ARRAY_GETTER_DEF(prefix, type, fieldName, accessorNamePart) \
-	PGENEDIT_ARRAY_SETTER_DEF(prefix, type, fieldName, accessorNamePart)
+#define PGENEDIT_ARRAY_GETTER_SETTER_DECL_4(type, fieldName, accessorNamePart, templateParam) \
+	PGENEDIT_ARRAY_GETTER_SETTER_DECL_5(type, fieldName, accessorNamePart, templateParam, (6, 7, 8))
 
-// prefix, type, field name, accessor name part
+#define PGENEDIT_ARRAY_GETTER_SETTER_DECL(...) PGENEDIT_GET_MACRO_5(__VA_ARGS__, PGENEDIT_ARRAY_GETTER_SETTER_DECL_5, PGENEDIT_ARRAY_GETTER_SETTER_DECL_4)(__VA_ARGS__)
+
+#define PGENEDIT_ARRAY_GETTER_SETTER_DEF_6(prefix, type, fieldName, accessorNamePart, templateParam, games) \
+	PGENEDIT_ARRAY_GETTER_DEF(prefix, type, fieldName, accessorNamePart, templateParam, games) \
+	PGENEDIT_ARRAY_SETTER_DEF(prefix, type, fieldName, accessorNamePart, templateParam, games)
+
+#define PGENEDIT_ARRAY_GETTER_SETTER_DEF_5(prefix, type, fieldName, accessorNamePart, templateParam) \
+    PGENEDIT_ARRAY_GETTER_SETTER_DEF_6(prefix, type, fieldName, accessorNamePart, templateParam, (6, 7, 8))
+
+#define PGENEDIT_ARRAY_GETTER_SETTER_DEF(...) PGENEDIT_GET_MACRO_6(__VA_ARGS__, PGENEDIT_ARRAY_GETTER_SETTER_DEF_6, PGENEDIT_ARRAY_GETTER_SETTER_DEF_5)(__VA_ARGS__)
+
+// prefix, type, field name, accessor name part, templateParam, [tuple of games]
 #define PGENEDIT_ARRAY_GETTER_SETTER_METHODS_DEF(prefix, ...) \
 	BOOST_PP_ASSERT_MSG(BOOST_PP_NOT(BOOST_PP_IS_BEGIN_PARENS(prefix)), "First argument for accessor definitions should be prefix to access the field, not tuple")\
 	BOOST_PP_SEQ_FOR_EACH(PGENEDIT_ARRAY_GETTER_SETTER_METHODS_MACRO_DEF, prefix, BOOST_PP_VARIADIC_TO_SEQ(__VA_ARGS__))
 #define PGENEDIT_ARRAY_GETTER_SETTER_METHODS_MACRO_DEF(r, data, seq) \
-	PGENEDIT_ARRAY_GETTER_SETTER_DEF(data, BOOST_PP_TUPLE_ELEM(0, seq), BOOST_PP_TUPLE_ELEM(1, seq), BOOST_PP_TUPLE_ELEM(2, seq))
+	PGENEDIT_ARRAY_GETTER_SETTER_DEF(data, BOOST_PP_TUPLE_ENUM(BOOST_PP_TUPLE_SIZE(seq), seq))
 
-// type, field name, accessor name part
+// type, field name, accessor name part, templateParam, [tuple of games]
+// receives variadic tuples
 #define PGENEDIT_ARRAY_GETTER_SETTER_METHODS_DECL(...) \
 	BOOST_PP_SEQ_FOR_EACH(PGENEDIT_ARRAY_GETTER_SETTER_METHODS_MACRO_DECL, _, BOOST_PP_VARIADIC_TO_SEQ(__VA_ARGS__))
 #define PGENEDIT_ARRAY_GETTER_SETTER_METHODS_MACRO_DECL(r, data, seq) \
-	PGENEDIT_ARRAY_GETTER_SETTER_DECL(BOOST_PP_TUPLE_ELEM(0, seq), BOOST_PP_TUPLE_ELEM(1, seq), BOOST_PP_TUPLE_ELEM(2, seq))
+	PGENEDIT_ARRAY_GETTER_SETTER_DECL(BOOST_PP_TUPLE_ENUM(BOOST_PP_TUPLE_SIZE(seq), seq))
 
 // holds dynamic array data
 // TODO: wrap all suitable dynamic arrays inside this class
