@@ -6,7 +6,6 @@
 
 #define myfail(msg) myasserter.fail(__FUNCTION__, __FILE__, __LINE__, wxString("Failure! " + msg))
 
-// could also be simply macro invoking directly format function
 #define myassertf(cond, fmt, ...) ((!!(cond)) || myasserter(__FUNCTION__, __FILE__, __LINE__, wxString::Format(wxString("Assertion failed! (" #cond "): ") + fmt __VA_OPT__(,) __VA_ARGS__)))
 
 #define myfailf(fmt, ...) myasserter.failFormat(__FUNCTION__, __FILE__, __LINE__, wxString("Failure! ") + fmt __VA_OPT__(,) __VA_ARGS__)

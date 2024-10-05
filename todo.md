@@ -30,7 +30,6 @@
     - first option allows you to index a table with exact provided index if you needed to, but doesn't let you know which iteration of the loop is running;
     - while second is inverse - you don't know how to index real data table, but know which iteration of the loop is currently running.
     - I think the first one is better, because you can always know current iteration by capturing counter variable, while you might not know the exact index that is used as first
-- redo "enum" handling code to allow to extract all automatically generated code to its own file (to allow easy future changes), make second file containing changeable code and provide "hook" to allow to change static part from dynamic part (for example, to allow to add extra stats, that is "enum" fields)
 - move most lua-related code to "lua" namespace (I tried to do it the easy way, but didn't find anything else than Resharper's "move to namespace" refactoring, and I don't have Resharper)
 - for all game data classes like PlayerSkill, PlayerStat etc., make them immutable as much as possible and initialize them in constructor, so there is no danger of incomplete initialization or changing them
 

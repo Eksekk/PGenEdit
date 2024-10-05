@@ -135,6 +135,7 @@
     <ClInclude Include="CommandManager.h" />
     <ClInclude Include="TimeChooserCtrl.h" />
     <ClInclude Include="Utility.h" />
+    <ClInclude Include="UtilityFunctionTests.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="accessorCommonCode.cpp" />
@@ -248,6 +249,7 @@
     <ClCompile Include="CommandManager.cpp" />
     <ClCompile Include="TimeChooserCtrl.cpp" />
     <ClCompile Include="Utility.cpp" />
+    <ClCompile Include="UtilityFunctionTests.cpp" />
     <ClCompile Include="wxWidgetsReflectionRegistration.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -320,7 +322,7 @@
     <EnableMicrosoftCodeAnalysis>true</EnableMicrosoftCodeAnalysis>
     <ExternalIncludePath>$(VC_IncludePath);$(WindowsSDK_IncludePath);json</ExternalIncludePath>
     <GenerateManifest>true</GenerateManifest>
-    <LinkIncremental>false</LinkIncremental>
+    <LinkIncremental>true</LinkIncremental>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <IncludePath>headers;headers\structs;.;.\wxWidgets-3.2.1\include;.\openresty-luajit\src;.\Zydis\include;.\Zydis\dependencies\zycore\include;.\pfr\include;.\rttr\src\rttr</IncludePath>
@@ -357,7 +359,8 @@
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <SupportJustMyCode>true</SupportJustMyCode>
       <CallingConvention>Cdecl</CallingConvention>
-      <ForcedIncludeFiles>%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <ForcedIncludeFiles>
+      </ForcedIncludeFiles>
       <ShowIncludes>false</ShowIncludes>
       <PreprocessToFile>false</PreprocessToFile>
     </ClCompile>

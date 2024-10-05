@@ -76,11 +76,11 @@ define
 	(char*, statsDescriptions, StatsDescriptions, Game),\
 	(char*, skillNames, SkillNames, Game),\
 	(char*, skillDescriptions, SkillDescriptions, Game),\
-	(char*, skillDesNormal, SkillDesNormal, Game),\
+/*	(char*, skillDesNormal, SkillDesNormal, Game),\
 	(char*, skillDesExpert, SkillDesExpert, Game),\
 	(char*, skillDesMaster, SkillDesMaster, Game),\
-	/*(char*, skillDesGM, SkillDesGM, Game),*/ /* doesn't exist in MM6, and array accessors don't yet have support for only some game versions */\
-	(char*, classDescriptions, ClassDescriptions, Game)\
+	(char*, skillDesGM, SkillDesGM, Game), \*/\
+	(char*, classDescriptions, ClassDescriptions, Game)
 
 
 //,(int32_t*, autonoteCategory, AutonoteCategory)
@@ -102,6 +102,7 @@ public:
 	{
 		return StructAccessorGenericFor::genericForSingleStructExecute<Function, mm6::Game, mm7::Game, mm8::Game>(nullptr, std::forward<Function>(func));
 	}
+
 	PGENEDIT_GETTER_SETTER_METHODS_DECL(PGENEDIT_GETTERS_SETTERS)
 
 	PGENEDIT_ARRAY_GETTER_SETTER_METHODS_DECL(PGENEDIT_ARRAY_GETTERS_SETTERS)

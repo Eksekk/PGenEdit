@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "main.h"
 #include "Utility.h"
+#include "Asserter.h"
 
 // string functions
 
@@ -19,37 +20,78 @@ std::string stringToLower(const std::string& source)
 	return out;
 }
 
+std::string stringToUpper(const std::string& source)
+{
+	std::string out = source;
+	for (char& c : out)
+	{
+		c = std::toupper(c);
+	}
+	return out;
+}
+
 std::vector<std::string> stringSplit(const std::string& text, const std::string& delimiter, bool ignoreCase)
 {
-    std::string useText = ignoreCase ? stringToLower(text) : text;
-    std::string useDelimiter = ignoreCase ? stringToLower(delimiter) : delimiter;
-    std::vector<std::string> strings;
-    size_t pos = 0, foundPos;
-    while ((foundPos = useText.find(useDelimiter, pos)) != std::string::npos)
-    {
-        strings.push_back(text.substr(pos, foundPos - pos));
-        pos = foundPos + useDelimiter.size();
-    }
-    strings.push_back(text.substr(pos));
-    return strings;
+	std::string useText = ignoreCase ? stringToLower(text) : text;
+	std::string useDelimiter = ignoreCase ? stringToLower(delimiter) : delimiter;
+	std::vector<std::string> strings;
+	size_t pos = 0, foundPos;
+	while ((foundPos = useText.find(useDelimiter, pos)) != std::string::npos)
+	{
+		strings.push_back(text.substr(pos, foundPos - pos));
+		pos = foundPos + useDelimiter.size();
+	}
+	strings.push_back(text.substr(pos));
+	return strings;
 }
 
 std::vector<std::string> stringSplit(const std::string& text, char delimiter, bool ignoreCase)
 {
-    std::string s;
-    s.push_back(delimiter);
-    return stringSplit(text, s, ignoreCase);
+	std::string s;
+	s.push_back(delimiter);
+	return stringSplit(text, s, ignoreCase);
 }
 
-wxString stringRep(const wxString& str, int n)
+std::vector<std::string> stringSplitRegex(const std::string& text, const std::string& regex, bool ignoreCase)
 {
-    wxString ret = str;
-    ret.reserve(str.size() * n);
-    for (int i = 0; i < n - 1; ++i)
-    {
-        ret << str;
-    }
-    return ret;
+	std::vector<std::string> strings;
+	std::regex rgx = ignoreCase ? std::regex(regex, std::regex_constants::icase) : std::regex(regex);
+	std::sregex_token_iterator iter(text.begin(), text.end(), rgx, -1);
+	std::sregex_token_iterator end;
+	auto originalIter = text.begin();
+	for (; iter != end; ++iter)
+	{
+		strings.push_back(*iter);
+		originalIter = iter->second;
+	}
+
+	// Add the remaining part of the text if any
+	if (originalIter != text.end())
+	{
+		strings.push_back(std::string(originalIter, text.end()));
+	}
+
+	return strings;
+}
+
+std::string stringRep(const std::string& str, int n)
+{
+	if (n < 0)
+	{
+		wxLogError(__FUNCTION__ ": n must be >= 0, got %d", n);
+		return str;
+	}
+	else if (n == 0)
+	{
+		return "";
+	}
+	std::string ret = "";
+	ret.reserve(str.size() * n);
+	for (int i = 0; i < n; ++i)
+	{
+		ret.append(str);
+	}
+	return ret;
 }
 
 wxString getTimeStr()
@@ -61,12 +103,12 @@ wxString getTimeStr()
 // json functions
 void jsonEnsureIsObject(Json& json)
 {
-    json = !json.is_object() ? Json::object() : json;
+	json = !json.is_object() ? Json::object() : json;
 }
 
 void jsonEnsureIsArray(Json& json)
 {
-    json = !json.is_array() ? Json::array() : json;
+	json = !json.is_array() ? Json::array() : json;
 }
 
 int indexInVector(const std::vector<int64_t>& vec, const int& val)
@@ -81,6 +123,7 @@ bool existsInVector(const std::vector<int64_t>& vec, const int& val)
 
 std::string stringReplace(const std::string& str, const std::string& replaceWhat, const std::string& replacement, bool plain /*= true*/)
 {
+	// TODO: support replacement backreferences if using regex (for example replaceWhat string = "abc$1,$2" and substitute value of referenced capture group)
 	std::string newStr;
 	if (plain)
 	{
@@ -91,7 +134,7 @@ std::string stringReplace(const std::string& str, const std::string& replaceWhat
 			int skipped = (int)pos - (int)afterEndOfLastMatch;
 			if (skipped > 0)
 			{
-                newStr += str.substr(afterEndOfLastMatch, skipped);
+				newStr += str.substr(afterEndOfLastMatch, skipped);
 			}
 			newStr += replacement;
 			pos += replaceWhat.size() - 1;
@@ -102,48 +145,50 @@ std::string stringReplace(const std::string& str, const std::string& replaceWhat
 	}
 	else
 	{
-		return stringReplace(str, replaceWhat, [&](const std::smatch& match) { return replacement; });
+		// replace with regex, handling capture group substitution, that is $0, $1 etc.
+		std::regex re(replaceWhat);
+		return std::regex_replace(str, re, replacement);
 	}
 }
 
 std::string stringReplace(const std::string& str, const std::string& replaceWhat, const StringReplaceFuncType& func)
 {
-    std::string newStr;
-    std::regex regex(replaceWhat);
-    std::sregex_iterator itr(str.begin(), str.end(), regex);
-    std::sregex_iterator end;
-    int afterEndOfLastMatch = 0;
-    while (itr != end)
-    {
-        const std::smatch& match = *itr;
-        if (match.position() > afterEndOfLastMatch)
-        {
-            newStr += str.substr(afterEndOfLastMatch, match.position() - afterEndOfLastMatch);
-        }
-        newStr += func(match);
-        afterEndOfLastMatch = match.position() + match[0].str().size();
-        ++itr;
-    }
-    newStr += str.substr(afterEndOfLastMatch);
-    return newStr;
+	std::string newStr;
+	std::regex regex(replaceWhat);
+	std::sregex_iterator itr(str.begin(), str.end(), regex);
+	std::sregex_iterator end;
+	int afterEndOfLastMatch = 0;
+	while (itr != end)
+	{
+		const std::smatch& match = *itr;
+		if (match.position() > afterEndOfLastMatch)
+		{
+			newStr += str.substr(afterEndOfLastMatch, match.position() - afterEndOfLastMatch);
+		}
+		newStr += func(match);
+		afterEndOfLastMatch = match.position() + match[0].str().size();
+		++itr;
+	}
+	newStr += str.substr(afterEndOfLastMatch);
+	return newStr;
 }
 
 // wxWidgets functions
 // sets font color of passed window to red/black/green, depending on current value and threshold
 void redBlackGreenTextThreshold(wxWindow* win, int value, int threshold)
 {
-    if (value < threshold)
-    {
-        win->SetOwnForegroundColour(*wxRED);
-    }
-    else if (value > threshold)
-    {
+	if (value < threshold)
+	{
+		win->SetOwnForegroundColour(*wxRED);
+	}
+	else if (value > threshold)
+	{
 		win->SetOwnForegroundColour(wxColour(0x00b02f)); // different color, because default green is too bright and hard to read
-    }
-    else
-    {
-        win->SetOwnForegroundColour(*wxBLACK);
-    }
+	}
+	else
+	{
+		win->SetOwnForegroundColour(*wxBLACK);
+	}
 }
 
 // misc functions
@@ -215,43 +260,43 @@ class variant_wrapper
 	using VariantType = std::variant<Types...>;
 	VariantType var;
 
-	public:
-		// operator -> can be used to access members of the contained object
-		VariantType* operator->()
-		{
-			return &var;
-		}
-        template<typename T>
-        variant_wrapper(T&& t) : var(std::forward<T>(t)) {}
+public:
+	// operator -> can be used to access members of the contained object
+	VariantType* operator->()
+	{
+		return &var;
+	}
+	template<typename T>
+	variant_wrapper(T&& t) : var(std::forward<T>(t)) {}
 
-        template<typename T>
-        bool is() const
-        {
-            return std::holds_alternative<T>(var);
-        }
+	template<typename T>
+	bool is() const
+	{
+		return std::holds_alternative<T>(var);
+	}
 
-        template<typename T>
-        T& get()
-        {
-            return std::get<T>(var);
-        }
+	template<typename T>
+	T& get()
+	{
+		return std::get<T>(var);
+	}
 
-        template<typename T>
-        const T& get() const
-        {
-            return std::get<T>(var);
-        }
+	template<typename T>
+	const T& get() const
+	{
+		return std::get<T>(var);
+	}
 	template<typename T>
 	T get_or(T&& t) const
-    {
-        return std::get_if<T>(&var) ? std::get<T>(var) : std::forward<T>(t);
-    }
+	{
+		return std::get_if<T>(&var) ? std::get<T>(var) : std::forward<T>(t);
+	}
 
-    template<typename T, std::enable_if_t<std::is_default_constructible_v<T>, bool> = true>
-    T get_or() const
-    {
-        return std::get_if<T>(&var) ? std::get<T>(var) : T();
-    }
+	template<typename T, std::enable_if_t<std::is_default_constructible_v<T>, bool> = true>
+	T get_or() const
+	{
+		return std::get_if<T>(&var) ? std::get<T>(var) : T();
+	}
 };
 
 std::pair<rttrOrig::constructor, bool> util::rttr::getMaybeWrappedConstructor(rttrOrig::constructor ctor)

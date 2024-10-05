@@ -6,17 +6,19 @@ extern int MMVER;
 
 // string functions
 
-std::string stringToLower(const std::string& source);
+[[nodiscard]] std::string stringToLower(const std::string& source);
+[[nodiscard]] std::string stringToUpper(const std::string& source);
 
-std::vector<std::string> stringSplit(const std::string& text, const std::string& delimiter, bool ignoreCase = true);
-std::vector<std::string> stringSplit(const std::string& text, char delimiter, bool ignoreCase = true);
+[[nodiscard]] std::vector<std::string> stringSplit(const std::string& text, const std::string& delimiter, bool ignoreCase = false);
+[[nodiscard]] std::vector<std::string> stringSplit(const std::string& text, char delimiter, bool ignoreCase = false);
+[[nodiscard]] std::vector<std::string> stringSplitRegex(const std::string& text, const std::string& regex, bool ignoreCase = false);
 
-wxString stringRep(const wxString& str, int n = 1);
+[[nodiscard]] std::string stringRep(const std::string& str, int n = 1);
 
-wxString getTimeStr();
+[[nodiscard]] wxString getTimeStr();
 
 template<typename T>
-wxString my_to_string(const T& t)
+[[nodiscard]] wxString my_to_string(const T& t)
 {
 	return wxString().operator<<(t); // sorry for clever code, couldn't help myself!
 	// we are calling operator<< (which inserts argument into string) on temporary string,
@@ -34,7 +36,7 @@ wxString my_to_string(const T& t)
 /// <param name="separator">The separator to use between concatenated strings (default is "\n").</param>
 /// <returns>The concatenated string.</returns>
 template<template<typename, typename, typename...> typename Container, typename String, typename... Extra>
-String stringConcat(const Container<String, Extra...>& container, const std::string& separator = "\n")
+[[nodiscard]] String stringConcat(const Container<String, Extra...>& container, const std::string& separator = "\n")
 {
 	String s = "";
 	const int size = container.size();
@@ -60,7 +62,7 @@ String stringConcat(const Container<String, Extra...>& container, const std::str
 /// <param name="separator">The separator used to concatenate the elements (default is "\n").</param>
 /// <returns>A string containing the converted and concatenated elements of the container.</returns>
 template<template<typename, typename, typename...> typename Container, typename ValType, typename... Extra>
-std::string convertAndConcat(const Container<ValType, Extra...>& container, const std::string& separator = "\n")
+[[nodiscard]] std::string convertAndConcat(const Container<ValType, Extra...>& container, const std::string& separator = "\n")
 {
 	std::string s = "";
 	const int size = container.size();
@@ -79,13 +81,13 @@ std::string convertAndConcat(const Container<ValType, Extra...>& container, cons
 using StringReplaceFuncType = std::function<std::string(const std::smatch&)>;
 
 // replaces all occurences of plain string or regex pattern in provided string
-std::string stringReplace(const std::string& str, const std::string& replaceWhat, const std::string& replacement, bool plain = true);
+[[nodiscard]] std::string stringReplace(const std::string& str, const std::string& replaceWhat, const std::string& replacement, bool plain = true);
 
 // replaces all occurences of regex pattern, using value obtained from callback function as replacement
-std::string stringReplace(const std::string& str, const std::string& replaceWhat, const StringReplaceFuncType& func);
+[[nodiscard]] std::string stringReplace(const std::string& str, const std::string& replaceWhat, const StringReplaceFuncType& func);
 
 template<size_t size>
-std::string stringFromArray(const std::array<char, size>& arr)
+[[nodiscard]] std::string stringFromArray(const std::array<char, size>& arr)
 {
 	return std::string(arr.data(), size);
 }
@@ -103,7 +105,7 @@ void jsonEnsureIsArray(Json& json);
 // misc functions
 
 template<typename T>
-int indexInVector(const std::vector<T>& vec, const T& val)
+[[nodiscard]] int indexInVector(const std::vector<T>& vec, const T& val)
 {
 	for (size_t i = 0; i < vec.size(); ++i)
 	{
@@ -118,20 +120,20 @@ int indexInVector(const std::vector<T>& vec, const T& val)
 // HACK: I created this explicit specialization to deal with the case where T is int64_t, because otherwise the above function would be ambiguous (this happens for example when searching for integer value in all valid skill ids, because they're int64_t as of now)
 // could have changed all function signatures to accept int64_t instead of int, or convert inside function and use the converted value, but it's much more effort and pollutes the code
 // so, this handles that exact case and I don't need to do anything else
-int indexInVector(const std::vector<int64_t>& vec, const int& val);
+[[nodiscard]] int indexInVector(const std::vector<int64_t>& vec, const int& val);
 
 template<typename T>
-bool existsInVector(const std::vector<T>& vec, const T& val)
+[[nodiscard]] bool existsInVector(const std::vector<T>& vec, const T& val)
 {
 	return indexInVector(vec, val) != -1;
 }
 
 // HACK: see above indexInVector specialization for more details
-bool existsInVector(const std::vector<int64_t>& vec, const int& val);
+[[nodiscard]] bool existsInVector(const std::vector<int64_t>& vec, const int& val);
 
 template<typename Container, typename Val>
 	requires std::random_access_iterator<typename Container::iterator> // index usually makes sense only in random access containers
-int indexInContainer(const Container& container, const Val& val)
+[[nodiscard]] int indexInContainer(const Container& container, const Val& val)
 {
 	int i = 0;
 	for (const auto& v : container)
@@ -140,20 +142,21 @@ int indexInContainer(const Container& container, const Val& val)
 		{
 			return i;
 		}
+		++i;
 	}
 	return -1;
 }
 
 template<typename Container, typename Val>
 	requires std::random_access_iterator<typename Container::iterator> // index usually makes sense only in random access containers
-bool existsInContainer(const Container& container, const Val& val)
+[[nodiscard]] bool existsInContainer(const Container& container, const Val& val)
 {
 	return indexInContainer(container, val) != -1;
 }
 
 // returns a new vector with the sorted elements of the original vector
 template<typename Container>
-Container sorted(const Container& c, std::function<bool(const typename Container::value_type&, const typename Container::value_type&)> comp = std::less<typename Container::value_type>())
+[[nodiscard]] Container sorted(const Container& c, std::function<bool(const typename Container::value_type&, const typename Container::value_type&)> comp = std::less<typename Container::value_type>())
 {
 	Container out = c;
 	std::sort(out.begin(), out.end(), comp);
@@ -161,7 +164,7 @@ Container sorted(const Container& c, std::function<bool(const typename Container
 }
 
 template<typename Vector>
-Vector mergeVectors(std::initializer_list<Vector> list)
+[[nodiscard]] Vector mergeVectors(std::initializer_list<Vector> list)
 {
 	size_t n = 0;
 	for (auto& vec : list)
@@ -178,7 +181,7 @@ Vector mergeVectors(std::initializer_list<Vector> list)
 }
 
 template<template<typename, typename, typename...> typename Map, typename Key, typename Value, typename... Extra>
-Map<Value, Key> invertMap(const Map<Key, Value, Extra...>& map)
+[[nodiscard]] Map<Value, Key> invertMap(const Map<Key, Value, Extra...>& map)
 {
 	Map<Value, Key> outMap;
 	for (const auto& [key, value] : map)
@@ -189,7 +192,7 @@ Map<Value, Key> invertMap(const Map<Key, Value, Extra...>& map)
 }
 
 template<typename T>
-T&& mmv(T&& e6, T&& e7, T&& e8)
+[[nodiscard]] T&& mmv(T&& e6, T&& e7, T&& e8)
 {
 	if (MMVER == 6)
 	{
@@ -210,7 +213,7 @@ T&& mmv(T&& e6, T&& e7, T&& e8)
 }
 
 template<typename Vector>
-constexpr Vector compileTimeMergeVectors(std::initializer_list<Vector> list)
+[[nodiscard]] constexpr Vector compileTimeMergeVectors(std::initializer_list<Vector> list)
 {
 	Vector out;
 	for (auto& vec : list)
@@ -270,7 +273,7 @@ struct Bounds
 	int64_t low, high;
 };
 
-Bounds getBounds(int size);
+[[nodiscard]] Bounds getBounds(int size);
 
 template<int size>
 const Bounds boundsBySize = getBounds(size);
@@ -376,7 +379,7 @@ void showDeducedType(const T&&)
 #define COMPILE_TIME_CONSTEXPR_IF_ERROR() ((void(*)())0x5)("a")
 
 // to avoid ambiguity with std::to_string
-std::string to_string(const std::string& str);
+[[nodiscard]] std::string to_string(const std::string& str);
 
 // allows to use std::format with std::pair
 // TODO: support more types
@@ -400,7 +403,7 @@ namespace std
 }
 
 template<typename T, typename U>
-std::string to_string(const std::pair<T, U>& pair)
+[[nodiscard]] std::string to_string(const std::pair<T, U>& pair)
 {
 	// using std::to_string; // ADL
 	return std::format("{}", pair);
@@ -408,7 +411,7 @@ std::string to_string(const std::pair<T, U>& pair)
 
 // TODO: support associative containers
 template<template<typename, typename, typename...> typename Container, typename T, typename... Extra>
-std::string containerToString(const Container<T, Extra...>& container, const std::string& separator = ", ")
+[[nodiscard]] std::string containerToString(const Container<T, Extra...>& container, const std::string& separator = ", ")
 {
 	std::string s = "";
 	const int size = container.size();
@@ -426,7 +429,7 @@ std::string containerToString(const Container<T, Extra...>& container, const std
 }
 
 template<typename T, size_t S>
-std::string containerToString(const std::array<T, S>& container, const std::string& separator = ", ")
+[[nodiscard]] std::string containerToString(const std::array<T, S>& container, const std::string& separator = ", ")
 {
 	return containerToString(std::vector<T>(container.begin(), container.end()), separator);
 }
@@ -437,6 +440,7 @@ namespace util
 	namespace string
 	{
 		static constexpr auto toLower = stringToLower;
+		static constexpr auto toUpper = stringToUpper;
 		static constexpr auto rep = stringRep;
 		template<size_t size>
 		static constexpr auto fromArray = stringFromArray<size>;
@@ -501,9 +505,9 @@ namespace util
 
 	namespace guid
 	{
-		GUID create();
-		std::string toString(const GUID& guid);
-		std::string newGuidString();
+		[[nodiscard]] GUID create();
+		[[nodiscard]] std::string toString(const GUID& guid);
+		[[nodiscard]] std::string newGuidString();
 	}
 
 	namespace misc
@@ -525,7 +529,7 @@ namespace util
 		}
 		// works on containers without random access iterators
 		template<typename R>
-		auto getNthRangeElement(R&& range, size_t n)
+		[[nodiscard]] auto getNthRangeElement(R&& range, size_t n)
 		{
 			wxASSERT_MSG(n >= 0, "Index out of range");
 			if constexpr (hasSize<R>)
@@ -547,6 +551,6 @@ namespace util
 		}
 
 		// returns a constructor, which might potentially be wrapped by another one, such as to return a shared_ptr to the object, and a bool, which is true if constructor was unwrapped
-		std::pair<rttrOrig::constructor, bool> getMaybeWrappedConstructor(rttrOrig::constructor ctor);
+		[[nodiscard]] std::pair<rttrOrig::constructor, bool> getMaybeWrappedConstructor(rttrOrig::constructor ctor);
 	}
 }

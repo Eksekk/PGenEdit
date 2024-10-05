@@ -17,6 +17,7 @@
 #include "LuaTable.h"
 #include "LuaWrapper.h"
 #include "Reflection.h"
+#include "AutoBackup.h"
 
 extern Generator* generator;
 
@@ -691,15 +692,9 @@ template std::vector<wxString> Tests::testPlayerStructAccessor<mm8::Player, mm8:
 
 #pragma warning(push)
 #pragma warning(disable: 6001)
-template<typename Player, typename Game>
 std::vector<wxString> Tests::testMisc()
 {
 	Asserter myasserter("Misc");
-	auto& playersConverted = reinterpret_cast<std::array<Player*, 5>&>(playersInParty);
-	for (int i = 0; i < CURRENT_PARTY_SIZE; ++i) // TODO: player count can be different in mm8
-	{
-
-	}
 
 	// bounds check
 	//wxLogNull noLog;
@@ -806,67 +801,15 @@ std::vector<wxString> Tests::testMisc()
 	return myasserter.errors;
 }
 
-
-struct ReplaceInStringTest
+std::vector<wxString> Tests::runNonGameTests()
 {
-	std::string str, replaceWhat;
-	std::variant<std::string, StringReplaceFuncType> replacement;
-	std::string expected;
-	bool plain = true;
-};
-
-const std::vector<ReplaceInStringTest> replaceInStringTests =
-{
-	{.str = "ababababa", .replaceWhat = "ab", .replacement = "b", .expected = "bbbba"},
-	{.str = "aaaaaaaaaaaaaaaaaaa", .replaceWhat = "aaa", .replacement = "c", .expected = "cccccca"},
-	{.str = "mytest1", .replaceWhat = "tes1", .replacement = "y", .expected = "mytest1"},
-	{.str = "int i;\nint j;\nint k;\nint f;", .replaceWhat = "int (\\w);",
-		.replacement = [](const std::smatch& match) -> std::string
-        {
-                return "int " + stringRep(match[1].str(), 3).ToStdString() + ";";
-        },
-        .expected = "int iii;\nint jjj;\nint kkk;\nint fff;"},
-
-    {.str = "fedcba", .replaceWhat = "(\\w)",
-        .replacement = [](const std::smatch& match) -> std::string
-        {
-			const auto& str = match[1].str();
-			if (str != "f")
-			{
-				return std::string(1, 'a' + ('e' - str[0]));
-			}
-			else
-			{
-				return "";
-			}
-        },
-        .expected = "abcde"},
-};
-
-std::vector<wxString> Tests::testUtilityFunctions()
-{
-	Asserter myasserter("utility functions");
-	// stringReplace
-	int i = 1;
-	for (const auto& [str, replaceWhat, replacement, expected, plain] : replaceInStringTests)
-	{
-		std::string result;
-		if (const std::string* repl = std::get_if<std::string>(&replacement))
-		{
-			result = stringReplace(str, replaceWhat, *repl, plain);
-		}
-		else if (const StringReplaceFuncType* repl = std::get_if<StringReplaceFuncType>(&replacement))
-		{
-			result = stringReplace(str, replaceWhat, *repl);
-		}
-		myassertf(result == expected, "[stringReplace test #%d] incorrect output (expected '%s', got '%s')", i, expected, result);
-		++i;
-	}
-
-	return myasserter.errors;
+	testingNow = true;
+	auto ret = mergeVectors({ testMisc<Player, Game>(), UtilityFunctionTests::run(), testSkillFunctions()/*, testJson()*/, GUI_tests::testGui<Player, Game>()
+		, testPlayerStructAccessor<Player, Game>(), HookTests::run<Player, Game>(), LuaTests::run(), ReflectionTests::run()
+		});
+	testingNow = false;
+	return ret;
 }
-
-
 
 #pragma warning(pop)
 
@@ -877,9 +820,7 @@ template std::vector<wxString> Tests::testMisc<mm8::Player, mm8::Game>();
 std::vector<wxString> Tests::testSkillFunctions()
 {
 	Asserter myasserter("Skill functions");
-	auto old1 = SKILL_COMBINE_MODE;
-	auto old2 = MASTERY_BITS;
-	auto old3 = SKILL_BITS;
+	AutoBackup ab(SKILL_COMBINE_MODE, MASTERY_BITS, SKILL_BITS);
 
 	// rules as in mm7+
 	SKILL_COMBINE_MODE = BIT_PER_MASTERY;
@@ -972,13 +913,12 @@ std::vector<wxString> Tests::testSkillFunctions()
 	myassert(splitSkill(0b1) == SkillValue({ 1, 1 }));
 	myassert(splitSkill(0b100) == SkillValue({ 4, 1 }));
 	myassert(splitSkill(0b111111) == SkillValue({ 63, 1 }));
+	myassert(splitSkill(0b1111111) == SkillValue({ 63, 2 }));
+	myassert(splitSkill(0b10111111) == SkillValue({ 63, 3 }));
 	myassert(splitSkill(0b11111111) == SkillValue({ 63, 4 }));
 	myassert(splitSkill(0b10001100) == SkillValue({ 12, 3 }));
 	myassert(splitSkill(0b0) == SkillValue({ 0, 0 }));
 	myassert(splitSkill(0b10000001) == SkillValue({ 1, 3 }));
-
-	// restore old values
-	std::tie(SKILL_COMBINE_MODE, MASTERY_BITS, SKILL_BITS) = std::make_tuple(old1, old2, old3);
 
 	return myasserter.errors;
 }

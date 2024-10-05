@@ -8,6 +8,7 @@
 #include "HookTests.h"
 #include "LuaTests.h"
 #include "ReflectionTests.h"
+#include "UtilityFunctionTests.h"
 
 extern Generator* generator;
 
@@ -31,17 +32,16 @@ public:
 	template<typename Player, typename Game>
 	static std::vector<wxString> run();
 
-	template<typename Player, typename Game>
 	static std::vector<wxString> testMisc();
 
-	static std::vector<wxString> testUtilityFunctions();
+	static std::vector<wxString> runNonGameTests();
 };
 
 template<typename Player, typename Game>
 std::vector<wxString> Tests::run()
 {
 	testingNow = true;
-	auto ret = mergeVectors({ testMisc<Player, Game>(), testUtilityFunctions(), testSkillFunctions()/*, testJson()*/, GUI_tests::testGui<Player, Game>()
+	auto ret = mergeVectors({ testMisc(), UtilityFunctionTests::run(), testSkillFunctions()/*, testJson()*/, GUI_tests::testGui<Player, Game>()
 		, testPlayerStructAccessor<Player, Game>(), HookTests::run<Player, Game>(), LuaTests::run(), ReflectionTests::run()
 	});
 	testingNow = false;

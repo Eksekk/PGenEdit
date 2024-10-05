@@ -468,6 +468,9 @@
     <ClInclude Include="json\json.hpp">
       <Filter>Pliki nagłówkowe\JSON</Filter>
     </ClInclude>
+    <ClInclude Include="UtilityFunctionTests.h">
+      <Filter>Pliki nagłówkowe</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="sources\MainWindow.cpp">
@@ -795,6 +798,9 @@
       <Filter>Pliki źródłowe</Filter>
     </ClCompile>
     <ClCompile Include="MapChestStructAccessor.cpp">
+      <Filter>Pliki źródłowe</Filter>
+    </ClCompile>
+    <ClCompile Include="UtilityFunctionTests.cpp">
       <Filter>Pliki źródłowe</Filter>
     </ClCompile>
   </ItemGroup>
