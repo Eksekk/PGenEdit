@@ -439,7 +439,6 @@ public:
 class HookElementReplaceCall : public HookElementCallableFunction
 {
 public:
-    HookElementReplaceCall();
     template<typename ReturnType, int cc, typename... Args>
     void setCallableFunctionHookFunc(CallableFunctionHookFunc<ReturnType, Args...> func)
     {
@@ -470,6 +469,7 @@ public:
     }
     ~HookElementReplaceCall();
 private: // private to enforce no accidental "new" operator usage
+	HookElementReplaceCall();
 
     // COMMENTED OUT, because this constructor is preferred to "no args" constructor
 
@@ -499,7 +499,6 @@ class HookElementHookFunction : public HookElementCallableFunction
 public:
     bool usesExtraData() const override;
     void* getExtraData() const override;
-    HookElementHookFunction();
     template<typename ReturnType, int cc, typename... Args>
     void setCallableFunctionHookFunc(CallableFunctionHookFunc<ReturnType, Args...> func)
     {
@@ -531,6 +530,7 @@ public:
     }
     ~HookElementHookFunction();
 private: // private to enforce no accidental "new" operator usage
+	HookElementHookFunction();
 
     // COMMENTED OUT, because this constructor is preferred to "no args" constructor
 

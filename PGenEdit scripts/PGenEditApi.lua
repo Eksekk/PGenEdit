@@ -591,7 +591,6 @@ local function getContainerReference(classObject, fieldName, accessPath)
 	return setmetatable(t, mt)
 end
 
--- TODO: Boost.PP for easy & nice definition of accessor getters/setters (and other macros)
 -- contrary to its name, for methods it uses rawset in addition to returning function, to cache the functions, because their creation might be expensive
 -- as single table is used for all polymorphic objects, I can't use __index and __newindex metamethods to check for field existence, because I would have to call them manually from metatable (ugly)
 

@@ -11,20 +11,15 @@ namespace util::lowLevel
 class HookTests
 {
 public:
-    template<typename Player, typename Game>
     static std::vector<wxString> run();
 
-    template<typename Player, typename Game>
     static std::vector<wxString> testHookPlacingAndSize();
 
-    template<typename Player, typename Game>
     static std::vector<wxString> testBasicHookFunctionalityAndHookManager();
 
-    template<typename Player, typename Game>
     static std::vector<wxString> testAdvancedHookFunctionality();
 
     static std::vector<wxString> testAsmHookFunctions();
 
-    template<typename Player, typename Game>
     static std::vector<wxString> testMiscFunctions(); // findCode, getInstructionSize, 
 };

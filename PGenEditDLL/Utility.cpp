@@ -59,8 +59,10 @@ std::vector<std::string> stringSplitRegex(const std::string& text, const std::st
 	std::sregex_token_iterator iter(text.begin(), text.end(), rgx, -1);
 	std::sregex_token_iterator end;
 	auto originalIter = text.begin();
+	int lastAfterMatchPos = -1;
 	for (; iter != end; ++iter)
 	{
+		lastAfterMatchPos = std::distance(text.begin(), iter->first) + iter->length();
 		strings.push_back(*iter);
 		originalIter = iter->second;
 	}
@@ -68,7 +70,7 @@ std::vector<std::string> stringSplitRegex(const std::string& text, const std::st
 	// Add the remaining part of the text if any
 	if (originalIter != text.end())
 	{
-		strings.push_back(std::string(originalIter, text.end()));
+		strings.push_back(text.substr(lastAfterMatchPos));
 	}
 
 	return strings;

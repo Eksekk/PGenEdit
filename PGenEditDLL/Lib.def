@@ -18,3 +18,4 @@ EXPORTS
 	unloadCleanup
 	setItemData
 	getWhichTestsWereRun
+	runNonGameTests

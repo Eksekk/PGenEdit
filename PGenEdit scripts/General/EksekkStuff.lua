@@ -56,6 +56,7 @@ function M.loadDll()
 		events.Tick = runEventLoopOnce
 		--function events.AfterLoadMap() M.dll.runTests() end
 		rawset(M.dll, "runLua", M.dll.runLuaScriptFromDLL)
+		rawset(M.dll, "runTests2", M.dll.runNonGameTests)
 		M.reloadApi()
 	end
 end

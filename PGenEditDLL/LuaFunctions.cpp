@@ -501,6 +501,17 @@ void lua::utils::luaExpectStackSize(lua_State* L, int expected)
 	}
 }
 
+void lua::utils::expectEmptyStack(lua_State* L, int expected)
+{
+	int stackSize = lua_gettop(L);
+	if (stackSize != expected)
+	{
+		LuaWrapper w(L);
+		ReflectionConversions::
+		luaError("Lua stack is not empty at the end of C function, got {} arguments: ", expected, stackSize);
+	}
+}
+
 /// <summary>
 /// Checks if a Lua table has a metafield with the given name.
 /// </summary>

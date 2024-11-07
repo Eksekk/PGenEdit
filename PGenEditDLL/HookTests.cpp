@@ -85,8 +85,7 @@ std::string getCodeString(uint32_t addr, int size)
     return codeToSemiReadableString(readCodeAsString(addr, size));
 }
 
-template<typename Player, typename Game>
-static std::vector<wxString> HookTests::testHookPlacingAndSize()
+std::vector<wxString> HookTests::testHookPlacingAndSize()
 {
     std::vector<std::vector<uint8_t>> codeBackup;
     // test hook size: patchData, callRaw, call, jump (for detours check if opcode and function address is correct, for all check that bytes beyond 5 are NOP-ed if they are in range of hook size)
@@ -226,10 +225,6 @@ static std::vector<wxString> HookTests::testHookPlacingAndSize()
     }
     return myasserter.errors;
 }
-
-template std::vector<wxString> HookTests::testHookPlacingAndSize<mm6::Player, mm6::Game>();
-template std::vector<wxString> HookTests::testHookPlacingAndSize<mm7::Player, mm7::Game>();
-template std::vector<wxString> HookTests::testHookPlacingAndSize<mm8::Player, mm8::Game>();
 
 static __declspec(naked) void jumpDoNothing()
 {
@@ -396,8 +391,7 @@ static __declspec(naked) bool expectComputation()
     }
 }
 
-template<typename Player, typename Game>
-static std::vector<wxString> HookTests::testBasicHookFunctionalityAndHookManager()
+std::vector<wxString> HookTests::testBasicHookFunctionalityAndHookManager()
 {
     Asserter myasserter("Basic hook functionality");
     static std::mt19937 gen(std::random_device{}());
@@ -567,8 +561,6 @@ static std::vector<wxString> HookTests::testBasicHookFunctionalityAndHookManager
     }
     return myasserter.errors;
 }
-
-INSTANTIATE_TEMPLATES_MM_GAMES(std::vector<wxString>, HookTests::testBasicHookFunctionalityAndHookManager);
 
 namespace // make vars file scoped
 {
@@ -762,8 +754,7 @@ static int __declspec(naked) autohookTest()
     }
 }
 
-template<typename Player, typename Game>
-static std::vector<wxString> HookTests::testAdvancedHookFunctionality()
+std::vector<wxString> HookTests::testAdvancedHookFunctionality()
 {
     Asserter myasserter("Advanced hook functionality");
     using HookFunctionType = CallableFunctionHookOrigFunc<int, int, int, unsigned char>;
@@ -843,9 +834,9 @@ static std::vector<wxString> HookTests::testAdvancedHookFunctionality()
     };
 
     Hook hook
-    { {
-        hk::HookFunction::create<int, 2, int, int, unsigned char>((uint32_t)hookFunctionTest1, hookFunctionFunc, 5),
-        hk::ReplaceCall::create<int, 0, unsigned char>(findCall(replaceCallHookTestOuter, replaceCallHookTestInner), replaceCallFunc),
+	{ {
+		hk::HookFunction::create<int, 2, int, int, unsigned char>((uint32_t)hookFunctionTest1, hookFunctionFunc, 5),
+		hk::ReplaceCall::create<int, 0, unsigned char>(findCall(replaceCallHookTestOuter, replaceCallHookTestInner), replaceCallFunc),
         new hk::AutohookBefore((uint32_t)findCode(autohookTest, NOP), autohookFunc1, 6),
         new hk::AutohookBefore((uint32_t)findCode(autohookTest, "\x66\x0F\x1F\x00", 4), autohookFunc2, 5),
     } };
@@ -1177,8 +1168,6 @@ std::vector<wxString> HookTests::testAsmHookFunctions()
 
     return myasserter.errors;
 }
-
-INSTANTIATE_TEMPLATES_MM_GAMES(std::vector<wxString>, HookTests::testAdvancedHookFunctionality);
 
 struct HookSizeTest
 {
@@ -1890,9 +1879,7 @@ namespace
     }
 }
 
-template<typename Player, typename Game>
-static std::vector<wxString>
-HookTests::testMiscFunctions()
+std::vector<wxString> HookTests::testMiscFunctions()
 {
     
     Asserter myasserter("Misc low level functions");
@@ -2113,19 +2100,7 @@ HookTests::testMiscFunctions()
     return myasserter.errors;
 }
 
-INSTANTIATE_TEMPLATES_MM_GAMES(std::vector<wxString>, HookTests::testMiscFunctions);
-
-/*
-template std::vector<wxString> HookTests::testBasicHookFunctionalityAndHookManager<mm6::Player, mm6::Game>();
-template std::vector<wxString> HookTests::testBasicHookFunctionalityAndHookManager<mm7::Player, mm7::Game>();
-template std::vector<wxString> HookTests::testBasicHookFunctionalityAndHookManager<mm8::Player, mm8::Game>();*/
-
-template<typename Player, typename Game>
-static std::vector<wxString> HookTests::run()
+std::vector<wxString> HookTests::run()
 {
-    return mergeVectors({ testHookPlacingAndSize<Player, Game>(), testMiscFunctions<Player, Game>(), testBasicHookFunctionalityAndHookManager<Player, Game>(), testAdvancedHookFunctionality<Player, Game>(), testAsmHookFunctions()});
+    return mergeVectors({ testHookPlacingAndSize(), testMiscFunctions(), testBasicHookFunctionalityAndHookManager(), testAdvancedHookFunctionality(), testAsmHookFunctions()});
 }
-
-template std::vector<wxString> HookTests::run<mm6::Player, mm6::Game>();
-template std::vector<wxString> HookTests::run<mm7::Player, mm7::Game>();
-template std::vector<wxString> HookTests::run<mm8::Player, mm8::Game>();

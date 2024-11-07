@@ -474,6 +474,35 @@ extern "C"
         return 1;
     }
 
+    DLL_EXPORT int __stdcall runNonGameTests()
+	{
+		try
+		{
+			std::vector<wxString> errors;
+			errors = Tests::runNonGameTests();
+			if (errors.size() > 0)
+			{
+				wxString str = stringConcat(errors, "\n\n");
+				std::fstream file("pgen_errors_nongame.txt", std::ios::out | std::ios::trunc);
+				file << str;
+				file.close();
+				if (!Asserter::logAutomatically)
+				{
+					wxLogError("%d tests failed. Error messages:\n\n%s", errors.size(), str);
+					wxLog::FlushActive();
+				}
+				return 0;
+			}
+		}
+		catch (const std::exception& ex)
+		{
+			wxLogError(ex.what());
+			wxLog::FlushActive();
+			return 0;
+		}
+		return 1;
+	}
+
     std::unique_ptr<char> testsRun;
 
     // FIXME: implement this, should return string with tests that were run (if gui tests were disabled, don't include it etc.)

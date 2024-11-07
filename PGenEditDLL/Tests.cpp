@@ -804,18 +804,14 @@ std::vector<wxString> Tests::testMisc()
 std::vector<wxString> Tests::runNonGameTests()
 {
 	testingNow = true;
-	auto ret = mergeVectors({ testMisc<Player, Game>(), UtilityFunctionTests::run(), testSkillFunctions()/*, testJson()*/, GUI_tests::testGui<Player, Game>()
+	auto ret = mergeVectors({ testMisc(), UtilityFunctionTests::run(), testSkillFunctions()/*, testJson()*/, }); /*GUI_tests::testGui<Player, Game>()
 		, testPlayerStructAccessor<Player, Game>(), HookTests::run<Player, Game>(), LuaTests::run(), ReflectionTests::run()
-		});
+		});*/
 	testingNow = false;
 	return ret;
 }
 
 #pragma warning(pop)
-
-template std::vector<wxString> Tests::testMisc<mm6::Player, mm6::Game>();
-template std::vector<wxString> Tests::testMisc<mm7::Player, mm7::Game>();
-template std::vector<wxString> Tests::testMisc<mm8::Player, mm8::Game>();
 
 std::vector<wxString> Tests::testSkillFunctions()
 {
