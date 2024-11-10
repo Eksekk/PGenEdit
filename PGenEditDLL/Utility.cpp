@@ -38,10 +38,16 @@ std::vector<std::string> stringSplit(const std::string& text, const std::string&
 	size_t pos = 0, foundPos;
 	while ((foundPos = useText.find(useDelimiter, pos)) != std::string::npos)
 	{
-		strings.push_back(text.substr(pos, foundPos - pos));
+		if (foundPos > pos) // Only add non-empty substrings
+		{
+			strings.push_back(text.substr(pos, foundPos - pos));
+		}
 		pos = foundPos + useDelimiter.size();
 	}
-	strings.push_back(text.substr(pos));
+	if (pos < text.size()) // Add the last part if it's not empty
+	{
+		strings.push_back(text.substr(pos));
+	}
 	return strings;
 }
 
