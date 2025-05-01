@@ -984,11 +984,15 @@ function tests()
 				return false
 			end
 		end
+		local countA = 0
+		for k, v in pairs(a) do
+			countA = countA + 1
+		end
 		local countB = 0 -- "b" may have more or less keys than "a", of which all existing in "a" happen to compare equal
 		for k, v in pairs(b) do
 			countB = countB + 1
 		end
-		return countB == #a
+		return countB == countA
 	end
 	local function mmv(a, b, c)
 		local v = select(mmv - 5, a, b, c)
@@ -1047,6 +1051,7 @@ function tests()
 	local function fastcallGlobalFunctionTest(argEcx, argEdx, argEsp)
 		return global.fastcallGlobalFunctionTest(argEcx, argEdx, argEsp)
 	end
+	-- FIXME: make indexes start from 1
 	assert(fastcallGlobalFunctionTest(0x77777777, 0x3333333, 0x88888888) == 0, "fastcallGlobalFunctionTest(0x77777777, 0x3333333, 0x88888888) == %d, expected 0", fastcallGlobalFunctionTest(0x77777777, 0x3333333, 0x88888888))
 	assert(fastcallGlobalFunctionTest(0x0, 0x1, 0x2) == 1, "fastcallGlobalFunctionTest(0x0, 0x1, 0x2) == %d, expected 1", fastcallGlobalFunctionTest(0x0, 0x1, 0x2))
 	assert(fastcallGlobalFunctionTest(0x77777777, 0x0, 0x2) == 2, "fastcallGlobalFunctionTest(0x77777777, 0x0, 0x2) == %d, expected 2", fastcallGlobalFunctionTest(0x77777777, 0x0, 0x2))

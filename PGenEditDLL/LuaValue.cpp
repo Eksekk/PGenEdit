@@ -345,6 +345,7 @@ const LuaTable* LuaValue::getTableIf() const
 
 rttr::variant LuaValue::toRttrVariant(rttr::type type) const
 {
+	throw std::runtime_error("LuaValue::toRttrVariant not implemented");
 	return rttr::variant();
 }
 

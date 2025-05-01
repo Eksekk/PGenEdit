@@ -5,6 +5,8 @@
 struct _Nil {}; // this is a special type that represents nil in lua
 extern _Nil Nil;
 
+// TODO: by default make Nil compare false with anything else? (one parameter of _Nil type, other of any other, and with reversed order)
+
 inline bool operator==(const _Nil& lhs, const _Nil& rhs) // for std::unordered_map and other stuff, implements "there is only one Nil value"
 {
 	return true;
@@ -152,6 +154,7 @@ namespace lua::utils
 	/// The corresponding C++ LuaTypeInCpp value based on the Lua type at the specified stack index.
 	/// </returns>
 	LuaTypeInCpp convertStackIndexToLuaTypeInCpp(lua_State* L, int stackIndex);
+	void expectEmptyStack(lua_State* L, int expected);
 }
 
 namespace std

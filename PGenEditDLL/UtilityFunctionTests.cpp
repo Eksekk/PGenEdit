@@ -74,7 +74,7 @@ std::vector<wxString> doStringFunctionTests()
 		{.text = "mY strING mY text mY words", .delimiter = "[a-z] [a-z]", .regex = true, .ignoreCase = false, .expected = { "mY strING mY tex", "Y words" } },
 		{.text = "|||,|,,||,|||,,|,||", .delimiter = R"(\|\|)", .regex = true, .ignoreCase = true, .expected = { "", "|,|,,", ",", "|,,|,", "" } },
 		{.text = "a,b;c.d.f:abc:abc", .delimiter = R"(,|;|\.|:)", .regex = true, .ignoreCase = true, .expected = { "a", "b", "c", "d", "f", "abc", "abc" } },
-		{.text = "testingtestingtesting", .delimiter = R"(t|t|t|s)", .regex = true, .ignoreCase = true, .expected = { "", "e", "", "ing", "e", "ing", "e", "", "ing"}},
+		{.text = "testingtestingtesting", .delimiter = R"(t|t|t|s)", .regex = true, .ignoreCase = true, .expected = { "", "e", "", "ing", "e", "", "ing", "e", "", "ing"}},
 		// New test cases
 		{.text = "CaseInsensitive,CASEINSENSITIVE,caseinsensitive", .delimiter = "caseinsensitive", .regex = false, .ignoreCase = true, .expected = { "", ",", ",", "" }},
 		{.text = "Split by space", .delimiter = " ", .regex = false, .ignoreCase = false, .expected = { "Split", "by", "space" } },
@@ -98,7 +98,7 @@ std::vector<wxString> doStringFunctionTests()
 		{
 			result = stringSplit(test.text, test.delimiter, test.ignoreCase);
 		}
-		myassert(result == test.expected, std::format("stringSplit test failed: input: '{}', delimiter: '{}', expected output: '{}', actual output: '{}'", test.text, test.delimiter, test.expected, result));
+		myassert(result == test.expected, std::format("stringSplit{} test failed: input: '{}', delimiter: '{}', expected output: '{}', actual output: '{}'", test.regex ? "Regex" : "", test.text, test.delimiter, test.expected, result));
 	}
 
 	// stringRep

@@ -507,7 +507,7 @@ void lua::utils::expectEmptyStack(lua_State* L, int expected)
 	if (stackSize != expected)
 	{
 		LuaWrapper w(L);
-		ReflectionConversions::
+		//ReflectionConversions::
 		luaError("Lua stack is not empty at the end of C function, got {} arguments: ", expected, stackSize);
 	}
 }
@@ -641,7 +641,7 @@ extern "C" static int pcallErrorFunc(lua_State* L)
 	// remove error message from stack
 	w.pop(1);
 	// add stack trace
-	msg += "\n\n" + luaWrapper.luaStackTrace();
+	msg += "\n\n" + luaWrapper.luaStackTrace(); // important to use the global luaWrapper here, because we want to get as big stack trace as possible, "w" would only contain current call
 	// push new error message
 	w.pushstring(msg);
 	return 1;

@@ -377,4 +377,11 @@ FodyWeavers.xsd
 PGenEditDLL/wxWidgets-3.2.1/build/msw/vc_mswuddll/
 PGenEditDLL/wxWidgets-3.2.1/build/msw/vc_mswud/
 PGenEditDLL/wxWidgets-3.2.1/lib/vc_dll/
+PGenEditDLL/wxWidgets-3.2.1/lib/vc_x64_lib/
 PGenEditDLL/wxWidgets-3.2.1/build/msw/JSON/
+.aider*
+.env
+.specstory
+.vshistory
+.cursorindexingignore
+*.code-workspace

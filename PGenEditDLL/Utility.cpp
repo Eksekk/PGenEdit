@@ -38,16 +38,10 @@ std::vector<std::string> stringSplit(const std::string& text, const std::string&
 	size_t pos = 0, foundPos;
 	while ((foundPos = useText.find(useDelimiter, pos)) != std::string::npos)
 	{
-		if (foundPos > pos) // Only add non-empty substrings
-		{
-			strings.push_back(text.substr(pos, foundPos - pos));
-		}
+		strings.push_back(text.substr(pos, foundPos - pos));
 		pos = foundPos + useDelimiter.size();
 	}
-	if (pos < text.size()) // Add the last part if it's not empty
-	{
-		strings.push_back(text.substr(pos));
-	}
+	strings.push_back(text.substr(pos));
 	return strings;
 }
 
@@ -62,22 +56,24 @@ std::vector<std::string> stringSplitRegex(const std::string& text, const std::st
 {
 	std::vector<std::string> strings;
 	std::regex rgx = ignoreCase ? std::regex(regex, std::regex_constants::icase) : std::regex(regex);
-	std::sregex_token_iterator iter(text.begin(), text.end(), rgx, -1);
+	std::sregex_token_iterator iter(text.begin(), text.end(), rgx, -1); // -1 makes it return the parts between matches
 	std::sregex_token_iterator end;
-	auto originalIter = text.begin();
-	int lastAfterMatchPos = -1;
+	//auto originalIter = text.begin();
+	int lastAfterMatchPos = 0;
+	std::string::const_iterator last;
 	for (; iter != end; ++iter)
 	{
 		lastAfterMatchPos = std::distance(text.begin(), iter->first) + iter->length();
+		last = iter->second;
 		strings.push_back(*iter);
-		originalIter = iter->second;
+		//originalIter = iter->second;
 	}
 
 	// Add the remaining part of the text if any
-	if (originalIter != text.end())
-	{
-		strings.push_back(text.substr(lastAfterMatchPos));
-	}
+// 	if (originalIter != text.end())
+// 	{
+// 		strings.push_back(text.substr(lastAfterMatchPos));
+// 	}
 
 	return strings;
 }
